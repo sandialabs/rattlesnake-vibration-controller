@@ -1,0 +1,9 @@
+numpy>=1.18.4
+scipy>=1.4.1
+PyQt5>=5.9.2
+pyqtgraph>=0.11.0
+netCDF4>=1.4.2
+nidaqmx>=0.5.7
+openpyxl>=3.0.3
+kaitaistruct>=0.9
+requests>=2.25.1
