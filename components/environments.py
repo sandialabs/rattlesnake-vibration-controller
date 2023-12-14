@@ -36,7 +36,7 @@ class ControlTypes(Enum):
     # SINE = 3
     TIME = 4
     # NONLINEAR = 5
-    # MODAL = 6
+    MODAL = 6
     # Add new environment types here
 
 # Name for each environment
@@ -46,13 +46,15 @@ environment_long_names[ControlTypes.TRANSIENT] = 'MIMO Transient'
 # environment_long_names[ControlTypes.SINE] = 'Sine Vibration'
 environment_long_names[ControlTypes.TIME] = 'Time Signal Generation'
 # environment_long_names[ControlTypes.NONLINEAR] = 'Nonlinear Normal Modes'
+environment_long_names[ControlTypes.MODAL] = 'Modal Testing'
 environment_long_names[ControlTypes.COMBINED] = 'Combined Environments...'
 
 # Add the environment here if it can be used for combined environments
 combined_environments_capable = [
     ControlTypes.RANDOM,
     ControlTypes.TRANSIENT,
-    ControlTypes.TIME
+    ControlTypes.TIME,
+    ControlTypes.MODAL
     ]
 
 # Define paths to the User Interface UI Files
@@ -82,13 +84,17 @@ environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory,'time_run.u
 environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory,'transient_definition.ui')
 environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory,'transient_prediction.ui')
 environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory,'transient_run.ui')
+# Modal Environments
+environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory,'modal_definition.ui')
+environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory,'modal_run.ui')
+modal_mdi_ui_path = os.path.join(directory,'modal_acquisition_window.ui')
 
 # Import the process function and the UI from the module and add them to the
 # respective dictionaries
 environment_processes = {}
 environment_UIs = {}
 # Random Vibration
-from .random_vibration_environment import random_vibration_process,RandomVibrationUI
+from .random_vibration_sys_id_environment import random_vibration_process,RandomVibrationUI
 environment_processes[ControlTypes.RANDOM] = random_vibration_process
 environment_UIs[ControlTypes.RANDOM] = RandomVibrationUI
 # Time Signal Generation
@@ -96,9 +102,12 @@ from .time_environment import time_process,TimeUI
 environment_processes[ControlTypes.TIME] = time_process
 environment_UIs[ControlTypes.TIME] = TimeUI
 # Transient
-from .transient_environment import transient_process,TransientUI
+from .transient_sys_id_environment import transient_process,TransientUI
 environment_processes[ControlTypes.TRANSIENT] = transient_process
 environment_UIs[ControlTypes.TRANSIENT] = TransientUI
-
+# Modal
+from .modal_environment import modal_process,ModalUI
+environment_processes[ControlTypes.MODAL] = modal_process
+environment_UIs[ControlTypes.MODAL] = ModalUI
 
 ### End of code needed to be modified to create a new environment

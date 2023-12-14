@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>442</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="button_layout">
+     <item>
+      <widget class="QComboBox" name="signal_selector">
+       <property name="toolTip">
+        <string>Select the type of data to look at.</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Time</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Windowed Time</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Spectrum</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Autospectrum</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>FRF</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Coherence</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>FRF Coherence</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Reciprocity</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="response_coordinate_selector">
+       <property name="toolTip">
+        <string>Select the channel to look at.</string>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContents</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="reference_coordinate_selector">
+       <property name="toolTip">
+        <string>Select the reference to look at.</string>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContents</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="data_type_selector">
+       <property name="toolTip">
+        <string>Select how the data is displayed.</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Magnitude</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Magnitude/Phase</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Real</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Imaginary</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Real/Imaginary</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="lock_response_checkbox">
+       <property name="toolTip">
+        <string>Locks the channel so it does not update when the increment channels buttons are clicked.  Channel can still be manually changed.</string>
+       </property>
+       <property name="text">
+        <string>Lock</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="button_spacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="PlotWidget" name="primary_plot"/>
+   </item>
+   <item>
+    <widget class="PlotWidget" name="secondary_plot"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

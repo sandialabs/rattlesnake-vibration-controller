@@ -18,6 +18,9 @@
     <layout class="QGridLayout" name="excitation_prediction_layout">
      <item row="2" column="0">
       <widget class="QPushButton" name="minimum_voltage_button">
+       <property name="toolTip">
+        <string>Visualize the signal with the smallest drive voltage</string>
+       </property>
        <property name="text">
         <string>Go to Minimum</string>
        </property>
@@ -25,6 +28,9 @@
      </item>
      <item row="1" column="0">
       <widget class="QPushButton" name="maximum_voltage_button">
+       <property name="toolTip">
+        <string>Visualize the drive signal with the largest voltage</string>
+       </property>
        <property name="text">
         <string>Go to Maximum</string>
        </property>
@@ -50,6 +56,9 @@
             <height>0</height>
            </size>
           </property>
+          <property name="toolTip">
+           <string>Peak voltage for each drive signal</string>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
           </property>
@@ -59,7 +68,11 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QComboBox" name="excitation_selector"/>
+      <widget class="QComboBox" name="excitation_selector">
+       <property name="toolTip">
+        <string>Select the signal to visualize</string>
+       </property>
+      </widget>
      </item>
      <item row="0" column="1">
       <widget class="PlotWidget" name="excitation_display_plot">
@@ -89,12 +102,32 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="toolTip">
+           <string>Time Response Assurance Criterion between the predicted response and the desired response</string>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
           </property>
          </widget>
         </item>
        </layout>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="maximum_error_button">
+       <property name="toolTip">
+        <string>Visualize the signal with the largest predicted error</string>
+       </property>
+       <property name="text">
+        <string>Go to Maximum</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="response_selector">
+       <property name="toolTip">
+        <string>Select the signal prediction to visualize</string>
+       </property>
       </widget>
      </item>
      <item row="0" column="1">
@@ -109,20 +142,40 @@
      </item>
      <item row="2" column="0">
       <widget class="QPushButton" name="minimum_error_button">
+       <property name="toolTip">
+        <string>Visualize the signal with the smallest predicted error</string>
+       </property>
        <property name="text">
         <string>Go to Minimum</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QPushButton" name="maximum_error_button">
-       <property name="text">
-        <string>Go to Maximum</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="response_selector"/>
+     <item row="2" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="recompute_predictions_button">
+         <property name="toolTip">
+          <string>Recompute predictions by running the control law again.</string>
+         </property>
+         <property name="text">
+          <string>Recompute Predictions</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

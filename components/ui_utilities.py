@@ -22,21 +22,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-from PyQt5 import QtWidgets, uic, QtGui
-from PyQt5.QtCore import Qt,QTimer
+from qtpy import QtWidgets, uic, QtGui
+from qtpy.QtCore import Qt,QTimer
 import numpy as np
 import pyqtgraph
 from scipy.io import loadmat
 from scipy.interpolate import interp1d
-import importlib.util
 import openpyxl
+from typing import List
 
 from .utilities import (coherence,error_message_qt,save_csv_matrix,
-                        load_csv_matrix,trac)
+                        load_csv_matrix,trac,Channel,DataAcquisitionParameters)
 from .environments import (ControlTypes,environment_long_names,
                            combined_environments_capable,control_select_ui_path,
                            environment_select_ui_path,environment_UIs,
-                           transformation_matrices_ui_path
+                           transformation_matrices_ui_path,
+                           modal_mdi_ui_path
                            )
 
 ACQUISITION_FRAMES_TO_DISPLAY = 4
@@ -111,27 +112,6 @@ def get_table_bools(tablewidget : QtWidgets.QTableWidget):
             value = tablewidget.cellWidget(row_idx,col_idx).isChecked()
             bool_array[-1].append(value)
     return bool_array
-    
-def load_python_module(module_path):
-    """Loads in the Python file at the specified path as a module at runtime
-
-    Parameters
-    ----------
-    module_path : str:
-        Path to the module to be loaded
-        
-
-    Returns
-    -------
-    module : module:
-        A reference to the loaded module
-    """
-    path,file = os.path.split(module_path)
-    file,ext = os.path.splitext(file)
-    spec = importlib.util.spec_from_file_location(file, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 def load_time_history(signal_path,sample_rate):
     """Loads a time history from a given file
@@ -169,7 +149,9 @@ def load_time_history(signal_path,sample_rate):
         try:
             times = data['t'].squeeze()
             fn = interp1d(times,signal)
-            signal = fn(np.arange(0,max(times),1/sample_rate))
+            abscissa = np.arange(0,max(times)+1/sample_rate-1e-10,1/sample_rate)
+            abscissa = abscissa[abscissa <= max(times)]
+            signal = fn(abscissa)
         except KeyError:
             pass
     elif extension.lower() == '.mat':
@@ -178,51 +160,17 @@ def load_time_history(signal_path,sample_rate):
         try:
             times = data['t'].squeeze()
             fn = interp1d(times,signal)
-            signal = fn(np.arange(0,max(times),1/sample_rate))
+            abscissa = np.arange(0,max(times)+1/sample_rate-1e-10,1/sample_rate)
+            abscissa = abscissa[abscissa <= max(times)]
+            signal = fn(abscissa)
         except KeyError:
             pass
+    else:
+        raise ValueError("Could Not Determine the file type from the filename {:}: {:}".format(
+            signal_path,extension))
+    if signal.shape[-1] % 2 == 1:
+        signal = signal[...,:-1]
     return signal
-
-def load_specification(spec_path,n_freq_lines,df):
-    """Loads a specification CPSD matrix from a file.
-
-    Parameters
-    ----------
-    spec_path : str
-        Loads the specification contained in this file
-    n_freq_lines : int
-        The number of frequency lines 
-    df : float
-        The frequency spacing
-
-    Returns
-    -------
-    frequency_lines : np.ndarray
-        The frequency lines ``df*np.arange(n_freq_lines)``
-    cpsd_matrix : np.ndarray
-        3D numpy array consisting of a CPSD matrix at each frequency line
-    """
-    file_base,extension = os.path.splitext(spec_path)
-    if extension.lower() == '.mat':
-        data = loadmat(spec_path)
-        frequencies = data['f'].squeeze()
-        cpsd = data['cpsd'].transpose(2,0,1)
-    elif extension.lower() == '.npz':
-        data = np.load(spec_path)
-        frequencies = data['f'].squeeze()
-        cpsd = data['cpsd']
-    
-    # Create the full CPSD matrix
-    frequency_lines = df*np.arange(n_freq_lines)
-    cpsd_matrix = np.zeros((n_freq_lines,)+cpsd.shape[1:],dtype='complex128')
-    for frequency,cpsd_line in zip(frequencies,cpsd):
-        index = np.argmin(np.abs(frequency-frequency_lines))
-        if abs(frequency-frequency_lines[index]) > 1e-5:
-            #raise ValueError('Frequency {:} not a valid frequency ({:} closest)'.format(frequency,frequency_lines[index]))
-            continue
-        cpsd_matrix[index,...] = cpsd_line
-    # Deliever specification to data analysis
-    return frequency_lines,cpsd_matrix
 
 colororder = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 def multiline_plotter(x,y,widget = None,curve_list = None,names=None,other_pen_options = {'width':1},legend=False):
@@ -269,6 +217,77 @@ def multiline_plotter(x,y,widget = None,curve_list = None,names=None,other_pen_o
     else:
         raise ValueError('Either Widget or list of curves must be specified')
 
+def save_combined_environments_profile_template(filename,environment_data):
+    # Create the header
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Channel Table"
+    hardware_worksheet = workbook.create_sheet('Hardware')
+    # Create the header
+    worksheet.cell(row=1,column=2,value='Test Article Definition')
+    worksheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
+    worksheet.cell(row=1,column=5,value='Instrument Definition')
+    worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
+    worksheet.cell(row=1,column=12,value='Channel Definition')
+    worksheet.merge_cells(start_row=1, start_column=12, end_row=1, end_column=19)
+    worksheet.cell(row=1,column=20,value='Output Feedback')
+    worksheet.merge_cells(start_row=1, start_column=20, end_row=1, end_column=21)
+    worksheet.cell(row=1,column=22,value='Limits')
+    worksheet.merge_cells(start_row=1, start_column=22, end_row=1, end_column=23)
+    for col_idx,val in enumerate(['Channel Index',
+                                  'Node Number',
+                                  'Node Direction',
+                                  'Comment',
+                                  'Serial Number',
+                                  'Triax DoF',
+                                  'Sensitivity  (mV/EU)',
+                                  'Engineering Unit',
+                                  'Make',
+                                  'Model',
+                                  'Calibration Exp Date',
+                                  'Physical Device',
+                                  'Physical Channel',
+                                  'Type',
+                                  'Minimum Value (V)',
+                                  'Maximum Value (V)',
+                                  'Coupling',
+                                  'Current Excitation Source',
+                                  'Current Excitation Value',
+                                  'Physical Device',
+                                  'Physical Channel',
+                                  'Warning Level (EU)',
+                                  'Abort Level (EU)']):
+        worksheet.cell(row=2,column=1+col_idx,value=val)
+    # Fill out the hardware worksheet
+    hardware_worksheet.cell(1,1,'Hardware Type')
+    hardware_worksheet.cell(1,2,'# Enter hardware index here')
+    hardware_worksheet.cell(1,3,'Hardware Indices: 0 - NI DAQmx; 1 - LAN XI; 2 - Data Physics Quattro; 3 - Data Physics 900 Series; 4 - Exodus Modal Solution; 5 - State Space Integration; 6 - SDynPy System Integration')
+    hardware_worksheet.cell(2,1,'Hardware File')
+    hardware_worksheet.cell(2,2,'# Path to Hardware File (Depending on Hardware Device: 0 - Not Used; 1 - Not Used; 2 - Path to DpQuattro.dll library file; 3 - Not Used; 4 - Path to Exodus Eigensolution; 5 - Path to State Space File; 6 - Path to SDynPy system file)')
+    hardware_worksheet.cell(3,1,'Sample Rate')
+    hardware_worksheet.cell(3,2,'# Sample Rate of Data Acquisition System')
+    hardware_worksheet.cell(4,1,'Time Per Read')
+    hardware_worksheet.cell(4,2,'# Number of seconds per Read from the Data Acquisition System')
+    hardware_worksheet.cell(5,1,'Time Per Write')
+    hardware_worksheet.cell(5,2,'# Number of seconds per Write to the Data Acquisition System')
+    hardware_worksheet.cell(6,1,'Acquisition Processes')
+    hardware_worksheet.cell(6,2,'# Maximum Number of Acquisition Processes to start to pull data from hardware')
+    hardware_worksheet.cell(7,1,'Integration Oversampling')
+    hardware_worksheet.cell(7,2,'# For virual control, an integration oversampling can be specified')
+    # Now do the environment
+    worksheet.cell(row=1,column=24,value='Environments')
+    for row,(value,name) in enumerate(environment_data):
+        environment_UIs[value].create_environment_template(name, workbook)
+        worksheet.cell(row=2,column=24+row,value=name)
+    # Now create a profile page
+    profile_sheet = workbook.create_sheet('Test Profile')
+    profile_sheet.cell(1,1,'Time (s)')
+    profile_sheet.cell(1,2,'Environment')
+    profile_sheet.cell(1,3,'Operation')
+    profile_sheet.cell(1,4,'Data')
+    
+    workbook.save(filename)
+
 class EnvironmentSelect(QtWidgets.QDialog):
     """QDialog for selecting the environments in a combined environments run"""
     def __init__(self,parent=None):
@@ -314,76 +333,14 @@ class EnvironmentSelect(QtWidgets.QDialog):
         if filename == '':
             return
         file_base,file_type = os.path.splitext(filename)
-        # Create the header
-        workbook = openpyxl.Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Channel Table"
-        hardware_worksheet = workbook.create_sheet('Hardware')
-        # Create the header
-        worksheet.cell(row=1,column=3,value='Test Article Definition')
-        worksheet.merge_cells(start_row=1, start_column=3, end_row=1, end_column=5)
-        worksheet.cell(row=1,column=6,value='Instrument Definition')
-        worksheet.merge_cells(start_row=1, start_column=6, end_row=1, end_column=12)
-        worksheet.cell(row=1,column=13,value='Channel Definition')
-        worksheet.merge_cells(start_row=1, start_column=13, end_row=1, end_column=20)
-        worksheet.cell(row=1,column=21,value='Output Feedback')
-        worksheet.merge_cells(start_row=1, start_column=21, end_row=1, end_column=22)
-        for col_idx,val in enumerate(['Channel Index',
-                                      'Control?',
-                                      'Node Number',
-                                      'Node Direction',
-                                      'Comment',
-                                      'Serial Number',
-                                      'Triax DoF',
-                                      'Sensitivity  (mV/EU)',
-                                      'Engineering Unit',
-                                      'Make',
-                                      'Model',
-                                      'Calibration Exp Date',
-                                      'Physical Device',
-                                      'Physical Channel',
-                                      'Type',
-                                      'Minimum Value (V)',
-                                      'Maximum Value (V)',
-                                      'Coupling',
-                                      'Current Excitation Source',
-                                      'Current Excitation Value',
-                                      'Physical Device',
-                                      'Physical Channel']):
-            worksheet.cell(row=2,column=1+col_idx,value=val)
-        # Fill out the hardware worksheet
-        hardware_worksheet.cell(1,1,'Hardware Type')
-        hardware_worksheet.cell(1,2,'# Enter hardware index here')
-        hardware_worksheet.cell(1,3,'Hardware Indices: 0 - NI DAQmx; 1 - LAN XI; 2 - Exodus Modal Solution; 3 - State Space Integration')
-        hardware_worksheet.cell(2,1,'Hardware File')
-        hardware_worksheet.cell(2,2,'# Path to Hardware File (Exodus File path for index 2)')
-        hardware_worksheet.cell(3,1,'Sample Rate')
-        hardware_worksheet.cell(3,2,'# Sample Rate of Data Acquisition System')
-        hardware_worksheet.cell(4,1,'Time Per Read')
-        hardware_worksheet.cell(4,2,'# Number of seconds per Read from the Data Acquisition System')
-        hardware_worksheet.cell(5,1,'Time Per Write')
-        hardware_worksheet.cell(5,2,'# Number of seconds per Write to the Data Acquisition System')
-        hardware_worksheet.cell(6,1,'Acquisition Processes')
-        hardware_worksheet.cell(6,2,'# Maximum Number of Acquisition Processes to start to pull data from hardware')
-        hardware_worksheet.cell(7,1,'Integration Oversampling')
-        hardware_worksheet.cell(7,2,'# For virual control, an integration oversampling can be specified')
-        # Now do the environment
-        worksheet.cell(row=1,column=23,value='Environments')
         # Now do the environments
+        environment_data = []
         for row in range(self.environment_display_table.rowCount()):
             combobox = self.environment_display_table.cellWidget(row,0)
             value = ControlTypes(combobox.currentData())
             name = self.environment_display_table.item(row,1).text()
-            environment_UIs[value].create_environment_template(name, workbook)
-            worksheet.cell(row=2,column=23+row,value=name)
-        # Now create a profile page
-        profile_sheet = workbook.create_sheet('Test Profile')
-        profile_sheet.cell(1,1,'Time (s)')
-        profile_sheet.cell(1,2,'Environment')
-        profile_sheet.cell(1,3,'Operation')
-        profile_sheet.cell(1,4,'Data')
-        
-        workbook.save(filename)
+            environment_data.append((value,name))
+        save_combined_environments_profile_template(filename, environment_data)
         
     def load_profile(self):
         """Loads a profile from an excel spreadsheet."""
@@ -428,7 +385,7 @@ class EnvironmentSelect(QtWidgets.QDialog):
                     value = ControlTypes(combobox.currentData())
                     name = dialog.environment_display_table.item(row,1).text()
                     environment_table.append([value,name])
-            print(environment_table)
+            # print(environment_table)
             return result,environment_table
         else:
             result = -1
@@ -492,13 +449,14 @@ class ControlSelect(QtWidgets.QDialog):
         result = dialog.exec_()==QtWidgets.QDialog.Accepted
         index = dialog.control_select_buttongroup.checkedId()
         button_id = ControlTypes(index)
-        print(button_id)
+        # print(button_id)
         return (button_id,result)
 
 
 class PlotWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
-    def __init__(self,parent,row,column,datatype,specification,row_name,column_name,datatype_name):
+    def __init__(self,parent,row,column,datatype,specification,row_name,column_name,datatype_name,
+                 warning_matrix = None, abort_matrix = None):
         """
         Creates a window showing CPSD matrix information for a single channel.
 
@@ -544,6 +502,12 @@ class PlotWindow(QtWidgets.QDialog):
         if self.datatype==0:
             plot_item.setLogMode(False,True)
         plot_item.plot(self.frequencies,self.spec_data,pen = {'color': "b", 'width': 1})
+        if not warning_matrix is None:
+            plot_item.plot(self.frequencies,warning_matrix[0,:,row],pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine})
+            plot_item.plot(self.frequencies,warning_matrix[1,:,row],pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine})
+        if not abort_matrix is None:
+            plot_item.plot(self.frequencies,abort_matrix[0,:,row],pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine})
+            plot_item.plot(self.frequencies,abort_matrix[1,:,row],pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine})
         self.curve = plot_item.plot(self.frequencies,self.data,pen = {'color': "r", 'width': 1})
         self.setWindowTitle('{:} {:} / {:}'.format(datatype_name,row_name,column_name))
         self.show()
@@ -1002,3 +966,459 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx,col_idx,item)
+                    
+class ModalMDISubWindow(QtWidgets.QWidget):
+    def __init__(self,parent):
+        super().__init__(parent)
+        uic.loadUi(modal_mdi_ui_path, self)
+        
+        self.parent = parent
+        self.channel_names = self.parent.channel_names
+        self.reference_names = np.array([self.parent.channel_names[i] for i in self.parent.reference_channel_indices])
+        self.response_names = np.array([self.parent.channel_names[i] for i in self.parent.response_channel_indices])
+        self.reciprocal_responses = self.parent.reciprocal_responses
+        
+        self.signal_selector.currentIndexChanged.connect(self.update_ui)
+        self.data_type_selector.currentIndexChanged.connect(self.update_ui_no_clear)
+        self.response_coordinate_selector.currentIndexChanged.connect(self.update_data)
+        self.reference_coordinate_selector.currentIndexChanged.connect(self.update_data)
+        
+        self.primary_plotitem = self.primary_plot.getPlotItem()
+        self.secondary_plotitem = self.secondary_plot.getPlotItem()
+        self.primary_viewbox = self.primary_plotitem.getViewBox()
+        self.secondary_viewbox = self.secondary_plotitem.getViewBox()
+        self.primary_axis = self.primary_plotitem.getAxis('left')
+        self.secondary_axis = self.secondary_plotitem.getAxis('left')
+        
+        self.secondary_plotitem.setXLink(self.primary_plotitem)
+        
+        self.primary_plotdataitem = pyqtgraph.PlotDataItem(
+            np.arange(2),np.zeros(2),pen = {'color': "r", 'width': 1})
+        self.secondary_plotdataitem = pyqtgraph.PlotDataItem(
+            np.arange(2),np.zeros(2),pen = {'color': "r", 'width': 1})
+        
+        self.primary_viewbox.addItem(self.primary_plotdataitem)
+        self.secondary_viewbox.addItem(self.secondary_plotdataitem)
+        
+        self.twinx_viewbox = None
+        self.twinx_axis = None
+        self.twinx_original_plotitem = None
+        self.twinx_plotdataitem = None
+        
+        self.is_comparing = False
+        self.primary_plotdataitem_compare = pyqtgraph.PlotDataItem(
+            np.arange(2),np.zeros(2),pen = {'color': "b", 'width': 1})
+        self.secondary_plotdataitem_compare = pyqtgraph.PlotDataItem(
+            np.arange(2),np.zeros(2),pen = {'color': "b", 'width': 1})
+        
+        self.update_ui()
+        
+    def remove_twinx(self):
+        if self.twinx_viewbox is None:
+            return
+        self.twinx_original_plotitem.layout.removeItem(self.twinx_axis)
+        self.twinx_original_plotitem.scene().removeItem(self.twinx_viewbox)
+        self.twinx_original_plotitem.scene().removeItem(self.twinx_axis)
+        self.twinx_viewbox = None
+        self.twinx_axis = None
+        self.twinx_original_plotitem = None
+        self.twinx_plot_item = None
+    
+    def add_twinx(self, existing_plot_item : pyqtgraph.PlotItem):
+        # Create a viewbox
+        self.twinx_original_plotitem = existing_plot_item
+        self.twinx_viewbox = pyqtgraph.ViewBox()
+        self.twinx_original_plotitem.scene().addItem(self.twinx_viewbox)
+        self.twinx_axis = pyqtgraph.AxisItem('right')
+        self.twinx_axis.setLogMode(False)
+        self.twinx_axis.linkToView(self.twinx_viewbox)
+        self.twinx_original_plotitem.layout.addItem(self.twinx_axis,2,3)
+        self.updateTwinXViews()
+        self.twinx_viewbox.setXLink(self.twinx_original_plotitem)
+        self.twinx_original_plotitem.vb.sigResized.connect(self.updateTwinXViews)
+        self.twinx_plotdataitem = pyqtgraph.PlotDataItem(
+            np.arange(2),np.zeros(2),pen = {'color': "b", 'width': 1})
+        self.twinx_viewbox.addItem(self.twinx_plotdataitem)
+    
+    def add_compare(self):
+        self.is_comparing = True
+        self.primary_viewbox.addItem(self.primary_plotdataitem_compare)
+        self.secondary_viewbox.addItem(self.secondary_plotdataitem_compare)
+        
+    def remove_compare(self):
+        if self.is_comparing:
+            self.primary_viewbox.removeItem(self.primary_plotdataitem_compare)
+            self.secondary_viewbox.removeItem(self.secondary_plotdataitem_compare)
+            self.is_comparing = False
+    
+    def updateTwinXViews(self):
+        if self.twinx_viewbox is None:
+            return
+        self.twinx_viewbox.setGeometry(self.twinx_original_plotitem.vb.sceneBoundingRect())
+        # self.twinx_viewbox.linkedViewChanged(self.twinx_original_plotitem.vb, self.twinx_viewbox.XAxis)
+        
+    def update_ui_no_clear(self):
+        self.update_ui(False)
+        
+    def update_ui(self,clear_channels=True):
+        self.response_coordinate_selector.blockSignals(True)
+        self.reference_coordinate_selector.blockSignals(True)
+        self.remove_twinx()
+        self.remove_compare()
+        if self.signal_selector.currentIndex() in [0,1,2,3]: # Time or Windowed Time or Spectrum or Autospectrum
+            self.reference_coordinate_selector.hide()
+            self.data_type_selector.hide()
+            self.secondary_plot.hide()
+            if clear_channels:
+                self.response_coordinate_selector.clear()
+                self.reference_coordinate_selector.clear()
+                for channel_name in self.channel_names:
+                    self.response_coordinate_selector.addItem(channel_name)
+            if self.signal_selector.currentIndex() in [0,1]:
+                self.primary_axis.setLogMode(False)
+                self.primary_plotdataitem.setLogMode(False,False)
+            else:
+                self.primary_axis.setLogMode(True)
+                self.primary_plotdataitem.setLogMode(False,True)
+        elif self.signal_selector.currentIndex() in [4,6,7]: # FRF or FRF Coherence or Reciprocity
+            self.reference_coordinate_selector.show()
+            self.data_type_selector.show()
+            if self.data_type_selector.currentIndex() in [1,4]:
+                self.secondary_plot.show()
+                if self.signal_selector.currentIndex() == 6:
+                    self.add_twinx(self.secondary_plotitem)
+            else:
+                self.secondary_plot.hide()
+                if self.signal_selector.currentIndex() == 6:
+                    self.add_twinx(self.primary_plotitem)
+            if self.signal_selector.currentIndex() == 7:
+                if any([val is None for val in self.reciprocal_responses]):
+                    error_message_qt('Invalid Reciprocal Channels', 'Could not deterimine reciprocal channels for this test')
+                    self.signal_selector.setCurrentIndex(4)
+                    return
+                self.add_compare()
+            if clear_channels:
+                self.response_coordinate_selector.clear()
+                self.reference_coordinate_selector.clear()
+                if self.signal_selector.currentIndex() == 7:
+                    for channel_name in self.response_names[self.reciprocal_responses]:
+                        self.response_coordinate_selector.addItem(channel_name)
+                else:
+                    for channel_name in self.response_names:
+                        self.response_coordinate_selector.addItem(channel_name)
+                for channel_name in self.reference_names:
+                    self.reference_coordinate_selector.addItem(channel_name)
+            if self.data_type_selector.currentIndex() == 0:
+                self.primary_axis.setLogMode(True)
+                self.primary_plotdataitem.setLogMode(False,True)
+                self.primary_plotdataitem_compare.setLogMode(False,True)
+            elif self.data_type_selector.currentIndex() == 1:
+                self.primary_axis.setLogMode(False)
+                self.primary_plotdataitem.setLogMode(False,False)
+                self.primary_plotdataitem_compare.setLogMode(False,False)
+                self.secondary_axis.setLogMode(True)
+                self.secondary_plotdataitem.setLogMode(False,True)
+                self.secondary_plotdataitem_compare.setLogMode(False,True)
+            elif self.data_type_selector.currentIndex() in [2,3]:
+                self.primary_axis.setLogMode(False)
+                self.primary_plotdataitem.setLogMode(False,False)
+                self.primary_plotdataitem_compare.setLogMode(False,False)
+            elif self.data_type_selector.currentIndex() == 4:
+                self.primary_axis.setLogMode(False)
+                self.primary_plotdataitem.setLogMode(False,False)
+                self.primary_plotdataitem_compare.setLogMode(False,False)
+                self.secondary_axis.setLogMode(False)
+                self.secondary_plotdataitem.setLogMode(False,False)
+                self.secondary_plotdataitem_compare.setLogMode(False,False)
+            if self.signal_selector.currentIndex() == 6:
+                self.twinx_axis.setLogMode(False)
+                self.twinx_plotdataitem.setLogMode(False,False)
+        elif self.signal_selector.currentIndex() in [5]: # Coherence
+            self.reference_coordinate_selector.hide()
+            self.data_type_selector.hide()
+            self.secondary_plot.hide()
+            if clear_channels:
+                self.response_coordinate_selector.clear()
+                self.reference_coordinate_selector.clear()
+                for channel_name in self.response_names:
+                    self.response_coordinate_selector.addItem(channel_name)
+            self.primary_axis.setLogMode(False)
+            self.primary_plotdataitem.setLogMode(False,False)
+        self.update_data()
+        self.response_coordinate_selector.blockSignals(False)
+        self.reference_coordinate_selector.blockSignals(False)
+            
+    def set_window_title(self):
+        self.setWindowTitle('{:} {:} {:}'.format(
+            self.signal_selector.itemText(self.signal_selector.currentIndex()),
+            self.response_coordinate_selector.itemText(self.response_coordinate_selector.currentIndex()),
+            self.reference_coordinate_selector.itemText(self.reference_coordinate_selector.currentIndex()) if self.signal_selector.currentIndex() == 4 else ''
+            ))
+            
+    def update_data(self):
+        self.set_window_title()
+        current_index = self.signal_selector.currentIndex()
+        if current_index in [0,1]: # Time history
+            if self.parent.last_frame is None:
+                return
+            data = self.parent.last_frame[self.response_coordinate_selector.currentIndex()]
+            if current_index == 1:
+                data = data * self.parent.window_function
+            self.primary_plotdataitem.setData(self.parent.time_abscissa,data)
+        elif current_index == 2: # Spectrum
+            if self.parent.last_spectrum is None:
+                return
+            data = self.parent.last_spectrum[self.response_coordinate_selector.currentIndex()]
+            self.primary_plotdataitem.setData(self.parent.frequency_abscissa,data)
+        elif current_index == 3: # Autospectrum
+            if self.parent.last_autospectrum is None:
+                return
+            data = self.parent.last_autospectrum[self.response_coordinate_selector.currentIndex()]
+            self.primary_plotdataitem.setData(self.parent.frequency_abscissa,data)
+        elif current_index == 4 or current_index == 6: # FRF or FRF Coherence
+            if self.parent.last_frf is None:
+                return
+            data = self.parent.last_frf[:,self.response_coordinate_selector.currentIndex(),self.reference_coordinate_selector.currentIndex()]
+            if self.data_type_selector.currentIndex() == 0: # Magnitude
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.abs(data))
+            elif self.data_type_selector.currentIndex() == 1: # Magnitude/Phase
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.angle(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa,np.abs(data))
+            elif self.data_type_selector.currentIndex() == 2: # Real
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.real(data))
+            elif self.data_type_selector.currentIndex() == 3: # Imag
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.imag(data))
+            elif self.data_type_selector.currentIndex() == 4: # Real/Imag
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.real(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa,np.imag(data))
+            if current_index == 6:
+                data = self.parent.last_coh[self.response_coordinate_selector.currentIndex()]
+                self.twinx_plotdataitem.setData(self.parent.frequency_abscissa,data)
+        elif current_index == 5: # Coherence
+            if self.parent.last_coh is None:
+                return
+            data = self.parent.last_coh[self.response_coordinate_selector.currentIndex()]
+            self.primary_plotdataitem.setData(self.parent.frequency_abscissa,data)
+        elif current_index == 7: # FRF or FRF Coherence
+            if self.parent.last_frf is None:
+                return
+            resp_ind = self.response_coordinate_selector.currentIndex()
+            ref_ind = self.reference_coordinate_selector.currentIndex()
+            data = self.parent.last_frf[:,self.reciprocal_responses[resp_ind],ref_ind]
+            compare_data = self.parent.last_frf[:,self.reciprocal_responses[ref_ind],resp_ind]
+            if self.data_type_selector.currentIndex() == 0: # Magnitude
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.abs(data))
+                self.primary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.abs(compare_data))
+            elif self.data_type_selector.currentIndex() == 1: # Magnitude/Phase
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.angle(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa,np.abs(data))
+                self.primary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.angle(compare_data))
+                self.secondary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.abs(compare_data))
+            elif self.data_type_selector.currentIndex() == 2: # Real
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.real(data))
+                self.primary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.real(compare_data))
+            elif self.data_type_selector.currentIndex() == 3: # Imag
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.imag(data))
+                self.primary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.imag(compare_data))
+            elif self.data_type_selector.currentIndex() == 4: # Real/Imag
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa,np.real(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa,np.imag(data))
+                self.primary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.real(compare_data))
+                self.secondary_plotdataitem_compare.setData(self.parent.frequency_abscissa,np.imag(compare_data))
+    
+    def increment_channel(self,increment=1):
+        if not self.lock_response_checkbox.isChecked():
+            num_channels = self.response_coordinate_selector.count()
+            current_index = self.response_coordinate_selector.currentIndex()
+            new_index = (current_index + increment) % num_channels
+            self.response_coordinate_selector.setCurrentIndex(new_index)
+            
+class ChannelMonitor(QtWidgets.QDialog):
+    """Class defining a subwindow that displays specific channel information"""
+    
+    def __init__(self,parent,daq_settings : DataAcquisitionParameters):
+        """
+        Creates a window showing CPSD matrix information for a single channel.
+
+        Parameters
+        ----------
+        parent : QWidget
+            Parent of the window.
+        """
+        super(QtWidgets.QDialog,self).__init__(parent)
+        self.setWindowFlags(self.windowFlags() & Qt.Tool)
+        self.channels = daq_settings.channel_list
+        # Set up the window
+        self.graphics_layout_widget = pyqtgraph.GraphicsLayoutWidget(self)
+        self.push_button = QtWidgets.QPushButton('Clear Alerts',self)
+        self.channels_per_row_label = QtWidgets.QLabel('Channels per Row: ',self)
+        self.channels_per_row_selector = QtWidgets.QSpinBox(self)
+        self.channels_per_row_selector.setMinimum(2)
+        self.channels_per_row_selector.setMaximum(100)
+        self.channels_per_row_selector.setValue(20)
+        self.channels_per_row_selector.setKeyboardTracking(False)
+        layout = QtWidgets.QVBoxLayout()
+        control_layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.graphics_layout_widget)
+        control_layout.addWidget(self.channels_per_row_label)
+        control_layout.addWidget(self.channels_per_row_selector)
+        control_layout.addStretch()
+        control_layout.addWidget(self.push_button)
+        layout.addLayout(control_layout)
+        self.setLayout(layout)
+        # Set up defaults for the channel ranges
+        self.channel_ranges = None
+        self.channel_warning_limits = None
+        self.channel_abort_limits = None
+        self.background_bars = None
+        self.history_bars = None
+        self.level_bars = None
+        self.history_last_update = None
+        self.history_hold_frames = int(np.ceil(10*daq_settings.sample_rate/daq_settings.samples_per_read))
+        self.aborted_channels = None
+        # Set up defaults for the plot
+        self.plots = None
+        self.bar_channel_indices = None
+        self.pen = pyqtgraph.mkPen(color=(0,0,0,255),width=1)
+        self.background_brush = pyqtgraph.mkBrush((255,255,255))
+        self.history_brush = pyqtgraph.mkBrush((124,124,255))
+        self.current_brush = pyqtgraph.mkBrush((34,139,34))
+        self.limit_brush = pyqtgraph.mkBrush((145,197,17))
+        self.abort_brush = pyqtgraph.mkBrush((145,70,17))
+        self.limit_background_brush = pyqtgraph.mkBrush((255,255,0,))
+        self.abort_background_brush = pyqtgraph.mkBrush((255,0,0))
+        self.limit_history_brush = pyqtgraph.mkBrush((190,190,128))
+        self.abort_history_brush = pyqtgraph.mkBrush((190,62,128))
+        # Connect everything and do final builds
+        self.connect_callbacks()
+        self.build_plot()
+        self.setWindowTitle('Channel Monitor')
+        self.resize(400,300)
+        self.show()
+
+    def connect_callbacks(self):
+        self.channels_per_row_selector.valueChanged.connect(self.build_plot)
+        self.push_button.clicked.connect(self.clear_alerts)
+    
+    def update_channel_list(self,daq_settings):
+        self.channels = daq_settings.channel_list
+        self.history_hold_frames = int(np.ceil(10*daq_settings.sample_rate/daq_settings.samples_per_read))
+        self.build_plots()
+    
+    def clear_alerts(self):
+        self.aborted_channels = [False for val in self.aborted_channels]
+        for current_bar in self.level_bars:
+            current_bar.setOpts(brushes=[self.current_brush])
+        for history_bar in self.history_bars:
+            history_bar.setOpts(brushes=[self.history_brush])
+        for background_bar in self.background_bars:
+            background_bar.setOpts(brushes=[self.background_brush])
+    
+    def build_plot(self):
+        #TODO Need to get the values from the bars before deleting them so we
+        # can maintain the levels from before the value was changed
+        self.graphics_layout_widget.clear()
+        num_channels = len(self.channels)
+        num_bars = int(np.ceil(num_channels/self.channels_per_row_selector.value()))
+        # Compute number of channels per bar
+        channels_per_bar = [0 for i in range(num_bars)]
+        for i in range(num_channels):
+            channels_per_bar[i%num_bars] += 1
+        
+        # print('Channels per Bar {:}'.format(channels_per_bar))
+        # Now let's actually make the plots
+        self.plots = [self.graphics_layout_widget.addPlot(i,0) for i in range(num_bars)]
+        
+        # Now parse the channel ranges
+        self.channel_ranges = []
+        self.channel_warning_limits = []
+        self.channel_abort_limits = []
+        for channel in self.channels:
+            try:
+                max_abs_volt = np.min(np.abs([float(channel.maximum_value),float(channel.minimum_value)]))
+            except (ValueError,TypeError):
+                max_abs_volt = 10 # Assume 10 V range on DAQ
+            try:
+                sensitivity = float(channel.sensitivity)/1000 #mV -> V
+            except (ValueError,TypeError):
+                sensitivity = 0.01 # Assume 10 mV/EU
+            max_abs_eu = max_abs_volt/sensitivity
+            try:
+                warning_limit = float(channel.warning_level)
+            except (ValueError,TypeError):
+                warning_limit = max_abs_eu*0.9 # Put out warning at 90% the max range
+            try:
+                abort_limit = float(channel.abort_level)
+            except (ValueError,TypeError):
+                abort_limit = max_abs_eu # Never abort on this channel if not specified
+            self.channel_ranges.append(max_abs_eu)
+            self.channel_warning_limits.append(warning_limit)
+            self.channel_abort_limits.append(abort_limit)
+        self.channel_ranges = np.array(self.channel_ranges)
+        self.channel_warning_limits = np.array(self.channel_warning_limits)
+        self.channel_abort_limits = np.array(self.channel_abort_limits)
+        # Display abort limit as range rather than channel if it is lower
+        abort_lower = self.channel_ranges > self.channel_abort_limits
+        self.channel_ranges[abort_lower] = self.channel_abort_limits[abort_lower]
+        
+        # Now build the plots
+        self.bar_channel_indices = []
+        for i,num_channels in enumerate(channels_per_bar):
+            try:
+                next_starting_index = self.bar_channel_indices[-1][-1]+1
+            except IndexError:
+                next_starting_index = 0
+            self.bar_channel_indices.append(next_starting_index+np.arange(num_channels))
+        # print(self.bar_channel_indices)
+        self.background_bars = []
+        self.history_bars = []
+        self.level_bars = []
+        self.history_last_update = []
+        self.aborted_channels = []
+        for indices,plot in zip(self.bar_channel_indices,self.plots):
+            plot.hideAxis('left')
+            for j,index in enumerate(indices):
+                background_bar = pyqtgraph.BarGraphItem(x=[index+1],height=1.0,width=0.9,pen=self.pen,brush=self.background_brush)
+                plot.addItem(background_bar)
+                self.background_bars.append(background_bar)
+                history_bar = pyqtgraph.BarGraphItem(x=[index+1],height=0,width=0.9,pen=self.pen,brush=self.history_brush)
+                plot.addItem(history_bar)
+                self.history_bars.append(history_bar)
+                current_bar = pyqtgraph.BarGraphItem(x=[index+1],height=0,width=0.9,pen=self.pen,brush=self.current_brush)
+                plot.addItem(current_bar)
+                self.level_bars.append(current_bar)
+                self.history_last_update.append(0)
+                self.aborted_channels.append(False)
+                
+    def update(self,channel_levels):
+        # print('Data {:}'.format(channel_levels.shape))
+        # print(channel_levels)
+        for index,(level,current_bar,history_bar,background_bar,history_last_update,warning,abort,range,aborted) in enumerate(zip(
+                channel_levels,self.level_bars,self.history_bars,self.background_bars,self.history_last_update,
+                self.channel_warning_limits,self.channel_abort_limits,self.channel_ranges,self.aborted_channels)):
+            # Set the current bar height
+            current_height = level/range
+            current_bar.setOpts(height=current_height if current_height < 1 else 1)
+            # Now look at the history bar
+            last_history_height = history_bar.opts.get('height')
+            # print(last_history_height)
+            if history_last_update > self.history_hold_frames:
+                desired_history_height = last_history_height - 1/self.history_hold_frames
+            else:
+                desired_history_height = last_history_height
+            if desired_history_height < current_height:
+                desired_history_height = current_height
+                self.history_last_update[index] = 0
+            else:
+                self.history_last_update[index] += 1
+            history_bar.setOpts(height=1 if desired_history_height > 1 else desired_history_height)
+            # Now look at the pen color
+            if level > abort or aborted:
+                current_bar.setOpts(brushes=[self.abort_brush])
+                background_bar.setOpts(brushes=[self.abort_background_brush])
+                history_bar.setOpts(brushes=[self.abort_history_brush])
+                self.aborted_channels[index] = True
+            elif level > warning:
+                current_bar.setOpts(brushes=[self.limit_brush])
+                background_bar.setOpts(brushes=[self.limit_background_brush])
+                history_bar.setOpts(brushes=[self.limit_history_brush])

@@ -33,12 +33,14 @@ import time
 
 DEBUG = False
 
+NOISE_LEVEL = 0.00000001
+
 if DEBUG:
     import glob
     import os
-    test_files_output_names = r'C:\Users\dprohe\Documents\Local_Respositories\Combined_Environments_Controller\test_data\debug\output_data_{:}.npz'
-    test_files_acquisition_names = r'C:\Users\dprohe\Documents\Local_Respositories\Combined_Environments_Controller\test_data\debug\acquire_data_{:}.npz'
-    test_files_system_name = r'C:\Users\dprohe\Documents\Local_Respositories\Combined_Environments_Controller\test_data\debug\system.npz'
+    test_files_output_names = r'debug\output_data_{:}.npz'
+    test_files_acquisition_names = r'debug\acquire_data_{:}.npz'
+    test_files_system_name = r'debug\system.npz'
     # Delete existing test files
     for str_format in [test_files_acquisition_names,test_files_output_names]:
         files = glob.glob(str_format.format('*'))
@@ -265,7 +267,7 @@ class ExodusAcquisition(HardwareAcquisition):
                      modal_forces = modal_forces,forces = this_force,
                      integration_output = sys_out,times=times_out,state = self.state,
                      response_channels = self.response_channels)
-        return output[...,::self.integration_oversample]
+        return output[...,::self.integration_oversample] + NOISE_LEVEL*np.random.randn(*output[...,::self.integration_oversample].shape)
     
     def read_remaining(self):
         """Method to read the rest of the data on the acquisition

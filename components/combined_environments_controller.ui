@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1545</width>
-    <height>681</height>
+    <width>1568</width>
+    <height>667</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,6 +17,9 @@
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QTabWidget" name="rattlesnake_tabs">
+      <property name="toolTip">
+       <string>Select portion of the Rattlesnake controller.</string>
+      </property>
       <property name="currentIndex">
        <number>0</number>
       </property>
@@ -665,107 +668,198 @@
                <row/>
                <column>
                 <property name="text">
-                 <string>Control? (Y/N)</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
                  <string>Node Number</string>
+                </property>
+                <property name="toolTip">
+                 <string>Determines the instrumentation position on the test article. While not used directly by the controller except to label plots, it is important for book-keeping and test documentation. The node number will generally correspond to a node in a test geometry or FEM.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Node Direction</string>
                 </property>
+                <property name="toolTip">
+                 <string>Determines the instrumentation direction on the test article at the position specified by the Node Number.  This is not used directly by the controller except to label plots, but it is important for book-keeping. The Node Direction will generally correspond to the node’s local coordinate system if one exists in the test geometry.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Comment</string>
+                </property>
+                <property name="toolTip">
+                 <string>Provides space for additional information about a channel that may not be captured by the Node Number and Node Direction. Be aware that the comment field of the first channel is used to specify the modal damping for virtual tests using Exodus files.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Serial Number</string>
                 </property>
+                <property name="toolTip">
+                 <string>The serial number of the instrument used for the given channel. Not used by the controller, but is important for data traceability to know which instruments were used to measure which channels.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Triax DoF</string>
+                </property>
+                <property name="toolTip">
+                 <string>The degree of freedom on a given instrument corresponding to the given channel, if applicable.  This is primarily used to distinguish between the three axes of a triaxial accelerometer, but has the potential to be used for other multi-axis instrumentation types such as strain gauge rosettes.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Sensitivity (mV/EU)</string>
                 </property>
+                <property name="toolTip">
+                 <string>The sensitivity of the instrument in millivolts per Engineering Unit. This is used to transform the acquired data from a raw voltage to a engineering quantity such as acceleration or force.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Engineering Unit</string>
+                </property>
+                <property name="toolTip">
+                 <string>The unit in which the measured signal for the given instrument will be reported. Certain hardware will limit the units that can be specified.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Make</string>
                 </property>
+                <property name="toolTip">
+                 <string>Manufacturer of the sensor, for data traceability.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Model</string>
+                </property>
+                <property name="toolTip">
+                 <string>The product name or model number of the instrument, used for data traceability.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Expiration</string>
                 </property>
+                <property name="toolTip">
+                 <string>The expiration date of the instrument’s calibration certificate. Note that this is only for data traceability; no checking of this date with the current data to ensure a valid calibration is performed by the software.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Physical Device</string>
+                </property>
+                <property name="toolTip">
+                 <string>The reference to a physical device attached to the computer.  The entries inthis field will be specific to the acquisition hardware being used for a given test.  If NI is used, this should be the device name (e.g., PXI1Slot2 or Dev3).  If this is a LAN-XI hardware, this should be the IP address of the card the channel is plugged into.  For virtual control, this column must be filled to specify that a given channel is active.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Physical Channel</string>
                 </property>
+                <property name="toolTip">
+                 <string>The reference to a channel on a physical device attached to the computer.  The entries in this column will be specific to the acquisition hardware being used for a given test.  For NI, this should be an analog input channel (e.g., ai2).  For LAN-XI, this should be the channel number of the input (e.g. 3).</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Channel Type</string>
+                </property>
+                <property name="toolTip">
+                 <string>The type of the channel being used for a given test, such as Acceleration, Force, or Voltage. The allowable entries in this column will be specific to the acquisition hardware being used for a given test.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Minimum Value (V)</string>
                 </property>
+                <property name="toolTip">
+                 <string>The minimum voltage that the data acquisition system can handle during a test. This is used to set the range on the data acquisition system. For hardware devices with symmetric ranges (e.g. ±10V), this column can be left blank.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Maximum Value (V)</string>
+                </property>
+                <property name="toolTip">
+                 <string>The maximum voltage that the data acquisition system can handle during a test. This is used to set the range on the data acquisition system. For hardware devices with symmetric ranges (e.g. ±10V), this column is used to set the maximum and minimum voltage values.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Coupling</string>
                 </property>
+                <property name="toolTip">
+                 <string>The coupling used by the data acquisition system. This may include filtering in addition to AC/DC coupling, which is dependent on the hardware being used for a given test.
+
+This is currently not used by NI, as the Channel Type will determine the coupling.
+
+For LAN-XI, this specifies filtering as well as coupling.  Valid values for LAN-XI are`DC`, `0.7 Hz`, `7.0 Hz`, `22.4 Hz`, or `Intensity`.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Excitation Source</string>
+                </property>
+                <property name="toolTip">
+                 <string>Used to specify the signal conditioning that is required by the instrument. This column is generally where the CCLD/IEPE/ICP is specified for a given hardware device.
+
+For NI, Excitation Source should be set to either `Internal` or `None`.  If set to Internal, the device will generate the ICP/CCLD/IEPE signal conditioning required by the sensor. If set to None, no signal conditioning will be provided by the hardware device.
+
+For LAN-XI, if signal conditioning is used, type `CCLD` in this column.  If none is needed, it can be left blank.</string>
                 </property>
                </column>
                <column>
                 <property name="text">
                  <string>Current Excitation (A)</string>
                 </property>
+                <property name="toolTip">
+                 <string>Used to specify the excitation current sent to the device for signal conditioning. Depending on whether the device has a fixed or variable excitation current, this field may be left empty. This can also be left empty if no signal conditioning is provided by the data acquisition system.
+
+For NI, Current Excitation should typically be set to 0.004 (4 mA) unless the sensor requires a different
+current to be provided. The Current Excitation value is only used if the Excitation Source is set to
+Internal. If set to None, no current is generated.
+
+LAN-XI does not use this field.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Feedback Device</string>
                 </property>
+                <property name="toolTip">
+                 <string>Rattlesnake requires the output signals to be measured by the controller to achieve synchronization for devices without input/output synchronization.  This means that output signals to shakers must be teed off back into an acquisition channel.
+
+For output channels, this is the reference to the output or excitation device that is being fed back into the current channel’s Physical device. If the current channel is not an output channel, it should be left empty. A populated Feedback Device column tells the controller that the given channel is an output channel.  These follow the same naming conventions as Physical Device.
+
+As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed into Analog Input PXI1Slot3 ai2, then the Physical Device for the channel would be PXI1Slot3, the Physical Channel would be ai2, the Feedback Device would be PXI1Slot4, and the Feedback Channel would be ao0.</string>
+                </property>
                </column>
                <column>
                 <property name="text">
                  <string>Feedback Channel</string>
+                </property>
+                <property name="toolTip">
+                 <string>For output channels, this is the reference to the output channel on the output or excitation device that is being fed back into the current channel’s Physical Device.
+
+As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed into Analog Input PXI1Slot3 ai2, then the Physical Device for the channel would be PXI1Slot3, the Physical Channel would be ai2, the Feedback Device would be PXI1Slot4, and the Feedback Channel would be ao0.</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Warning Level (EU)</string>
+                </property>
+                <property name="toolTip">
+                 <string>Global warning level in engineering units.  If data reaches this level, text will be displayed in the system console and the Channel Monitor will display the channel with a yellow tint.</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Abort Level (EU)</string>
+                </property>
+                <property name="toolTip">
+                 <string>If a channel reaches the specified abort level in engineering units, the controller will immediately attempt to gracefully shut itself down.</string>
                 </property>
                </column>
               </widget>
@@ -777,6 +871,9 @@
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>Specifies which channels are active for which environments.  If, for example, if a particular environment doesn't use specific shakers, they can be disabled for that environment.</string>
                </property>
                <property name="verticalScrollBarPolicy">
                 <enum>Qt::ScrollBarAlwaysOn</enum>
@@ -1305,6 +1402,9 @@
             <layout class="QHBoxLayout" name="channel_table_button_layout">
              <item>
               <widget class="QPushButton" name="load_test_file_button">
+               <property name="toolTip">
+                <string>Loads a NetCDF4 file containing test data to replicate the parameters in that test.</string>
+               </property>
                <property name="text">
                 <string>Load Test from File</string>
                </property>
@@ -1319,6 +1419,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="save_channel_table_button">
+               <property name="toolTip">
+                <string>Saves the current channel table to an Excel Spreadsheet.</string>
+               </property>
                <property name="text">
                 <string>Save Channel Table</string>
                </property>
@@ -1326,6 +1429,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="load_channel_table_button">
+               <property name="toolTip">
+                <string>Loads a channel table in the form of an Excel Spreadsheet.</string>
+               </property>
                <property name="text">
                 <string>Load Channel Table</string>
                </property>
@@ -1378,6 +1484,9 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string>Choose which hardware you will be using in the test.</string>
+               </property>
                <item>
                 <property name="text">
                  <string>NI DAQmx</string>
@@ -1385,7 +1494,17 @@
                </item>
                <item>
                 <property name="text">
-                 <string>LAN-XI</string>
+                 <string>HBK LAN-XI</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Data Physics Quattro</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Data Physics 900 Series</string>
                 </property>
                </item>
                <item>
@@ -1396,6 +1515,11 @@
                <item>
                 <property name="text">
                  <string>State Space Integration...</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SDynPy System Integration...</string>
                 </property>
                </item>
               </widget>
@@ -1409,8 +1533,17 @@
              </item>
              <item>
               <widget class="QSpinBox" name="sample_rate_selector">
+               <property name="toolTip">
+                <string>Sets the sample rate of the data acquisition system.  The bandwidth will be half this value.  If anti-aliasing filters are present, the usable bandwidth is typically the sample rate divided by 2.56</string>
+               </property>
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="minimum">
+                <number>10</number>
+               </property>
                <property name="maximum">
-                <number>100000</number>
+                <number>102400</number>
                </property>
                <property name="value">
                 <number>2048</number>
@@ -1424,6 +1557,9 @@
                  <horstretch>1</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>Select the sample rate of the LAN-XI data acquisition system, which uses powers of 2.  The LAN-XI Generator has a minimum frequency of 16,384 Hz, so the output signals are oversample by the hardware prior to being output.  The user needn't oversample their signals; this will be handled automatically by the data acquisition system.</string>
                </property>
                <property name="sizeAdjustPolicy">
                 <enum>QComboBox::AdjustToContents</enum>
@@ -1469,6 +1605,9 @@
              </item>
              <item>
               <widget class="QDoubleSpinBox" name="time_per_read_selector">
+               <property name="toolTip">
+                <string>Specify the time between reads from the data acquisition system.  Communications with hardware are computationally expensive, so we can't pull every sample off as it arrives.  We therefore allow samples to accumulate on the data acquisition system's buffer and then read every so often.  Larger values will result in the controller not falling behind, but smaller values will allow the controller to be more responsive.  Values such as 0.25 or 0.5 are typical.</string>
+               </property>
                <property name="minimum">
                 <double>0.010000000000000</double>
                </property>
@@ -1492,6 +1631,9 @@
              </item>
              <item>
               <widget class="QDoubleSpinBox" name="time_per_write_selector">
+               <property name="toolTip">
+                <string>Specify the time between writes to the data acquisition system.  Communications with hardware are computationally expensive, so we can't write every sample to the data acquisition as it is calculated or we would miss the next sample as it would take to long.  We therefore write samples to the data acquisition system buffer in chunks.  Larger values will result in the controller not falling behind, but smaller values will allow the controller to be more responsive.  Values such as 0.25 or 0.5 are typical.</string>
+               </property>
                <property name="minimum">
                 <double>0.010000000000000</double>
                </property>
@@ -1515,6 +1657,9 @@
              </item>
              <item>
               <widget class="QSpinBox" name="lanxi_maximum_acquisition_processes_selector">
+               <property name="toolTip">
+                <string>Set the number of processes to use to pull data from the LAN-XI hardware.  1 processor per 20-40 channels is typically sufficient depending on the sample rate.</string>
+               </property>
                <property name="minimum">
                 <number>1</number>
                </property>
@@ -1532,6 +1677,9 @@
              </item>
              <item>
               <widget class="QSpinBox" name="integration_oversample_selector">
+               <property name="toolTip">
+                <string>Specifies how much oversampling is used when integrating equations of motion.  Integration in Rattlesnake uses `lsim` from SciPy, which is a linear integrator and typically provides accurate results with an oversample factor of 10.</string>
+               </property>
                <property name="minimum">
                 <number>1</number>
                </property>
@@ -1561,6 +1709,9 @@
           </item>
           <item>
            <widget class="QPushButton" name="initialize_data_acquisition_button">
+            <property name="toolTip">
+             <string>Stores the specified data acquisition settings to the controller, initializes the hardware, and advances the software to the next tab.</string>
+            </property>
             <property name="text">
              <string>Initialize Data Acquisition</string>
             </property>
@@ -1608,6 +1759,9 @@
           </item>
           <item>
            <widget class="QPushButton" name="initialize_environments_button">
+            <property name="toolTip">
+             <string>Stores all environment information specified on this tab to the controller and proceeds to the next part of the controller.</string>
+            </property>
             <property name="text">
              <string>Initialize Environments</string>
             </property>
@@ -1675,20 +1829,32 @@
                <property name="text">
                 <string>Timestamp (s)</string>
                </property>
+               <property name="toolTip">
+                <string>Time in seconds at which the event will occur.</string>
+               </property>
               </column>
               <column>
                <property name="text">
                 <string>Environment</string>
+               </property>
+               <property name="toolTip">
+                <string>Environment in which the event will occur.</string>
                </property>
               </column>
               <column>
                <property name="text">
                 <string>Operation</string>
                </property>
+               <property name="toolTip">
+                <string>Operation to perform when the specified time is reached.</string>
+               </property>
               </column>
               <column>
                <property name="text">
                 <string>Data</string>
+               </property>
+               <property name="toolTip">
+                <string>Any additional data needed by the operation.</string>
                </property>
               </column>
              </widget>
@@ -1697,6 +1863,9 @@
              <layout class="QHBoxLayout" name="profile_button_layout">
               <item>
                <widget class="QPushButton" name="save_profile_button">
+                <property name="toolTip">
+                 <string>Saves the current test timeline to an Excel spreadsheet.</string>
+                </property>
                 <property name="text">
                  <string>Save Profile...</string>
                 </property>
@@ -1704,6 +1873,9 @@
               </item>
               <item>
                <widget class="QPushButton" name="load_profile_button">
+                <property name="toolTip">
+                 <string>Loads a test timeline from an Excel Spreadsheet.</string>
+                </property>
                 <property name="text">
                  <string>Load Profile...</string>
                 </property>
@@ -1711,6 +1883,9 @@
               </item>
               <item>
                <widget class="QPushButton" name="add_profile_event_button">
+                <property name="toolTip">
+                 <string>Adds a new event to the test timeline that will be automatically executed.</string>
+                </property>
                 <property name="text">
                  <string>Add Event</string>
                 </property>
@@ -1718,6 +1893,9 @@
               </item>
               <item>
                <widget class="QPushButton" name="remove_profile_event_button">
+                <property name="toolTip">
+                 <string>Removes the selected event from the test timeline.</string>
+                </property>
                 <property name="text">
                  <string>Remove Event</string>
                 </property>
@@ -1749,6 +1927,9 @@
           </item>
           <item>
            <widget class="QPushButton" name="initialize_profile_button">
+            <property name="toolTip">
+             <string>Stores the test timeline information to the controller and proceeds to the next tab.</string>
+            </property>
             <property name="text">
              <string>Initialize Profile</string>
             </property>
@@ -1769,8 +1950,12 @@
            <layout class="QHBoxLayout" name="streaming_options_layout">
             <item>
              <widget class="QRadioButton" name="no_streaming_radiobutton">
+              <property name="toolTip">
+               <string>No time data will be stored to disk.</string>
+              </property>
               <property name="text">
-               <string>No Streaming</string>
+               <string>No
+Streaming</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -1782,8 +1967,12 @@
             </item>
             <item>
              <widget class="QRadioButton" name="profile_streaming_radiobutton">
+              <property name="toolTip">
+               <string>Data will only be saved to disk after recieving a Global Start Streaming event from the Test Profile.</string>
+              </property>
               <property name="text">
-               <string>Start Streaming from Test Profile Instruction</string>
+               <string>Start Streaming from
+Test Profile Instruction</string>
               </property>
               <attribute name="buttonGroup">
                <string notr="true">streaming_button_group</string>
@@ -1794,6 +1983,9 @@
              <layout class="QHBoxLayout" name="streaming_environment_target_layout">
               <item>
                <widget class="QRadioButton" name="test_level_streaming_radiobutton">
+                <property name="toolTip">
+                 <string>Starts streaming data to disk when the specified environment hits its target test level.  This is useful if the user will step up level slowly and doesn't want to save a ton of data before the test level is reached.</string>
+                </property>
                 <property name="text">
                  <string>Start Streaming at</string>
                 </property>
@@ -1806,7 +1998,11 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="streaming_environment_select_combobox"/>
+               <widget class="QComboBox" name="streaming_environment_select_combobox">
+                <property name="toolTip">
+                 <string>Selects the environment to use if streaming is based on an environment hitting a desired test level.</string>
+                </property>
+               </widget>
               </item>
               <item>
                <widget class="QLabel" name="streaming_environment_target_end_text_label">
@@ -1819,8 +2015,12 @@
             </item>
             <item>
              <widget class="QRadioButton" name="immediate_streaming_radiobutton">
+              <property name="toolTip">
+               <string>Starts streaming data to disk when the first environment is started.</string>
+              </property>
               <property name="text">
-               <string>Start Streaming Immediately</string>
+               <string>Start Streaming
+Immediately</string>
               </property>
               <property name="checked">
                <bool>false</bool>
@@ -1830,12 +2030,43 @@
               </attribute>
              </widget>
             </item>
+            <item>
+             <widget class="QRadioButton" name="manual_streaming_radiobutton">
+              <property name="toolTip">
+               <string>Allows the user to select when to save data manually.  User can start and stop streaming data multiple times in one test.</string>
+              </property>
+              <property name="text">
+               <string>Manually Start/Stop
+Streaming</string>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">streaming_button_group</string>
+              </attribute>
+             </widget>
+            </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QPushButton" name="manual_streaming_trigger_button">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Start or stop streaming to disk.</string>
+            </property>
+            <property name="text">
+             <string>Start
+Streaming</string>
+            </property>
+           </widget>
           </item>
           <item>
            <layout class="QHBoxLayout" name="streaming_file_display_layout">
             <item>
              <widget class="QPushButton" name="select_streaming_file_button">
+              <property name="toolTip">
+               <string>Select a file to store data to on the computer.</string>
+              </property>
               <property name="text">
                <string>Select Streaming File...</string>
               </property>
@@ -1848,6 +2079,9 @@
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>File to which data will be streamed.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -1905,6 +2139,9 @@
              <font>
               <pointsize>16</pointsize>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Arms the data acquisition system.  This will start the data acquisition system.  Until an environment is started, the data acquisition system will only output zero voltage.</string>
             </property>
             <property name="text">
              <string>Arm Data Acquisition</string>
@@ -1964,6 +2201,9 @@
               <pointsize>16</pointsize>
              </font>
             </property>
+            <property name="toolTip">
+             <string>Stops the data acquisition system.  This button must be pressed to stop streaming data to disk, unless Manual Streaming is selected.</string>
+            </property>
             <property name="text">
              <string>Disarm Data Acquisition</string>
             </property>
@@ -2012,6 +2252,9 @@
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="toolTip">
+                  <string>Starts running the specified test timeline.  Listed events will occur automatically at their prescribed timestamps.</string>
+                 </property>
                  <property name="text">
                   <string>Start Profile</string>
                  </property>
@@ -2022,6 +2265,9 @@
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="toolTip">
+                  <string>Stops the profile from running.</string>
+                 </property>
                  <property name="text">
                   <string>Stop Profile</string>
                  </property>
@@ -2031,6 +2277,9 @@
              </item>
              <item>
               <widget class="QCheckBox" name="show_profile_change_checkbox">
+               <property name="toolTip">
+                <string>If checked, the Environment displayed on the Run Test tab will change to the environment that the profile event occured in.</string>
+               </property>
                <property name="text">
                 <string>Switch Environment to Profile Event</string>
                </property>
@@ -2091,6 +2340,42 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <item>
      <layout class="QHBoxLayout" name="stop_program_button_layout">
       <item>
+       <widget class="QPushButton" name="channel_monitor_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="toolTip">
+         <string>Open up channel monitor to see the levels of each channel compared to their maximum values.</string>
+        </property>
+        <property name="text">
+         <string>Channel Monitor</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="signal_monitor_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Signal Monitor</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="global_button_spacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QPushButton" name="stop_program_button">
         <property name="palette">
          <palette>
@@ -2134,6 +2419,9 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
           <pointsize>16</pointsize>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Stop the program</string>
+        </property>
         <property name="text">
          <string>Stop Program</string>
         </property>
@@ -2148,7 +2436,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1545</width>
+     <width>1568</width>
      <height>21</height>
     </rect>
    </property>

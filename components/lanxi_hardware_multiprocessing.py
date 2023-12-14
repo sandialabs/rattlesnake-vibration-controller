@@ -30,9 +30,6 @@ import multiprocessing as mp
 import os
 from math import ceil
 
-import sys
-sys.path.append(r'C:\Users\dprohe\Documents\Local_Respositories\Combined_Environments_Controller')
-
 from .abstract_hardware import HardwareAcquisition,HardwareOutput
 from .utilities import Channel,DataAcquisitionParameters
 
@@ -44,7 +41,7 @@ LANXI_STATE_REPORT = 10
 VALID_FILTERS = ['DC', '0.7 Hz', '7.0 Hz', '22.4 Hz', 'Intensity']
 VALID_RANGES = ['0.316', '1', '10', '31.6']
 HEADER_LENGTH = 28
-BUFFER_SIZE = 3.5
+BUFFER_SIZE = 2.5
 
 LANXI_STATE_SHUTDOWN = {
     'RecorderRecording':'/rest/rec/measurements/stop',
@@ -387,13 +384,16 @@ class LanXIAcquisition(HardwareAcquisition):
         else:
             self.modules_per_process = modules_per_process_floor + 1
         self.total_processes = (len(self.acquisition_map) // self.modules_per_process) + (0 if len(self.acquisition_map) % self.modules_per_process == 0 else 1)
-        self.acquisition_delay = (BUFFER_SIZE+1)*test_data.samples_per_write/test_data.output_oversample
+        self.acquisition_delay = (BUFFER_SIZE+2)*test_data.samples_per_write/test_data.output_oversample
 
     def start(self):
         """Method to start acquiring data from the hardware"""
         self.sockets = {}
         self.processes = {}
         self.process_data_queues = {}
+        # Apply the trigger for multi-frame acquisition
+        if len(set(self.acquisition_map)|set(self.output_map)) > 1:
+            requests.put('http://'+self.master_address+'/rest/rec/apply')
         # Collect the sockets
         for acquisition_device in self.acquisition_map:
             response = requests.get('http://'+acquisition_device+'/rest/rec/destination/socket')
@@ -522,6 +522,7 @@ class LanXIAcquisition(HardwareAcquisition):
             print('Recovering process {:}'.format(acquisition_device))
             process.join()
             print('Process {:} recovered'.format(acquisition_device))
+        print('All processes recovered, ready for next acquire.')
         self.processes = {}
         self.process_data_queues = {}
         self.interpretations = None
@@ -783,9 +784,6 @@ class LanXIOutput(HardwareOutput):
             requests.put('http://'+self.master_address+'/rest/rec/generator/start',json=master_json)
         print('States after Generator Started')
         self._get_states()
-        if len(set(self.acquisition_map)|set(self.output_map)) > 1:
-            requests.put('http://'+self.master_address+'/rest/rec/apply')
-            
     
     def write(self,data):
         """Method to write a frame of data to the hardware"""
@@ -819,6 +817,8 @@ class LanXIOutput(HardwareOutput):
         
         
     def set_generators(self):
+        if len(self.output_map) == 0:
+            return
         master_json = None
         for generator_device,generator_channel_dict in self.output_map.items():
             json = {

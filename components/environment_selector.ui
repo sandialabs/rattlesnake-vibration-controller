@@ -41,6 +41,9 @@
        <layout class="QGridLayout" name="button_layout">
         <item row="1" column="0" colspan="2">
          <widget class="QPushButton" name="remove_environment_button">
+          <property name="toolTip">
+           <string>Removes an environment from the test.</string>
+          </property>
           <property name="text">
            <string>Remove Selected Environment</string>
           </property>
@@ -48,6 +51,9 @@
         </item>
         <item row="3" column="1">
          <widget class="QPushButton" name="save_profile_template_button">
+          <property name="toolTip">
+           <string>Saves a template profile spreadsheet with the specified environments, which can be filled out and loaded back into the software so the user doesn't need to fill out the graphical user interface.</string>
+          </property>
           <property name="text">
            <string>Save Profile Template...</string>
           </property>
@@ -55,6 +61,9 @@
         </item>
         <item row="3" column="0">
          <widget class="QPushButton" name="load_profile_button">
+          <property name="toolTip">
+           <string>Loads an Excel Spreadsheet containing channel table, environment information, and test timeline data.</string>
+          </property>
           <property name="text">
            <string>Load Profile...</string>
           </property>
@@ -69,6 +78,9 @@
         </item>
         <item row="0" column="0" colspan="2">
          <widget class="QPushButton" name="add_environment_button">
+          <property name="toolTip">
+           <string>Adds an environment to the test.</string>
+          </property>
           <property name="text">
            <string>Add Environment</string>
           </property>

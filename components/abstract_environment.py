@@ -22,11 +22,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from abc import ABC,abstractmethod
 from .utilities import Channel,VerboseMessageQueue,GlobalCommands,DataAcquisitionParameters
 from typing import List
 from multiprocessing.queues import Queue
+import multiprocessing as mp
 from datetime import datetime
 import traceback
 import os
@@ -360,7 +361,9 @@ class AbstractEnvironment(ABC):
                  controller_communication_queue : VerboseMessageQueue,
                  log_file_queue : Queue,
                  data_in_queue : Queue,
-                 data_out_queue : Queue):
+                 data_out_queue : Queue,
+                 acquisition_active : mp.Value,
+                 output_active : mp.Value):
         self._environment_name = environment_name
         self._command_queue = command_queue
         self._gui_update_queue = gui_update_queue
@@ -372,6 +375,18 @@ class AbstractEnvironment(ABC):
                              GlobalCommands.INITIALIZE_DATA_ACQUISITION:self.initialize_data_acquisition_parameters,
                              GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS:self.initialize_environment_test_parameters,
                              GlobalCommands.STOP_ENVIRONMENT:self.stop_environment}
+        self._acquisition_active = acquisition_active
+        self._output_active = output_active
+
+    @property
+    def acquisition_active(self):
+        # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
+        return bool(self._acquisition_active.value)
+
+    @property
+    def output_active(self):
+        # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
+        return bool(self._output_active.value)
 
     @abstractmethod
     def initialize_data_acquisition_parameters(self,data_acquisition_parameters : DataAcquisitionParameters):
@@ -557,7 +572,9 @@ def run_process(environment_name : str,
                 controller_communication_queue : VerboseMessageQueue,
                 log_file_queue : Queue,
                 data_in_queue : Queue,
-                data_out_queue : Queue):
+                data_out_queue : Queue,
+                acquisition_active : mp.Value,
+                output_active : mp.Value):
     """A function called by ``multiprocessing.Process`` to start the environment
     
     This function should not be called directly, but used as a template for
@@ -596,5 +613,7 @@ def run_process(environment_name : str,
             controller_communication_queue,
             log_file_queue,
             data_in_queue,
-            data_out_queue)
+            data_out_queue,
+            acquisition_active,
+            output_active)
     process_class.run()

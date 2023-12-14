@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Synthetic "hardware" that allows the responses to be simulated by integrating
-linear equations of motion.
+linear equations of motion using state space matrices, A, B, C, and D.
 
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
@@ -183,8 +183,6 @@ class StateSpaceAcquisition(HardwareAcquisition):
                 forces = np.zeros((self.force_buffer.shape[-1],self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer,forces.T),axis=0)
             
-            
-        
         # Now extract a force that is the correct size
         this_force = self.force_buffer[:self.times.size]
         # And leave the rest for next time

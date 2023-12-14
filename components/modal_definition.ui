@@ -1,0 +1,1950 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1176</width>
+    <height>660</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="main_layout">
+     <item>
+      <layout class="QVBoxLayout" name="parameter_summary_layout">
+       <item>
+        <widget class="QGroupBox" name="sampling_parameters_groupbox">
+         <property name="title">
+          <string>Sampling Parameters</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="2">
+           <layout class="QVBoxLayout" name="samples_per_read_layout">
+            <item>
+             <widget class="QLabel" name="samples_per_acquire_label">
+              <property name="text">
+               <string>Samples Per Acquire</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="samples_per_acquire_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of new samples that the control process acquires at a time.  This added to the overlapped samples will result in the Samples per Frame.  This will be equal to the Samples per Frame * (1 - Overlap Percentage / 100).  This need not correspond to the read or write size of the data acquisition system as the control process acquisition is buffered.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="sample_rate_layout">
+            <item>
+             <widget class="QLabel" name="sample_rate_display_label">
+              <property name="text">
+               <string>Sample Rate</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="sample_rate_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="suffix">
+               <string> Hz</string>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <layout class="QVBoxLayout" name="nyquist_frequency_layout">
+            <item>
+             <widget class="QLabel" name="nyquist_frequency_label">
+              <property name="text">
+               <string>Nyquist Frequency</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="nyquist_frequency_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>The Nyquist Frequency is the highest frequency that can be analyzed using frequency domain techniques.  It is the Sample Rate / 2.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="suffix">
+               <string> Hz</string>
+              </property>
+              <property name="maximum">
+               <double>1000000.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="1">
+           <layout class="QVBoxLayout" name="fft_lines_layout">
+            <item>
+             <widget class="QLabel" name="fft_lines_label">
+              <property name="text">
+               <string>FFT Lines</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="fft_lines_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>The number of frequency lines in the Fast Fourier Transform output, which is the number of frequency lines that will be in the Transfer Function and CPSD matrices.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="2">
+           <layout class="QVBoxLayout" name="frequency_spacing_layout">
+            <item>
+             <widget class="QLabel" name="frequency_spacing_label">
+              <property name="text">
+               <string>Frequency Spacing</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="frequency_spacing_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>The frequency resolution of the measurement, computed by 1/Frame Time.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="suffix">
+               <string> Hz</string>
+              </property>
+              <property name="maximum">
+               <double>1000000.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="1">
+           <layout class="QVBoxLayout" name="samples_per_frame_layout">
+            <item>
+             <widget class="QLabel" name="samples_per_frame_label">
+              <property name="text">
+               <string>Samples Per Frame</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="samples_per_frame_selector">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Samples per measurement frame in the signal processing. The measurement frame is the `block` of data upon which the signal processing will be performed. This value will determine the window size. A larger value will result in more frequency lines in the FFT analysis. This need not correspond to the read or write size in the data acquisition system.</string>
+              </property>
+              <property name="readOnly">
+               <bool>false</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::UpDownArrows</enum>
+              </property>
+              <property name="keyboardTracking">
+               <bool>false</bool>
+              </property>
+              <property name="minimum">
+               <number>10</number>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+              <property name="singleStep">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="5">
+           <layout class="QVBoxLayout" name="frame_time_layout">
+            <item>
+             <widget class="QLabel" name="frame_time_label">
+              <property name="text">
+               <string>Frame Time</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="frame_time_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Time to acquire each measurement frame in seconds.  This is the Samples per Frame divided by the Sample Rate.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="suffix">
+               <string> s</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="system_id_groupbox">
+         <property name="title">
+          <string>System ID Parameters</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="averaging_type_layout">
+            <item>
+             <widget class="QLabel" name="averaging_type_label">
+              <property name="text">
+               <string>Averaging Type</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="system_id_averaging_scheme_selector">
+              <property name="toolTip">
+               <string>Specifies how averaging is performed.  Linear averaging weights all measurement frames equally.  Exponential averaging weights more recent frames more heavily.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Linear</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Exponential</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="2">
+           <layout class="QVBoxLayout" name="overlap_percentage_layout">
+            <item>
+             <widget class="QLabel" name="overlap_percentage_label">
+              <property name="text">
+               <string>Overlap Percentage</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="system_id_overlap_percentage_selector">
+              <property name="toolTip">
+               <string>The percentage overlap used between measurement frames.  A 25% overlap means the last quarter of the previous measurement frame is used as the first quarter of the new measurement frame.</string>
+              </property>
+              <property name="suffix">
+               <string>%</string>
+              </property>
+              <property name="value">
+               <double>0.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="2">
+           <layout class="QVBoxLayout" name="averaging_coefficient_layout">
+            <item>
+             <widget class="QLabel" name="averaging_coefficient_label">
+              <property name="text">
+               <string>Averaging Coefficient</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="system_id_averaging_coefficient_selector">
+              <property name="toolTip">
+               <string>Weighting applied to the most recent average for Exponential Averaging.</string>
+              </property>
+              <property name="decimals">
+               <number>3</number>
+              </property>
+              <property name="minimum">
+               <double>0.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>0.100000000000000</double>
+              </property>
+              <property name="value">
+               <double>0.100000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <layout class="QVBoxLayout" name="frf_technique_layout">
+            <item>
+             <widget class="QLabel" name="frf_technique_label">
+              <property name="text">
+               <string>FRF Technique</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="system_id_frf_technique_selector">
+              <property name="toolTip">
+               <string>Technique to compute the Transfer Function. H1 averages noise on the response channels.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>H1</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="1">
+           <layout class="QVBoxLayout" name="system_id_averages_layout">
+            <item>
+             <widget class="QLabel" name="system_id_averages_label">
+              <property name="text">
+               <string>Number of Averages</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="system_id_frames_to_average_selector">
+              <property name="toolTip">
+               <string>The number of averages used for Linear Averaging, and the number of frames that will be used for the initial System Identification step for Exponential Averaging.</string>
+              </property>
+              <property name="maximum">
+               <number>9999</number>
+              </property>
+              <property name="value">
+               <number>30</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="1">
+           <layout class="QVBoxLayout" name="frf_window_layout">
+            <item>
+             <widget class="QLabel" name="frf_window_label">
+              <property name="text">
+               <string>FRF Window</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="system_id_transfer_function_computation_window_selector">
+              <property name="toolTip">
+               <string>The window function applied to the measurement frames when computing the transfer functions.
+
+Rectangle: No window is used, all samples are weighted equally.  Used for periodic signals or signals that start and end at zero in the measurement frame.
+
+Hann: Window that weights the start and end of the frame to zero and the middle to one.  Useful for Random excitation to reduce leakage.
+
+Exponential: Window that weights the beginning of the frame more heavily than the end of the frame.  Useful for impact testing where the test article's response doesn't decay by itself by the end of the measurement frame.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Rectangle</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Hann</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Exponential</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="0" colspan="3">
+           <layout class="QHBoxLayout" name="window_value_layout">
+            <item>
+             <widget class="QLabel" name="window_value_label">
+              <property name="text">
+               <string>Window value at frame end:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="window_value_selector">
+              <property name="toolTip">
+               <string>Value of the exponential window at the end of the measurement frame, which is used to specify how quickly the exponential window decays.</string>
+              </property>
+              <property name="suffix">
+               <string>%</string>
+              </property>
+              <property name="minimum">
+               <double>0.010000000000000</double>
+              </property>
+              <property name="value">
+               <double>25.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="window_value_spacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="triggering_groupbox">
+         <property name="title">
+          <string>Triggering</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="4" column="1">
+           <layout class="QVBoxLayout" name="hysteresis_samples_layout">
+            <item>
+             <widget class="QLabel" name="hysteresis_samples_label">
+              <property name="text">
+               <string>Hysteresis Samples</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="hysteresis_samples_display">
+              <property name="toolTip">
+               <string>Number of samples that the trigger channel must be below the Hysteresis level.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="1">
+           <layout class="QVBoxLayout" name="pretrigger_layout">
+            <item>
+             <widget class="QLabel" name="pretrigger_label">
+              <property name="text">
+               <string>Pretrigger</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="pretrigger_selector_layout">
+              <item>
+               <widget class="QDoubleSpinBox" name="pretrigger_selector">
+                <property name="toolTip">
+                 <string>Amount of time in the measurement frame before the trigger occurs.  The system retains a running buffer of recently acquired data looking for the trigger.  When the trigger is found, the specified percentage of the frame is data that occured before the trigger.  This is used to capture, for example, the entire transient of a shock, some of which may occur before the trigger depending on the trigger level.</string>
+                </property>
+                <property name="suffix">
+                 <string>%</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <layout class="QVBoxLayout" name="trigger_channel_layout">
+            <item>
+             <widget class="QLabel" name="trigger_channel_label">
+              <property name="text">
+               <string>Trigger Channel</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="trigger_channel_selector">
+              <property name="toolTip">
+               <string>Select the channel to use as a trigger.</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="2">
+           <layout class="QVBoxLayout" name="wait_for_steady_layout">
+            <item>
+             <widget class="QLabel" name="wait_for_steady_label">
+              <property name="text">
+               <string>Wait for Steady State</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="wait_for_steady_selector_layout">
+              <item>
+               <widget class="QDoubleSpinBox" name="wait_for_steady_selector">
+                <property name="toolTip">
+                 <string>Amount of time to wait for the measurement to achieve a steady state response prior to performing signal processing operations.</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="wait_for_steady_selector_label">
+                <property name="text">
+                 <string>s</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="1">
+           <layout class="QVBoxLayout" name="trigger_level_voltage_layout">
+            <item>
+             <widget class="QLabel" name="trigger_level_voltage_label">
+              <property name="text">
+               <string>Trigger Level (V)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="trigger_level_voltage_display">
+              <property name="toolTip">
+               <string>Level to trigger at in volts.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="triggering_type_layout">
+            <item>
+             <widget class="QLabel" name="triggering_type_label">
+              <property name="text">
+               <string>Triggering Type</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="triggering_type_selector">
+              <property name="toolTip">
+               <string>Type of trigger used for the analysis.
+
+Free Run: No triggering is used.
+
+First Frame: Triggering only starts the first measurement frame and then the measurement proceeds as if it were a Free Run.
+
+Every Frame: The measurement waits for a trigger for every measurement frame.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Free Run</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>First Frame</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Every Frame</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="1">
+           <layout class="QVBoxLayout" name="acceptance_layout">
+            <item>
+             <widget class="QLabel" name="acceptance_label">
+              <property name="text">
+               <string>Acceptance</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="acceptance_selector">
+              <property name="toolTip">
+               <string>Determines how measurement frames are accepted or rejected.
+
+Accept All: Accepts all measurement frames
+
+Manual: Allows the user to specify whether the recently obtained measurement frame should be accepted or rejected.
+
+Autoreject...: Allows the user to load in a Python function to automatically accept or reject the measurement frame based off of arbitrary criteria.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Accept All</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Manual</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Autoreject...</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="0">
+           <layout class="QVBoxLayout" name="trigger_level_layout">
+            <item>
+             <widget class="QLabel" name="trigger_level_label">
+              <property name="text">
+               <string>Trigger Level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="trigger_level_selector_layout">
+              <item>
+               <widget class="QDoubleSpinBox" name="trigger_level_selector">
+                <property name="toolTip">
+                 <string>Level to trigger at as a percentage of the range of the channel.</string>
+                </property>
+                <property name="suffix">
+                 <string>%</string>
+                </property>
+                <property name="minimum">
+                 <double>-99.989999999999995</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="2">
+           <layout class="QVBoxLayout" name="trigger_level_eu_layout">
+            <item>
+             <widget class="QLabel" name="trigger_level_eu_label">
+              <property name="text">
+               <string>Trigger Level (EU)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="trigger_level_eu_display">
+              <property name="toolTip">
+               <string>Level to trigger at in Engineering Units.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="0">
+           <layout class="QVBoxLayout" name="hysteresis_layout">
+            <item>
+             <widget class="QLabel" name="hysteresis_label">
+              <property name="text">
+               <string>Hysteresis Level</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="hysteresis_selector_layout">
+              <item>
+               <widget class="QDoubleSpinBox" name="hysteresis_selector">
+                <property name="toolTip">
+                 <string>Level that the signal must return to prior to a new trigger being able to be accepted.  This ensures that the system must return to some nominal state prior to a new trigger being obtained.  Specified in percentage of the range of the channel.</string>
+                </property>
+                <property name="suffix">
+                 <string>%</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="1">
+           <layout class="QVBoxLayout" name="hysteresis_voltage_layout">
+            <item>
+             <widget class="QLabel" name="hysteresis_voltage_label">
+              <property name="text">
+               <string>Hysteresis Level (V)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="hysteresis_voltage_display">
+              <property name="toolTip">
+               <string>Level that the trigger channel must fall below to achieve a subsequent trigger in volts.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="2">
+           <layout class="QVBoxLayout" name="hysteresis_eu_layout">
+            <item>
+             <widget class="QLabel" name="hysteresis_eu_label">
+              <property name="text">
+               <string>Hysteresis Level (EU)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="hysteresis_eu_display">
+              <property name="toolTip">
+               <string>Level that the trigger channel must fall below to achieve a subsequent trigger in Engineering Units.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="2">
+           <layout class="QVBoxLayout" name="trigger_slope_layout">
+            <item>
+             <widget class="QLabel" name="trigger_slope_label">
+              <property name="text">
+               <string>Trigger Slope</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="trigger_slope_selector">
+              <property name="toolTip">
+               <string>Slope of the trigger.  If the slope is Positive, it will look for a rising signal to trigger the measurement.  If the trigger slope is Negative, it will look for a falling signal to trigger the measurement.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Positive</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Negative</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="4" column="2">
+           <layout class="QVBoxLayout" name="hysteresis_time_layout">
+            <item>
+             <widget class="QLabel" name="hysteresis_time_label">
+              <property name="text">
+               <string>Hysteresis Time (s)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="hysteresis_time_display">
+              <property name="toolTip">
+               <string>Amount of time that the trigger channel must be below the Hysteresis level.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
+              <property name="maximum">
+               <double>100000.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="4" column="0">
+           <layout class="QVBoxLayout" name="hysteresis_length_layout">
+            <item>
+             <widget class="QLabel" name="hysteresis_length_label">
+              <property name="text">
+               <string>Hysteresis Frame %</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="hysteresis_length_selector">
+              <property name="toolTip">
+               <string>Percentage of the measurement frame that the signal must be below the Hysteresis value in order to accept a new trigger.  Useful for Burst Random excitation where you don't want to accidentally trigger midway through the burst.</string>
+              </property>
+              <property name="suffix">
+               <string>%</string>
+              </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="channel_information_groupbox">
+         <property name="title">
+          <string>Channel Information</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="1">
+           <layout class="QVBoxLayout" name="reference_channels_layout">
+            <item>
+             <widget class="QLabel" name="reference_channels_label">
+              <property name="text">
+               <string>Reference Channels</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="reference_channels_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of reference channels used to compute frequency response function</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="2">
+           <layout class="QVBoxLayout" name="output_channels_layout">
+            <item>
+             <widget class="QLabel" name="output_channels_label">
+              <property name="text">
+               <string>Output Channels</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="output_channels_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of output channels in the current test.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="response_channels_layout">
+            <item>
+             <widget class="QLabel" name="response_channels_label">
+              <property name="text">
+               <string>Response Channels</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="response_channels_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of response channels used when computing frequency response functions.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="parameter_spacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="reference_channels_groupbox">
+       <property name="title">
+        <string>Channel Selections</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QTableWidget" name="reference_channels_selector">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::AdjustToContents</enum>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>70</number>
+          </attribute>
+          <attribute name="horizontalHeaderMinimumSectionSize">
+           <number>70</number>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>Enabled</string>
+           </property>
+           <property name="toolTip">
+            <string>If checked, the given channel is enabled for the measurement.</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Reference</string>
+           </property>
+           <property name="toolTip">
+            <string>If checked, the given channel is used as a reference for computing frequency response functions.</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Channel</string>
+           </property>
+           <property name="toolTip">
+            <string>Name of the channel used by the Modal Environment</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="button_grid">
+          <item row="1" column="0">
+           <widget class="QPushButton" name="disable_selected_button">
+            <property name="toolTip">
+             <string>Disables selected channels.</string>
+            </property>
+            <property name="text">
+             <string>Disable
+Selected</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="enable_selected_button">
+            <property name="toolTip">
+             <string>Enables selected channels.</string>
+            </property>
+            <property name="text">
+             <string>Enable
+Selected</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="check_selected_button">
+            <property name="toolTip">
+             <string>Makes selected channels references.</string>
+            </property>
+            <property name="text">
+             <string>Check Selected
+References</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="uncheck_selected_button">
+            <property name="toolTip">
+             <string>Makes selected channels responses.</string>
+            </property>
+            <property name="text">
+             <string>Uncheck Selected
+References</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="signal_generator_layout">
+       <item>
+        <widget class="QGroupBox" name="signal_generator_groupbox">
+         <property name="title">
+          <string>Signal Generator</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_12">
+          <item>
+           <widget class="QTabWidget" name="signal_generator_selector">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>Type of signal that will be output.</string>
+            </property>
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <widget class="QWidget" name="no_excitation_tab">
+             <attribute name="title">
+              <string>No Signal Generation</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_18">
+              <item>
+               <widget class="QLabel" name="no_excitation_label">
+                <property name="text">
+                 <string>No signal will be generated</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="random_excitation_tab">
+             <attribute name="title">
+              <string>Random</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <layout class="QVBoxLayout" name="random_rms_layout">
+                <item>
+                 <widget class="QLabel" name="random_rms_label">
+                  <property name="text">
+                   <string>RMS</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="random_rms_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="random_rms_selector">
+                    <property name="toolTip">
+                     <string>RMS voltage level of the Random signal</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>10.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="random_rms_selector_label">
+                    <property name="text">
+                     <string>V</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="random_frequency_range_layout">
+                <item>
+                 <widget class="QLabel" name="random_frequency_range_label">
+                  <property name="text">
+                   <string>Frequency Range</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="random_frequency_range_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="random_min_frequency_selector">
+                    <property name="toolTip">
+                     <string>Minimum frequency cutoff for the random vibration signal.</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="random_frequency_range_selector_label">
+                    <property name="text">
+                     <string>--</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QDoubleSpinBox" name="random_max_frequency_selector">
+                    <property name="toolTip">
+                     <string>Maximum frequency cutoff for the random vibration signal.</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="random_spacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="burst_random_excitation_tab">
+             <attribute name="title">
+              <string>Burst Random</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <layout class="QVBoxLayout" name="burst_rms_layout">
+                <item>
+                 <widget class="QLabel" name="burst_rms_label">
+                  <property name="text">
+                   <string>RMS</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="burst_rms_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="burst_rms_selector">
+                    <property name="toolTip">
+                     <string>RMS voltage of the burst portion of the excitation</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>10.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="burst_rms_selector_label">
+                    <property name="text">
+                     <string>V</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="burst_frequency_range_layout">
+                <item>
+                 <widget class="QLabel" name="burst_frequency_range_label">
+                  <property name="text">
+                   <string>Frequency Range</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="burst_frequency_range_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="burst_min_frequency_selector">
+                    <property name="toolTip">
+                     <string>Minimum frequency of the burst excitation</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="burst_frequency_range_selector_label">
+                    <property name="text">
+                     <string>--</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QDoubleSpinBox" name="burst_max_frequency_selector">
+                    <property name="toolTip">
+                     <string>Maximum frequency of the burst excitation.</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="burst_on_percentage_layout">
+                <item>
+                 <widget class="QLabel" name="burst_on_percentage_label">
+                  <property name="text">
+                   <string>On Percentage</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="burst_on_percentage_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="burst_on_percentage_selector">
+                    <property name="toolTip">
+                     <string>Percentage of the measurement frame that the burst is active for.</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>%</string>
+                    </property>
+                    <property name="decimals">
+                     <number>2</number>
+                    </property>
+                    <property name="maximum">
+                     <double>100.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>50.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="burst_spacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="pseudorandom_tab">
+             <attribute name="title">
+              <string>Pseudorandom</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <item>
+               <layout class="QVBoxLayout" name="pseudorandom_rms_layout">
+                <item>
+                 <widget class="QLabel" name="pseudorandom_rms_label">
+                  <property name="text">
+                   <string>RMS</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="pseudorandom_rms_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="pseudorandom_rms_selector">
+                    <property name="toolTip">
+                     <string>RMS voltage of the pseudorandom excitation</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>10.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="pseudorandom_rms_selector_label">
+                    <property name="text">
+                     <string>V</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="pseudorandom_frequency_range_layout">
+                <item>
+                 <widget class="QLabel" name="pseudorandom_frequency_range_label">
+                  <property name="text">
+                   <string>Frequency Range</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="pseudorandom_frequency_range_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="pseudorandom_min_frequency_selector">
+                    <property name="toolTip">
+                     <string>Minimum frequency of the pseudorandom excitation</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="pseudorandom_frequency_range_selector_label">
+                    <property name="text">
+                     <string>--</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QDoubleSpinBox" name="pseudorandom_max_frequency_selector">
+                    <property name="toolTip">
+                     <string>Maximum frequency of the pseudorandom excitation.</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="pseudorandom_spacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="chirp_tab">
+             <attribute name="title">
+              <string>Chirp</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout_8">
+              <item>
+               <layout class="QVBoxLayout" name="chirp_level_layout">
+                <item>
+                 <widget class="QLabel" name="chirp_level_label">
+                  <property name="text">
+                   <string>Peak Level</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="chirp_level_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="chirp_level_selector">
+                    <property name="toolTip">
+                     <string>Peak level of the chirp signal</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>10.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="chirp_level_selector_label">
+                    <property name="text">
+                     <string>V</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="chirp_frequency_range_layout">
+                <item>
+                 <widget class="QLabel" name="chirp_frequency_label">
+                  <property name="text">
+                   <string>Frequency Range</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="chirp_frequency_range_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="chirp_min_frequency_selector">
+                    <property name="toolTip">
+                     <string>Starting frequency of the chirp</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="chirp_frequency_range_selector_label">
+                    <property name="text">
+                     <string>--</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QDoubleSpinBox" name="chirp_max_frequency_selector">
+                    <property name="toolTip">
+                     <string>Ending frequency of the chirp</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="chirp_spacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="square_wave_excitation_tab">
+             <attribute name="title">
+              <string>Square Pulse</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <layout class="QVBoxLayout" name="square_level_layout">
+                <item>
+                 <widget class="QLabel" name="square_level_label">
+                  <property name="text">
+                   <string>Peak Level</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="square_level_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="square_level_selector">
+                    <property name="toolTip">
+                     <string>Amplitude of the square pulse</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>10.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="square_level_selector_label">
+                    <property name="text">
+                     <string>V</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="square_frequency_layout">
+                <item>
+                 <widget class="QLabel" name="square_frequency_label">
+                  <property name="text">
+                   <string>Frequency</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="square_frequency_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="square_frequency_selector">
+                    <property name="toolTip">
+                     <string>Frequency of the square pulse</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="decimals">
+                     <number>6</number>
+                    </property>
+                    <property name="minimum">
+                     <double>0.000001000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="square_frequency_selector_label">
+                    <property name="text">
+                     <string>Hz</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="square_percent_on_layout">
+                <item>
+                 <widget class="QLabel" name="square_percent_on_label">
+                  <property name="text">
+                   <string>Percent On</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="square_percent_on_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="square_percent_on_selector">
+                    <property name="toolTip">
+                     <string>Percentage of the square pulse's period that it is &quot;up&quot;.</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>%</string>
+                    </property>
+                    <property name="maximum">
+                     <double>100.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>50.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="square_spacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="sine_wave_excitation_tab">
+             <attribute name="title">
+              <string>Sine</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <item>
+               <layout class="QVBoxLayout" name="square_level_layout_2">
+                <item>
+                 <widget class="QLabel" name="sine_level_label">
+                  <property name="text">
+                   <string>Peak Level</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="sine_level_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="sine_level_selector">
+                    <property name="toolTip">
+                     <string>Amplitude of the sinusoidal excitation</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <double>10.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="sine_level_selector_label">
+                    <property name="text">
+                     <string>V</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="sine_frequency_layout">
+                <item>
+                 <widget class="QLabel" name="sine_frequency_label">
+                  <property name="text">
+                   <string>Frequency</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="sine_frequency_selector_layout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="sine_frequency_selector">
+                    <property name="toolTip">
+                     <string>Frequency of the sinusoidal excitation</string>
+                    </property>
+                    <property name="keyboardTracking">
+                     <bool>false</bool>
+                    </property>
+                    <property name="decimals">
+                     <number>6</number>
+                    </property>
+                    <property name="minimum">
+                     <double>0.000001000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="sine_frequency_selector_label">
+                    <property name="text">
+                     <string>Hz</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="sine_spacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>262</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="output_signal_label">
+            <property name="text">
+             <string>Output Signal</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="PlotWidget" name="output_signal_plot"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="regenerate_signal_layout">
+            <item>
+             <widget class="QCheckBox" name="regenerate_signal_auto_checkbox">
+              <property name="toolTip">
+               <string>Check to automatically regenerate signals when parameters are updated.  If not checked, you will need to click the `Regenerate Signals` button to see changes.</string>
+              </property>
+              <property name="text">
+               <string>Automatically Regenerate Signal on Parameter Change</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="regenerate_signal_spacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="regenerate_signal_button">
+              <property name="toolTip">
+               <string>Generate a new realization of the output signals.</string>
+              </property>
+              <property name="text">
+               <string>Regenerate Signal</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1015</width>
-    <height>471</height>
+    <height>472</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,6 +16,31 @@
   <layout class="QHBoxLayout" name="horizontalLayout_4">
    <item>
     <layout class="QVBoxLayout" name="environment_control_layout">
+     <item>
+      <widget class="QGroupBox" name="response_error_groupbox">
+       <property name="title">
+        <string>Response Error (TRAC)</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_71">
+        <item>
+         <widget class="QListWidget" name="control_response_error_list">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Time Response Assurance Criterion between the measured and desired signals.</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::AdjustToContents</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item>
       <widget class="QGroupBox" name="environment_control_groupbox">
        <property name="sizePolicy">
@@ -45,6 +70,9 @@
           </item>
           <item>
            <widget class="QSpinBox" name="test_level_selector">
+            <property name="toolTip">
+             <string>Scale factor applied to the test</string>
+            </property>
             <property name="keyboardTracking">
              <bool>false</bool>
             </property>
@@ -73,6 +101,9 @@
         </item>
         <item>
          <widget class="QCheckBox" name="repeat_signal_checkbox">
+          <property name="toolTip">
+           <string>If checked, the signal will continually repeat</string>
+          </property>
           <property name="text">
            <string>Repeat Signal</string>
           </property>
@@ -129,6 +160,9 @@
              <font>
               <pointsize>16</pointsize>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Start the environment to control to the desired transient signal</string>
             </property>
             <property name="text">
              <string>Start Environment</string>
@@ -188,6 +222,9 @@
               <pointsize>16</pointsize>
              </font>
             </property>
+            <property name="toolTip">
+             <string>Stop the environment</string>
+            </property>
             <property name="text">
              <string>Stop Environment</string>
             </property>
@@ -195,21 +232,18 @@
           </item>
          </layout>
         </item>
+        <item>
+         <widget class="QPushButton" name="save_current_control_data_button">
+          <property name="toolTip">
+           <string>Save current control data from the test</string>
+          </property>
+          <property name="text">
+           <string>Save Current Control Data</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
-     </item>
-     <item>
-      <spacer name="environment_control_spacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
@@ -267,10 +301,17 @@
        </widget>
       </item>
       <item>
-       <widget class="QComboBox" name="control_channel_selector"/>
+       <widget class="QComboBox" name="control_channel_selector">
+        <property name="toolTip">
+         <string>Select an individual channel to visualize</string>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="create_window_button">
+        <property name="toolTip">
+         <string>Create a window to show the signal specified by Control Channel</string>
+        </property>
         <property name="text">
          <string>Create Window</string>
         </property>
@@ -285,6 +326,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="show_all_channels_button">
+        <property name="toolTip">
+         <string>Create a window for each control channel</string>
+        </property>
         <property name="text">
          <string>Show All
 Control Channels</string>
@@ -307,6 +351,9 @@ Control Channels</string>
       </item>
       <item>
        <widget class="QPushButton" name="tile_windows_button">
+        <property name="toolTip">
+         <string>Tile all windows across the main monitor</string>
+        </property>
         <property name="text">
          <string>Tile All
 Windows</string>
@@ -315,6 +362,9 @@ Windows</string>
       </item>
       <item>
        <widget class="QPushButton" name="close_windows_button">
+        <property name="toolTip">
+         <string>Closes all existing visualization windows</string>
+        </property>
         <property name="text">
          <string>Close All
 Windows</string>

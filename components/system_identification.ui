@@ -1,296 +1,920 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>system_identification</class>
+ <widget class="QWidget" name="system_identification">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1152</width>
-    <height>659</height>
+    <width>1161</width>
+    <height>825</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,1,0">
    <item>
-    <layout class="QHBoxLayout" name="system_id_display_layout">
+    <layout class="QVBoxLayout" name="parameters_and_control_layout">
      <item>
-      <layout class="QVBoxLayout" name="system_id_timedata_display_layout">
-       <item>
-        <layout class="QHBoxLayout" name="system_id_timedata_information_layout">
-         <item>
-          <widget class="QLabel" name="transfer_function_average_number_label">
+      <widget class="QGroupBox" name="parameters_groupbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title">
+        <string>System ID Parameters</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="samplesPerFrameLabel">
+          <property name="text">
+           <string>Samples per Frame</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="samplesPerFrameSpinBox">
+          <property name="toolTip">
+           <string>Samples per measurement frame used in the system identification</string>
+          </property>
+          <property name="maximum">
+           <number>999999999</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="averagingTypeLabel">
+          <property name="text">
+           <string>Averaging Type</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="averagingTypeComboBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Type of averaging used in the system identification.  Linear averaging weights each measurement frame equally.  Exponential averaging treats more recent averages with a higher weight.</string>
+          </property>
+          <item>
            <property name="text">
-            <string>Transfer Function Average</string>
+            <string>Linear</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="system_id_current_average_display">
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-           <property name="buttonSymbols">
-            <enum>QAbstractSpinBox::NoButtons</enum>
-           </property>
-           <property name="maximum">
-            <number>100000</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="transfer_function_of_label">
+          </item>
+          <item>
            <property name="text">
-            <string>of</string>
+            <string>Exponential</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="system_id_num_averages_display">
-           <property name="readOnly">
-            <bool>true</bool>
+          </item>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="noiseAveragesLabel">
+          <property name="text">
+           <string>Noise Averages</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="noiseAveragesSpinBox">
+          <property name="toolTip">
+           <string>Number of measurement frames to acquire to analyze the noise level of the test.</string>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>999</number>
+          </property>
+          <property name="value">
+           <number>20</number>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="systemIDAveragesLabel">
+          <property name="text">
+           <string>System ID Averages</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QSpinBox" name="systemIDAveragesSpinBox">
+          <property name="toolTip">
+           <string>Number of measurement frames to acquire to identify the system and compute transfer functions.</string>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>999</number>
+          </property>
+          <property name="value">
+           <number>20</number>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="averagingCoefficientLabel">
+          <property name="text">
+           <string>Averaging Coefficient</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QDoubleSpinBox" name="averagingCoefficientDoubleSpinBox">
+          <property name="toolTip">
+           <string>Averaging coefficient used to weight the most recent measurement frame if exponential averaging is used.</string>
+          </property>
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.010000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="estimatorLabel">
+          <property name="text">
+           <string>Estimator</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QComboBox" name="estimatorComboBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Estimator to use to compute the system identification.</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>H1</string>
            </property>
-           <property name="buttonSymbols">
-            <enum>QAbstractSpinBox::NoButtons</enum>
+          </item>
+          <item>
+           <property name="text">
+            <string>H2</string>
            </property>
-           <property name="maximum">
-            <number>100000</number>
+          </item>
+          <item>
+           <property name="text">
+            <string>H3</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="system_id_timedata_information_spacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+          </item>
+          <item>
+           <property name="text">
+            <string>Hv</string>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Control Responses</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="PlotWidget" name="response_timehistory_plot"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Shaker Drive Voltages</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="PlotWidget" name="drive_timehistory_plot"/>
-       </item>
-      </layout>
+          </item>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="levelLabel">
+          <property name="text">
+           <string>Level</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QDoubleSpinBox" name="levelDoubleSpinBox">
+          <property name="toolTip">
+           <string>RMS voltage level to play to the shakers when computing system identification</string>
+          </property>
+          <property name="keyboardTracking">
+           <bool>false</bool>
+          </property>
+          <property name="suffix">
+           <string> V RMS</string>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>0.000100000000000</double>
+          </property>
+          <property name="maximum">
+           <double>10.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.010000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="1">
+         <widget class="QDoubleSpinBox" name="levelRampTimeDoubleSpinBox">
+          <property name="toolTip">
+           <string>Time to ramp the system identification voltage to the test level.</string>
+          </property>
+          <property name="minimum">
+           <double>0.250000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.500000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QLabel" name="levelRampTimeLabel">
+          <property name="text">
+           <string>Level Ramp Time</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="system_id_transfer_function_display_layout">
-       <item>
-        <layout class="QHBoxLayout" name="system_id_transfer_function_selector_layout">
-         <item>
-          <widget class="QLabel" name="transfer_function_response_label">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title">
+        <string>Signal Parameters</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="signalTypeLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Signal Type</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="signalTypeComboBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Excitation used for system identification.  Random and Burst random excitation are suitable for MIMO control problems.  Chrip and Pseudorandom should only be used for single-shaker excitation.</string>
+          </property>
+          <item>
            <property name="text">
-            <string>Transer Function Response</string>
+            <string>Random</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="transfer_function_response_selector"/>
-         </item>
-         <item>
-          <widget class="QLabel" name="transfer_function_reference_label">
+          </item>
+          <item>
            <property name="text">
-            <string>Reference</string>
+            <string>Pseudorandom</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="transfer_function_reference_selector"/>
-         </item>
-         <item>
-          <spacer name="system_id_transfer_function_selector_spacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+          </item>
+          <item>
+           <property name="text">
+            <string>Burst Random</string>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
+          </item>
+          <item>
+           <property name="text">
+            <string>Chirp</string>
            </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="PlotWidget" name="transfer_function_phase_plot">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>1</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="PlotWidget" name="transfer_function_amplitude_plot">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>3</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-      </layout>
+          </item>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="windowLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Window</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="windowComboBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Window to apply to the data when computing transfer functions</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>Hann</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Rectangle</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="overlapLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Overlap</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QDoubleSpinBox" name="overlapDoubleSpinBox">
+          <property name="toolTip">
+           <string>Overlap to use between measurement frames when computing transfer functions.</string>
+          </property>
+          <property name="suffix">
+           <string>%</string>
+          </property>
+          <property name="value">
+           <double>50.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="onFractionLabel">
+          <property name="text">
+           <string>On Fraction</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QDoubleSpinBox" name="onFractionDoubleSpinBox">
+          <property name="toolTip">
+           <string>Fraction of the measurement frame that the burst random excitation is active for.</string>
+          </property>
+          <property name="suffix">
+           <string>%</string>
+          </property>
+          <property name="value">
+           <double>50.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="pretriggerLabel">
+          <property name="text">
+           <string>Pretrigger</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QDoubleSpinBox" name="pretriggerDoubleSpinBox">
+          <property name="toolTip">
+           <string>Percentage of the measurement frame that is before the burst random excitation.</string>
+          </property>
+          <property name="suffix">
+           <string>%</string>
+          </property>
+          <property name="value">
+           <double>5.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="rampFractionLabel">
+          <property name="text">
+           <string>Ramp Fraction</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QDoubleSpinBox" name="rampFractionDoubleSpinBox">
+          <property name="toolTip">
+           <string>Percentage of the burst that is used to ramp from zero to the test level.</string>
+          </property>
+          <property name="suffix">
+           <string>%</string>
+          </property>
+          <property name="maximum">
+           <double>50.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>5.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="streaming_groupbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title">
+        <string>Streaming</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <layout class="QHBoxLayout" name="streaming_layout">
+          <item>
+           <widget class="QCheckBox" name="stream_transfer_function_data_checkbox">
+            <property name="toolTip">
+             <string>If checked, time data from system identification will be streamed to disk.</string>
+            </property>
+            <property name="text">
+             <string>Stream Time Data</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="select_transfer_function_stream_file_button">
+            <property name="toolTip">
+             <string>Selects the file to which time data will be streamed.</string>
+            </property>
+            <property name="text">
+             <string>Select File...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="transfer_function_stream_file_label">
+          <property name="text">
+           <string>Streaming File:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="transfer_function_stream_file_display">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>File to which system identification data will be streamed.</string>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="save_system_id_matrices_button">
+          <property name="toolTip">
+           <string>Save system identification spectral data to a file on the disk.</string>
+          </property>
+          <property name="text">
+           <string>Save System Identification Data</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="start_stop_groupbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title">
+        <string>Start/Stop</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="preview_noise_button">
+          <property name="toolTip">
+           <string>Starts the noise identification of the system identification process.  No excitation will be applied to the shakers.</string>
+          </property>
+          <property name="text">
+           <string>Preview Noise</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="preview_system_id_button">
+          <property name="toolTip">
+           <string>Previews system identification, where excitation is played to the shakers.</string>
+          </property>
+          <property name="text">
+           <string>Preview System ID</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="stop_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Stops the system identification process.</string>
+          </property>
+          <property name="text">
+           <string>Stop</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QPushButton" name="start_button">
+          <property name="toolTip">
+           <string>Starts the full system identification process, including noise characterization and transfer function computation.</string>
+          </property>
+          <property name="text">
+           <string>Start</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="progress_groupbox">
+       <property name="title">
+        <string>Progress</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <layout class="QHBoxLayout" name="frame_number_layout">
+          <item>
+           <widget class="QSpinBox" name="current_frames_spinbox">
+            <property name="toolTip">
+             <string>Current number of system identification averages that have been acquired.</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="buttonSymbols">
+             <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="of_label">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>of</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="total_frames_spinbox">
+            <property name="toolTip">
+             <string>Total number of system identification averages that will be acquired.</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="buttonSymbols">
+             <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Expanding</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>120</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBar">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>System identification progress display.</string>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+          <property name="textVisible">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <spacer name="parameters_and_control_spacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="transfer_function_control_layout">
+    <layout class="QVBoxLayout" name="data_layout">
      <item>
-      <widget class="QLabel" name="voltage_out_label">
-       <property name="text">
-        <string>Initial RMS
-Voltage Out</string>
+      <widget class="QGroupBox" name="data_groupbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
+       <property name="title">
+        <string>Data</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,0,0,0">
+        <item>
+         <widget class="QGroupBox" name="time_data_groupbox">
+          <property name="title">
+           <string>Time Data</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <item>
+            <widget class="GraphicsLayoutWidget" name="time_data_graphicslayout"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="transfer_function_groupbox">
+          <property name="title">
+           <string>Transfer Function</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_10">
+           <item>
+            <widget class="GraphicsLayoutWidget" name="transfer_function_graphics_layout"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="impulse_groupbox">
+          <property name="title">
+           <string>Impulse Response</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_8">
+           <item>
+            <widget class="GraphicsLayoutWidget" name="impulse_graphicslayout"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="coherence_groupbox">
+          <property name="title">
+           <string>Coherence and Conditioning</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_11">
+           <item>
+            <widget class="GraphicsLayoutWidget" name="coherence_graphicslayout"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="levels_groupbox">
+          <property name="title">
+           <string>Levels</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <item>
+            <widget class="GraphicsLayoutWidget" name="levels_graphicslayout"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="data_selection_layout">
+     <item>
+      <widget class="QGroupBox" name="references_groupbox">
+       <property name="title">
+        <string>References</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QListWidget" name="reference_selector">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Select the references to visualize</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::AdjustToContents</enum>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::ExtendedSelection</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="references_button_layout">
+          <item>
+           <widget class="QPushButton" name="references_all_button">
+            <property name="toolTip">
+             <string>Select all references</string>
+            </property>
+            <property name="text">
+             <string>All</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="references_none_button">
+            <property name="toolTip">
+             <string>Deselect all references</string>
+            </property>
+            <property name="text">
+             <string>None</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="voltage_display">
-       <property name="readOnly">
-        <bool>true</bool>
+      <widget class="QGroupBox" name="responses_groupbox">
+       <property name="title">
+        <string>Responses</string>
        </property>
-       <property name="buttonSymbols">
-        <enum>QAbstractSpinBox::NoButtons</enum>
-       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QListWidget" name="response_selector">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Select responses to visualize</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::AdjustToContents</enum>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::ExtendedSelection</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="responses_button_layout">
+          <item>
+           <widget class="QPushButton" name="responses_all_button">
+            <property name="toolTip">
+             <string>Visualize all responses</string>
+            </property>
+            <property name="text">
+             <string>All</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="responses_none_button">
+            <property name="toolTip">
+             <string>Visualize no responses</string>
+            </property>
+            <property name="text">
+             <string>None</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="db_layout">
-       <property name="spacing">
-        <number>0</number>
+      <widget class="QGroupBox" name="show_groupbox">
+       <property name="title">
+        <string>Show</string>
        </property>
-       <item>
-        <widget class="QSpinBox" name="voltage_scale_factor_selector">
-         <property name="keyboardTracking">
-          <bool>false</bool>
-         </property>
-         <property name="minimum">
-          <number>-60</number>
-         </property>
-         <property name="maximum">
-          <number>18</number>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="voltage_scale_factor_label">
-         <property name="text">
-          <string>dB</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <spacer name="transfer_function_control_spacer_1">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeType">
-        <enum>QSizePolicy::Fixed</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="preview_transfer_function_button">
-       <property name="text">
-        <string>Preview</string>
-       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <widget class="QCheckBox" name="time_data_checkbox">
+          <property name="toolTip">
+           <string>Check to show time data during the system identification</string>
+          </property>
+          <property name="text">
+           <string>Time Data</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="transfer_function_checkbox">
+          <property name="toolTip">
+           <string>Check to show transfer functions in the system identification</string>
+          </property>
+          <property name="text">
+           <string>Transfer Function</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="impulse_checkbox">
+          <property name="toolTip">
+           <string>Check to show the impulse response function, which is the IFFT of the transfer function.</string>
+          </property>
+          <property name="text">
+           <string>Impulse Response</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="coherence_checkbox">
+          <property name="toolTip">
+           <string>Check to show multiple coherence and condition number of the transfer function matrix</string>
+          </property>
+          <property name="text">
+           <string>Coherence and Conditioning</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="levels_checkbox">
+          <property name="toolTip">
+           <string>Check to show levels for system identification and noise characterization</string>
+          </property>
+          <property name="text">
+           <string>Levels</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="acquire_transfer_function_button">
-       <property name="text">
-        <string>Acquire</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="stop_transfer_function_button">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Stop</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="transfer_function_control_spacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="stream_tf_data_layout">
-       <item>
-        <widget class="QCheckBox" name="stream_transfer_function_data_checkbox">
-         <property name="text">
-          <string>Stream Data</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="transfer_function_stream_file_label">
-         <property name="text">
-          <string>Streaming File</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="transfer_function_stream_file_display">
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="select_transfer_function_stream_file_button">
-         <property name="text">
-          <string>Select File...</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>
@@ -298,7 +922,7 @@ Voltage Out</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>PlotWidget</class>
+   <class>GraphicsLayoutWidget</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>

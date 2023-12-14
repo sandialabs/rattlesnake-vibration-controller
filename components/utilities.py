@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import numpy as np
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 import scipy.signal as sig
 import multiprocessing as mp
 import multiprocessing.queues as mp_queues
@@ -30,6 +30,8 @@ from enum import Enum
 import time
 from datetime import datetime
 from typing import List,Tuple,Dict
+import importlib.util
+import os
     
 time_reporting_threshold = 0.01
 
@@ -63,17 +65,15 @@ def coherence(cpsd_matrix : np.ndarray,row_column : Tuple[int] = None ):
 
 class Channel:
     """Property container for a single channel in the controller."""
-    def __init__(self,control,node_number,node_direction,comment,
+    def __init__(self,node_number,node_direction,comment,
                  serial_number,triax_dof,sensitivity,unit,make,model,expiration,
                  physical_device,physical_channel,channel_type,
                  minimum_value,maximum_value,coupling,excitation_source,excitation,
-                 feedback_device,feedback_channel):
+                 feedback_device,feedback_channel,warning_level,abort_level):
         """Property container for a single channel in the controller.
         
         Parameters
         ----------
-        control : bool : 
-            Whether or not the function is used for control.
         node_number : str :
             Metadata specifying the node number
         node_direction : str : 
@@ -115,8 +115,11 @@ class Channel:
             originates from
         feedback_channel : str :
             Channel on the physical hardware that is teed into this channel
+        warning_level : str :
+            Level at which warnings will be flagged on the monitor
+        abort_level : str :
+            Level at which the system will shut down
         """
-        self.control = bool(control)
         self.node_number = node_number
         self.node_direction = node_direction
         self.comment = comment
@@ -137,6 +140,8 @@ class Channel:
         self.excitation = excitation
         self.feedback_device = feedback_device
         self.feedback_channel = feedback_channel
+        self.warning_level = warning_level
+        self.abort_level = abort_level
     
     @classmethod
     def from_channel_table_row(cls,row : Tuple[str]):
@@ -156,34 +161,35 @@ class Channel:
         
         """
         new_row = [None if val.strip() == '' else val for val in row]
-        physical_device = new_row[11]
+        physical_device = new_row[10]
         if physical_device is None:
             return None
-        control = True if new_row[0] == 'Y' else False
-        node_number = new_row[1]
-        node_direction = new_row[2]
-        comment = new_row[3]
-        serial_number = new_row[4]
-        triax_dof = new_row[5]
-        sensitivity = new_row[6]
-        unit = new_row[7]
-        make = new_row[8]
-        model = new_row[9]
-        expiration = new_row[10]
-        physical_channel = new_row[12]
-        channel_type = new_row[13]
-        minimum_value = new_row[14]
-        maximum_value = new_row[15]
-        coupling = new_row[16]
-        excitation_source = new_row[17]
-        excitation = new_row[18]
-        feedback_device = new_row[19]
-        feedback_channel = new_row[20]
-        return cls(control,node_number,node_direction,comment,
+        node_number = new_row[0]
+        node_direction = new_row[1]
+        comment = new_row[2]
+        serial_number = new_row[3]
+        triax_dof = new_row[4]
+        sensitivity = new_row[5]
+        unit = new_row[6]
+        make = new_row[7]
+        model = new_row[8]
+        expiration = new_row[9]
+        physical_channel = new_row[11]
+        channel_type = new_row[12]
+        minimum_value = new_row[13]
+        maximum_value = new_row[14]
+        coupling = new_row[15]
+        excitation_source = new_row[16]
+        excitation = new_row[17]
+        feedback_device = new_row[18]
+        feedback_channel = new_row[19]
+        warning_level = new_row[20]
+        abort_level = new_row[21]
+        return cls(node_number,node_direction,comment,
                  serial_number,triax_dof,sensitivity,unit,make,model,expiration,
                  physical_device,physical_channel,channel_type,
                  minimum_value,maximum_value,coupling,excitation_source,excitation,
-                 feedback_device,feedback_channel)
+                 feedback_device,feedback_channel,warning_level,abort_level)
 
 class DataAcquisitionParameters:
     """Container to hold the global data acquisition parameters of the controller"""
@@ -479,54 +485,6 @@ def save_csv_matrix(data,file):
     with open(file,'w') as f:
         f.write(text)
         
-def cola(signal_samples : int,end_samples : int,
-         signals : np.ndarray,window_name : str,window_exponent : float = 0.5):
-    """
-    Constant Overlap and Addition of signals to blend them together
-    
-    This function creates long signals of individual realizations by windowing,
-    overlapping, and adding the signals together.
-
-    Parameters
-    ----------
-    signal_samples : int
-        Number of samples in the overlapped region of the signal.
-    end_samples : int
-        Number of samples in the rest of the signal.
-    signals : np.ndarray
-        3D numpy array where each of the two rows is a signal that will be
-        windowed, overlapped, and added.
-    window_name : str
-        Name of the window function that will be used to window the signals.
-    window_exponent : float
-        Exponent on the window function.  Set to 0.5 for constant variance in
-        the signals (Default Value = 0.5)
-
-    Returns
-    -------
-    output : np.ndarray
-        Combined signal that has been windowed, overlapped, and added.
-        
-    Notes
-    -----
-    Uses the constant overlap and add process described in [1]_
-    
-    .. [1] R. Schultz and G. Nelson, "Input signal synthesis for open-loop
-       multiple-input/multiple-output testing," Proceedings of the International
-       Modal Analysis Conference, 2019.
-
-    """
-    total_samples = signal_samples + end_samples
-    if window_name == 'tukey':
-        window_name = ('tukey',2*(end_samples/total_samples))
-    window = sig.get_window(window_name,total_samples,fftbins=True)**window_exponent
-    # Create the new signal
-    last_signal,current_signal = signals
-    output = current_signal[:,:signal_samples]*window[:signal_samples]
-    if end_samples > 0:
-        output[:,:end_samples] += np.array(last_signal)[:,-end_samples:]*window[-end_samples:]
-    return output
-
 def cpsd_to_time_history(cpsd_matrix,sample_rate,df,output_oversample = 1):
     """Generates a time history realization from a CPSD matrix
 
@@ -679,28 +637,40 @@ def trac(th_1,th_2=None):
     trac = np.abs(np.sum(th_1_flattened*th_2_flattened.conj(),axis=-1))**2/((np.sum(th_1_flattened*th_1_flattened.conj(),axis=-1))*np.sum(th_2_flattened*th_2_flattened.conj(),axis=-1))
     return trac.reshape(th_1_original_shape[:-1])
 
-def align_signals(measurement_buffer,specification,correlation_threshold = 0.9):
+def align_signals(measurement_buffer,specification,correlation_threshold = 0.9, perform_subsample = True):
     maximum_possible_correlation = np.sum(specification**2)
     correlation = sig.correlate(measurement_buffer,specification,mode='valid').squeeze()
     delay = np.argmax(correlation)
+    print('Max Correlation: {:}'.format(np.max(correlation)/maximum_possible_correlation))
     if correlation[delay] < correlation_threshold*maximum_possible_correlation:
         return None,None,None
+    # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
+    #          specification = specification,
+    #          correlation_threshold = correlation_threshold)
     specification_portion = measurement_buffer[:,delay:delay+specification.shape[-1]]
     
-    # Compute ffts for subsample alignment
-    spec_fft = np.fft.rfft(specification,axis=-1)
-    spec_portion_fft = np.fft.rfft(specification_portion,axis=-1)
-    
-    # Compute phase angle differences for subpixel alignment
-    phase_difference = np.angle(spec_portion_fft/spec_fft)
-    phase_slope = phase_difference[...,1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
-    mean_phase_slope = np.mean(phase_slope)
-    
-    spec_portion_aligned_fft = spec_portion_fft*np.exp(-1j*mean_phase_slope*np.arange(spec_portion_fft.shape[-1]))
-    spec_portion_aligned = np.fft.irfft(spec_portion_aligned_fft)
+    if perform_subsample:
+        # Compute ffts for subsample alignment
+        spec_fft = np.fft.rfft(specification,axis=-1)
+        spec_portion_fft = np.fft.rfft(specification_portion,axis=-1)
+        
+        # Compute phase angle differences for subpixel alignment
+        phase_difference = np.angle(spec_portion_fft/spec_fft)
+        phase_slope = phase_difference[...,1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
+        mean_phase_slope = np.median(phase_slope) # Use Median to discard outliers due to potentially noisy phase
+        
+        spec_portion_aligned_fft = spec_portion_fft*np.exp(-1j*mean_phase_slope*np.arange(spec_portion_fft.shape[-1]))
+        spec_portion_aligned = np.fft.irfft(spec_portion_aligned_fft)
+    else:
+        spec_portion_aligned = specification_portion.copy()
+        mean_phase_slope = None
     return spec_portion_aligned,delay,mean_phase_slope
 
 def shift_signal(signal,samples_to_keep,sample_delay,phase_slope):
+    # np.savez('shift_debug.npz',signal=signal,
+    #          samples_to_keep = samples_to_keep,
+    #          sample_delay = sample_delay,
+    #          phase_slope=phase_slope)
     signal_sample_aligned = signal[...,sample_delay:sample_delay+samples_to_keep]
     sample_aligned_fft = np.fft.rfft(signal_sample_aligned,axis=-1)
     subsample_aligned_fft = sample_aligned_fft*np.exp(-1j*phase_slope*np.arange(sample_aligned_fft.shape[-1]))
@@ -720,8 +690,10 @@ class GlobalCommands(Enum):
     STOP_ENVIRONMENT = -10
     START_STREAMING = -11
     STOP_STREAMING = -12
-    COMPLETED_SYSTEM_ID = -13
-    AT_TARGET_LEVEL = -14
+    CREATE_NEW_STREAM = -13
+    COMPLETED_SYSTEM_ID = -14
+    AT_TARGET_LEVEL = -15
+    UPDATE_METADATA = -16
     
 class OverlapBuffer:
     """Class to hold a buffer stored in a numpy array.
@@ -822,3 +794,25 @@ class OverlapBuffer:
     @property
     def shape(self):
         return self.buffer_data.shape
+    
+
+def load_python_module(module_path):
+    """Loads in the Python file at the specified path as a module at runtime
+
+    Parameters
+    ----------
+    module_path : str:
+        Path to the module to be loaded
+        
+
+    Returns
+    -------
+    module : module:
+        A reference to the loaded module
+    """
+    path,file = os.path.split(module_path)
+    file,ext = os.path.splitext(file)
+    spec = importlib.util.spec_from_file_location(file, module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

@@ -31,6 +31,9 @@
      </item>
      <item>
       <widget class="QLineEdit" name="signal_file_name_display">
+       <property name="toolTip">
+        <string>File from which the time signal was loaded.</string>
+       </property>
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -38,6 +41,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="load_signal_button">
+       <property name="toolTip">
+        <string>Loads a time signal to play to the shakers</string>
+       </property>
        <property name="text">
         <string>Load Signal</string>
        </property>
@@ -65,20 +71,32 @@
         <property name="text">
          <string>Show?</string>
         </property>
+        <property name="toolTip">
+         <string>Check to show a given signal</string>
+        </property>
        </column>
        <column>
         <property name="text">
          <string>Signal</string>
+        </property>
+        <property name="toolTip">
+         <string>Signal name</string>
         </property>
        </column>
        <column>
         <property name="text">
          <string>Max</string>
         </property>
+        <property name="toolTip">
+         <string>Maximum absolute value of the signal</string>
+        </property>
        </column>
        <column>
         <property name="text">
          <string>RMS</string>
+        </property>
+        <property name="toolTip">
+         <string>RMS of the signal</string>
         </property>
        </column>
       </widget>
@@ -101,6 +119,9 @@
          <width>50</width>
          <height>0</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>Sample rate of the data acquisition</string>
        </property>
        <property name="readOnly">
         <bool>true</bool>
@@ -128,6 +149,9 @@
          <height>0</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>Sample rate of the output generator</string>
+       </property>
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -153,6 +177,9 @@
          <width>50</width>
          <height>0</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>Number of output channels in the environment</string>
        </property>
        <property name="readOnly">
         <bool>true</bool>
@@ -180,6 +207,9 @@
          <height>0</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>Total number of samples in the signal</string>
+       </property>
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -200,6 +230,9 @@
      </item>
      <item>
       <widget class="QDoubleSpinBox" name="signal_time_display">
+       <property name="toolTip">
+        <string>Time it will take to generate the signal</string>
+       </property>
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -220,6 +253,9 @@
      </item>
      <item>
       <widget class="QDoubleSpinBox" name="cancel_rampdown_selector">
+       <property name="toolTip">
+        <string>Time to ramp down the signal to zero if the environment is stopped before the signal ends.</string>
+       </property>
        <property name="maximum">
         <double>300.000000000000000</double>
        </property>

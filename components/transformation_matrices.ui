@@ -31,6 +31,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_add_row_button">
+          <property name="toolTip">
+           <string>Add a virtual control channel to the response transformation</string>
+          </property>
           <property name="text">
            <string>Add Row</string>
           </property>
@@ -38,6 +41,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_remove_row_button">
+          <property name="toolTip">
+           <string>Remove a virtual control channel from the response transformation</string>
+          </property>
           <property name="text">
            <string>Remove Row</string>
           </property>
@@ -58,6 +64,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_save_matrix_button">
+          <property name="toolTip">
+           <string>Save the response transformation matrix to a file</string>
+          </property>
           <property name="text">
            <string>Save</string>
           </property>
@@ -65,6 +74,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_load_matrix_button">
+          <property name="toolTip">
+           <string>Load the response transformation matrix from a file</string>
+          </property>
           <property name="text">
            <string>Load</string>
           </property>
@@ -72,6 +84,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_identity_button">
+          <property name="toolTip">
+           <string>Set the response transformation to the identity matrix (removes the transformation)</string>
+          </property>
           <property name="text">
            <string>Identity</string>
           </property>
@@ -79,6 +94,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_6dof_kinematic_button">
+          <property name="toolTip">
+           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+          </property>
           <property name="text">
            <string>6DoF Kinematic</string>
           </property>
@@ -86,6 +104,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="response_transformation_reversed_6dof_kinematic_button">
+          <property name="toolTip">
+           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+          </property>
           <property name="text">
            <string>6DoF Kinematic Reversed</string>
           </property>
@@ -101,11 +122,11 @@
         <property name="columnCount">
          <number>20</number>
         </property>
-        <attribute name="horizontalHeaderMinimumSectionSize">
-         <number>30</number>
-        </attribute>
         <attribute name="horizontalHeaderDefaultSectionSize">
          <number>50</number>
+        </attribute>
+        <attribute name="horizontalHeaderMinimumSectionSize">
+         <number>30</number>
         </attribute>
         <row/>
         <row/>
@@ -150,6 +171,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_add_row_button">
+          <property name="toolTip">
+           <string>Add a virtual excitation channel</string>
+          </property>
           <property name="text">
            <string>Add Row</string>
           </property>
@@ -157,6 +181,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_remove_row_button">
+          <property name="toolTip">
+           <string>Remove a virtual excitation channel</string>
+          </property>
           <property name="text">
            <string>Remove Row</string>
           </property>
@@ -177,6 +204,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_save_matrix_button">
+          <property name="toolTip">
+           <string>Save the output transformation matrix to a file</string>
+          </property>
           <property name="text">
            <string>Save</string>
           </property>
@@ -184,6 +214,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_load_matrix_button">
+          <property name="toolTip">
+           <string>Load an output transformation matrix from a file</string>
+          </property>
           <property name="text">
            <string>Load</string>
           </property>
@@ -191,6 +224,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_identity_button">
+          <property name="toolTip">
+           <string>Set the output transformation to the identity matrix (removes the transformation)</string>
+          </property>
           <property name="text">
            <string>Identity</string>
           </property>
@@ -198,6 +234,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_6dof_kinematic_button">
+          <property name="toolTip">
+           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+          </property>
           <property name="text">
            <string>6DoF Kinematic</string>
           </property>
@@ -205,6 +244,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="output_transformation_reversed_6dof_kinematic_button">
+          <property name="toolTip">
+           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+          </property>
           <property name="text">
            <string>6DoF Kinematic Reversed</string>
           </property>
@@ -220,11 +262,11 @@
         <property name="columnCount">
          <number>20</number>
         </property>
-        <attribute name="horizontalHeaderMinimumSectionSize">
-         <number>30</number>
-        </attribute>
         <attribute name="horizontalHeaderDefaultSectionSize">
          <number>50</number>
+        </attribute>
+        <attribute name="horizontalHeaderMinimumSectionSize">
+         <number>30</number>
         </attribute>
         <row/>
         <row/>
@@ -278,6 +320,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="ok_button">
+       <property name="toolTip">
+        <string>Saves the transformation matrices to the environment</string>
+       </property>
        <property name="text">
         <string>OK</string>
        </property>
@@ -285,6 +330,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="cancel_button">
+       <property name="toolTip">
+        <string>Cancels modification of the transformation matrices</string>
+       </property>
        <property name="text">
         <string>Cancel</string>
        </property>

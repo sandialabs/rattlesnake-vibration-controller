@@ -229,7 +229,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 raise ValueError('{:} not a valid excitation'.format(channel_data.excitation))
         elif channel_data.excitation_source.lower() == 'none':
             excitation_source = nic.ExcitationSource.NONE
-            excitation = None
+            excitation = 0
         else:
             raise ValueError('{:} not a valid excitation source.  Must be one of ["internal","none"]'.format(channel_data.excitation_source))
         # Now go and create the channel
@@ -240,23 +240,43 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             min_val = minimum_value
             max_val = maximum_value
         if channel_type == nic.UsageTypeAI.ACCELERATION_ACCELEROMETER_CURRENT_INPUT:
-            channel = self.task.ai_channels.add_ai_accel_chan(
-                        physical_channel,min_val = min_val,max_val = max_val,
-                        units=unit,sensitivity=sensitivity,
-                        sensitivity_units=nic.AccelSensitivityUnits.M_VOLTS_PER_G,
-                        current_excit_source = excitation_source,
-                        current_excit_val = excitation
-                    )
+            try:
+                channel = self.task.ai_channels.add_ai_accel_chan(
+                            physical_channel,min_val = min_val,max_val = max_val,
+                            units=unit,sensitivity=sensitivity,
+                            sensitivity_units=nic.AccelSensitivityUnits.M_VOLTS_PER_G,
+                            current_excit_source = excitation_source,
+                            current_excit_val = excitation
+                        )
+            except AttributeError:
+                channel = self.task.ai_channels.add_ai_accel_chan(
+                            physical_channel,min_val = min_val,max_val = max_val,
+                            units=unit,sensitivity=sensitivity,
+                            sensitivity_units=nic.AccelSensitivityUnits.MILLIVOLTS_PER_G,
+                            current_excit_source = excitation_source,
+                            current_excit_val = excitation
+                        )
         elif channel_type == nic.UsageTypeAI.FORCE_IEPE_SENSOR:
-            channel = self.task.ai_channels.add_ai_force_iepe_chan(
-                        physical_channel,min_val = min_val,max_val = max_val,
-                        units=unit,sensitivity=sensitivity,
-                        sensitivity_units = nic.ForceIEPESensorSensitivityUnits.M_VOLTS_PER_NEWTON 
-                            if unit == nic.ForceUnits.NEWTONS
-                            else nic.ForceIEPESensorSensitivityUnits.M_VOLTS_PER_POUND,
-                        current_excit_source= excitation_source,
-                        current_excit_val = excitation
-                    )
+            try:
+                channel = self.task.ai_channels.add_ai_force_iepe_chan(
+                            physical_channel,min_val = min_val,max_val = max_val,
+                            units=unit,sensitivity=sensitivity,
+                            sensitivity_units = nic.ForceIEPESensorSensitivityUnits.M_VOLTS_PER_NEWTON 
+                                if unit == nic.ForceUnits.NEWTONS
+                                else nic.ForceIEPESensorSensitivityUnits.M_VOLTS_PER_POUND,
+                            current_excit_source= excitation_source,
+                            current_excit_val = excitation
+                        )
+            except AttributeError:
+                channel = self.task.ai_channels.add_ai_force_iepe_chan(
+                            physical_channel,min_val = min_val,max_val = max_val,
+                            units=unit,sensitivity=sensitivity,
+                            sensitivity_units = nic.ForceIEPESensorSensitivityUnits.MILLIVOLTS_PER_NEWTON 
+                                if unit == nic.ForceUnits.NEWTONS
+                                else nic.ForceIEPESensorSensitivityUnits.MILLIVOLTS_PER_POUND,
+                            current_excit_source= excitation_source,
+                            current_excit_val = excitation
+                        )
         elif channel_type == nic.UsageTypeAI.VOLTAGE:
             channel = self.task.ai_channels.add_ai_voltage_chan(
                         physical_channel,min_val = min_val,max_val=max_val,
@@ -359,9 +379,10 @@ class NIDAQmxOutput(HardwareOutput):
             task.out_stream.regen_mode = nic.RegenerationMode.DONT_ALLOW_REGENERATION
             #task.out_stream.relative_to = nic.WriteRelativeTo.CURRENT_WRITE_POSITION
             task.triggers.start_trigger.dig_edge_src = self.write_trigger
+            task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
+            task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
             task.out_stream.output_buf_size = self.buffer_size_factor*test_data.samples_per_write
             self.writers.append(ni_write.AnalogMultiChannelWriter(task.out_stream,auto_start=False))
-        
     
     def start(self):
         """Method to start acquiring data"""

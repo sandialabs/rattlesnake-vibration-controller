@@ -52,7 +52,12 @@ class StreamingProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.INITIALIZE_STREAMING,self.initialize)
         self.map_command(GlobalCommands.STREAMING_DATA,self.write_data)
         self.map_command(GlobalCommands.FINALIZE_STREAMING,self.finalize)
+        self.map_command(GlobalCommands.CREATE_NEW_STREAM,self.create_new_stream)
         self.netcdf_handle = None
+        # Track the variable we are streaming data to
+        self.stream_variable = 'time_data'
+        self.stream_dimension = 'time_samples'
+        self.stream_index = 0
         
     def initialize(self,data):
         """Creates a file with all metadata from the controller
@@ -73,13 +78,17 @@ class StreamingProcess(AbstractMessageProcess):
         global_data_parameters : DataAcquisitionParameters
         environment_metadata : Dict[str,AbstractMetadata]
         filename,global_data_parameters,environment_metadata = data
+        self.stream_variable = 'time_data'
+        self.stream_dimension = 'time_samples'
+        self.stream_index = 0
         self.netcdf_handle = nc.Dataset(filename,'w',format='NETCDF4',clobber=True)
         # Create dimensions
         self.netcdf_handle.createDimension('response_channels',len(global_data_parameters.channel_list))
         self.netcdf_handle.createDimension('output_channels',len([channel for channel in global_data_parameters.channel_list if not channel.feedback_device is None]))
-        self.netcdf_handle.createDimension('time_samples',None)
+        self.netcdf_handle.createDimension(self.stream_dimension,None)
         self.netcdf_handle.createDimension('num_environments',len(global_data_parameters.environment_names))
         # Create attributes
+        self.netcdf_handle.file_version = '3.0.0'
         self.netcdf_handle.sample_rate = global_data_parameters.sample_rate
         self.netcdf_handle.time_per_write = global_data_parameters.samples_per_write/global_data_parameters.output_sample_rate
         self.netcdf_handle.time_per_read = global_data_parameters.samples_per_read/global_data_parameters.sample_rate
@@ -88,15 +97,14 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.maximum_acquisition_processes = global_data_parameters.maximum_acquisition_processes
         self.netcdf_handle.output_oversample = global_data_parameters.output_oversample
         # Create Variables
-        self.netcdf_handle.createVariable('time_data','f8',('response_channels','time_samples'))
+        self.netcdf_handle.createVariable(self.stream_variable,'f8',('response_channels',self.stream_dimension))
         var = self.netcdf_handle.createVariable('environment_names',str,('num_environments',))
         for i,name in enumerate(global_data_parameters.environment_names):
             var[i] = name
         var = self.netcdf_handle.createVariable('environment_active_channels','i1',('response_channels','num_environments'))
         var[...] = global_data_parameters.environment_active_channels.astype('int8')
         # Create channel table variables
-        labels = [['control','i1'],
-                  ['node_number',str],
+        labels = [['node_number',str],
                   ['node_direction',str],
                   ['comment',str],
                   ['serial_number',str],
@@ -115,7 +123,10 @@ class StreamingProcess(AbstractMessageProcess):
                   ['excitation_source',str],
                   ['excitation',str],
                   ['feedback_device',str],
-                  ['feedback_channel',str]]
+                  ['feedback_channel',str],
+                  ['warning_level',str],
+                  ['abort_level',str],
+                  ]
         for (label,netcdf_datatype) in labels:
             var = self.netcdf_handle.createVariable('/channels/'+label,netcdf_datatype,('response_channels',))
             channel_data = [getattr(channel,label) for channel in global_data_parameters.channel_list]
@@ -143,9 +154,18 @@ class StreamingProcess(AbstractMessageProcess):
         if self.netcdf_handle is None:
             return
         test_data = data
-        timesteps = slice(self.netcdf_handle.dimensions['time_samples'].size,None,None)
-        self.netcdf_handle.variables['time_data'][:,timesteps] = test_data
-        
+        timesteps = slice(self.netcdf_handle.dimensions[self.stream_dimension].size,None,None)
+        self.netcdf_handle.variables[self.stream_variable][:,timesteps] = test_data
+    
+    def create_new_stream(self,data):
+        if self.netcdf_handle is None:
+            return
+        self.stream_index += 1
+        self.stream_variable = 'time_data_{:}'.format(self.stream_index)
+        self.stream_dimension = 'time_samples_{:}'.format(self.stream_index)
+        self.netcdf_handle.createDimension(self.stream_dimension,None)
+        self.netcdf_handle.createVariable(self.stream_variable,'f8',('response_channels',self.stream_dimension))
+    
     def finalize(self,data):
         """Closes the netCDF file when data writing is complete
 

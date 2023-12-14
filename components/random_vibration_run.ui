@@ -16,6 +16,311 @@
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <layout class="QGridLayout" name="test_control_layout">
+     <item row="3" column="1">
+      <layout class="QVBoxLayout" name="test_time_display_layout">
+       <item>
+        <layout class="QHBoxLayout" name="total_test_time_display_layout">
+         <item>
+          <widget class="QLabel" name="total_test_time_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Total Test Time</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="total_test_time_display">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Total time that the environment has been running for.</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="time_at_level_display_layout">
+         <item>
+          <widget class="QLabel" name="time_at_level_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Time at Level</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="time_at_level_display">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Time that the environment has been running at the current test level.</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="test_progress_bar">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>Environment progress.  When the bar reaches 100%, the environment will stop automatically.</string>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="3" column="0">
+      <layout class="QVBoxLayout" name="test_runtime_selection_layout">
+       <item>
+        <widget class="QRadioButton" name="continuous_test_radiobutton">
+         <property name="toolTip">
+          <string>Run the environment until it is manually stopped.</string>
+         </property>
+         <property name="text">
+          <string>Continuous Run</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">test_time_button_group</string>
+         </attribute>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="run_time_layout">
+         <item>
+          <widget class="QRadioButton" name="timed_test_radiobutton">
+           <property name="toolTip">
+            <string>Run the environment for a specified amount of time</string>
+           </property>
+           <property name="text">
+            <string>Run for</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">test_time_button_group</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTimeEdit" name="test_time_selector">
+           <property name="toolTip">
+            <string>Amount of time that the environment will run for.</string>
+           </property>
+           <property name="displayFormat">
+            <string>h:mm:ss</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="time_test_at_target_level_checkbox">
+         <property name="toolTip">
+          <string>If checked, the timer will only run when the test is at the target test level.</string>
+         </property>
+         <property name="text">
+          <string>at Target Test Level</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="0" colspan="2">
+      <widget class="Line" name="test_separator_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0" colspan="2">
+      <widget class="QPushButton" name="stop_test_button">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="palette">
+        <palette>
+         <active>
+          <colorrole role="ButtonText">
+           <brush brushstyle="SolidPattern">
+            <color alpha="255">
+             <red>255</red>
+             <green>0</green>
+             <blue>0</blue>
+            </color>
+           </brush>
+          </colorrole>
+         </active>
+         <inactive>
+          <colorrole role="ButtonText">
+           <brush brushstyle="SolidPattern">
+            <color alpha="255">
+             <red>255</red>
+             <green>0</green>
+             <blue>0</blue>
+            </color>
+           </brush>
+          </colorrole>
+         </inactive>
+         <disabled>
+          <colorrole role="ButtonText">
+           <brush brushstyle="SolidPattern">
+            <color alpha="255">
+             <red>120</red>
+             <green>120</green>
+             <blue>120</blue>
+            </color>
+           </brush>
+          </colorrole>
+         </disabled>
+        </palette>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>16</pointsize>
+        </font>
+       </property>
+       <property name="toolTip">
+        <string>Stops the environment</string>
+       </property>
+       <property name="text">
+        <string>Stop Environment</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <layout class="QVBoxLayout" name="target_test_level_layout">
+       <item>
+        <widget class="QLabel" name="target_test_label_lable">
+         <property name="text">
+          <string>Target Test Level</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="target_test_level_selector_layout">
+         <item>
+          <widget class="QDoubleSpinBox" name="target_test_level_selector">
+           <property name="toolTip">
+            <string>Target test level in dB.  This can be used to automatically trigger streaming or used to stop the controller after a specified amount of time.</string>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="minimum">
+            <double>-24.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>24.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="db_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>dB</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item row="1" column="0">
+      <layout class="QVBoxLayout" name="current_test_level_layout">
+       <item>
+        <widget class="QLabel" name="current_test_level_label">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Current Test Level</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="current_test_level_selector_layout">
+         <item>
+          <widget class="QDoubleSpinBox" name="current_test_level_selector">
+           <property name="toolTip">
+            <string>Current test level in dB.  0 dB is the actual test level from the specification.</string>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="minimum">
+            <double>-24.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>24.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="db_label_2">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>dB</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
      <item row="0" column="0">
       <widget class="QGroupBox" name="test_output_voltages_groupbox">
        <property name="sizePolicy">
@@ -41,6 +346,9 @@
             <width>0</width>
             <height>0</height>
            </size>
+          </property>
+          <property name="toolTip">
+           <string>Current excitation voltages being output from the controller</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -100,57 +408,20 @@
          <pointsize>16</pointsize>
         </font>
        </property>
+       <property name="toolTip">
+        <string>Starts the environment controlling to the specification.</string>
+       </property>
        <property name="text">
         <string>Start Environment</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <layout class="QVBoxLayout" name="current_test_level_layout">
-       <item>
-        <widget class="QLabel" name="current_test_level_label">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Current Test Level</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="current_test_level_selector_layout">
-         <item>
-          <widget class="QSpinBox" name="current_test_level_selector">
-           <property name="keyboardTracking">
-            <bool>false</bool>
-           </property>
-           <property name="minimum">
-            <number>-60</number>
-           </property>
-           <property name="maximum">
-            <number>18</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="db_label_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>dB</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
+     <item row="2" column="0" colspan="2">
+      <widget class="Line" name="test_separator_1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
      </item>
      <item row="0" column="1">
       <widget class="QGroupBox" name="test_response_error_groupbox">
@@ -172,6 +443,9 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="toolTip">
+           <string>Current control RMS dB error.</string>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
           </property>
@@ -180,240 +454,15 @@
        </layout>
       </widget>
      </item>
-     <item row="2" column="0" colspan="2">
-      <widget class="Line" name="test_separator_1">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <layout class="QVBoxLayout" name="test_time_display_layout">
-       <item>
-        <layout class="QHBoxLayout" name="total_test_time_display_layout">
-         <item>
-          <widget class="QLabel" name="total_test_time_label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Total Test Time</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="total_test_time_display">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="time_at_level_display_layout">
-         <item>
-          <widget class="QLabel" name="time_at_level_label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Time at Level</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="time_at_level_display">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QProgressBar" name="test_progress_bar">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="value">
-          <number>0</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="3" column="0">
-      <layout class="QVBoxLayout" name="test_runtime_selection_layout">
-       <item>
-        <widget class="QRadioButton" name="continuous_test_radiobutton">
-         <property name="text">
-          <string>Continuous Run</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-         <attribute name="buttonGroup">
-          <string notr="true">test_time_button_group</string>
-         </attribute>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="run_time_layout">
-         <item>
-          <widget class="QRadioButton" name="timed_test_radiobutton">
-           <property name="text">
-            <string>Run for</string>
-           </property>
-           <attribute name="buttonGroup">
-            <string notr="true">test_time_button_group</string>
-           </attribute>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTimeEdit" name="test_time_selector">
-           <property name="displayFormat">
-            <string>h:mm:ss</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="time_test_at_target_level_checkbox">
-         <property name="text">
-          <string>at Target Test Level</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="6" column="0" colspan="2">
-      <widget class="QPushButton" name="stop_test_button">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="palette">
-        <palette>
-         <active>
-          <colorrole role="ButtonText">
-           <brush brushstyle="SolidPattern">
-            <color alpha="255">
-             <red>255</red>
-             <green>0</green>
-             <blue>0</blue>
-            </color>
-           </brush>
-          </colorrole>
-         </active>
-         <inactive>
-          <colorrole role="ButtonText">
-           <brush brushstyle="SolidPattern">
-            <color alpha="255">
-             <red>255</red>
-             <green>0</green>
-             <blue>0</blue>
-            </color>
-           </brush>
-          </colorrole>
-         </inactive>
-         <disabled>
-          <colorrole role="ButtonText">
-           <brush brushstyle="SolidPattern">
-            <color alpha="255">
-             <red>120</red>
-             <green>120</green>
-             <blue>120</blue>
-            </color>
-           </brush>
-          </colorrole>
-         </disabled>
-        </palette>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>16</pointsize>
-        </font>
+     <item row="7" column="0" colspan="2">
+      <widget class="QPushButton" name="save_current_spectral_data_button">
+       <property name="toolTip">
+        <string>Saves current spectral data to a NetCDF4 file.</string>
        </property>
        <property name="text">
-        <string>Stop Environment</string>
+        <string>Save Current Spectral Data</string>
        </property>
       </widget>
-     </item>
-     <item row="4" column="0" colspan="2">
-      <widget class="Line" name="test_separator_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <layout class="QVBoxLayout" name="target_test_level_layout">
-       <item>
-        <widget class="QLabel" name="target_test_label_lable">
-         <property name="text">
-          <string>Target Test Level</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="target_test_level_selector_layout">
-         <item>
-          <widget class="QSpinBox" name="target_test_level_selector">
-           <property name="keyboardTracking">
-            <bool>false</bool>
-           </property>
-           <property name="minimum">
-            <number>-60</number>
-           </property>
-           <property name="maximum">
-            <number>18</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="db_label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>dB</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>
@@ -436,7 +485,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="control_channel_1_selector"/>
+         <widget class="QComboBox" name="control_channel_1_selector">
+          <property name="toolTip">
+           <string>Row of the CPSD matrix to create a window for.</string>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="control_channel_2_label">
@@ -446,7 +499,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="control_channel_2_selector"/>
+         <widget class="QComboBox" name="control_channel_2_selector">
+          <property name="toolTip">
+           <string>Column of the CPSD matrix to create a window for</string>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="data_type_label">
@@ -457,6 +514,9 @@
         </item>
         <item>
          <widget class="QComboBox" name="data_type_selector">
+          <property name="toolTip">
+           <string>Data type to display on the new visualization window.</string>
+          </property>
           <item>
            <property name="text">
             <string>Magnitude</string>
@@ -486,6 +546,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="create_window_button">
+          <property name="toolTip">
+           <string>Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.</string>
+          </property>
           <property name="text">
            <string>Create Window</string>
           </property>
@@ -507,6 +570,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="show_all_asds_button">
+          <property name="toolTip">
+           <string>Show Autospectral Densities (ASDs) for all control channels.  This will create a window for every channel in the test.</string>
+          </property>
           <property name="text">
            <string>Autospectral
 Densities</string>
@@ -515,6 +581,9 @@ Densities</string>
         </item>
         <item>
          <widget class="QPushButton" name="show_all_csds_phscoh_button">
+          <property name="toolTip">
+           <string>Show the entire CPSD matrix.  This will show Autospectral Densities on the diagonal, and phase and coherence on the off-diagonals.  WARNING: this will create a number of windows equal to the number of control channels squared, which for large tests could be a huge number of windows that can bog down the user interface of the software and make it unresponsive.</string>
+          </property>
           <property name="text">
            <string>Spectral Densities
 (phase/coh)</string>
@@ -523,6 +592,9 @@ Densities</string>
         </item>
         <item>
          <widget class="QPushButton" name="show_all_csds_realimag_button">
+          <property name="toolTip">
+           <string>Show the entire CPSD matrix.  This will show Autospectral Densities on the diagonal, and real and imaginary parts on the off-diagonals.  WARNING: this will create a number of windows equal to the number of control channels squared, which for large tests could be a huge number of windows that can bog down the user interface of the software and make it unresponsive.</string>
+          </property>
           <property name="text">
            <string>Spectral Densities
 (real/imag)</string>
@@ -545,6 +617,9 @@ Densities</string>
         </item>
         <item>
          <widget class="QPushButton" name="tile_windows_button">
+          <property name="toolTip">
+           <string>Tiles all windows over the main monitor</string>
+          </property>
           <property name="text">
            <string>Tile All
 Windows</string>
@@ -553,6 +628,9 @@ Windows</string>
         </item>
         <item>
          <widget class="QPushButton" name="close_windows_button">
+          <property name="toolTip">
+           <string>Closes all visualization windows</string>
+          </property>
           <property name="text">
            <string>Close All
 Windows</string>

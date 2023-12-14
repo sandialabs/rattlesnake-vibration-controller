@@ -19,11 +19,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 import multiprocessing as mp
 import sys
 import datetime
-
+import numpy as np
 from components import (Ui,ControlTypes,VerboseMessageQueue,QueueContainer,
                         ControlSelect,EnvironmentSelect,
                         all_environment_processes,
@@ -46,6 +46,9 @@ def log_file_task(queue : mp.queues.Queue):
             if output == 'quit':
                 f.write('Program quitting, logging terminated.')
                 break
+            num_newlines = output.count('\n')
+            if num_newlines > 1:
+                output = output.replace('\n','////',num_newlines-1)
             f.write(output)
             f.flush()
 
@@ -96,6 +99,10 @@ if __name__ == '__main__':
 #    environment_sync_queue = VerboseMessageQueue(log_file_queue,'Environment Sync Queue')
     single_process_hardware_queue = mp.Queue()
     
+    # Set up shared memory to know when acquisition and output are running
+    acquisition_active = mp.Value('i',0)
+    output_active = mp.Value('i',0)
+    
     # Create Queues for communication back to the GUI
     gui_update_queue = mp.Queue()
     
@@ -124,7 +131,9 @@ if __name__ == '__main__':
                     controller_communication_queue,
                     log_file_queue,
                     environment_data_in_queues[environment_name],
-                    environment_data_out_queues[environment_name]
+                    environment_data_out_queues[environment_name],
+                    acquisition_active,
+                    output_active
                     )
                 )
         environment_processes[environment_name].start()
@@ -144,10 +153,10 @@ if __name__ == '__main__':
                                      environment_data_out_queues)
     
     # Set up the processes
-    acquisition_proc = mp.Process(target=acquisition_process,args=(queue_container,environments))
+    acquisition_proc = mp.Process(target=acquisition_process,args=(queue_container,environments,acquisition_active))
     acquisition_proc.start()
     
-    output_proc = mp.Process(target=output_process,args=(queue_container,environments))
+    output_proc = mp.Process(target=output_process,args=(queue_container,environments,output_active))
     output_proc.start()
     
     streaming_proc = mp.Process(target = streaming_process,args=(queue_container,))
@@ -157,6 +166,8 @@ if __name__ == '__main__':
     
     # Run the program
     app.exec_()
+    
+    
     
     # Rejoin all proceseses
     log_file_queue.put('{:}: Joining Acquisition Process\n'.format(datetime.datetime.now()))
@@ -168,6 +179,6 @@ if __name__ == '__main__':
     for environment_name,environment_process in environment_processes.items():
         log_file_queue.put('{:}: Joining {:} Process\n'.format(datetime.datetime.now(),environment_name))
         environment_process.join()
-    
+    log_file_queue.put('{:}: Joining Log File Process\n'.format(datetime.datetime.now()))
     log_file_queue.put('quit')
     log_file_process.join()

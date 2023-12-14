@@ -24,7 +24,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from PyQt5 import QtWidgets,uic,QtCore
+from qtpy import QtWidgets,uic,QtCore
 from .abstract_environment import AbstractEnvironment,AbstractMetadata,AbstractUI
 from .utilities import DataAcquisitionParameters,VerboseMessageQueue,GlobalCommands,rms_time,db2scale
 from .ui_utilities import multiline_plotter,load_time_history
@@ -625,7 +625,9 @@ class TimeEnvironment(AbstractEnvironment):
         
     def __init__(self,
                  environment_name : str,
-                 queue_container : TimeQueues):
+                 queue_container : TimeQueues,
+                 acquisition_active : mp.Value,
+                 output_active : mp.Value):
         """
         Time History Generation Environment Constructor 
     
@@ -647,7 +649,9 @@ class TimeEnvironment(AbstractEnvironment):
                 queue_container.controller_communication_queue,
                 queue_container.log_file_queue,
                 queue_container.data_in_queue,
-                queue_container.data_out_queue)
+                queue_container.data_out_queue,
+                acquisition_active,
+                output_active)
         self.queue_container = queue_container
         # Define command map
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.run_environment
@@ -854,7 +858,9 @@ def time_process(environment_name : str,
                  controller_communication_queue : VerboseMessageQueue,
                  log_file_queue : Queue,
                  data_in_queue : Queue,
-                 data_out_queue : Queue):
+                 data_out_queue : Queue,
+                 acquisition_active : mp.Value,
+                 output_active : mp.Value):
     """Time signal generation environment process function called by multiprocessing
     
     This function defines the environment process that
@@ -891,6 +897,8 @@ def time_process(environment_name : str,
     
     process_class = TimeEnvironment(
             environment_name,
-            queue_container)
+            queue_container,
+            acquisition_active,
+            output_active)
     process_class.run()
     

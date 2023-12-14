@@ -45,6 +45,9 @@
           </item>
           <item>
            <widget class="QSpinBox" name="test_level_selector">
+            <property name="toolTip">
+             <string>Scale factor applied to the signal.</string>
+            </property>
             <property name="keyboardTracking">
              <bool>false</bool>
             </property>
@@ -73,6 +76,9 @@
         </item>
         <item>
          <widget class="QCheckBox" name="repeat_signal_checkbox">
+          <property name="toolTip">
+           <string>Check to continually repeat the signal</string>
+          </property>
           <property name="text">
            <string>Repeat Signal</string>
           </property>
@@ -129,6 +135,9 @@
              <font>
               <pointsize>16</pointsize>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Start playing the signal</string>
             </property>
             <property name="text">
              <string>Start Environment</string>
@@ -187,6 +196,9 @@
              <font>
               <pointsize>16</pointsize>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Stop playing the signal by ramping down the level</string>
             </property>
             <property name="text">
              <string>Stop Environment</string>

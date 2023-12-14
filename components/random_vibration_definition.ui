@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1163</width>
-    <height>689</height>
+    <width>1347</width>
+    <height>655</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="specification_layout">
+    <layout class="QHBoxLayout" name="specification_layout" stretch="0,0,1">
      <item>
       <layout class="QVBoxLayout" name="specification_summary_layout">
        <item>
@@ -39,7 +39,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of samples that the control process processes at a time.  This will be equal to the Samples per Frame * (1 - Overlap Percentage / 100).  This need correspond to the read or write size of the data acquisition system as the control process acquisition is buffered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>Number of samples that the control process processes at a time.  This will be equal to the Samples per Frame * (1 - Overlap Percentage / 100).  This need correspond to the read or write size of the data acquisition system as the control process acquisition is buffered.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -72,7 +72,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -105,7 +105,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The Nyquist Frequency is the highest frequency that can be analyzed using frequency domain techniques.  It is the Sample Rate / 2.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>The Nyquist Frequency is the highest frequency that can be analyzed using frequency domain techniques.  It is the Sample Rate / 2.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -135,7 +135,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of frequency lines in the Fast Fourier Transform output, which is the number of frequency lines that will be in the Transfer Function and CPSD matrices.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>The number of frequency lines in the Fast Fourier Transform output, which is the number of frequency lines that will be in the Transfer Function and CPSD matrices.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -168,7 +168,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The frequency resolution of the measurement, computed by 1/Frame Time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>The frequency resolution of the measurement, computed by 1/Frame Time.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -198,7 +198,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Samples per measurement frame in the controller. The measurement frame is the &amp;quot;block&amp;quot; of data upon which the signal processing will be performed. This value will determine the window size. A larger value will result in more frequency lines in the FFT analysis. This need not correspond to the read or write size in the data acquisition system.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>Samples per measurement frame in the controller. The measurement frame is the &amp;quot;block&amp;quot; of data upon which the signal processing will be performed. This value will determine the window size. A larger value will result in more frequency lines in the FFT analysis. This need not correspond to the read or write size in the data acquisition system.</string>
               </property>
               <property name="readOnly">
                <bool>false</bool>
@@ -240,7 +240,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Time to acquire each measurement frame in seconds.  This is the Samples per Frame divided by the Sample Rate.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>Time to acquire each measurement frame in seconds.  This is the Samples per Frame divided by the Sample Rate.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -264,7 +264,7 @@
             <item>
              <widget class="QDoubleSpinBox" name="ramp_time_spinbox">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Time in seconds that the controller takes to change the test level. The test level is changed smoothly to prevent damaging the excitation hardware or part under test. Larger numbers will result in a more smooth transition between test levels, while smaller numbers will make the test level change more quickly.&lt;/p&gt;&lt;p&gt;Profile Identifier: Ramp Time Spinbox&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>Time in seconds that the controller takes to change the test level. The test level is changed smoothly to prevent damaging the excitation hardware or part under test. Larger numbers will result in a more smooth transition between test levels, while smaller numbers will make the test level change more quickly.</string>
               </property>
               <property name="minimum">
                <double>0.100000000000000</double>
@@ -277,206 +277,6 @@
               </property>
               <property name="value">
                <double>0.500000000000000</double>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="system_id_groupbox">
-         <property name="title">
-          <string>System ID Parameters</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="1" column="1">
-           <layout class="QVBoxLayout" name="overlap_percentage_layout">
-            <item>
-             <widget class="QLabel" name="overlap_percentage_label">
-              <property name="text">
-               <string>Overlap Percentage</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QDoubleSpinBox" name="system_id_overlap_percentage_selector">
-              <property name="value">
-               <double>50.000000000000000</double>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="0" column="0">
-           <layout class="QVBoxLayout" name="averaging_type_layout">
-            <item>
-             <widget class="QLabel" name="averaging_type_label">
-              <property name="text">
-               <string>Averaging Type</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="system_id_averaging_scheme_selector">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The averaging approach used to compute the transfer function. Linear averaging weights all frames evenly, while Exponential averaging applies more weight to more recent frames.&lt;/p&gt;&lt;p&gt;Profile Identifier: System Id Averaging Scheme Selector&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <item>
-               <property name="text">
-                <string>Linear</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Exponential</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="0">
-           <layout class="QVBoxLayout" name="frf_window_layout">
-            <item>
-             <widget class="QLabel" name="frf_window_label">
-              <property name="text">
-               <string>FRF Window</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="system_id_transfer_function_computation_window_selector">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The window function applied to the measurement frames when computing the transfer functions.&lt;/p&gt;&lt;p&gt;Profile Identifier: System Id Transfer Function Computatino Window Selector&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <item>
-               <property name="text">
-                <string>Hann</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="0" column="2">
-           <layout class="QVBoxLayout" name="averaging_coefficient_layout">
-            <item>
-             <widget class="QLabel" name="averaging_coefficient_label">
-              <property name="text">
-               <string>Averaging Coefficient</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QDoubleSpinBox" name="system_id_averaging_coefficient_selector">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Weighting applied to the most recent average for Exponential Averaging.&lt;/p&gt;&lt;p&gt;Profile Identifier: System Id Averaging Coefficient Selector&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="decimals">
-               <number>3</number>
-              </property>
-              <property name="minimum">
-               <double>0.000000000000000</double>
-              </property>
-              <property name="maximum">
-               <double>1.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.100000000000000</double>
-              </property>
-              <property name="value">
-               <double>0.100000000000000</double>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="0" column="1">
-           <layout class="QVBoxLayout" name="system_id_averages_layout">
-            <item>
-             <widget class="QLabel" name="system_id_averages_label">
-              <property name="text">
-               <string>System ID Averages</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="system_id_frames_to_average_selector">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of averages used for Linear Averaging, and the number of frames that will be used for the initial System Identification step for Exponential Averaging.&lt;/p&gt;&lt;p&gt;Profile Identifier: System Id Frames To Average Selector&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="maximum">
-               <number>500</number>
-              </property>
-              <property name="value">
-               <number>50</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="0" column="3">
-           <layout class="QVBoxLayout" name="frf_technique_layout">
-            <item>
-             <widget class="QLabel" name="frf_technique_label">
-              <property name="text">
-               <string>FRF Technique</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="system_id_frf_technique_selector">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Technique to compute the Transfer Function. H1 averages noise on the response channels.&lt;/p&gt;&lt;p&gt;Profile Identifier: System Id Frf Technique Selector&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <item>
-               <property name="text">
-                <string>H1</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="3">
-           <layout class="QHBoxLayout" name="update_transfer_function_layout">
-            <item>
-             <widget class="QCheckBox" name="update_transfer_function_during_control_selector">
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="text">
-               <string>Update TF
-During Control?</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="2">
-           <layout class="QVBoxLayout" name="overlap_percentage_layout_2">
-            <item>
-             <widget class="QLabel" name="initial_rms_voltage_label">
-              <property name="text">
-               <string>System ID RMS Voltage</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QDoubleSpinBox" name="system_id_initial_drive_voltage_selector">
-              <property name="decimals">
-               <number>3</number>
-              </property>
-              <property name="maximum">
-               <double>12.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.010000000000000</double>
-              </property>
-              <property name="value">
-               <double>0.010000000000000</double>
               </property>
              </widget>
             </item>
@@ -502,6 +302,9 @@ During Control?</string>
             </item>
             <item>
              <widget class="QComboBox" name="cola_window_selector">
+              <property name="toolTip">
+               <string>Window function to use when performing the Constant Overlap and Add to combine time realizations into a continuous signal.  A Hann window is limited to 50% overlap.  Tukey windows can have variable overlap.</string>
+              </property>
               <item>
                <property name="text">
                 <string>Tukey</string>
@@ -527,6 +330,9 @@ During Control?</string>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="cola_exponent_selector">
+              <property name="toolTip">
+               <string>Exponent that the window function is raised to.  This should typically be 0.5 to ensure a constant variance in the signal.  Don't change this value unless you know what you're doing.</string>
+              </property>
               <property name="minimum">
                <double>-100.000000000000000</double>
               </property>
@@ -548,12 +354,18 @@ During Control?</string>
             <item>
              <widget class="QLabel" name="cola_overlap_percent_label">
               <property name="text">
-               <string>COLA Overlap %</string>
+               <string>COLA Overlap</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="cola_overlap_percentage_selector">
+              <property name="toolTip">
+               <string>Percentage overlap between frames that are assembled using the Constant Overlap and Add</string>
+              </property>
+              <property name="suffix">
+               <string>%</string>
+              </property>
               <property name="value">
                <double>50.000000000000000</double>
               </property>
@@ -574,6 +386,9 @@ During Control?</string>
              <widget class="QSpinBox" name="samples_per_write_display">
               <property name="enabled">
                <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of new samples generated by each realization taking into account the overlap with the previous realization.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -597,37 +412,14 @@ During Control?</string>
           <string>Control Parameters</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="0" column="3">
-           <layout class="QVBoxLayout" name="output_channels_layout">
-            <item>
-             <widget class="QLabel" name="output_channels_label">
-              <property name="text">
-               <string>Output Channels</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="output_channels_display">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-              <property name="buttonSymbols">
-               <enum>QAbstractSpinBox::NoButtons</enum>
-              </property>
-              <property name="prefix">
-               <string/>
-              </property>
-              <property name="maximum">
-               <number>1000000</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
+          <item row="4" column="0" colspan="4">
+           <widget class="Line" name="control_separator">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
           </item>
-          <item row="0" column="1">
+          <item row="0" column="0">
            <layout class="QVBoxLayout" name="input_channels_layout">
             <item>
              <widget class="QLabel" name="input_channels_label">
@@ -641,42 +433,8 @@ During Control?</string>
               <property name="enabled">
                <bool>true</bool>
               </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-              <property name="buttonSymbols">
-               <enum>QAbstractSpinBox::NoButtons</enum>
-              </property>
-              <property name="prefix">
-               <string/>
-              </property>
-              <property name="maximum">
-               <number>1000000</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="2" column="1" colspan="3">
-           <widget class="Line" name="control_separator">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <layout class="QVBoxLayout" name="control_channels_layout">
-            <item>
-             <widget class="QLabel" name="control_channels_label">
-              <property name="text">
-               <string>Control Channels</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="control_channels_display">
-              <property name="enabled">
-               <bool>true</bool>
+              <property name="toolTip">
+               <string>Number of acquisition channels that the controller is measuring.</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -694,28 +452,7 @@ During Control?</string>
             </item>
            </layout>
           </item>
-          <item row="0" column="0">
-           <layout class="QVBoxLayout" name="frames_in_cpsd_layout">
-            <item>
-             <widget class="QLabel" name="frames_in_cpsd_label">
-              <property name="text">
-               <string>Frames in CPSD</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="cpsd_frames_selector">
-              <property name="maximum">
-               <number>500</number>
-              </property>
-              <property name="value">
-               <number>20</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="3" column="0" colspan="4">
+          <item row="5" column="0" colspan="4">
            <layout class="QVBoxLayout" name="control_script_vertical_layout">
             <item>
              <widget class="QLabel" name="control_script_label">
@@ -734,6 +471,9 @@ During Control?</string>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="toolTip">
+                 <string>Python script used to specify the control law.</string>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
@@ -741,6 +481,9 @@ During Control?</string>
               </item>
               <item>
                <widget class="QPushButton" name="control_script_load_file_button">
+                <property name="toolTip">
+                 <string>Loads in a Python script to use as the control strategy</string>
+                </property>
                 <property name="text">
                  <string>Load</string>
                 </property>
@@ -750,7 +493,7 @@ During Control?</string>
             </item>
            </layout>
           </item>
-          <item row="4" column="0" colspan="4">
+          <item row="6" column="0" colspan="4">
            <layout class="QVBoxLayout" name="control_function_layout">
             <item>
              <widget class="QLabel" name="control_function_label">
@@ -769,6 +512,9 @@ During Control?</string>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="toolTip">
+                 <string>Select the item within the script to use as the control law.</string>
+                </property>
                </widget>
               </item>
               <item>
@@ -778,6 +524,9 @@ During Control?</string>
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Select if the selected control law is a Function, Generator, or Class</string>
                 </property>
                 <item>
                  <property name="text">
@@ -800,7 +549,7 @@ During Control?</string>
             </item>
            </layout>
           </item>
-          <item row="5" column="0" colspan="4">
+          <item row="7" column="0" colspan="4">
            <layout class="QVBoxLayout" name="control_parameters_layout">
             <item>
              <widget class="QLabel" name="control_parameters_label">
@@ -811,6 +560,9 @@ During Control?</string>
             </item>
             <item>
              <widget class="QTextEdit" name="control_parameters_text_input">
+              <property name="toolTip">
+               <string>Any additional parameters needed by the control law are entered in this text box.  It is up to the control law to define what is needed to be defined in this box.</string>
+              </property>
               <property name="lineWrapMode">
                <enum>QTextEdit::NoWrap</enum>
               </property>
@@ -821,8 +573,122 @@ During Control?</string>
             </item>
            </layout>
           </item>
-          <item row="1" column="0">
-           <layout class="QVBoxLayout" name="frames_in_cpsd_layout_2">
+          <item row="0" column="1">
+           <layout class="QVBoxLayout" name="output_channels_layout">
+            <item>
+             <widget class="QLabel" name="output_channels_label">
+              <property name="text">
+               <string>Output Channels</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="output_channels_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of excitation channels that the controller is generating.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="2">
+           <layout class="QVBoxLayout" name="control_channels_layout">
+            <item>
+             <widget class="QLabel" name="control_channels_label">
+              <property name="text">
+               <string>Control Channels</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="control_channels_display">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="toolTip">
+               <string>Number of channels that the controller is using to control the system.</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>1000000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="2">
+           <layout class="QVBoxLayout" name="cpsd_overlap_layout">
+            <item>
+             <widget class="QLabel" name="cpsd_overlap_label">
+              <property name="text">
+               <string>CPSD Overlap</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="cpsd_overlap_selector">
+              <property name="toolTip">
+               <string>Percentage overlap between measurements when constructing CPSDs.</string>
+              </property>
+              <property name="suffix">
+               <string>%</string>
+              </property>
+              <property name="value">
+               <double>50.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="0">
+           <layout class="QVBoxLayout" name="frames_in_cpsd_layout">
+            <item>
+             <widget class="QLabel" name="frames_in_cpsd_label">
+              <property name="text">
+               <string>Frames in CPSD</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="cpsd_frames_selector">
+              <property name="toolTip">
+               <string>Number of measurement frames to use when computing CPSDs.</string>
+              </property>
+              <property name="maximum">
+               <number>500</number>
+              </property>
+              <property name="value">
+               <number>20</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="1">
+           <layout class="QVBoxLayout" name="cpsd_window_layout">
             <item>
              <widget class="QLabel" name="cpsd_window_label">
               <property name="text">
@@ -832,6 +698,9 @@ During Control?</string>
             </item>
             <item>
              <widget class="QComboBox" name="cpsd_computation_window_selector">
+              <property name="toolTip">
+               <string>Window function to use when computing CPSDs.</string>
+              </property>
               <item>
                <property name="text">
                 <string>Hann</string>
@@ -841,7 +710,104 @@ During Control?</string>
             </item>
            </layout>
           </item>
-          <item row="1" column="1">
+          <item row="0" column="3" rowspan="2">
+           <widget class="QCheckBox" name="update_transfer_function_during_control_selector">
+            <property name="toolTip">
+             <string>Checking this box will allow the controller to continually update the system identification to perhaps get a better control for nonlinear structures.  Use with caution! If, for example, a shaker becomes disconnected, the controller will see the system identification between that shaker and the control channels become very small, and it will therefore try to push the shaker harder to make up for the poor transfer function, so the problem could explode.</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>Update Sys ID
+During Control?</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QCheckBox" name="auto_abort_checkbox">
+            <property name="toolTip">
+             <string>If checked, the controller will automatically abort if the abort level in the specification is hit.</string>
+            </property>
+            <property name="text">
+             <string>Allow Automatic
+Aborts?</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="channels_layout">
+       <item>
+        <widget class="QGroupBox" name="control_channels_groupbox">
+         <property name="title">
+          <string>Control Channels</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QListWidget" name="control_channels_selector">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>Check channels that will be treated as control channels</string>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QAbstractScrollArea::AdjustToContents</enum>
+            </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::ExtendedSelection</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="check_selected_button">
+            <property name="toolTip">
+             <string>Checks selected channels to use them as control channels.</string>
+            </property>
+            <property name="text">
+             <string>Check Selected</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="uncheck_selected_button">
+            <property name="toolTip">
+             <string>Unchecks selected channels so they are not treated as control channels.</string>
+            </property>
+            <property name="text">
+             <string>Uncheck Selected</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="transformation_matrices_groupbox">
+         <property name="title">
+          <string>Control and Drive Transforms</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QPushButton" name="transformation_matrices_button">
+            <property name="toolTip">
+             <string>Open the transformation matrix dialog to allow specification of transformations to virtual control or virtual excitation channels.</string>
+            </property>
+            <property name="text">
+             <string>Transformation
+Matrices...</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <layout class="QVBoxLayout" name="transform_channels_layout">
             <item>
              <widget class="QLabel" name="transform_channels_label">
@@ -855,6 +821,9 @@ During Control?</string>
               <property name="enabled">
                <bool>true</bool>
               </property>
+              <property name="toolTip">
+               <string>Number of virtual channels used for control if transformations are specified.</string>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -871,7 +840,7 @@ During Control?</string>
             </item>
            </layout>
           </item>
-          <item row="1" column="2">
+          <item>
            <layout class="QVBoxLayout" name="transform_outputs_layout">
             <item>
              <widget class="QLabel" name="transform_outputs_label">
@@ -885,6 +854,9 @@ During Control?</string>
               <property name="enabled">
                <bool>true</bool>
               </property>
+              <property name="toolTip">
+               <string>Number of virtual outputs defined if transformations are specified.</string>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -900,14 +872,6 @@ During Control?</string>
              </widget>
             </item>
            </layout>
-          </item>
-          <item row="1" column="3">
-           <widget class="QPushButton" name="transformation_matrices_button">
-            <property name="text">
-             <string>Transformation
-Matrices...</string>
-            </property>
-           </widget>
           </item>
          </layout>
         </widget>
@@ -932,7 +896,14 @@ Matrices...</string>
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="specification_row_selector"/>
+             <widget class="QComboBox" name="specification_row_selector">
+              <property name="toolTip">
+               <string>Select the row of the CPSD matrix to visualize</string>
+              </property>
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::AdjustToContents</enum>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QLabel" name="specification_column_label">
@@ -942,12 +913,22 @@ Matrices...</string>
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="specification_column_selector"/>
+             <widget class="QComboBox" name="specification_column_selector">
+              <property name="toolTip">
+               <string>Select the column of the CPSD matrix to visualize</string>
+              </property>
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::AdjustToContents</enum>
+              </property>
+             </widget>
             </item>
             <item>
              <spacer name="specification_button_spacer">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Preferred</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -959,6 +940,9 @@ Matrices...</string>
             </item>
             <item>
              <widget class="QLineEdit" name="specification_file_name_display">
+              <property name="toolTip">
+               <string>File name of the loaded specification</string>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -966,6 +950,9 @@ Matrices...</string>
             </item>
             <item>
              <widget class="QPushButton" name="load_spec_button">
+              <property name="toolTip">
+               <string>Loads in a Specification file to which the controller will attempt to control</string>
+              </property>
               <property name="text">
                <string>Load Spec</string>
               </property>
