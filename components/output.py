@@ -252,6 +252,10 @@ class OutputProcess(AbstractMessageProcess):
                         self.queue_container.input_output_sync_queue.put((environment,write_data[...,::self.output_oversample].copy()))
                         self.environment_first_data[environment] = False
                 self.hardware.write(write_data)
+            else:
+                if self.environment_first_data[environment]:
+                    self.queue_container.input_output_sync_queue.put((environment,0))
+                    self.environment_first_data[environment] = False
 #            np.savez('test_data/output_data_check.npz',output_data = write_data)
             # Now check and see if we are starting up and start the hardare if so
             if self.startup:

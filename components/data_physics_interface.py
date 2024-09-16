@@ -22,15 +22,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 import ctypes
 from enum import Enum
 import numpy as np
 from numpy.ctypeslib import ndpointer
 from time import sleep,time
-import matplotlib.pyplot as plt
-
-plt.close('all')
 
 DEBUG = False
 

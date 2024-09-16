@@ -1009,6 +1009,8 @@ class RandomVibrationUI(AbstractSysIdUI):
             widget.setEnabled(enabled)
         for widget in [self.run_widget.stop_test_button]:
             widget.setEnabled(not enabled)
+        if enabled:
+            self.run_timer.stop()
     
     def update_run_time(self):
         """Updates the time that the control has been running on the GUI"""
@@ -1229,11 +1231,11 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.environment_parameters.store_to_netcdf(group_handle)
         # Create Variables for Spectral Data
         group_handle.createDimension('drive_channels',self.last_transfer_function.shape[2])
-        var = group_handle.createVariable('frf_data_real','f8',('fft_lines','control_channels','drive_channels'))
+        var = group_handle.createVariable('frf_data_real','f8',('fft_lines','specification_channels','drive_channels'))
         var[...] = self.last_transfer_function.real
-        var = group_handle.createVariable('frf_data_imag','f8',('fft_lines','control_channels','drive_channels'))
+        var = group_handle.createVariable('frf_data_imag','f8',('fft_lines','specification_channels','drive_channels'))
         var[...] = self.last_transfer_function.imag
-        var = group_handle.createVariable('frf_coherence','f8',('fft_lines','control_channels'))
+        var = group_handle.createVariable('frf_coherence','f8',('fft_lines','specification_channels'))
         var[...] = self.last_coherence.real
         var = group_handle.createVariable('response_cpsd_real','f8',('fft_lines','specification_channels','specification_channels'))
         var[...] = self.last_response_cpsd.real

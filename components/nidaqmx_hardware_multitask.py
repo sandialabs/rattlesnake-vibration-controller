@@ -114,6 +114,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.reader = ni_read.AnalogMultiChannelReader(self.task.in_stream)
         self.read_data = np.zeros((len(self.task.ai_channels),test_data.samples_per_read))
         self.acquisition_delay = BUFFER_SIZE_FACTOR*test_data.samples_per_write
+        print('Actual Acquisition Sample Rate: {:}'.format(self.task.timing.samp_clk_rate))
     
     def start(self):
         """Start acquiring data"""
@@ -339,12 +340,24 @@ class NIDAQmxOutput(HardwareOutput):
         channel_data : List[Channel] :
             A list of ``Channel`` objects defining the channels in the test
         """
-        self.write_trigger = '/'+channel_data[0].physical_device+'/ai/StartTrigger'
         # Get the physical devices
         physical_devices = list(set([ni.system.device.Device(channel.feedback_device).product_type
                                      for channel in channel_data
                                      if not (channel.feedback_device is None)
                                      and not (channel.feedback_device.strip() == '')]))
+        # Check if it's a CDAQ device
+        try:
+            devices = [ni.system.device.Device(channel.feedback_device)
+                       for channel in channel_data
+                       if not (channel.feedback_device is None)
+                       and not (channel.feedback_device.strip() == '')]
+            if len(devices) == 0:
+                self.write_trigger = None # No output device
+            else:
+                chassis_device = devices[0].compact_daq_chassis_device
+                self.write_trigger = [trigger for trigger in chassis_device.terminals if 'ai/StartTrigger' in trigger][0]
+        except ni.DaqError:
+            self.write_trigger = '/'+channel_data[0].physical_device+'/ai/StartTrigger'
         print('Output Devices: {:}'.format(physical_devices))
         self.tasks = [ni.Task() for device in physical_devices]
         index = 0
@@ -383,6 +396,7 @@ class NIDAQmxOutput(HardwareOutput):
             task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
             task.out_stream.output_buf_size = self.buffer_size_factor*test_data.samples_per_write
             self.writers.append(ni_write.AnalogMultiChannelWriter(task.out_stream,auto_start=False))
+            print('Actual Output Sample Rate: {:}'.format(task.timing.samp_clk_rate))
     
     def start(self):
         """Method to start acquiring data"""

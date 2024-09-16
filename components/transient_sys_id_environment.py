@@ -199,8 +199,9 @@ class TransientMetadata(AbstractSysIdMetadata):
         netcdf_group_handle.control_python_function_parameters = self.control_python_function_parameters
         # Save the output signal
         netcdf_group_handle.createDimension('control_channels',len(self.control_channel_indices))
+        netcdf_group_handle.createDimension('specification_channels',len(self.control_channel_indices))
         netcdf_group_handle.createDimension('signal_samples',self.signal_samples)
-        var = netcdf_group_handle.createVariable('control_signal','f8',('control_channels','signal_samples'))
+        var = netcdf_group_handle.createVariable('control_signal','f8',('specification_channels','signal_samples'))
         var[...] = self.control_signal
         # Control Channels
         var = netcdf_group_handle.createVariable('control_channel_indices','i4',('control_channels'))
@@ -887,29 +888,29 @@ class TransientUI(AbstractSysIdUI):
         # Create Variables for Spectral Data
         group_handle.createDimension('drive_channels',self.last_transfer_function.shape[2])
         group_handle.createDimension('fft_lines',self.environment_parameters.sysid_frame_size//2 + 1)
-        var = group_handle.createVariable('frf_data_real','f8',('fft_lines','control_channels','drive_channels'))
+        var = group_handle.createVariable('frf_data_real','f8',('fft_lines','specification_channels','drive_channels'))
         var[...] = self.last_transfer_function.real
-        var = group_handle.createVariable('frf_data_imag','f8',('fft_lines','control_channels','drive_channels'))
+        var = group_handle.createVariable('frf_data_imag','f8',('fft_lines','specification_channels','drive_channels'))
         var[...] = self.last_transfer_function.imag
-        var = group_handle.createVariable('frf_coherence','f8',('fft_lines','control_channels'))
+        var = group_handle.createVariable('frf_coherence','f8',('fft_lines','specification_channels'))
         var[...] = self.last_coherence.real
-        var = group_handle.createVariable('response_cpsd_real','f8',('fft_lines','control_channels','control_channels'))
+        var = group_handle.createVariable('response_cpsd_real','f8',('fft_lines','specification_channels','specification_channels'))
         var[...] = self.last_response_cpsd.real
-        var = group_handle.createVariable('response_cpsd_imag','f8',('fft_lines','control_channels','control_channels'))
+        var = group_handle.createVariable('response_cpsd_imag','f8',('fft_lines','specification_channels','specification_channels'))
         var[...] = self.last_response_cpsd.imag
         var = group_handle.createVariable('drive_cpsd_real','f8',('fft_lines','drive_channels','drive_channels'))
         var[...] = self.last_reference_cpsd.real
         var = group_handle.createVariable('drive_cpsd_imag','f8',('fft_lines','drive_channels','drive_channels'))
         var[...] = self.last_reference_cpsd.imag
-        var = group_handle.createVariable('response_noise_cpsd_real','f8',('fft_lines','control_channels','control_channels'))
+        var = group_handle.createVariable('response_noise_cpsd_real','f8',('fft_lines','specification_channels','specification_channels'))
         var[...] = self.last_response_noise.real
-        var = group_handle.createVariable('response_noise_cpsd_imag','f8',('fft_lines','control_channels','control_channels'))
+        var = group_handle.createVariable('response_noise_cpsd_imag','f8',('fft_lines','specification_channels','specification_channels'))
         var[...] = self.last_response_noise.imag
         var = group_handle.createVariable('drive_noise_cpsd_real','f8',('fft_lines','drive_channels','drive_channels'))
         var[...] = self.last_reference_noise.real
         var = group_handle.createVariable('drive_noise_cpsd_imag','f8',('fft_lines','drive_channels','drive_channels'))
         var[...] = self.last_reference_noise.imag
-        var = group_handle.createVariable('control_response','f8',('control_channels','signal_samples'))
+        var = group_handle.createVariable('control_response','f8',('specification_channels','signal_samples'))
         var[...] = self.last_control_data
         var = group_handle.createVariable('control_drives','f8',('drive_channels','signal_samples'))
         var[...] = self.last_output_data

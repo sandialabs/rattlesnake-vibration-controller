@@ -27,48 +27,71 @@ def pseudoinverse_control(
         last_excitation_signals = None, # Last excitation signal for drive-based control
         last_response_signals = None, # Last response signal for error correction
         ):
-    # Get a tolerance if specified
+    # Parse the input arguments in extra_parameters
     rcond = 1e-15
     zero_impulse_after = None
+    # Split it up into lines
     for entry in extra_parameters.split('\n'):
         try:
+            # For each entry, split the key from the value using the colon
             field,value = entry.split(':')
+            # Strip any whitespace
             field = field.strip()
+            # Check the field to figure out which value to assign
             if field == 'rcond':
                 rcond = float(value)
             elif field == 'zero_impulse_after':
                 zero_impulse_after = float(value)
             else:
+                # Report if we cannot understand the parameter
                 print('Unrecognized Parameter: {:}, skipping...'.format(field))
         except ValueError:
+            # Report if we cannot parse the line
             print('Unable to Parse Line {:}, skipping...'.format(entry))
 
-    # Compute impulse responses
+    # Compute impulse responses using the IFFT of the transfer function
+    # We will zero pad the IFFT to do interpolation in the frequency domain
+    # to match the length of the required signal
     impulse_response = np.fft.irfft(transfer_function,axis=0)
 
+    # The impulse response should be going to zero at the end of the frame,
+    # but practically there may be some gibbs phenomenon effects that make the
+    # impulse response noncausal.  If we zero pad, this might be wrong.  We
+    # therefore give the use the ability to zero out this non-causal poriton of
+    # the impulse response.
     if zero_impulse_after is not None:
         # Remove noncausal portion
         impulse_response_abscissa = np.arange(impulse_response.shape[0])/sample_rate
         zero_indices = impulse_response_abscissa > zero_impulse_after
         impulse_response[zero_indices] = 0
         
-    # Zero pad the impulse response to create a signal that is long enough
-    added_zeros = np.zeros((specification_signals.shape[-1]-impulse_response.shape[0],) + impulse_response.shape[1:])
+    # Zero pad the impulse response to create a signal that is long enough for
+    # the specification signal
+    added_zeros = np.zeros((specification_signals.shape[-1]-impulse_response.shape[0],) 
+                           + impulse_response.shape[1:])
     full_impulse_response = np.concatenate((impulse_response,added_zeros),axis=0)
 
-    # Compute FRFs
+    # Compute FRFs using the FFT from the impulse response.  This is now
+    # interpolated such that it matches the frequency spacing of the specification
+    # signal
     interpolated_transfer_function = np.fft.rfft(full_impulse_response,axis=0)
 
-    # Perform convolution in frequency domain
+    # Perform convolution by frequency domain multiplication
     signal_fft = np.fft.rfft(specification_signals,axis=-1)
+    # Invert the FRF matrix using the specified rcond parameter
     inverted_frf = np.linalg.pinv(interpolated_transfer_function,rcond=rcond)
+    # Multiply the inverted FRFs by the response spectra to get the drive spectra
     drive_signals_fft = np.einsum('ijk,ki->ij',inverted_frf,signal_fft)
 
-    # Zero pad the FFT to oversample
+    # Zero pad the drive FFT to oversample to the output_oversample_factor
     drive_signals_fft_zero_padded = np.concatenate((drive_signals_fft[:-1],
-        np.zeros((drive_signals_fft[:-1].shape[0]*(output_oversample_factor-1)+1,)+drive_signals_fft.shape[1:])),axis=0)
+        np.zeros((drive_signals_fft[:-1].shape[0]*(output_oversample_factor-1)+1,)
+                 +drive_signals_fft.shape[1:])),axis=0)
 
-    drive_signals_oversampled = np.fft.irfft(drive_signals_fft_zero_padded.T,axis=-1)*output_oversample_factor
+    # Finally, take the IFFT to get the time domain signal.  We need to scale
+    # by the output_oversample_factor due to how the IFFT is normalized.
+    drive_signals_oversampled = np.fft.irfft(
+        drive_signals_fft_zero_padded.T,axis=-1)*output_oversample_factor
     return drive_signals_oversampled
 
 def pseudoinverse_control_generator():
@@ -153,17 +176,6 @@ class pseudoinverse_control_class:
                  last_excitation_signals = None, # Last excitation signal for drive-based control
                  last_response_signals = None, # Last response signal for error correction
                  ):
-        """
-        Initializes the control law
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        None.
-
-        """
         self.rcond = 1e-15
         self.zero_impulse_after = None
         for entry in extra_parameters.split('\n'):
@@ -202,17 +214,6 @@ class pseudoinverse_control_class:
                          frames, # Number of frames in the CPSD and FRF matrices
                          total_frames, # Total frames that could be in the CPSD and FRF matrices
                          ):
-        """
-        Updates the control law with the data from the system identification
-
-        Parameters
-        ----------
-        transfer_function : np.ndarray
-            A complex 3d numpy ndarray with dimensions frequency lines x control
-            channels x excitation sources representing the FRF matrix measured
-            by the system identification process between drive voltages and
-            control response
-        """
         # Compute impulse responses
         impulse_response = np.fft.irfft(transfer_function,axis=0)
 
@@ -223,7 +224,8 @@ class pseudoinverse_control_class:
             impulse_response[zero_indices] = 0
             
         # Zero pad the impulse response to create a signal that is long enough
-        added_zeros = np.zeros((self.specification_signals.shape[-1]-impulse_response.shape[0],) + impulse_response.shape[1:])
+        added_zeros = np.zeros((self.specification_signals.shape[-1]-impulse_response.shape[0],) 
+                               + impulse_response.shape[1:])
         full_impulse_response = np.concatenate((impulse_response,added_zeros),axis=0)
 
         # Compute FRFs
@@ -236,34 +238,16 @@ class pseudoinverse_control_class:
 
         # Zero pad the FFT to oversample
         drive_signals_fft_zero_padded = np.concatenate((drive_signals_fft[:-1],
-            np.zeros((drive_signals_fft[:-1].shape[0]*(self.output_oversample_factor-1)+1,)+drive_signals_fft.shape[1:])),axis=0)
+            np.zeros((drive_signals_fft[:-1].shape[0]*(self.output_oversample_factor-1)+1,)
+                     +drive_signals_fft.shape[1:])),axis=0)
 
-        self.drive_signals_oversampled = np.fft.irfft(drive_signals_fft_zero_padded.T,axis=-1)*self.output_oversample_factor
+        self.drive_signals_oversampled = np.fft.irfft(
+            drive_signals_fft_zero_padded.T,axis=-1)*self.output_oversample_factor
 
     def control(self,
                 last_excitation_signals = None, # Last excitation signal for drive-based control
                 last_response_signals = None, # Last response signal for error correction
-                ) -> np.ndarray:
-        """
-        Perform the control operations
-
-        Parameters
-        ----------
-        last_excitation_signals : np.ndarray, optional
-            The most recent output signal, which can be used for error-based
-            control. The default is None.
-        last_response_signals : np.ndarray, optional
-            The most recent responses to the last output signals, which can be
-            used for error-based control. The default is None.
-
-        Returns
-        -------
-        output_signal : np.ndarray
-            A 2D numpy array consisting of number of outputs x signal samples *
-            output_oversample_factor.  This signal will be played directly to the
-            shakers.
-        """
-        
+                ) -> np.ndarray:       
         # We could modify the output signal based on new data that we obtained
         # Otherwise just output the same
         
