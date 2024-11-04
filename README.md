@@ -9,7 +9,7 @@ and New Mexico (the location of the main Sandia National Laboratories campus, wh
 
 Rattlesnake can be run as a Python script using the code from this repository, or an executable can be downloaded from the [Releases](https://github.com/sandialabs/rattlesnake-vibration-controller/releases) page.
 
-See the [User's Manual](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v2.0/Users_Manual.pdf) for more information.
+See the [User's Manual](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) for more information.
 
 ### Flexible
 
