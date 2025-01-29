@@ -1042,18 +1042,18 @@ class Ui(QtWidgets.QMainWindow):
         filename,file_filter = QtWidgets.QFileDialog.getSaveFileName(self,'Save Test Profile',filter='Excel File (*.xlsx)')
         if filename == '':
             return
-        workbook = openpyxl.workbook()
+        workbook = openpyxl.Workbook()
         worksheet = workbook.active
-        worksheet.title = "Hardware Profile"
-        worksheet.cell(1,1,'Timestamp')
+        worksheet.title = "Test Profile"
+        worksheet.cell(1,1,'Time (s)')
         worksheet.cell(1,2,'Environment')
         worksheet.cell(1,3,'Operation')
         worksheet.cell(1,4,'Data')
         for row in range(self.profile_table.rowCount()):
-            worksheet.cell(row+1,1,float(self.profile_table.cellWidget(row,0).value()))
-            worksheet.cell(row+2,1,self.profile_table.cellWidget(row,1).currentText())
-            worksheet.cell(row+3,1,self.profile_table.cellWidget(row,2).currentText())
-            worksheet.cell(row+4,1,self.profile_table.item(row,3).text())
+            worksheet.cell(row+2,1,float(self.profile_table.cellWidget(row,0).value()))
+            worksheet.cell(row+2,2,self.profile_table.cellWidget(row,1).currentText())
+            worksheet.cell(row+2,3,self.profile_table.cellWidget(row,2).currentText())
+            worksheet.cell(row+2,4,self.profile_table.item(row,3).text())
         workbook.save(filename)
     
     def load_profile(self):
