@@ -24,3 +24,9 @@ dist/**
 **/*.exe
 **/html/**
 **/*.mat
+**/.ipynb_checkpoints/**
+**.vscode/
+# ignore macOS database files
+.DS_Store
+# ignore egg files
+*.egg*
