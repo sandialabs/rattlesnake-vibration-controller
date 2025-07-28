@@ -37,7 +37,45 @@ jobs:
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
-        pylint src/rattlesnake/**/*.py > "$OUTPUT_FILE" || true  # Allow the command to fail without failing the job
+        pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$OUTPUT_FILE" || true  # Allow the command to fail without failing the job
+
+        # Extract the score from pylint output
+        SCORE=$(grep "Your code has been rated at" "$OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1)
+        echo "Pylint score: $SCORE"
+        echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
+        
+        # Determine badge color based on score
+        if (( $(echo "$SCORE >= 8.0" | bc -l) )); then
+          COLOR="brightgreen"
+        elif (( $(echo "$SCORE >= 6.0" | bc -l) )); then
+          COLOR="yellow"
+        elif (( $(echo "$SCORE >= 4.0" | bc -l) )); then
+          COLOR="orange"
+        else
+          COLOR="red"
+        fi
+        echo "BADGE_COLOR=$COLOR" >> $GITHUB_ENV
+
+    - name: Create pylint badge
+      if: github.ref == 'refs/heads/main'  # Only create badge on main branch
+      run: |
+        # Create badges directory if it doesn't exist
+        mkdir -p badges
+        
+        # Download badge using shields.io
+        curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${{ env.PYLINT_SCORE }}-${{ env.BADGE_COLOR }}.svg"
+
+    - name: Commit badge
+      # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
+      if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add badges/pylint.svg
+        git diff --staged --quiet || git commit -m "Update pylint badge [skip ci]"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload pylint output as artifact
       uses: actions/upload-artifact@v4
