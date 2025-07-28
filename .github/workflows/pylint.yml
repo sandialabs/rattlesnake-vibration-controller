@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.8", "3.9"]
+        python-version: ["3.8"]
 
     steps:
     - uses: actions/checkout@v4
@@ -32,13 +32,16 @@ jobs:
         # pip install pylint
         pip install .[dev]
 
-    - name: Analysing the code with pylint
+    - name: Analyzing the code with pylint
       run: |
-        # pylint $(git ls-files '*.py')
-        pylint src/rattlesnake/**/*.py > pylint_output.txt || true  # Allow the command to fail without failing the job
+        # Create a timestamp for the output file
+        TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+        OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
+        pylint src/rattlesnake/**/*.py > "$OUTPUT_FILE" || true  # Allow the command to fail without failing the job
 
     - name: Upload pylint output as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: pylint-output
-        path: pylint_output.txt
+        name: pylint-output-${{ github.run_id }}  # Use the run ID to ensure uniqueness
+        path: pylint_output*.txt  # Uplaod timestamped output file
+        retention-days: 7  # Retain the artifact for 7 days
