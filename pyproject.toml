@@ -32,7 +32,7 @@ dependencies = [
     "qtpy",
     "requests",
     "scipy",
-    ]
+]
 requires-python = '>=3.8'
 version = '3.0.2'
 #classifiers = [
@@ -49,6 +49,7 @@ version = '3.0.2'
 dev = [
   'flake8',
   'isort',
+  'pylint',
   'pytest',
   'pytest-cov',
   'pytest-qt==4.4.0',
