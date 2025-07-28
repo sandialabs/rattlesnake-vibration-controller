@@ -1,6 +1,6 @@
 # This file is a GitHub Actions workflow configuration file that runs Pytest on pushes and pull requests to the main and dev branches. It sets up a matrix of Python versions (3.8 and 3.9) to test against, checks out the code, installs dependencies, and runs the tests using Pytest.
 
-name: main
+name: Pytest
 
 on:
   push:
