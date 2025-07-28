@@ -41,7 +41,7 @@ jobs:
 
         # Extract the score from pylint output
         SCORE=$(grep "Your code has been rated at" "$OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1)
-        echo "Pylint score: $SCORE"
+        echo "Pylint score: $SCORE out of 10.0"
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         
         # Determine badge color based on score

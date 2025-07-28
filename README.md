@@ -1,5 +1,7 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
+![Pylint](./badges/pylint.svg)
+
 This project aims to develop a Combined Environments, Multiple-Input/Multiple-Output (MIMO) vibration
 controller that can better simulate dynamic environments than a traditional single-shaker test.
 
