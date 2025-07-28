@@ -29,7 +29,6 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # pip install pylint
         pip install .[dev]
 
     - name: Analyzing the code with pylint
@@ -66,6 +65,17 @@ jobs:
         # Download badge using shields.io
         curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${{ env.PYLINT_SCORE }}-${{ env.BADGE_COLOR }}.svg"
 
+        # Create a JSON file with badge metadata for easier linking
+        cat > badges/pylint-info.json << EOF
+        {
+          "score": "${{ env.PYLINT_SCORE }}",
+          "color": "${{ env.BADGE_COLOR }}",
+          "workflow_url": "${WORKFLOW_URL}",
+          "run_id": "${{ github.run_id }}",
+          "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}"
+        }
+        EOF
+
     - name: Commit badge
       # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
       if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch
@@ -83,4 +93,4 @@ jobs:
       with:
         name: pylint-output-${{ github.run_id }}  # Use the run ID to ensure uniqueness
         path: pylint_output*.txt  # Uplaod timestamped output file
-        retention-days: 7  # Retain the artifact for 7 days
+        # retention-days: 7  # Retain the artifact for 7 days

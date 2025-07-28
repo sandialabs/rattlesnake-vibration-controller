@@ -36,7 +36,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install .[dev]
-          # pip install pytest  # Add any other dependencies your project needs
 
       - name: Run tests with coverage
         run: |
@@ -49,7 +48,7 @@ jobs:
         with:
           name: coverage-report
           path: coverage.xml
-          retention-days: 7
+          # retention-days: 7
           
   # Separate job for badge generation (only runs after tests pass)
   coverage-badge:
@@ -98,10 +97,32 @@ jobs:
           else
             COLOR="red"
           fi
-          
+
+          # Create the badge URL that links to the latest workflow run
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+          WORKFLOW_URL="${REPO_URL}/actions/workflows/pytest.yml"
+
           # Download badge using shields.io
           curl -o badges/coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}.svg"
-          
+
+          # Create a JSON file with badge metadata
+          cat > badges/coverage-info.json << EOF
+          {
+            "coverage": "${COVERAGE}",
+            "color": "${COLOR}",
+            "workflow_url": "${WORKFLOW_URL}",
+            "run_id": "${{ github.run_id }}",
+            "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+
+      - name: Upload HTML coverage report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-report-${{ github.run_id }}
+          path: htmlcov/
+          # retention-days: 7
+
       - name: Commit badge
         run: |
           git fetch
