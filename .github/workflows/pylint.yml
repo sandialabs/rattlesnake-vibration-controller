@@ -41,7 +41,7 @@ jobs:
 
         # Extract the score from pylint output
         SCORE=$(grep "Your code has been rated at" "$OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1)
-        echo "Pylint score: $SCORE out of 10.0"
+        echo "Pylint score: $SCORE out of 10"
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         
         # Determine badge color based on score
@@ -57,7 +57,8 @@ jobs:
         echo "BADGE_COLOR=$COLOR" >> $GITHUB_ENV
 
     - name: Create pylint badge
-      if: github.ref == 'refs/heads/main'  # Only create badge on main branch
+      # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
+      if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch
       run: |
         # Create badges directory if it doesn't exist
         mkdir -p badges
