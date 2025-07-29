@@ -77,7 +77,7 @@ jobs:
         # Define the time zones
         est = pytz.timezone('America/New_York')
         mst = pytz.timezone('America/Denver')
-                
+
         # Convert UTC time to EST and MST
         est_now = utc_now.astimezone(est)
         mst_now = utc_now.astimezone(mst)
@@ -85,7 +85,7 @@ jobs:
         # Format the output
         formatted_time = utc_now.strftime("%Y-%m-%d %H:%M:%S UTC") + f" ({est_now.strftime('%Y-%m-%d %H:%M:%S EST')} / {mst_now.strftime('%Y-%m-%d %H:%M:%S MST')})"
 
-        print(formatted_time)
+        # print(formatted_time) # debugging
 
         # Read pylint output
         output_file = os.environ['OUTPUT_FILE']
@@ -219,7 +219,8 @@ jobs:
             <h1>🐍 Rattlesnake Pylint Report</h1>
             <div class="score">{pylint_score}/10</div>
             <div class="metadata">
-                <div><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</div>
+                <!--div><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</div-->
+                <div><strong>Generated:</strong> {formatted_time}</div>
                 <div><strong>Run ID:</strong> {run_id}</div>
                 <div><strong>Branch:</strong> {ref_name}</div>
                 <div><strong>Commit:</strong> {github_sha[:8]}</div>
