@@ -1,8 +1,11 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
-![Pylint](./badges/pylint.svg)
+![Pylint](./badges/pylint.svg) &nbsp;&nbsp;&nbsp; ![Coverage](./badges/coverage.svg)
 
-![Coverage](./badges/coverage.svg)
+
+![pylint report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+
+![coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 This project aims to develop a Combined Environments, Multiple-Input/Multiple-Output (MIMO) vibration
 controller that can better simulate dynamic environments than a traditional single-shaker test.

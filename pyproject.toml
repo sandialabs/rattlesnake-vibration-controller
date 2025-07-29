@@ -51,6 +51,7 @@ dev = [
   'flake8',
   'isort',
   'pylint',
+  'pylint2html',
   'pytest',
   'pytest-cov',
   'pytest-qt==4.4.0',
