@@ -360,6 +360,7 @@ jobs:
         EOF
         
     - name: Create pylint badge with GitHub Pages link
+      # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
       if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
       run: |
         # Create badges directory if it doesn't exist
@@ -389,8 +390,9 @@ jobs:
         publish_branch: gh-pages
         commit_message: 'Deploy pylint report for ${{ github.sha }}'
         
-    - name: Commit badge to main repository
-      if: github.ref == 'refs/heads/dev'
+    - name: Commit badge to main repository (dev branch for now)
+      # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
+      if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
