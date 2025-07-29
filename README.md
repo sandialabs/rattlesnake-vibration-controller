@@ -1,17 +1,14 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
-![Pylint](./badges/pylint.svg) &nbsp;&nbsp;&nbsp; ![Coverage](./badges/coverage.svg)
+## Work in Progress 
 
+![Coverage](./badges/coverage.svg)
 
-![pylint report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+[coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
-![coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
-
-[Rattlesnake Pylint Report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/) ![Pylint](./badges/pylint.svg)
 
 ## Quality Metrics
 
-[Rattlesnake Pylint Report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/) 
 [![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
 
 ## Overview
