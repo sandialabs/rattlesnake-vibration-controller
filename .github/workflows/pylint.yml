@@ -216,7 +216,7 @@ jobs:
             font-size: 1.8em; font-weight: bold; color: #0366d6;
         }} </style> </head> <body> <div class="container">
         <div class="header">
-            <h1>🐍 Rattlesnake Pylint Report</h1>
+            <h1>Rattlesnake Pylint Report</h1>
             <div class="score">{pylint_score}/10</div>
             <div class="metadata">
                 <!--div><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</div-->
