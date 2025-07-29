@@ -74,9 +74,13 @@ jobs:
         # Get the current UTC time
         utc_now = datetime.now(pytz.utc)
 
-        # Define the timezones for the report
+        # Define the time zones
         est = pytz.timezone('America/New_York')
         mst = pytz.timezone('America/Denver')
+                
+        # Convert UTC time to EST and MST
+        est_now = utc_now.astimezone(est)
+        mst_now = utc_now.astimezone(mst)
         
         # Format the output
         formatted_time = utc_now.strftime("%Y-%m-%d %H:%M:%S UTC") + f" ({est_now.strftime('%Y-%m-%d %H:%M:%S EST')} / {mst_now.strftime('%Y-%m-%d %H:%M:%S MST')})"
