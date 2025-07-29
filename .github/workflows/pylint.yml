@@ -24,30 +24,23 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install .[dev]
-        pip install pylint2html  # For HTML report generation
         
     - name: Analyzing the code with pylint
       run: |
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
-        HTML_FILE="pylint_report_${TIMESTAMP}.html"
         
         # Generate text report
         pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$OUTPUT_FILE" || true
-        
-        # Generate HTML report
-        pylint src/rattlesnake/**/*.py --output-format=json > pylint_report.json || true
-        pylint2html pylint_report.json -o "$HTML_FILE"
         
         # Extract the score from pylint output
         SCORE=$(grep "Your code has been rated at" "$OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
         echo "Pylint score: $SCORE out of 10"
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
-        echo "HTML_FILE=$HTML_FILE" >> $GITHUB_ENV
         echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
         
-        # Determine badge color based on score (using Python instead of bc for better compatibility)
+        # Determine badge color based on score
         python3 << EOF
         import os
         try:
@@ -68,89 +61,182 @@ jobs:
             f.write(f"BADGE_COLOR={color}\n")
         EOF
         
-    - name: Create enhanced HTML report
+    - name: Create custom HTML report
       run: |
-        # Create a comprehensive HTML report with navigation
-        cat > pylint_enhanced_report.html << 'EOF'
-        <!DOCTYPE html>
+        # Read the pylint output and create a custom HTML report
+        python3 << 'EOF'
+        import os
+        import html
+        import re
+        from datetime import datetime
+        
+        # Read pylint output
+        output_file = os.environ['OUTPUT_FILE']
+        with open(output_file, 'r') as f:
+            pylint_content = f.read()
+        
+        # Parse pylint output for better formatting
+        lines = pylint_content.split('\n')
+        issues = []
+        summary_started = False
+        summary_lines = []
+        
+        for line in lines:
+            if line.startswith('************* Module'):
+                current_module = line.replace('************* Module ', '')
+            elif ':' in line and any(x in line for x in ['error', 'warning', 'convention', 'refactor']):
+                issues.append(line)
+            elif summary_started or 'Your code has been rated at' in line:
+                summary_started = True
+                summary_lines.append(line)
+        
+        # Create HTML content
+        html_content = f'''<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Pylint Report - Rattlesnake</title>
             <style>
-                body { 
+                body {{ 
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-                    margin: 0; padding: 20px; background: #f6f8fa; 
-                }
-                .header { 
+                    margin: 0; padding: 20px; background: #f6f8fa; line-height: 1.6;
+                }}
+                .container {{
+                    max-width: 1200px; margin: 0 auto;
+                }}
+                .header {{ 
+                    background: white; padding: 30px; border-radius: 8px; 
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+                }}
+                .score {{ 
+                    font-size: 2.5em; font-weight: bold; 
+                    color: {"#28a745" if float(os.environ.get("PYLINT_SCORE", "0")) >= 8 else "#ffc107" if float(os.environ.get("PYLINT_SCORE", "0")) >= 6 else "#dc3545"};
+                }}
+                .metadata {{ 
+                    color: #6a737d; font-size: 0.9em; margin-top: 10px;
+                }}
+                .nav {{ 
                     background: white; padding: 20px; border-radius: 8px; 
                     box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
-                }
-                .score { 
-                    font-size: 2em; font-weight: bold; color: #0366d6; 
-                }
-                .timestamp { 
-                    color: #6a737d; font-size: 0.9em; 
-                }
-                .nav { 
-                    margin: 20px 0; 
-                }
-                .nav a { 
-                    background: #0366d6; color: white; padding: 8px 16px; 
+                }}
+                .nav a {{ 
+                    background: #0366d6; color: white; padding: 10px 20px; 
                     text-decoration: none; border-radius: 6px; margin-right: 10px; 
-                }
-                .nav a:hover { 
+                    display: inline-block; margin-bottom: 5px;
+                }}
+                .nav a:hover {{ 
                     background: #0256cc; 
-                }
-                .report-content { 
-                    background: white; padding: 20px; border-radius: 8px; 
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-                }
-                pre { 
-                    background: #f6f8fa; padding: 16px; border-radius: 6px; 
-                    overflow-x: auto; border-left: 3px solid #0366d6; 
-                }
+                }}
+                .section {{ 
+                    background: white; padding: 25px; border-radius: 8px; 
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+                }}
+                .issues-list {{
+                    max-height: 500px; overflow-y: auto; 
+                    border: 1px solid #e1e4e8; border-radius: 6px;
+                }}
+                .issue {{
+                    padding: 10px; border-bottom: 1px solid #e1e4e8;
+                    font-family: 'SFMono-Regular', 'Consolas', monospace;
+                    font-size: 0.9em;
+                }}
+                .issue:last-child {{
+                    border-bottom: none;
+                }}
+                .issue.error {{ background: #ffeef0; }}
+                .issue.warning {{ background: #fff8e1; }}
+                .issue.convention {{ background: #e8f4fd; }}
+                .issue.refactor {{ background: #f0f9ff; }}
+                .summary {{
+                    background: #f6f8fa; padding: 20px; border-radius: 6px; 
+                    border-left: 4px solid #0366d6; font-family: monospace;
+                    white-space: pre-wrap;
+                }}
+                .stats {{
+                    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px; margin-top: 20px;
+                }}
+                .stat-card {{
+                    background: #f6f8fa; padding: 15px; border-radius: 6px; text-align: center;
+                }}
+                .stat-number {{
+                    font-size: 1.8em; font-weight: bold; color: #0366d6;
+                }}
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>🐍 Rattlesnake Pylint Report</h1>
-                <div class="score">Score: ${{ env.PYLINT_SCORE }}/10</div>
-                <div class="timestamp">Generated: $(date)</div>
-                <div class="timestamp">Run ID: ${{ github.run_id }}</div>
-                <div class="timestamp">Branch: ${{ github.ref_name }}</div>
-            </div>
-            
-            <div class="nav">
-                <a href="#summary">Summary</a>
-                <a href="#detailed-report">Detailed Report</a>
-                <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a>
-                <a href="https://github.com/${{ github.repository }}">Back to Repository</a>
-            </div>
-            
-            <div class="report-content">
-                <h2 id="summary">Summary</h2>
-                <p>This report was generated from the latest pylint analysis of the Rattlesnake codebase.</p>
-                <p><strong>Overall Score:</strong> ${{ env.PYLINT_SCORE }}/10</p>
+            <div class="container">
+                <div class="header">
+                    <h1>🐍 Rattlesnake Pylint Report</h1>
+                    <div class="score">{os.environ.get("PYLINT_SCORE", "0")}/10</div>
+                    <div class="metadata">
+                        <div><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</div>
+                        <div><strong>Run ID:</strong> {os.environ.get("GITHUB_RUN_ID", "N/A")}</div>
+                        <div><strong>Branch:</strong> {os.environ.get("GITHUB_REF_NAME", "N/A")}</div>
+                        <div><strong>Commit:</strong> {os.environ.get("GITHUB_SHA", "N/A")[:8]}</div>
+                    </div>
+                </div>
                 
-                <h2 id="detailed-report">Detailed Report</h2>
-                <pre>
-        EOF
-        
-        # Append the actual pylint output
-        cat "${{ env.OUTPUT_FILE }}" >> pylint_enhanced_report.html
-        
-        # Close the HTML
-        cat >> pylint_enhanced_report.html << 'EOF'
-                </pre>
+                <div class="nav">
+                    <a href="#summary">Summary</a>
+                    <a href="#issues">Issues ({len(issues)})</a>
+                    <a href="#statistics">Statistics</a>
+                    <a href="https://github.com/{os.environ.get("GITHUB_REPOSITORY", "")}/actions/runs/{os.environ.get("GITHUB_RUN_ID", "")}">View Workflow Run</a>
+                    <a href="https://github.com/{os.environ.get("GITHUB_REPOSITORY", "")}">Repository</a>
+                </div>
+                
+                <div class="section">
+                    <h2 id="summary">📊 Summary</h2>
+                    <div class="summary">{"".join(summary_lines)}</div>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number">{len(issues)}</div>
+                            <div>Total Issues</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{len([i for i in issues if "error" in i.lower()])}</div>
+                            <div>Errors</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{len([i for i in issues if "warning" in i.lower()])}</div>
+                            <div>Warnings</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{len([i for i in issues if "convention" in i.lower()])}</div>
+                            <div>Conventions</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2 id="issues">🔍 Issues Detail</h2>
+                    {"<p>No issues found! 🎉</p>" if not issues else f'''
+                    <div class="issues-list">
+                        {"".join([f'<div class="issue {("error" if "error" in issue.lower() else "warning" if "warning" in issue.lower() else "convention" if "convention" in issue.lower() else "refactor")}">{html.escape(issue)}</div>' for issue in issues])}
+                    </div>
+                    '''}
+                </div>
+                
+                <div class="section">
+                    <h2 id="statistics">📈 Full Report</h2>
+                    <details>
+                        <summary>Click to view complete pylint output</summary>
+                        <pre style="background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto;">{html.escape(pylint_content)}</pre>
+                    </details>
+                </div>
             </div>
             
-            <footer style="text-align: center; margin-top: 40px; color: #6a737d;">
-                <p>Generated by GitHub Actions • <a href="https://github.com/${{ github.repository }}">Rattlesnake Project</a></p>
+            <footer style="text-align: center; margin: 40px 0; color: #6a737d;">
+                <p>Generated by GitHub Actions • <a href="https://github.com/{os.environ.get("GITHUB_REPOSITORY", "")}">Rattlesnake Project</a></p>
             </footer>
         </body>
-        </html>
+        </html>'''
+        
+        # Write HTML file
+        with open('pylint_enhanced_report.html', 'w') as f:
+            f.write(html_content)
         EOF
         
     - name: Prepare GitHub Pages content
