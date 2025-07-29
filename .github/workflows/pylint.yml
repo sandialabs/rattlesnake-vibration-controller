@@ -360,7 +360,7 @@ jobs:
         EOF
         
     - name: Create pylint badge with GitHub Pages link
-      if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch
+      if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
       run: |
         # Create badges directory if it doesn't exist
         mkdir -p badges

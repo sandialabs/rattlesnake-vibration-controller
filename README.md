@@ -1,6 +1,6 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
-## Work in Progress 
+## Work in Progress
 
 ![Coverage](./badges/coverage.svg)
 
