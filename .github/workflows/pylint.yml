@@ -69,7 +69,20 @@ jobs:
         import html
         import re
         from datetime import datetime
+        import pytz
         
+        # Get the current UTC time
+        utc_now = datetime.now(pytz.utc)
+
+        # Define the timezones for the report
+        est = pytz.timezone('America/New_York')
+        mst = pytz.timezone('America/Denver')
+        
+        # Format the output
+        formatted_time = utc_now.strftime("%Y-%m-%d %H:%M:%S UTC") + f" ({est_now.strftime('%Y-%m-%d %H:%M:%S EST')} / {mst_now.strftime('%Y-%m-%d %H:%M:%S MST')})"
+
+        print(formatted_time)
+
         # Read pylint output
         output_file = os.environ['OUTPUT_FILE']
         with open(output_file, 'r') as f:
