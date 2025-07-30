@@ -280,7 +280,8 @@ jobs:
         # Copy the enhanced report as the main report
         cp pylint_enhanced_report.html pages/reports/pylint/index.html
         
-        # Create a main index page for all reports
+        # Create a main index page for all reports located at
+        # https://sandialabs.github.io/rattlesnake-vibration-controller/
         cat > pages/index.html << 'EOF'
         <!DOCTYPE html>
         <html lang="en">
@@ -336,7 +337,7 @@ jobs:
                     <h3>📊 Pylint Report</h3>
                     <p>Static code analysis results showing code quality metrics, style compliance, and potential issues.</p>
                     <p><strong>Latest Score:</strong> ${{ env.PYLINT_SCORE }}/10</p>
-                    <p><strong>Last Updated:</strong> $(date)</p>
+                    <p><strong>Last Updated:</strong> $(formatted_time)</p>
                     <a href="./reports/pylint/" class="report-link">Pylint Report</a>
                 </div>
                 
