@@ -25,7 +25,7 @@
         }
         .report-link { 
             background: #0366d6; color: white; padding: 10px 20px; 
-            text-decoration: none; border-radius: 6px; display: inline-block; 
+            text-decoration: none; border-radius: 6px; display: inline-block; margin-right: 10px;
         }
         .report-link:hover { 
             background: #0256cc; 
@@ -49,10 +49,18 @@
         </div>
         
         <div class="report-card">
+            <h3>📊 Coverage Report</h3>
+            <p>Test coverage analysis showing how much of the codebase is covered by tests.</p>
+            <p><strong>Latest Coverage:</strong> 0.0%</p>
+            <p><strong>Last Updated:</strong> $(date)</p>
+            <a href="./reports/coverage/" class="report-link">Coverage Report</a>
+            <a href="./reports/coverage/htmlcov/" class="report-link">Detailed HTML Coverage</a>
+        </div>
+        
+        <div class="report-card">
             <h3>📊 Pylint Report</h3>
             <p>Static code analysis results showing code quality metrics, style compliance, and potential issues.</p>
-            <p><strong>Latest Score:</strong> 5.66/10</p>
-            <p><strong>Last Updated:</strong> $(date)</p>
+            <p><strong>Last Updated:</strong> Check latest workflow run</p>
             <a href="./reports/pylint/" class="report-link">Pylint Report</a>
         </div>
         
