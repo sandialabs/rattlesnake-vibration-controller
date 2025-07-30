@@ -48,6 +48,12 @@ jobs:
         
         # Determine badge color based on score and add it as an environment variable
         python3 pylint_badge_color.py "$SCORE"
+
+    - name: Confirm new environment variables
+      run: |
+        echo "Badge color set to: ${{ env.BADGE_COLOR }}"
+        echo "PYLINT_SCORE=${{ env.PYLINT_SCORE }}"
+        echo "OUTPUT_FILE=${{ env.OUTPUT_FILE }}"
         
     - name: Create custom HTML report
       run: |
