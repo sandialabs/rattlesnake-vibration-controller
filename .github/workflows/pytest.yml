@@ -39,7 +39,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest -v --cov=src/rattlesnake --cov-report=xml --cov-report=term --cov-report=html
+          pytest -v --cov=src/rattlesnake --cov-report=xml --cov-report=term-missing --cov-report=html
 
       - name: Upload coverage to artifact (Ubuntu + Python 3.9 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
@@ -82,7 +82,7 @@ jobs:
           OUTPUT_FILE="coverage_output_${TIMESTAMP}.txt"
           
           # Generate coverage reports
-          pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term > "$OUTPUT_FILE" || true
+          pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term-missing > "$OUTPUT_FILE" || true
           
           # Extract coverage percentage and determine badge color using Python
           python3 << EOF
@@ -152,6 +152,19 @@ jobs:
               lines_valid = int(root.attrib.get('lines-valid', 0))
               branches_covered = int(root.attrib.get('branches-covered', 0))
               branches_valid = int(root.attrib.get('branches-valid', 0))
+
+              # Extract missing lines information from XML
+              missing_lines_by_file = {}
+              for package in root.findall('.//package'):
+                  for class_elem in package.findall('.//class'):
+                      filename = class_elem.get('filename', '')
+                      missing_lines = []
+                      for line in class_elem.findall('.//line'):
+                          if line.get('hits') == '0':
+                              missing_lines.append(int(line.get('number')))
+                      if missing_lines:
+                          missing_lines_by_file[filename] = sorted(missing_lines)
+
           except:
               line_rate = 0
               branch_rate = 0
@@ -159,14 +172,34 @@ jobs:
               lines_valid = 0
               branches_covered = 0
               branches_valid = 0
-          
+              missing_lines_by_file = {}
+
           # Read pytest output
           output_file = os.environ.get('OUTPUT_FILE', '')
           pytest_content = ""
+          missing_lines_info = []
+
           if output_file and os.path.exists(output_file):
               with open(output_file, 'r') as f:
                   pytest_content = f.read()
-          
+
+              # Parse missing lines from term-missing output
+              lines = pytest_content.split('\n')
+              in_coverage_section = False
+              for line in lines:
+                  if 'Name' in line and 'Stmts' in line and 'Miss' in line and 'Cover' in line and 'Missing' in line:
+                      in_coverage_section = True
+                      continue
+                  elif in_coverage_section and line.strip() and not line.startswith('-'):
+                      parts = line.split()
+                      if len(parts) >= 5 and parts[-1] != '':
+                          filename = parts[0]
+                          missing = parts[-1] if parts[-1] != '' else 'None'
+                          if missing != 'None' and missing != '':
+                              missing_lines_info.append({'file': filename, 'missing': missing})
+                  elif in_coverage_section and (line.startswith('=') or line.strip() == ''):
+                      break
+
           # Parse test results from pytest output
           test_results = []
           summary_lines = []
@@ -209,6 +242,36 @@ jobs:
           skipped_count = len([t for t in test_results if "SKIPPED" in t.upper()])
           error_count = len([t for t in test_results if "ERROR" in t.upper()])
           total_tests = len(test_results)
+          
+          # Generate missing lines HTML
+          missing_lines_html = ""
+          if missing_lines_info:
+              missing_sections = []
+              for item in missing_lines_info:
+                  missing_sections.append(f'''
+                  <div class="missing-file">
+                      <h4>{html.escape(item['file'])}</h4>
+                      <div class="missing-lines">
+                          <strong>Missing lines:</strong> {html.escape(item['missing'])}
+                      </div>
+                  </div>
+                  ''')
+              missing_lines_html = f'''
+              <div class="section">
+                  <h2 id="missing">🚫 Missing Coverage</h2>
+                  <p>Lines not covered by tests:</p>
+                  <div class="missing-coverage">
+                      {"".join(missing_sections)}
+                  </div>
+              </div>
+              '''
+          else:
+              missing_lines_html = '''
+              <div class="section">
+                  <h2 id="missing">✅ Complete Coverage</h2>
+                  <p>All lines are covered by tests! 🎉</p>
+              </div>
+              '''
           
           # Generate test results HTML
           if not test_results:
@@ -317,6 +380,25 @@ jobs:
                   height: 100%; background: {coverage_color}; 
                   transition: width 0.3s ease;
               }}
+              .missing-coverage {{
+                  max-height: 400px; overflow-y: auto;
+                  border: 1px solid #e1e4e8; border-radius: 6px;
+              }}
+              .missing-file {{
+                  padding: 15px; border-bottom: 1px solid #e1e4e8;
+              }}
+              .missing-file:last-child {{
+                  border-bottom: none;
+              }}
+              .missing-file h4 {{
+                  margin: 0 0 10px 0; color: #0366d6;
+                  font-family: 'SFMono-Regular', 'Consolas', monospace;
+              }}
+              .missing-lines {{
+                  background: #ffeef0; padding: 10px; border-radius: 4px;
+                  border-left: 4px solid #dc3545; font-family: monospace;
+                  font-size: 0.9em;
+              }}
               </style>
           </head>
           <body>
@@ -336,6 +418,7 @@ jobs:
                       <a href="#summary">Summary</a>
                       <a href="#tests">Test Results ({total_tests})</a>
                       <a href="#coverage">Coverage Details</a>
+                      <a href="#missing">Missing Coverage</a>
                       <a href="#full-report">Full Report</a>
                       <a href="https://github.com/{github_repo}/actions/runs/{run_id}">View Workflow Run</a>
                       <a href="https://github.com/{github_repo}">Repository</a>
@@ -383,6 +466,28 @@ jobs:
                       </div>
                   </div>
                   
+
+                  <div class="section">
+                      <h2 id="missing">🚫 Missing Coverage</h2>
+                      <div class="missing-coverage">
+                          <div class="coverage-card">
+                              <h4>Line Coverage</h4>
+                              <div class="progress-bar">
+                                  <div class="progress-fill" style="width: {line_rate}%;"></div>
+                              </div>
+                              <p><strong>{line_rate:.1f}%</strong> ({lines_covered}/{lines_valid} lines)</p>
+                          </div>
+                          <div class="coverage-card">
+                              <h4>Branch Coverage</h4>
+                              <div class="progress-bar">
+                                  <div class="progress-fill" style="width: {branch_rate}%;"></div>
+                              </div>
+                              <p><strong>{branch_rate:.1f}%</strong> ({branches_covered}/{branches_valid} branches)</p>
+                          </div>
+                      </div>
+                  </div>
+
+
                   <div class="section">
                       <h2 id="tests">🧪 Test Results Detail</h2>
                       {tests_html}
