@@ -6,10 +6,12 @@
 
 [coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
-
 ## Quality Metrics
 
 [![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+
+* Lint: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+* Coverage: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 ## Overview
 
