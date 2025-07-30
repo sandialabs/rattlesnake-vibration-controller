@@ -39,9 +39,8 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest -v --cov=src/rattlesnake --cov-report=xml --cov-report=term
+          pytest -v --cov=src/rattlesnake --cov-report=xml --cov-report=term --cov-report=html
 
-                  
       - name: Upload coverage to artifact (Ubuntu + Python 3.9 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
         uses: actions/upload-artifact@v4
@@ -49,14 +48,14 @@ jobs:
           name: coverage-report
           path: coverage.xml
           # retention-days: 7
-          
-  # Separate job for badge generation (only runs after tests pass)
+
+  # Separate job for badge generation (only runs after test passes)
   coverage-badge:
-    needs: test  # Only run if tests pass
+    needs: test  # Only run if test passes
     runs-on: ubuntu-latest
     # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
     if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -72,49 +71,470 @@ jobs:
           pip install .[dev]
           # pip install pytest-cov coverage-badge  # already included in dev dependencies
           
-      - name: Generate coverage report
+      # - name: Generate coverage report and analyze
+      #  run: |
+      #    pytest --cov=src/rattlesnake --cov-report=xml
+
+      - name: Generate coverage report and analyze
         run: |
-          pytest --cov=src/rattlesnake --cov-report=xml
+          # Create a timestamp for the output file
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+          OUTPUT_FILE="coverage_output_${TIMESTAMP}.txt"
           
+          # Generate coverage reports
+          pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term > "$OUTPUT_FILE" || true
+          
+          # Extract coverage percentage and determine badge color using Python
+          python3 << EOF
+          import xml.etree.ElementTree as ET
+          import os
+          
+          try:
+              tree = ET.parse('coverage.xml')
+              root = tree.getroot()
+              coverage = float(root.attrib['line-rate']) * 100
+          except:
+              coverage = 0.0
+          
+          print(f"Coverage: {coverage:.1f}%")
+          
+          # Determine badge color based on coverage
+          if coverage >= 90:
+              color = "brightgreen"
+          elif coverage >= 80:
+              color = "green"
+          elif coverage >= 70:
+              color = "yellow"
+          elif coverage >= 60:
+              color = "orange"
+          else:
+              color = "red"
+          
+          # Set environment variables
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f"COVERAGE={coverage:.1f}\n")
+              f.write(f"BADGE_COLOR={color}\n")
+              f.write(f"OUTPUT_FILE=$OUTPUT_FILE\n")
+          EOF
+          
+      - name: Create custom HTML report
+        run: |
+          # Read the coverage output and create a custom HTML report
+          python3 << 'EOF'
+          import os
+          import html
+          import re
+          from datetime import datetime
+          import pytz
+          import xml.etree.ElementTree as ET
+          
+          # Get the current UTC time
+          utc_now = datetime.now(pytz.utc)
+
+          # Define the time zones
+          est = pytz.timezone('America/New_York')
+          mst = pytz.timezone('America/Denver')
+
+          # Convert UTC time to EST and MST
+          est_now = utc_now.astimezone(est)
+          mst_now = utc_now.astimezone(mst)
+          
+          # Format the output
+          formatted_time = utc_now.strftime("%Y-%m-%d %H:%M:%S UTC") + f" ({est_now.strftime('%Y-%m-%d %H:%M:%S EST')} / {mst_now.strftime('%Y-%m-%d %H:%M:%S MST')})"
+
+          # Read coverage XML for detailed info
+          try:
+              tree = ET.parse('coverage.xml')
+              root = tree.getroot()
+              line_rate = float(root.attrib['line-rate']) * 100
+              branch_rate = float(root.attrib.get('branch-rate', 0)) * 100
+              lines_covered = int(root.attrib.get('lines-covered', 0))
+              lines_valid = int(root.attrib.get('lines-valid', 0))
+              branches_covered = int(root.attrib.get('branches-covered', 0))
+              branches_valid = int(root.attrib.get('branches-valid', 0))
+          except:
+              line_rate = 0
+              branch_rate = 0
+              lines_covered = 0
+              lines_valid = 0
+              branches_covered = 0
+              branches_valid = 0
+          
+          # Read pytest output
+          output_file = os.environ.get('OUTPUT_FILE', '')
+          pytest_content = ""
+          if output_file and os.path.exists(output_file):
+              with open(output_file, 'r') as f:
+                  pytest_content = f.read()
+          
+          # Parse test results from pytest output
+          test_results = []
+          summary_lines = []
+          collecting_summary = False
+          
+          for line in pytest_content.split('\n'):
+              if '::' in line and any(x in line.upper() for x in ['PASSED', 'FAILED', 'SKIPPED', 'ERROR']):
+                  test_results.append(line.strip())
+              elif 'collected' in line or 'passed' in line or 'failed' in line or 'error' in line:
+                  collecting_summary = True
+              if collecting_summary:
+                  summary_lines.append(line)
+          
+          # Get environment variables
+          coverage_percent = os.environ.get("COVERAGE", "0")
+          run_id = os.environ.get("GITHUB_RUN_ID", "N/A")
+          ref_name = os.environ.get("GITHUB_REF_NAME", "N/A")
+          github_sha = os.environ.get("GITHUB_SHA", "N/A")
+          github_repo = os.environ.get("GITHUB_REPOSITORY", "")
+          
+          # Determine score color
+          try:
+              coverage_val = float(coverage_percent)
+              if coverage_val >= 90:
+                  coverage_color = "#28a745"
+              elif coverage_val >= 80:
+                  coverage_color = "#28a745"
+              elif coverage_val >= 70:
+                  coverage_color = "#ffc107"
+              elif coverage_val >= 60:
+                  coverage_color = "#fd7e14"
+              else:
+                  coverage_color = "#dc3545"
+          except:
+              coverage_color = "#6c757d"
+          
+          # Count test results
+          passed_count = len([t for t in test_results if "PASSED" in t.upper()])
+          failed_count = len([t for t in test_results if "FAILED" in t.upper()])
+          skipped_count = len([t for t in test_results if "SKIPPED" in t.upper()])
+          error_count = len([t for t in test_results if "ERROR" in t.upper()])
+          total_tests = len(test_results)
+          
+          # Generate test results HTML
+          if not test_results:
+              tests_html = "<p>No test results found.</p>"
+          else:
+              tests_list = []
+              for test in test_results:
+                  if "PASSED" in test.upper():
+                      css_class = "passed"
+                  elif "FAILED" in test.upper():
+                      css_class = "failed"
+                  elif "SKIPPED" in test.upper():
+                      css_class = "skipped"
+                  else:
+                      css_class = "error"
+                  tests_list.append(f'<div class="test-result {css_class}">{html.escape(test)}</div>')
+              
+              tests_html = f'<div class="tests-list">{"".join(tests_list)}</div>'
+          
+          # Create HTML content
+          html_content = f'''<!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Coverage Report - Rattlesnake</title>
+              <style>
+              body {{ 
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                  margin: 0; padding: 20px; background: #f6f8fa; line-height: 1.6;
+              }}
+              .container {{
+                  max-width: 1200px; margin: 0 auto;
+              }}
+              .header {{ 
+                  background: white; padding: 30px; border-radius: 8px; 
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+              }}
+              .coverage {{ 
+                  font-size: 2.5em; font-weight: bold; color: {coverage_color};
+              }}
+              .metadata {{ 
+                  color: #6a737d; font-size: 0.9em; margin-top: 10px;
+              }}
+              .nav {{ 
+                  background: white; padding: 20px; border-radius: 8px; 
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+              }}
+              .nav a {{ 
+                  background: #0366d6; color: white; padding: 10px 20px; 
+                  text-decoration: none; border-radius: 6px; margin-right: 10px; 
+                  display: inline-block; margin-bottom: 5px;
+              }}
+              .nav a:hover {{ 
+                  background: #0256cc; 
+              }}
+              .section {{ 
+                  background: white; padding: 25px; border-radius: 8px; 
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+              }}
+              .tests-list {{
+                  max-height: 500px; overflow-y: auto; 
+                  border: 1px solid #e1e4e8; border-radius: 6px;
+              }}
+              .test-result {{
+                  padding: 10px; border-bottom: 1px solid #e1e4e8;
+                  font-family: 'SFMono-Regular', 'Consolas', monospace;
+                  font-size: 0.9em;
+              }}
+              .test-result:last-child {{
+                  border-bottom: none;
+              }}
+              .test-result.passed {{ background: #e6ffed; }}
+              .test-result.failed {{ background: #ffeef0; }}
+              .test-result.skipped {{ background: #fff8e1; }}
+              .test-result.error {{ background: #ffeaa7; }}
+              .summary {{
+                  background: #f6f8fa; padding: 20px; border-radius: 6px; 
+                  border-left: 4px solid #0366d6; font-family: monospace;
+                  white-space: pre-wrap;
+              }}
+              .stats {{
+                  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 15px; margin-top: 20px;
+              }}
+              .stat-card {{
+                  background: #f6f8fa; padding: 15px; border-radius: 6px; text-align: center;
+              }}
+              .stat-number {{
+                  font-size: 1.8em; font-weight: bold; color: #0366d6;
+              }}
+              .coverage-details {{
+                  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                  gap: 15px; margin-top: 20px;
+              }}
+              .coverage-card {{
+                  background: #f6f8fa; padding: 20px; border-radius: 6px;
+              }}
+              .coverage-card h4 {{
+                  margin-top: 0; color: #0366d6;
+              }}
+              .progress-bar {{
+                  background: #e1e4e8; height: 20px; border-radius: 10px; overflow: hidden;
+              }}
+              .progress-fill {{
+                  height: 100%; background: {coverage_color}; 
+                  transition: width 0.3s ease;
+              }}
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>Rattlesnake Coverage Report</h1>
+                      <div class="coverage">{coverage_percent}%</div>
+                      <div class="metadata">
+                          <div><strong>Generated:</strong> {formatted_time}</div>
+                          <div><strong>Run ID:</strong> {run_id}</div>
+                          <div><strong>Branch:</strong> {ref_name}</div>
+                          <div><strong>Commit:</strong> {github_sha[:8]}</div>
+                      </div>
+                  </div>
+                  
+                  <div class="nav">
+                      <a href="#summary">Summary</a>
+                      <a href="#tests">Test Results ({total_tests})</a>
+                      <a href="#coverage">Coverage Details</a>
+                      <a href="#full-report">Full Report</a>
+                      <a href="https://github.com/{github_repo}/actions/runs/{run_id}">View Workflow Run</a>
+                      <a href="https://github.com/{github_repo}">Repository</a>
+                  </div>
+                  
+                  <div class="section">
+                      <h2 id="summary">📊 Test Summary</h2>
+                      <div class="stats">
+                          <div class="stat-card">
+                              <div class="stat-number">{total_tests}</div>
+                              <div>Total Tests</div>
+                          </div>
+                          <div class="stat-card">
+                              <div class="stat-number" style="color: #28a745;">{passed_count}</div>
+                              <div>Passed</div>
+                          </div>
+                          <div class="stat-card">
+                              <div class="stat-number" style="color: #dc3545;">{failed_count}</div>
+                              <div>Failed</div>
+                          </div>
+                          <div class="stat-card">
+                              <div class="stat-number" style="color: #ffc107;">{skipped_count}</div>
+                              <div>Skipped</div>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div class="section">
+                      <h2 id="coverage">📈 Coverage Details</h2>
+                      <div class="coverage-details">
+                          <div class="coverage-card">
+                              <h4>Line Coverage</h4>
+                              <div class="progress-bar">
+                                  <div class="progress-fill" style="width: {line_rate}%;"></div>
+                              </div>
+                              <p><strong>{line_rate:.1f}%</strong> ({lines_covered}/{lines_valid} lines)</p>
+                          </div>
+                          <div class="coverage-card">
+                              <h4>Branch Coverage</h4>
+                              <div class="progress-bar">
+                                  <div class="progress-fill" style="width: {branch_rate}%;"></div>
+                              </div>
+                              <p><strong>{branch_rate:.1f}%</strong> ({branches_covered}/{branches_valid} branches)</p>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div class="section">
+                      <h2 id="tests">🧪 Test Results Detail</h2>
+                      {tests_html}
+                  </div>
+                  
+                  <div class="section">
+                      <h2 id="full-report">📋 Full Report</h2>
+                      <details>
+                          <summary>Click to view complete pytest output</summary>
+                          <pre style="background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto;">{html.escape(pytest_content)}</pre>
+                      </details>
+                  </div>
+              </div>
+              <footer style="text-align: center; margin: 40px 0; color: #6a737d;">
+                  <p>Generated by GitHub Actions • <a href="https://github.com/{github_repo}">Rattlesnake Project</a></p>
+              </footer>
+          </body>
+          </html>'''
+          
+          # Write HTML file
+          with open('coverage_enhanced_report.html', 'w') as f:
+              f.write(html_content)
+          EOF
+
+      - name: Prepare GitHub Pages content
+        if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
+        run: |
+          # Create pages directory structure
+          mkdir -p pages/reports/coverage
+          
+          # Copy the enhanced report as the main report
+          cp coverage_enhanced_report.html pages/reports/coverage/index.html
+          
+          # Copy HTML coverage report if it exists
+          if [ -d "htmlcov" ]; then
+            cp -r htmlcov pages/reports/coverage/htmlcov
+          fi
+          
+          # Update main index page for all reports (or create if it doesn't exist)
+          cat > pages/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Rattlesnake Code Quality Reports</title>
+              <style>
+                  body { 
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                      margin: 0; padding: 20px; background: #f6f8fa; 
+                  }
+                  .container { 
+                      max-width: 800px; margin: 0 auto; 
+                  }
+                  .header { 
+                      background: white; padding: 30px; border-radius: 8px; 
+                      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; text-align: center; 
+                  }
+                  .report-card { 
+                      background: white; padding: 20px; border-radius: 8px; 
+                      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+                  }
+                  .report-card h3 { 
+                      margin-top: 0; color: #0366d6; 
+                  }
+                  .report-link { 
+                      background: #0366d6; color: white; padding: 10px 20px; 
+                      text-decoration: none; border-radius: 6px; display: inline-block; margin-right: 10px;
+                  }
+                  .report-link:hover { 
+                      background: #0256cc; 
+                  }
+                  .badge { 
+                      margin: 10px 5px; 
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>Rattlesnake Code Quality Reports Summary</h1>
+                      <p>Automated code quality analysis for the Rattlesnake vibration controller</p>
+                      <div class="badge">
+                          <img src="https://github.com/${{ github.repository }}/raw/dev/badges/pylint.svg" alt="Pylint Score">
+                      </div>
+                      <div class="badge">
+                          <img src="https://github.com/${{ github.repository }}/raw/dev/badges/coverage.svg" alt="Coverage">
+                      </div>
+                  </div>
+                  
+                  <div class="report-card">
+                      <h3>📊 Coverage Report</h3>
+                      <p>Test coverage analysis showing how much of the codebase is covered by tests.</p>
+                      <p><strong>Latest Coverage:</strong> ${{ env.COVERAGE }}%</p>
+                      <p><strong>Last Updated:</strong> $(date)</p>
+                      <a href="./reports/coverage/" class="report-link">Coverage Report</a>
+                      <a href="./reports/coverage/htmlcov/" class="report-link">Detailed HTML Coverage</a>
+                  </div>
+                  
+                  <div class="report-card">
+                      <h3>📊 Pylint Report</h3>
+                      <p>Static code analysis results showing code quality metrics, style compliance, and potential issues.</p>
+                      <p><strong>Last Updated:</strong> Check latest workflow run</p>
+                      <a href="./reports/pylint/" class="report-link">Pylint Report</a>
+                  </div>
+                  
+                  <div class="report-card">
+                      <h3>🔗 Quick Links</h3>
+                      <p>
+                          <a href="https://github.com/${{ github.repository }}" class="report-link">GitHub Repository</a>
+                          <a href="https://github.com/${{ github.repository }}/actions" class="report-link">GitHub Actions</a>
+                          <a href="https://github.com/${{ github.repository }}/releases" class="report-link">Releases</a>
+                      </p>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
       - name: Generate coverage badge
         run: |
           # Create badges directory if it doesn't exist
           mkdir -p badges
-          
-          # Extract coverage percentage
-          COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(f\"{float(root.attrib['line-rate']) * 100:.1f}\")")
-          echo "Coverage: $COVERAGE%"
-          
-          # Determine badge color based on coverage
-          if (( $(echo "$COVERAGE >= 90" | bc -l) )); then
-            COLOR="brightgreen"
-          elif (( $(echo "$COVERAGE >= 80" | bc -l) )); then
-            COLOR="green"
-          elif (( $(echo "$COVERAGE >= 70" | bc -l) )); then
-            COLOR="yellow"
-          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
-            COLOR="orange"
-          else
-            COLOR="red"
-          fi
 
           # Create the badge URL that links to the latest workflow run
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
           WORKFLOW_URL="${REPO_URL}/actions/workflows/pytest.yml"
 
           # Download badge using shields.io
-          curl -o badges/coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}.svg"
+          curl -o badges/coverage.svg "https://img.shields.io/badge/coverage-${{ env.COVERAGE }}%25-${{ env.BADGE_COLOR }}.svg"
 
-          # Create a JSON file with badge metadata
+          # Create a JSON file with badge metadata including GitHub Pages link
           cat > badges/coverage-info.json << EOF
           {
-            "coverage": "${COVERAGE}",
-            "color": "${COLOR}",
+            "coverage": "${{ env.COVERAGE }}",
+            "color": "${{ env.BADGE_COLOR }}",
+            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/coverage/",
             "workflow_url": "${WORKFLOW_URL}",
             "run_id": "${{ github.run_id }}",
-            "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}"
+            "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           }
           EOF
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/dev'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pages
+          publish_branch: gh-pages
+          commit_message: 'Deploy coverage report for ${{ github.sha }}'
 
       - name: Commit badge to main repository (dev branch for now)
         # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
@@ -124,7 +544,7 @@ jobs:
           git pull
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add badges/coverage.svg
+          git add badges/coverage.svg badges/coverage-info.json
           git diff --staged --quiet || git commit -m "Update coverage badge [skip ci]"
           git push
         env:
@@ -136,3 +556,10 @@ jobs:
           name: coverage-html-report-${{ github.run_id }}
           path: htmlcov/
           retention-days: 7
+          
+      - name: Upload enhanced coverage report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-enhanced-report-${{ github.run_id }}
+          path: coverage_enhanced_report.html
+          retention-days: 7 
