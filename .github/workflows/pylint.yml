@@ -55,7 +55,8 @@ jobs:
         echo "PYLINT_SCORE=${{ env.PYLINT_SCORE }}"
         echo "BADGE_COLOR=${{ env.BADGE_COLOR }}"
         
-    - name: Create custom HTML report
+    - name: Create custom Pylint Report in HTML format
+        # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
       run: |
         # Read the pylint output and create a custom HTML report
         python3 << 'EOF'
@@ -271,7 +272,7 @@ jobs:
             f.write(html_content)
         EOF
         
-    - name: Prepare GitHub Pages content
+    - name: Prepare GitHub Pages main landing page content
       if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
       run: |
         # Create pages directory structure
