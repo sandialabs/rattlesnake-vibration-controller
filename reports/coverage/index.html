@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coverage Report - Rattlesnake</title>
+    <style>
+    body { 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        margin: 0; padding: 20px; background: #f6f8fa; line-height: 1.6;
+    }
+    .container {
+        max-width: 1200px; margin: 0 auto;
+    }
+    .header { 
+        background: white; padding: 30px; border-radius: 8px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+    }
+    .coverage { 
+        font-size: 2.5em; font-weight: bold; color: #dc3545;
+    }
+    .metadata { 
+        color: #6a737d; font-size: 0.9em; margin-top: 10px;
+    }
+    .nav { 
+        background: white; padding: 20px; border-radius: 8px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+    }
+    .nav a { 
+        background: #0366d6; color: white; padding: 10px 20px; 
+        text-decoration: none; border-radius: 6px; margin-right: 10px; 
+        display: inline-block; margin-bottom: 5px;
+    }
+    .nav a:hover { 
+        background: #0256cc; 
+    }
+    .section { 
+        background: white; padding: 25px; border-radius: 8px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+    }
+    .tests-list {
+        max-height: 500px; overflow-y: auto; 
+        border: 1px solid #e1e4e8; border-radius: 6px;
+    }
+    .test-result {
+        padding: 10px; border-bottom: 1px solid #e1e4e8;
+        font-family: 'SFMono-Regular', 'Consolas', monospace;
+        font-size: 0.9em;
+    }
+    .test-result:last-child {
+        border-bottom: none;
+    }
+    .test-result.passed { background: #e6ffed; }
+    .test-result.failed { background: #ffeef0; }
+    .test-result.skipped { background: #fff8e1; }
+    .test-result.error { background: #ffeaa7; }
+    .summary {
+        background: #f6f8fa; padding: 20px; border-radius: 6px; 
+        border-left: 4px solid #0366d6; font-family: monospace;
+        white-space: pre-wrap;
+    }
+    .stats {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px; margin-top: 20px;
+    }
+    .stat-card {
+        background: #f6f8fa; padding: 15px; border-radius: 6px; text-align: center;
+    }
+    .stat-number {
+        font-size: 1.8em; font-weight: bold; color: #0366d6;
+    }
+    .coverage-details {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px; margin-top: 20px;
+    }
+    .coverage-card {
+        background: #f6f8fa; padding: 20px; border-radius: 6px;
+    }
+    .coverage-card h4 {
+        margin-top: 0; color: #0366d6;
+    }
+    .progress-bar {
+        background: #e1e4e8; height: 20px; border-radius: 10px; overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%; background: #dc3545; 
+        transition: width 0.3s ease;
+    }
+    .missing-coverage {
+        max-height: 400px; overflow-y: auto;
+        border: 1px solid #e1e4e8; border-radius: 6px;
+    }
+    .missing-file {
+        padding: 15px; border-bottom: 1px solid #e1e4e8;
+    }
+    .missing-file:last-child {
+        border-bottom: none;
+    }
+    .missing-file h4 {
+        margin: 0 0 10px 0; color: #0366d6;
+        font-family: 'SFMono-Regular', 'Consolas', monospace;
+    }
+    .missing-lines {
+        background: #ffeef0; padding: 10px; border-radius: 4px;
+        border-left: 4px solid #dc3545; font-family: monospace;
+        font-size: 0.9em;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Rattlesnake Coverage Report</h1>
+            <div class="coverage">0.0%</div>
+            <div class="metadata">
+                <div><strong>Generated:</strong> 2025-07-30 19:54:25 UTC (2025-07-30 15:54:25 EST / 2025-07-30 13:54:25 MST)</div>
+                <div><strong>Run ID:</strong> 16632361205</div>
+                <div><strong>Branch:</strong> dev</div>
+                <div><strong>Commit:</strong> e2b27b93</div>
+            </div>
+        </div>
+        
+        <div class="nav">
+            <a href="#summary">Summary</a>
+            <a href="#tests">Test Results (0)</a>
+            <a href="#coverage">Coverage Details</a>
+            <a href="#missing">Missing Coverage</a>
+            <a href="#full-report">Full Report</a>
+            <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/16632361205">View Workflow Run</a>
+            <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">Repository</a>
+        </div>
+        
+        <div class="section">
+            <h2 id="summary">📊 Test Summary</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">0</div>
+                    <div>Total Tests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #28a745;">0</div>
+                    <div>Passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #dc3545;">0</div>
+                    <div>Failed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #ffc107;">0</div>
+                    <div>Skipped</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 id="coverage">📈 Coverage Details</h2>
+            <div class="coverage-details">
+                <div class="coverage-card">
+                    <h4>Line Coverage</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0.0%;"></div>
+                    </div>
+                    <p><strong>0.0%</strong> (0/10368 lines)</p>
+                </div>
+                <div class="coverage-card">
+                    <h4>Branch Coverage</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0.0%;"></div>
+                    </div>
+                    <p><strong>0.0%</strong> (0/0 branches)</p>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="section">
+            <h2 id="missing">🚫 Missing Coverage</h2>
+            <div class="missing-coverage">
+                <div class="coverage-card">
+                    <h4>Line Coverage</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0.0%;"></div>
+                    </div>
+                    <p><strong>0.0%</strong> (0/10368 lines)</p>
+                </div>
+                <div class="coverage-card">
+                    <h4>Branch Coverage</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0.0%;"></div>
+                    </div>
+                    <p><strong>0.0%</strong> (0/0 branches)</p>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="section">
+            <h2 id="tests">🧪 Test Results Detail</h2>
+            <p>No test results found.</p>
+        </div>
+        
+        <div class="section">
+            <h2 id="full-report">📋 Full Report</h2>
+            <details>
+                <summary>Click to view complete pytest output</summary>
+                <pre style="background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto;">============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.4.1, pluggy-1.6.0
+PyQt5 5.15.11 -- Qt runtime 5.15.17 -- Qt compiled 5.15.14
+rootdir: /home/runner/work/rattlesnake-vibration-controller/rattlesnake-vibration-controller
+configfile: pyproject.toml
+plugins: cov-6.2.1, qt-4.4.0
+collected 1 item
+
+tests/test_hello.py .                                                    [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.13-final-0 _______________
+
+Name                                                                  Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------------------------------
+src/rattlesnake/__init__.py                                               0      0   100%
+src/rattlesnake/components/__init__.py                                    9      9     0%   28-41
+src/rattlesnake/components/abstract_environment.py                      151    151     0%   25-619
+src/rattlesnake/components/abstract_hardware.py                          44     44     0%   24-157
+src/rattlesnake/components/abstract_message_process.py                   53     53     0%   25-180
+src/rattlesnake/components/abstract_sysid_data_analysis.py               76     76     0%   26-180
+src/rattlesnake/components/abstract_sysid_environment.py                788    788     0%   25-1711
+src/rattlesnake/components/acquisition.py                               226    226     0%   24-434
+src/rattlesnake/components/data_collector.py                            306    306     0%   25-537
+src/rattlesnake/components/data_physics_hardware.py                     125    125     0%   25-359
+src/rattlesnake/components/data_physics_interface.py                    236    236     0%   25-393
+src/rattlesnake/components/environments.py                               52     52     0%   25-111
+src/rattlesnake/components/exodus_modal_solution_hardware.py            201    201     0%   25-638
+src/rattlesnake/components/lanxi_hardware_multiprocessing.py            570    570     0%   24-953
+src/rattlesnake/components/lanxi_stream.py                              235    235     0%   3-295
+src/rattlesnake/components/modal_environment.py                        1145   1145     0%   25-2061
+src/rattlesnake/components/nidaqmx_hardware_multitask.py                184    184     0%   25-476
+src/rattlesnake/components/output.py                                    163    163     0%   25-362
+src/rattlesnake/components/random_vibration_sys_id_data_analysis.py     125    125     0%   26-331
+src/rattlesnake/components/random_vibration_sys_id_environment.py      1075   1075     0%   30-2023
+src/rattlesnake/components/random_vibration_sys_id_utilities.py          41     41     0%   24-87
+src/rattlesnake/components/sdynpy_system_virtual_hardware.py            141    141     0%   24-435
+src/rattlesnake/components/signal_generation.py                         279    279     0%   24-526
+src/rattlesnake/components/signal_generation_process.py                 158    158     0%   24-386
+src/rattlesnake/components/skeleton_sys_id_environment.py               114    114     0%   25-297
+src/rattlesnake/components/spectral_processing.py                       279    279     0%   25-588
+src/rattlesnake/components/state_space_virtual_hardware.py               78     78     0%   25-307
+src/rattlesnake/components/streaming.py                                  77     77     0%   25-212
+src/rattlesnake/components/time_environment.py                          332    332     0%   27-903
+src/rattlesnake/components/transient_sys_id_environment.py              927    927     0%   25-1562
+src/rattlesnake/components/ui_utilities.py                              894    894     0%   24-1424
+src/rattlesnake/components/user_interface.py                            891    891     0%   25-1374
+src/rattlesnake/components/utilities.py                                 306    306     0%   24-818
+src/rattlesnake/hello.py                                                  2      2     0%   4-6
+src/rattlesnake/rattlesnake.py                                           85     85     0%   22-217
+---------------------------------------------------------------------------------------------------
+TOTAL                                                                 10368  10368     0%
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+============================== 1 passed in 4.90s ===============================
+</pre>
+            </details>
+        </div>
+    </div>
+    <footer style="text-align: center; margin: 40px 0; color: #6a737d;">
+        <p>Generated by GitHub Actions • <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">Rattlesnake Project</a></p>
+    </footer>
+</body>
+</html>
