@@ -20,6 +20,6 @@ env_path = os.environ.get("GITHUB_ENV")
 if env_path:
     with open(env_path, "a", encoding="utf-8") as f:
         f.write(f"BADGE_COLOR={COLOR}\n")
-    print(f"    ✅ BADGE_COLOR={COLOR}")
+    print(f"    🎨 BADGE_COLOR={COLOR}")
 else:
     print("   ⚠️ GITHUB_ENV is not set — failed to export BADGE_COLOR")
