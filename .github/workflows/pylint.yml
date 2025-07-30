@@ -41,8 +41,8 @@ jobs:
         
         # Output the score and file name
         echo "🏁 Pylint analysis completed. 🏁"
-        echo "   📄 Output file: $OUTPUT_FILE"
-        echo "   🏆 Pylint score: $SCORE out of 10"
+        echo "    📄 Output file: $OUTPUT_FILE"
+        echo "    🏆 Pylint score: $SCORE out of 10"
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
         

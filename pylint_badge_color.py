@@ -15,5 +15,9 @@ elif score >= 4.0:
 else:
     COLOR = "red"
 
+# Expore to GitHub environment
 with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
     f.write(f"BADGE_COLOR={COLOR}\n")
+
+# ✅ Provide visual feedback in the GitHub Actions log
+print(f"    Badge color set to '{COLOR}' for score {score}/10")
