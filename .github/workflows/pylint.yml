@@ -46,26 +46,9 @@ jobs:
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
         
-        # Determine badge color based on score
-        python3 << EOF
-        import os
-        try:
-            score = float("$SCORE")
-        except ValueError:
-            score = 0.0
-            
-        if score >= 8.0:
-            color = "brightgreen"
-        elif score >= 6.0:
-            color = "yellow"
-        elif score >= 4.0:
-            color = "orange"
-        else:
-            color = "red"
-        
-        with open(os.environ['GITHUB_ENV'], 'a') as f:
-            f.write(f"BADGE_COLOR={color}\n")
-        EOF
+        # Determine badge color based on score and add it as an environment variable
+        run: |
+          python3 pylint_badge_color.py "$SCORE"
         
     - name: Create custom HTML report
       run: |
