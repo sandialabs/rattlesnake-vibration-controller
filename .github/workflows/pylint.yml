@@ -51,9 +51,9 @@ jobs:
 
     - name: Confirm new environment variables
       run: |
-        echo "Badge color set to: ${{ env.BADGE_COLOR }}"
-        echo "PYLINT_SCORE=${{ env.PYLINT_SCORE }}"
         echo "OUTPUT_FILE=${{ env.OUTPUT_FILE }}"
+        echo "PYLINT_SCORE=${{ env.PYLINT_SCORE }}"
+        echo "BADGE_COLOR=${{ env.BADGE_COLOR }}"
         
     - name: Create custom HTML report
       run: |
