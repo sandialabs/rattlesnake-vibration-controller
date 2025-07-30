@@ -67,11 +67,11 @@ body {
     <h1>Rattlesnake Pylint Report</h1>
     <div class="score">5.66/10</div>
     <div class="metadata">
-        <!--div><strong>Generated:</strong> 2025-07-30 22:05:42 UTC</div-->
-        <div><strong>Generated:</strong> 2025-07-30 22:05:42 UTC (2025-07-30 18:05:42 EST / 2025-07-30 16:05:42 MST)</div>
-        <div><strong>Run ID:</strong> 16634760327</div>
+        <!--div><strong>Generated:</strong> 2025-07-30 22:10:00 UTC</div-->
+        <div><strong>Generated:</strong> 2025-07-30 22:10:00 UTC (2025-07-30 18:10:00 EST / 2025-07-30 16:10:00 MST)</div>
+        <div><strong>Run ID:</strong> 16634831035</div>
         <div><strong>Branch:</strong> dev</div>
-        <div><strong>Commit:</strong> 6330c845</div>
+        <div><strong>Commit:</strong> 1a5da22b</div>
     </div>
 </div>
 
@@ -79,7 +79,7 @@ body {
     <a href="#summary">Summary</a>
     <a href="#issues">Issues (4)</a>
     <a href="#statistics">Full Report</a>
-    <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/16634760327">View Workflow Run</a>
+    <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/16634831035">View Workflow Run</a>
     <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">Repository</a>
 </div>
 
@@ -4376,6 +4376,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
         self.frame_time = test_data.samples_per_read/test_data.sample_rate
         self.acquisition_delay = test_data.samples_per_write/test_data.output_oversample
 
+
     def start(self):
         &quot;&quot;&quot;Method to start acquiring data.
 
@@ -4461,6 +4462,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 
         &quot;&quot;&quot;
         pass
+
  (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.modal_environment:[1043:1068]
@@ -4709,21 +4711,21 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[1963:1979]
 ==rattlesnake.components.skeleton_sys_id_environment:[239:255]
-                                      input_queue,
-                                      gui_update_queue,
-                                      controller_communication_queue,
-                                      data_in_queue,
-                                      data_out_queue,
-                                      log_file_queue)
+                                            input_queue,
+                                            gui_update_queue,
+                                            controller_communication_queue,
+                                            data_in_queue,
+                                            data_out_queue,
+                                            log_file_queue)
 
     spectral_proc = mp.Process(target=spectral_processing_process,
-                                args=(environment_name,
-                                      queue_container.spectral_command_queue,
-                                      queue_container.data_for_spectral_computation_queue,
-                                      queue_container.updated_spectral_quantities_queue,
-                                      queue_container.environment_command_queue,
-                                      queue_container.gui_update_queue,
-                                      queue_container.log_file_queue))
+                               args=(environment_name,
+                                     queue_container.spectral_command_queue,
+                                     queue_container.data_for_spectral_computation_queue,
+                                     queue_container.updated_spectral_quantities_queue,
+                                     queue_container.environment_command_queue,
+                                     queue_container.gui_update_queue,
+                                     queue_container.log_file_queue))
     spectral_proc.start() (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.signal_generation_process:[235:258]
@@ -4747,29 +4749,26 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
                 self.current_test_level = test_level[-1]
             self.log(&#x27;Test level from {:} to {:}&#x27;.format(test_level[0],test_level[-1]))
         # Write the test level-scaled data to the task
-        self.log(&#x27;Sending data to data_out queue&#x27;)
-        # # TODO: Delete This Later
-        # self.write_index += 1
-        # np.savez(&#x27;signal_generation_output_data_check_{:}.npz&#x27;.format(self.write_index),write_data = write_data,test_level = test_level) (duplicate-code)
+        self.log(&#x27;Sending data to data_out queue&#x27;) (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[2007:2023]
 ==rattlesnake.components.transient_sys_id_environment:[1544:1560]
-                environment_name,
-                queue_container,
-                acquisition_active,
-                output_active)
-        process_class.run()
+            environment_name,
+            queue_container,
+            acquisition_active,
+            output_active)
+    process_class.run()
 
-        # Rejoin all the processes
-        process_class.log(&#x27;Joining Subprocesses&#x27;)
-        process_class.log(&#x27;Joining Spectral Computation&#x27;)
-        spectral_proc.join()
-        process_class.log(&#x27;Joining Data Analysis&#x27;)
-        analysis_proc.join()
-        process_class.log(&#x27;Joining Signal Generation&#x27;)
-        siggen_proc.join()
-        process_class.log(&#x27;Joining Data Collection&#x27;)
-        collection_proc.join() (duplicate-code)
+    # Rejoin all the processes
+    process_class.log(&#x27;Joining Subprocesses&#x27;)
+    process_class.log(&#x27;Joining Spectral Computation&#x27;)
+    spectral_proc.join()
+    process_class.log(&#x27;Joining Data Analysis&#x27;)
+    analysis_proc.join()
+    process_class.log(&#x27;Joining Signal Generation&#x27;)
+    siggen_proc.join()
+    process_class.log(&#x27;Joining Data Collection&#x27;)
+    collection_proc.join() (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[1634:1648]
 ==rattlesnake.components.transient_sys_id_environment:[1154:1168]
@@ -4913,7 +4912,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
         for i in group.variables[&#x27;control_channel_indices&#x27;][...]:
             item = self.definition_widget.control_channels_selector.item(i)
             item.setCheckState(Qt.Checked)
-        # Other Data
+        # Other data
         try:
             self.response_transformation_matrix = group.variables[&#x27;response_transformation_matrix&#x27;][...].data
         except KeyError:
@@ -4975,7 +4974,8 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
             self.environment_name,
             (SpectralProcessingCommands.INITIALIZE_PARAMETERS,
              self.get_spectral_processing_metadata()))
-        # Set up the data analysis (duplicate-code)
+
+    def get_data_collector_metadata(self) -&gt; CollectorMetadata: (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[1634:1645]
 ==rattlesnake.components.skeleton_sys_id_environment:[209:220]
@@ -5257,8 +5257,6 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.signal_generation:[120:139]
 ==rattlesnake.components.utilities:[517:532]
     [U,S,Vh] = np.linalg.svd(cpsd_matrix,full_matrices=False)
-    # svd_end = time()
-    # print(&#x27;SVD Time: {:0.4f}&#x27;.format(svd_end-svd_start))
     # Reform using the sqrt of the S matrix
     Lsvd = U*np.sqrt(S[:,np.newaxis,:])@Vh
     # Compute Random Process
@@ -5268,13 +5266,11 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
     Xv[[0,-1],:,:] = 0
     # Compute the IFFT, using the real version makes it so you don&#x27;t need negative frequencies
     zero_padding = np.zeros([((output_oversample-1)*(Xv.shape[0]-1))]+list(Xv.shape[1:]),dtype=Xv.dtype)
-    # ifft_start = time()
     xv = np.fft.irfft(np.concatenate((Xv,zero_padding),axis=0)/np.sqrt(2),axis=0)*output_oversample*sample_rate
-    # ifft_end = time()
-    # print(&#x27;FFT Time: {:0.4f}&#x27;.format(ifft_end-ifft_start))
     output = xv[:,:,0].T
     return output
- (duplicate-code)
+
+def pseudorandom_signal(fmin,fmax,df,sample_rate,rms,nsignals = 1): (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.modal_environment:[1445:1477]
 ==rattlesnake.components.user_interface:[1279:1301]
@@ -5362,14 +5358,15 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_sysid_environment:[919:927]
 ==rattlesnake.components.random_vibration_sys_id_environment:[1223:1232]
-                if netcdf_datatype == &#x27;i1&#x27;:
-                    channel_data = np.array([1 if val else 0 for val in channel_data])
-                else:
-                    channel_data = [&#x27;&#x27; if val is None else val for val in channel_data]
-                for i,cd in enumerate(channel_data):
-                    var[i] = cd
-            group_handle = netcdf_handle.createGroup(self.environment_name)
-            self.environment_parameters.store_to_netcdf(group_handle) (duplicate-code)
+            if netcdf_datatype == &#x27;i1&#x27;:
+                channel_data = np.array([1 if val else 0 for val in channel_data])
+            else:
+                channel_data = [&#x27;&#x27; if val is None else val for val in channel_data]
+            for i,cd in enumerate(channel_data):
+                var[i] = cd
+        group_handle = netcdf_handle.createGroup(self.environment_name)
+        self.environment_parameters.store_to_netcdf(group_handle)
+        # Create Variables for Spectral Data (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.time_environment:[253:263]
 ==rattlesnake.components.transient_sys_id_environment:[283:291]
@@ -5551,41 +5548,122 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.skeleton_sys_id_environment:[99:126]
         pass
 
-    @property
-    def number_of_channels(self):
+    @abstractmethod
+    def stop_control(self):
+        &quot;&quot;&quot;Stops the corresponding environment in the controller&quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    def collect_environment_definition_parameters(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Collect the parameters from the user interface defining the environment
+
+        Returns
+        -------
+        AbstractMetadata
+            A metadata or parameters object containing the parameters defining
+            the corresponding environment.
+
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    def initialize_data_acquisition(self,data_acquisition_parameters : DataAcquisitionParameters):
+        &quot;&quot;&quot;Update the user interface with data acquisition parameters
+
+        This function is called when the Data Acquisition parameters are
+        initialized.  This function should set up the environment user interface
+        accordingly.
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters :
+            Container containing the data acquisition parameters, including
+            channel table and sampling information.
+
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    def initialize_environment(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Update the user interface with environment parameters
+
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.  It must
+        return the parameters class of the environment that inherits from
+        AbstractMetadata.
+
+        Returns
+        -------
+        AbstractMetadata
+            An AbstractMetadata-inheriting object that contains the parameters
+            defining the environment.
+
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset):
+        &quot;&quot;&quot;Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the &quot;read&quot; counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment&#x27;s name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment&#x27;s name.
+
+        &quot;&quot;&quot;
+        pass
+
+    @abstractmethod
+    def update_gui(self,queue_data : tuple):
+        &quot;&quot;&quot;Update the environment&#x27;s graphical user interface
+
+        This function will receive data from the gui_update_queue that
+        specifies how the user interface should be updated.  Data will usually
+        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
+        what operation should be taken or which widget should be modified, and
+        the ``data`` notes what data should be used in the update.
+
+        Parameters
+        ----------
+        queue_data : tuple
+            A tuple containing ``(instruction,data)`` pairs where ``instruction``
+            defines and operation or widget to be modified and ``data`` contains
+            the data used to perform the operation.
+        &quot;&quot;&quot;
         pass
 
     @property
-    def response_channel_indices(self):
-        pass
-
-    @property
-    def reference_channel_indices(self):
-        pass
-
-    @property
-    def response_transformation_matrix(self):
-        pass
-
-    @property
-    def reference_transformation_matrix(self):
-        pass
-
-    @property
-    def sample_rate(self):
-        pass
-
-    def store_to_netcdf(self,netcdf_group_handle : nc4._netCDF4.Group): (duplicate-code)
+    def log_file_queue(self) -&gt; Queue:
+        &quot;&quot;&quot;A property containing a reference to the queue accepting messages
+        that will be written to the log file&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_environment:[611:618]
 ==rattlesnake.components.abstract_sysid_environment:[1102:1109]
-            gui_update_queue,
-            controller_communication_queue,
-            log_file_queue,
-            data_in_queue,
-            data_out_queue,
-            acquisition_active,
-            output_active) (duplicate-code)
+                gui_update_queue,
+                controller_communication_queue,
+                log_file_queue,
+                data_in_queue,
+                data_out_queue,
+                acquisition_active,
+                output_active) (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.time_environment:[517:524]
 ==rattlesnake.components.transient_sys_id_environment:[961:968]
@@ -5653,9 +5731,9 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[1984:1990]
 ==rattlesnake.components.skeleton_sys_id_environment:[260:266]
-                                     queue_container.environment_command_queue,
-                                     queue_container.gui_update_queue,
-                                     queue_container.log_file_queue))
+                                      queue_container.environment_command_queue,
+                                      queue_container.gui_update_queue,
+                                      queue_container.log_file_queue))
     analysis_proc.start()
     siggen_proc = mp.Process(target=signal_generation_process,args=(environment_name,
                                                                     queue_container.signal_generation_command_queue, (duplicate-code)
@@ -5679,28 +5757,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
                 widget.clear()
                 widget.addItems([&#x27;{:.3f}&#x27;.format(d) for d in data])
 
-    @staticmethod
-    def create_environment_template(environment_name : str, workbook : openpyxl.workbook.workbook.Workbook):
-        &quot;&quot;&quot;Creates a template worksheet in an Excel workbook defining the
-        environment.
-
-        This function creates a template worksheet in an Excel workbook that
-        when filled out could be read by the controller to re-create the
-        environment.
-
-        This function is the &quot;write&quot; counterpart to the
-        ``set_parameters_from_template`` function in the ``ModalUI`` class,
-        which reads the values from the template file to populate the user
-        interface.
-
-        Parameters
-        ----------
-        environment_name : str :
-            The name of the environment that will specify the worksheet&#x27;s name
-        workbook : openpyxl.workbook.workbook.Workbook :
-            A reference to an ``openpyxl`` workbook.
-
-        &quot;&quot;&quot; (duplicate-code)
+    def set_parameters_from_template(self, worksheet): (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.modal_environment:[1427:1433]
 ==rattlesnake.components.time_environment:[527:533]
@@ -5797,7 +5854,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
         environment.
 
         This function is the &quot;write&quot; counterpart to the
-        ``set_parameters_from_template`` function in the ``RandomVibrationUI`` class,
+        ``set_parameters_from_template`` function in the ``ModalUI`` class,
         which reads the values from the template file to populate the user
         interface.
 
@@ -5839,126 +5896,227 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
                       self.queue_container.collector_command_queue]:
             queue.put(self.environment_name,(GlobalCommands.QUIT,None))
         # Return true to stop the task
-        return True
-
-# %% Process
-
-def random_vibration_process(environment_name : str,
-                 input_queue : VerboseMessageQueue,
-                 gui_update_queue : Queue,
-                 controller_communication_queue : VerboseMessageQueue,
-                 log_file_queue : Queue,
-                 data_in_queue : Queue,
-                 data_out_queue : Queue,
-                 acquisition_active : mp.Value,
-                 output_active : mp.Value):
-    &quot;&quot;&quot;Random vibration environment process function called by multiprocessing
-
-    This function defines the Random Vibration Environment process that
-    gets run by the multiprocessing module when it creates a new process.  It
-    creates a RandomVibrationEnvironment object and runs it.
-
-    Parameters
-    ----------
-    environment_name : str :
-        Name of the environment
-    input_queue : VerboseMessageQueue :
-        Queue containing instructions for the environment
-    gui_update_queue : Queue :
-        Queue where GUI updates are put
-    controller_communication_queue : Queue :
-        Queue for global communications with the controller
-    log_file_queue : Queue :
-        Queue for writing log file messages
-    data_in_queue : Queue :
-        Queue from which data will be read by the environment
-    data_out_queue : Queue :
-        Queue to which data will be written that will be output by the hardware.
-
-    &quot;&quot;&quot;
-    # Create vibration queues (duplicate-code)
+        return True (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_sysid_environment:[918:924]
 ==rattlesnake.components.modal_environment:[1068:1074]
-                channel_data = [getattr(channel,label) for channel in self.data_acquisition_parameters.channel_list]
-                if netcdf_datatype == &#x27;i1&#x27;:
-                    channel_data = np.array([1 if val else 0 for val in channel_data])
-                else:
-                    channel_data = [&#x27;&#x27; if val is None else val for val in channel_data]
-                for i,cd in enumerate(channel_data): (duplicate-code)
+            channel_data = [getattr(channel,label) for channel in self.data_acquisition_parameters.channel_list]
+            if netcdf_datatype == &#x27;i1&#x27;:
+                channel_data = np.array([1 if val else 0 for val in channel_data])
+            else:
+                channel_data = [&#x27;&#x27; if val is None else val for val in channel_data]
+            for i,cd in enumerate(channel_data): (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_environment:[132:235]
 ==rattlesnake.components.abstract_hardware:[131:157]
         pass
 
     @abstractmethod
-    def start(self):
-        &quot;&quot;&quot;Method to start outputting data to the hardware&quot;&quot;&quot;
+    def collect_environment_definition_parameters(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Collect the parameters from the user interface defining the environment
+
+        Returns
+        -------
+        AbstractMetadata
+            A metadata or parameters object containing the parameters defining
+            the corresponding environment.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def write(self,data):
-        &quot;&quot;&quot;Method to write a np.ndarray with a frame of data to the hardware&quot;&quot;&quot;
+    def initialize_data_acquisition(self,data_acquisition_parameters : DataAcquisitionParameters):
+        &quot;&quot;&quot;Update the user interface with data acquisition parameters
+
+        This function is called when the Data Acquisition parameters are
+        initialized.  This function should set up the environment user interface
+        accordingly.
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters :
+            Container containing the data acquisition parameters, including
+            channel table and sampling information.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def stop(self):
-        &quot;&quot;&quot;Method to stop the output&quot;&quot;&quot;
+    def initialize_environment(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Update the user interface with environment parameters
+
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.  It must
+        return the parameters class of the environment that inherits from
+        AbstractMetadata.
+
+        Returns
+        -------
+        AbstractMetadata
+            An AbstractMetadata-inheriting object that contains the parameters
+            defining the environment.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def close(self):
-        &quot;&quot;&quot;Method to close down the hardware&quot;&quot;&quot;
+    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset):
+        &quot;&quot;&quot;Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the &quot;read&quot; counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment&#x27;s name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment&#x27;s name.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def ready_for_new_output(self) -&gt; bool:
-        &quot;&quot;&quot;Method that returns true if the hardware should accept a new signal&quot;&quot;&quot;
-        pass (duplicate-code)
+    def update_gui(self,queue_data : tuple):
+        &quot;&quot;&quot;Update the environment&#x27;s graphical user interface
+
+        This function will receive data from the gui_update_queue that
+        specifies how the user interface should be updated.  Data will usually
+        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
+        what operation should be taken or which widget should be modified, and
+        the ``data`` notes what data should be used in the update.
+
+        Parameters
+        ----------
+        queue_data : tuple
+            A tuple containing ``(instruction,data)`` pairs where ``instruction``
+            defines and operation or widget to be modified and ``data`` contains
+            the data used to perform the operation.
+        &quot;&quot;&quot;
+        pass
+
+    @property
+    def log_file_queue(self) -&gt; Queue:
+        &quot;&quot;&quot;A property containing a reference to the queue accepting messages
+        that will be written to the log file&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_environment:[127:229]
 ==rattlesnake.components.abstract_hardware:[59:100]
         pass
 
     @abstractmethod
-    def start(self):
-        &quot;&quot;&quot;Method to start acquiring data from the hardware&quot;&quot;&quot;
+    def stop_control(self):
+        &quot;&quot;&quot;Stops the corresponding environment in the controller&quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def read(self) -&gt; np.ndarray:
-        &quot;&quot;&quot;Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray&quot;&quot;&quot;
+    def collect_environment_definition_parameters(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Collect the parameters from the user interface defining the environment
+
+        Returns
+        -------
+        AbstractMetadata
+            A metadata or parameters object containing the parameters defining
+            the corresponding environment.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def read_remaining(self) -&gt; np.ndarray:
-        &quot;&quot;&quot;Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray&quot;&quot;&quot;
+    def initialize_data_acquisition(self,data_acquisition_parameters : DataAcquisitionParameters):
+        &quot;&quot;&quot;Update the user interface with data acquisition parameters
+
+        This function is called when the Data Acquisition parameters are
+        initialized.  This function should set up the environment user interface
+        accordingly.
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters :
+            Container containing the data acquisition parameters, including
+            channel table and sampling information.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def stop(self):
-        &quot;&quot;&quot;Method to stop the acquisition&quot;&quot;&quot;
+    def initialize_environment(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Update the user interface with environment parameters
+
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.  It must
+        return the parameters class of the environment that inherits from
+        AbstractMetadata.
+
+        Returns
+        -------
+        AbstractMetadata
+            An AbstractMetadata-inheriting object that contains the parameters
+            defining the environment.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def close(self):
-        &quot;&quot;&quot;Method to close down the hardware&quot;&quot;&quot;
+    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset):
+        &quot;&quot;&quot;Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the &quot;read&quot; counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment&#x27;s name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment&#x27;s name.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def get_acquisition_delay(self) -&gt; int:
-        &quot;&quot;&quot;Get the number of samples between output and acquisition
+    def update_gui(self,queue_data : tuple):
+        &quot;&quot;&quot;Update the environment&#x27;s graphical user interface
 
-        This function is designed to handle buffering done in the output
-        hardware, ensuring that all data written to the output is read by the
-        acquisition.  If a output hardware has a buffer, there may be a non-
-        negligable delay between when output is written to the device and
-        actually played out from the device.&quot;&quot;&quot;
+        This function will receive data from the gui_update_queue that
+        specifies how the user interface should be updated.  Data will usually
+        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
+        what operation should be taken or which widget should be modified, and
+        the ``data`` notes what data should be used in the update.
 
-
- (duplicate-code)
+        Parameters
+        ----------
+        queue_data : tuple
+            A tuple containing ``(instruction,data)`` pairs where ``instruction``
+            defines and operation or widget to be modified and ``data`` contains
+            the data used to perform the operation.
+        &quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[1561:1566]
 ==rattlesnake.components.transient_sys_id_environment:[1040:1045]
@@ -5978,11 +6136,11 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.random_vibration_sys_id_environment:[1964:1970]
 ==rattlesnake.components.time_environment:[891:897]
-                                            gui_update_queue,
-                                            controller_communication_queue,
-                                            data_in_queue,
-                                            data_out_queue,
-                                            log_file_queue)
+                                 gui_update_queue,
+                                 controller_communication_queue,
+                                 data_in_queue,
+                                 data_out_queue,
+                                 log_file_queue)
  (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.modal_environment:[2047:2054]
@@ -5991,9 +6149,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
             queue_container,
             acquisition_active,
             output_active)
-    process_class.run()
-
-    # Rejoin all the processes (duplicate-code)
+    process_class.run() (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.modal_environment:[1822:1841]
 ==rattlesnake.components.random_vibration_sys_id_environment:[1805:1824]
@@ -6031,9 +6187,7 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
             plot_item = plotWidget.getPlotItem()
             plot_item.showGrid(True,True,0.25)
             plot_item.enableAutoRange()
-            plot_item.getViewBox().enableAutoRange(enable=True)
-
-        # Disable the currently inactive portions of the definition layout (duplicate-code)
+            plot_item.getViewBox().enableAutoRange(enable=True) (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.acquisition:[408:431]
 ==rattlesnake.components.output:[336:359]
@@ -6071,11 +6225,11 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_sysid_data_analysis:[142:147]
 ==rattlesnake.components.transient_sys_id_environment:[1263:1268]
-                  self.coherence,
-                  self.sysid_response_cpsd,
-                  self.sysid_reference_cpsd,
-                  self.sysid_condition,
-                  self.sysid_response_noise, (duplicate-code)
+        self.coherence,
+        self.sysid_response_cpsd,
+        self.sysid_reference_cpsd,
+        self.sysid_condition,
+        self.sysid_response_noise, (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_sysid_data_analysis:[174:180]
 ==rattlesnake.components.random_vibration_sys_id_data_analysis:[325:331]
@@ -6178,30 +6332,92 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
         pass
 
     @abstractmethod
-    def start(self):
-        &quot;&quot;&quot;Method to start acquiring data from the hardware&quot;&quot;&quot;
+    def initialize_data_acquisition(self,data_acquisition_parameters : DataAcquisitionParameters):
+        &quot;&quot;&quot;Update the user interface with data acquisition parameters
+
+        This function is called when the Data Acquisition parameters are
+        initialized.  This function should set up the environment user interface
+        accordingly.
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters :
+            Container containing the data acquisition parameters, including
+            channel table and sampling information.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def read(self) -&gt; np.ndarray:
-        &quot;&quot;&quot;Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray&quot;&quot;&quot;
+    def initialize_environment(self) -&gt; AbstractMetadata:
+        &quot;&quot;&quot;
+        Update the user interface with environment parameters
+
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.  It must
+        return the parameters class of the environment that inherits from
+        AbstractMetadata.
+
+        Returns
+        -------
+        AbstractMetadata
+            An AbstractMetadata-inheriting object that contains the parameters
+            defining the environment.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def read_remaining(self) -&gt; np.ndarray:
-        &quot;&quot;&quot;Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray&quot;&quot;&quot;
+    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset):
+        &quot;&quot;&quot;Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the &quot;read&quot; counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment&#x27;s name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment&#x27;s name.
+
+        &quot;&quot;&quot;
         pass
 
     @abstractmethod
-    def stop(self):
-        &quot;&quot;&quot;Method to stop the acquisition&quot;&quot;&quot;
+    def update_gui(self,queue_data : tuple):
+        &quot;&quot;&quot;Update the environment&#x27;s graphical user interface
+
+        This function will receive data from the gui_update_queue that
+        specifies how the user interface should be updated.  Data will usually
+        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
+        what operation should be taken or which widget should be modified, and
+        the ``data`` notes what data should be used in the update.
+
+        Parameters
+        ----------
+        queue_data : tuple
+            A tuple containing ``(instruction,data)`` pairs where ``instruction``
+            defines and operation or widget to be modified and ``data`` contains
+            the data used to perform the operation.
+        &quot;&quot;&quot;
         pass
 
-    @abstractmethod
-    def close(self):
-        &quot;&quot;&quot;Method to close down the hardware&quot;&quot;&quot; (duplicate-code)
+    @property
+    def log_file_queue(self) -&gt; Queue:
+        &quot;&quot;&quot;A property containing a reference to the queue accepting messages
+        that will be written to the log file&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.components.abstract_environment:[127:210]
 ==rattlesnake.components.abstract_hardware:[64:100]
@@ -6288,15 +6504,15 @@ src/rattlesnake/components/utilities.py:1:0: R0801: Similar lines in 2 files
             a group name with the enviroment&#x27;s name.
 
         &quot;&quot;&quot; (duplicate-code)
+src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.environments -&gt; rattlesnake.components.time_environment) (cyclic-import)
 src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_data_analysis -&gt; rattlesnake.components.abstract_sysid_environment) (cyclic-import)
-src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_data_analysis -&gt; rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.transient_sys_id_environment) (cyclic-import)
-src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.environments -&gt; rattlesnake.components.transient_sys_id_environment -&gt; rattlesnake.components.ui_utilities) (cyclic-import)
 src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.random_vibration_sys_id_data_analysis -&gt; rattlesnake.components.random_vibration_sys_id_environment) (cyclic-import)
-src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.transient_sys_id_environment) (cyclic-import)
-src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.environments -&gt; rattlesnake.components.modal_environment -&gt; rattlesnake.components.ui_utilities) (cyclic-import)
-src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_data_analysis -&gt; rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.random_vibration_sys_id_environment -&gt; rattlesnake.components.random_vibration_sys_id_data_analysis) (cyclic-import)
-src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.environments -&gt; rattlesnake.components.time_environment -&gt; rattlesnake.components.ui_utilities) (cyclic-import)
 src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.random_vibration_sys_id_environment) (cyclic-import)
+src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_data_analysis -&gt; rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.random_vibration_sys_id_environment -&gt; rattlesnake.components.random_vibration_sys_id_data_analysis) (cyclic-import)
+src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.environments -&gt; rattlesnake.components.modal_environment) (cyclic-import)
+src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_data_analysis -&gt; rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.transient_sys_id_environment) (cyclic-import)
+src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.abstract_sysid_environment -&gt; rattlesnake.components.environments -&gt; rattlesnake.components.transient_sys_id_environment) (cyclic-import)
+src/rattlesnake/components/utilities.py:1:0: R0401: Cyclic import (rattlesnake.components.environments -&gt; rattlesnake.components.time_environment -&gt; rattlesnake.components.ui_utilities) (cyclic-import)
 
 
 Report
