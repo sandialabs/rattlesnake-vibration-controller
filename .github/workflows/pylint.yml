@@ -56,9 +56,9 @@ jobs:
         echo "BADGE_COLOR=${{ env.BADGE_COLOR }}"
         
     - name: Create custom Pylint Report in HTML format
-        # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
       run: |
         # Read the pylint output and create a custom HTML report
+        # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
         python3 << 'EOF'
         import os
         import html
