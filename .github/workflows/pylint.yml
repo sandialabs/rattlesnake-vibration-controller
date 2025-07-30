@@ -218,7 +218,7 @@ jobs:
                 <div><strong>Generated:</strong> {formatted_time}</div>
                 <div><strong>Run ID:</strong> {run_id}</div>
                 <div><strong>Branch:</strong> {ref_name}</div>
-                <div><strong>Commit:</strong> {github_sha[:8]}</div>
+                <div><strong>Commit:</strong> {github_sha[:7]}</div>
             </div>
         </div>
         
