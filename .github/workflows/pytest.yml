@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]  # Specify the OS versions to test against
-        python-version: ["3.9", "3.10"]  # Specify the Python versions to test against
+        python-version: ["3.9", "3.10", "3.11"]  # Specify the Python versions to test against
 
     runs-on: ${{ matrix.os }}  # Use the OS from the matrix
 
@@ -60,10 +60,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v3
         with:
-          python-version: "3.9"
+          python-version: "3.11" # Use a specific Python version for badge generation
           
       - name: Install dependencies
         run: |
