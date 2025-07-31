@@ -328,7 +328,7 @@ def generate_html_report(
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">{issue_counts["refactor"]}</div>
-                    <div>Refactor</div>
+                    <div>Refactors</div>
                 </div>
             </div>
         </div>
@@ -495,9 +495,10 @@ def main() -> None:
         print(f"✅ Enhanced HTML report generated: {args.output_file}")
         print(f"📊 Pylint score: {args.pylint_score}/10")
         print(f"🔍 Total issues found: {total_issues}")
-        print(f"   - Errors: {issue_counts['error']}")
-        print(f"   - Warnings: {issue_counts['warning']}")
         print(f"   - Conventions: {issue_counts['convention']}")
+        print(f"   - Warnings: {issue_counts['warning']}")
+        print(f"   - Errors: {issue_counts['error']}")
+        print(f"   - Refactors: {issue_counts['refactor']}")
 
     except Exception as e:
         print(f"❌ Error generating HTML report: {e}")
