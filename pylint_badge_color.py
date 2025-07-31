@@ -22,4 +22,4 @@ if env_path:
         f.write(f"BADGE_COLOR={COLOR}\n")
     print(f"    🎨 BADGE_COLOR={COLOR}")
 else:
-    print("   ⚠️ GITHUB_ENV is not set — failed to export BADGE_COLOR")
+    print("    ⚠️ GITHUB_ENV is not set — failed to export BADGE_COLOR")
