@@ -406,7 +406,6 @@ def create_pylint_html_report(
     Returns:
         Tuple of (total_issues, issue_counts_dict)
     """
-    breakpoint()
     # Read the pylint output
     pylint_content: str = read_pylint_content(input_file)
 
