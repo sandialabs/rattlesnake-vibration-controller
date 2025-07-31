@@ -1,5 +1,8 @@
-"""This module is called by the pylint.yml to determine the badge color
-based on the pylint score."""
+"""
+This module is called by the pylint.yml to determine the badge color
+based on the pylint score.  The module then appends BADGE_COLOR to the
+GITHUB_ENV file so that it can be used later in the workflow.
+"""
 
 import os
 import sys
