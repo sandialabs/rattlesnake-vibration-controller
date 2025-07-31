@@ -31,27 +31,27 @@ jobs:
       run: |
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
-        OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
+        PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
         
         # Generate text report
-        pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$OUTPUT_FILE" || true
+        pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$PYLINT_OUTPUT_FILE" || true
         
         # Extract the score from pylint output
-        SCORE=$(grep "Your code has been rated at" "$OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+        SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
         
         # Output the score and file name
         echo "🏁 Pylint analysis completed. 🏁"
-        echo "    📄 Output file: $OUTPUT_FILE"
+        echo "    📄 Output file: $PYLINT_OUTPUT_FILE"
         echo "    🏆 Pylint score: $SCORE out of 10"
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
-        echo "OUTPUT_FILE=$OUTPUT_FILE" >> $GITHUB_ENV
+        echo "PYLINT_OUTPUT_FILE=$PYLINT_OUTPUT_FILE" >> $GITHUB_ENV
         
         # Determine badge color based on score and add it as an environment variable
         python3 pylint_badge_color.py "$SCORE"
 
     - name: Confirm new environment variables
       run: |
-        echo "OUTPUT_FILE=${{ env.OUTPUT_FILE }}"
+        echo "PYLINT_OUTPUT_FILE=${{ env.PYLINT_OUTPUT_FILE }}"
         echo "PYLINT_SCORE=${{ env.PYLINT_SCORE }}"
         echo "BADGE_COLOR=${{ env.BADGE_COLOR }}"
         
@@ -83,8 +83,8 @@ jobs:
         # print(formatted_time) # debugging
 
         # Read pylint output
-        output_file = os.environ['OUTPUT_FILE']
-        with open(output_file, 'r') as f:
+        pylint_output_file = os.environ['PYLINT_OUTPUT_FILE']
+        with open(pylint_output_file, 'r') as f:
             pylint_content = f.read()
         
         # Parse pylint output for better formatting
@@ -271,6 +271,19 @@ jobs:
         with open('pylint_enhanced_report.html', 'w') as f:
             f.write(html_content)
         EOF
+
+    # - name: Create custom Pylint Report in HTML format (version 2)
+    #   run: |
+    #     # Read the pylint output and create a custom HTML report
+    #     # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
+    #     python pylint_html_report.py \
+    #       --input_file pylint_output_${{ env.TIMESTAMP }}.txt \
+    #       --output_file pylint_enhanced_report.html \
+    #       --pylint_score ${{ env.PYLINT_SCORE }} \
+    #       --run_id ${{ github.run_id }} \
+    #       --ref_name ${{ github.ref_name }} \
+    #       --github_sha ${{ github.sha }} \
+    #       --github_repo ${{ github.repository }}
         
     - name: Prepare GitHub Pages main landing page content
       if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
