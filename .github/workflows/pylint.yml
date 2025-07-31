@@ -272,8 +272,9 @@ jobs:
             f.write(html_content)
         EOF
 
-    # - name: Create custom Pylint Report in HTML format (version 2)
-    #   run: |
+    - name: Create custom Pylint Report in HTML format (version 2)
+      run: |
+        echo "Work in progress..."
     #     # Read the pylint output and create a custom HTML report
     #     # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
     #     python pylint_html_report.py \
