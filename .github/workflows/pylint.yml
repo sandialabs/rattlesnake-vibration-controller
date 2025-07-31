@@ -284,6 +284,7 @@ jobs:
           --pylint_score ${{ env.PYLINT_SCORE }} \
           --run_id ${{ github.run_id }} \
           --ref_name ${{ github.ref_name }} \
+          --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
         
     - name: Prepare GitHub Pages main landing page content

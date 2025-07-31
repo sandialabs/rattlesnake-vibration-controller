@@ -446,7 +446,7 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-  python pylint_html_report.py \\
+  python pylint_report.py \\
     --input_file pylint_output_20240101_120000_UTC.txt \\
     --output_file pylint_report.html \\
     --pylint_score 8.5 \\
