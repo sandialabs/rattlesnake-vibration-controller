@@ -276,16 +276,15 @@ jobs:
     - name: Create custom Pylint Report in HTML format (version 2)
       run: |
         echo "Work in progress..."
-    #     # Read the pylint output and create a custom HTML report
-    #     # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
-    #     python pylint_html_report.py \
-    #       --input_file pylint_output_${{ env.TIMESTAMP }}.txt \
-    #       --output_file pylint_enhanced_report.html \
-    #       --pylint_score ${{ env.PYLINT_SCORE }} \
-    #       --run_id ${{ github.run_id }} \
-    #       --ref_name ${{ github.ref_name }} \
-    #       --github_sha ${{ github.sha }} \
-    #       --github_repo ${{ github.repository }}
+        # Read the pylint output and create a custom HTML report
+        # Saved to https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
+        python pylint_report.py \
+          --input_file ${{ env.PYLINT_OUTPUT_FILE }} \
+          --output_file pylint_enhanced_report.html \
+          --pylint_score ${{ env.PYLINT_SCORE }} \
+          --run_id ${{ github.run_id }} \
+          --ref_name ${{ github.ref_name }} \
+          --github_repo ${{ github.repository }}
         
     - name: Prepare GitHub Pages main landing page content
       if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
