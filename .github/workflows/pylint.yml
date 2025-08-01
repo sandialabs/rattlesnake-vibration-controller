@@ -58,8 +58,7 @@ jobs:
         # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
         python pylint_report.py \
           --input_file ${{ env.PYLINT_OUTPUT_FILE }} \
-          --output_file pylint_enhanced_report.html \
-          --pylint_score ${{ env.PYLINT_SCORE }} \
+          --output_file pylint_report.html \
           --run_id ${{ github.run_id }} \
           --ref_name ${{ github.ref_name }} \
           --github_sha ${{ github.sha }} \
@@ -71,8 +70,8 @@ jobs:
         # Create pages directory structure
         mkdir -p pages/reports/pylint
         
-        # Copy the enhanced report as the main report
-        cp pylint_enhanced_report.html pages/reports/pylint/index.html
+        # Copy the pylint report as the main report
+        cp pylint_report.html pages/reports/pylint/index.html
         
         # Create a main index page for all reports located at
         # https://sandialabs.github.io/rattlesnake-vibration-controller/

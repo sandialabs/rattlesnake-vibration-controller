@@ -163,10 +163,9 @@ def test_create_pylint_html_report():
 
     fout = "pylint_report_temp.html"
 
-    _total_issues, _issue_counts = run_pylint_report(
+    _total_issues, _issue_counts, _pylint_score = run_pylint_report(
         input_file="pylint_output_20250729_150018_UTC.txt",
         output_file=fout,
-        pylint_score="8.5",  # TODO: Replace with actual score from file
         run_id="1234567890",
         ref_name="main",
         github_sha="abc123def456",

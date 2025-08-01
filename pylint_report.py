@@ -383,19 +383,17 @@ def write_report(html_content: str, output_file: str) -> None:
 def run_pylint_report(
     input_file: str,
     output_file: str,
-    pylint_score: str,
     run_id: str,
     ref_name: str,
     github_sha: str,
     github_repo: str,
-) -> Tuple[int, Dict[str, int]]:
+) -> Tuple[int, Dict[str, int], float]:
     """
     Main function to create HTML report from pylint output.
 
     Args:
         input_file: Path to the pylint output text file
         output_file: Path for the generated HTML report
-        pylint_score: Pylint score
         run_id: GitHub Actions run ID
         ref_name: Git reference name (branch)
         github_sha: GitHub commit SHA
@@ -409,6 +407,9 @@ def run_pylint_report(
 
     # Parse pylint output
     issues, summary_lines = get_pylint_sections(pylint_content=pylint_content)
+
+    # Extract pylint score from summary lines
+    pylint_score: str = get_score_from_summary(summary_lines)
 
     # Generate HTML report
     html_content: str = get_report_html(
@@ -428,7 +429,7 @@ def run_pylint_report(
     # Count issues by type
     issue_counts: Dict[str, int] = get_issue_counts(issues)
 
-    return len(issues), issue_counts
+    return len(issues), issue_counts, float(pylint_score)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -446,7 +447,6 @@ Example:
   python pylint_report.py \\
     --input_file pylint_output_20240101_120000_UTC.txt \\
     --output_file pylint_report.html \\
-    --pylint_score 8.5 \\
     --run_id 1234567890 \\
     --ref_name main \\
     --github_sha abc123def456 \\
@@ -457,10 +457,6 @@ Example:
     parser.add_argument("--input_file", required=True, help="Input pylint output file")
 
     parser.add_argument("--output_file", required=True, help="Output HTML report file")
-
-    parser.add_argument(
-        "--pylint_score", required=True, help='Pylint score (e.g., "8.5")'
-    )
 
     parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
 
@@ -482,10 +478,9 @@ def main() -> None:
     args: argparse.Namespace = parse_arguments()
 
     try:
-        total_issues, issue_counts = run_pylint_report(
+        total_issues, issue_counts, pylint_score = run_pylint_report(
             args.input_file,
             args.output_file,
-            args.pylint_score,
             args.run_id,
             args.ref_name,
             args.github_sha,
@@ -493,15 +488,21 @@ def main() -> None:
         )
 
         print(f"✅ Enhanced HTML report generated: {args.output_file}")
-        print(f"📊 Pylint score: {args.pylint_score}/10")
+        print(f"📊 Pylint score: {pylint_score}/10")
         print(f"🔍 Total issues found: {total_issues}")
         print(f"   - Conventions: {issue_counts['convention']}")
         print(f"   - Warnings: {issue_counts['warning']}")
         print(f"   - Errors: {issue_counts['error']}")
         print(f"   - Refactors: {issue_counts['refactor']}")
 
+    except FileNotFoundError:
+        print(f"❌ Error: The input file '{args.input_file}' was not found.")
+        sys.exit(1)
+    except IOError as e:
+        print(f"❌ I/O error occurred: {e}")
+        sys.exit(1)
     except Exception as e:
-        print(f"❌ Error generating HTML report: {e}")
+        print(f"❌ An unexpected error occurred: {e}")
         sys.exit(1)
 
 
