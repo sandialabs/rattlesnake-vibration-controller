@@ -11,17 +11,15 @@ Example use:
 """
 
 import re
-# import pytest
 
 from pylint_report import (
-    create_pylint_html_report,
-    get_formatted_timestamp,
-    # pylint_content,
-    parse_pylint_output,
+    run_pylint_report,
+    get_timestamp,
+    get_pylint_sections,
     get_score_color,
-    count_issues_by_type,
-    generate_issues_html,
-    generate_html_report,
+    get_issue_counts,
+    get_issues_list_html,
+    get_report_html,
 )
 
 
@@ -51,7 +49,7 @@ def test_get_formatted_timestamp():
     Example get_formatted_timestamp output:
         '2025-07-31 18:33:56 UTC (2025-07-31 14:33:56 EST / 2025-07-31 12:33:56 MST)'
     """
-    ts = get_formatted_timestamp()
+    ts = get_timestamp()
 
     assert "UTC" in ts
     assert re.search(r"\d{4}-\d{2}-\d{2}", ts)
@@ -73,8 +71,8 @@ example.py:5:0: R0913: Too many arguments (8/5) (too-many-arguments)
 
 Your code has been rated at 6.00/10 (previous run: 7.00/10, -1.00)
 """
-    issues, summary = parse_pylint_output(content)
-    counts = count_issues_by_type(issues)
+    issues, summary = get_pylint_sections(content)
+    counts = get_issue_counts(issues)
 
     assert len(issues) == 5
     assert any("example.py" in line for line in issues)
@@ -98,7 +96,7 @@ def test_generate_issues_html():
         "example.py:4:0: E1101: Instance of 'datetime' has no 'nowz' member (no-member)",
         "example.py:5:0: R0913: Too many arguments (8/5) (too-many-arguments)",
     ]
-    html_out = generate_issues_html(issues)
+    html_out = get_issues_list_html(issues)
 
     assert '<div class="issues-list">' in html_out
 
@@ -119,7 +117,7 @@ def test_generate_html_report_basic():
     )
     issues = [pylint_content]
     summary = ["Your code has been rated at 9.00/10"]
-    report = generate_html_report(
+    report = get_report_html(
         pylint_content=pylint_content,
         issues=issues,
         summary_lines=summary,
@@ -139,7 +137,7 @@ def test_generate_html_report_basic():
 def test_create_pylint_html_report():
     """Tests the main report creation."""
 
-    _total_issues, _issue_counts = create_pylint_html_report(
+    _total_issues, _issue_counts = run_pylint_report(
         input_file="pylint_output_20250729_150018_UTC.txt",
         output_file="pylint_report.html",
         pylint_score="8.5",  # TODO: Replace with actual score from file

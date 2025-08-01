@@ -5,13 +5,13 @@ Pylint HTML Report Generator (Functional Version)
 This module extracts pylint output and generates a custom HTML report.
 """
 
-import os
+import argparse
 import html
 import re
-import argparse
 import sys
 from datetime import datetime
-from typing import List, Tuple, Dict, Optional
+from typing import Dict, List, Tuple
+
 import pytz
 
 
@@ -20,10 +20,10 @@ def get_score_color(pylint_score: str) -> str:
     Determine color based on pylint score.
 
     Args:
-        pylint_score: The pylint score as string
+        pylint_score: The pylint score as string, e.g., "8.5", "7.0", etc.
 
     Returns:
-        Hex color code for the score
+        Hex color code for the score, as a string.
     """
     # TODO: Merge this with same function in pylint_badge_color.py
     try:
@@ -40,7 +40,7 @@ def get_score_color(pylint_score: str) -> str:
         return "gray"  # #6c757d for invalid scores
 
 
-def get_formatted_timestamp() -> str:
+def get_timestamp() -> str:
     """
     Get formatted timestamp with UTC, EST, and MST times.
 
@@ -59,15 +59,16 @@ def get_formatted_timestamp() -> str:
     mst_now: datetime = utc_now.astimezone(mst)
 
     # Format the output
-    formatted_time: str = (
-        utc_now.strftime("%Y-%m-%d %H:%M:%S UTC")
-        + f" ({est_now.strftime('%Y-%m-%d %H:%M:%S EST')} / {mst_now.strftime('%Y-%m-%d %H:%M:%S MST')})"
+    df: str = "%Y-%m-%d %H:%M:%S "  # Date format
+    timestamp: str = (
+        utc_now.strftime(df + "UTC")
+        + f" ({est_now.strftime(df + 'EST')} / {mst_now.strftime(df + 'MST')})"
     )
 
-    return formatted_time
+    return timestamp
 
 
-def read_pylint_content(input_file: str) -> str:
+def get_pylint_content(input_file: str) -> str:
     """
     Read pylint output from file.
 
@@ -91,7 +92,7 @@ def read_pylint_content(input_file: str) -> str:
         sys.exit(1)
 
 
-def parse_pylint_output(pylint_content: str) -> Tuple[List[str], List[str]]:
+def get_pylint_sections(pylint_content: str) -> Tuple[List[str], List[str]]:
     """
     Parse pylint output to extract issues and summary.
 
@@ -109,14 +110,8 @@ def parse_pylint_output(pylint_content: str) -> Tuple[List[str], List[str]]:
     for line in lines:
         if line.startswith("************* Module"):
             _: str = line.replace("************* Module ", "")
-        # elif ":" in line and any(
-        #     # codes: error, warning, convention, refactor
-        #     x in line
-        #     # for x in ["error", "warning", "convention", "refactor"]
-        #     for x in ["error", "warning", convention_code, "refactor"]
-        # ):
-        # extract any line with codes that match convention, warning, error, or refactor,
-        # e.g., C0114:, W0611:, E1101:, or R0913:
+        # Extract any line with codes that match convention, warning, error,
+        # or refactor, e.g., C0114:, W0611:, E1101:, or R0913:, for example.
         elif re.search(r"\b[CWER]\d{4}:", line):
             # Extract issues that match the pylint format
             issues.append(line)
@@ -127,7 +122,7 @@ def parse_pylint_output(pylint_content: str) -> Tuple[List[str], List[str]]:
     return issues, summary_lines
 
 
-def count_issues_by_type(issues: List[str]) -> Dict[str, int]:
+def get_issue_counts(issues: List[str]) -> Dict[str, int]:
     """
     Count issues by type (error, warning, convention).
 
@@ -137,9 +132,6 @@ def count_issues_by_type(issues: List[str]) -> Dict[str, int]:
     Returns:
         Dictionary with counts for each issue type
     """
-    # error_count: int = len([i for i in issues if "error" in i.lower()])
-    # warning_count: int = len([i for i in issues if "warning" in i.lower()])
-    # convention_count: int = len([i for i in issues if "convention" in i.lower()])
     convention_count: int = len([i for i in issues if re.search(r"C\d{4}:", i)])
     warning_count: int = len([i for i in issues if re.search(r"W\d{4}:", i)])
     error_count: int = len([i for i in issues if re.search(r"E\d{4}:", i)])
@@ -153,9 +145,9 @@ def count_issues_by_type(issues: List[str]) -> Dict[str, int]:
     }
 
 
-def generate_issues_html(issues: List[str]) -> str:
+def get_issues_list_html(issues: List[str]) -> str:
     """
-    Generate HTML for the issues section.
+    Create HTML for the issues section.
 
     Args:
         issues: List of pylint issues
@@ -169,13 +161,10 @@ def generate_issues_html(issues: List[str]) -> str:
     issues_list: List[str] = []
 
     for issue in issues:
-        # if "convention" in issue.lower():
         if re.search(r"C\d{4}:", issue):
             css_class = "convention"
-        # elif "warning" in issue.lower():
         elif re.search(r"W\d{4}:", issue):
             css_class = "warning"
-        # elif "error" in issue.lower():
         elif re.search(r"E\d{4}:", issue):
             css_class = "error"
         else:
@@ -185,7 +174,7 @@ def generate_issues_html(issues: List[str]) -> str:
     return f'<div class="issues-list">{"".join(issues_list)}</div>'
 
 
-def generate_html_report(
+def get_report_html(
     pylint_content: str,
     issues: List[str],
     summary_lines: List[str],
@@ -196,7 +185,7 @@ def generate_html_report(
     github_repo: str,
 ) -> str:
     """
-    Generate the complete HTML report.
+    Create the complete HTML report.
 
     Args:
         pylint_content: Raw pylint output content
@@ -211,10 +200,10 @@ def generate_html_report(
     Returns:
         Complete HTML report as string
     """
-    formatted_time: str = get_formatted_timestamp()
+    timestamp: str = get_timestamp()
     score_color: str = get_score_color(pylint_score)
-    issue_counts: Dict[str, int] = count_issues_by_type(issues)
-    issues_html: str = generate_issues_html(issues)
+    issue_counts: Dict[str, int] = get_issue_counts(issues)
+    issues_html: str = get_issues_list_html(issues)
 
     html_content: str = f"""<!DOCTYPE html>
 <html lang="en">
@@ -296,7 +285,7 @@ def generate_html_report(
             <h1>Rattlesnake Pylint Report</h1>
             <div class="score">{pylint_score}/10</div>
             <div class="metadata">
-                <div><strong>Generated:</strong> {formatted_time}</div>
+                <div><strong>Generated:</strong> {timestamp}</div>
                 <div><strong>Run ID:</strong> <a href="https://github.com/{github_repo}/actions/runs/{run_id}"> {run_id}</a></div>
                 <div><strong>Branch:</strong> <a href="https://github.com/{github_repo}/tree/{ref_name}"> {ref_name}</a></div>
                 <div><strong>Commit:</strong> <a href="https://github.com/{github_repo}/commit/{github_sha}"> {github_sha[:7]}</a></div>
@@ -354,7 +343,7 @@ def generate_html_report(
     return html_content
 
 
-def write_html_report(html_content: str, output_file: str) -> None:
+def write_report(html_content: str, output_file: str) -> None:
     """
     Write HTML content to file.
 
@@ -373,7 +362,7 @@ def write_html_report(html_content: str, output_file: str) -> None:
         sys.exit(1)
 
 
-def create_pylint_html_report(
+def run_pylint_report(
     input_file: str,
     output_file: str,
     pylint_score: str,
@@ -398,13 +387,13 @@ def create_pylint_html_report(
         Tuple of (total_issues, issue_counts_dict)
     """
     # Read the pylint output
-    pylint_content: str = read_pylint_content(input_file)
+    pylint_content: str = get_pylint_content(input_file)
 
     # Parse pylint output
-    issues, summary_lines = parse_pylint_output(pylint_content=pylint_content)
+    issues, summary_lines = get_pylint_sections(pylint_content=pylint_content)
 
     # Generate HTML report
-    html_content: str = generate_html_report(
+    html_content: str = get_report_html(
         pylint_content,
         issues,
         summary_lines,
@@ -415,11 +404,11 @@ def create_pylint_html_report(
         github_repo,
     )
 
-    # Write HTML report
-    write_html_report(html_content, output_file)
+    # Write the HTML report
+    write_report(html_content, output_file)
 
     # Count issues by type
-    issue_counts: Dict[str, int] = count_issues_by_type(issues)
+    issue_counts: Dict[str, int] = get_issue_counts(issues)
 
     return len(issues), issue_counts
 
@@ -455,12 +444,6 @@ Example:
         "--pylint_score", required=True, help='Pylint score (e.g., "8.5")'
     )
 
-    # parser.add_argument(
-    #     "--badge_color",
-    #     required=True,
-    #     help='Badge color (e.g., "green", "yellow", "red")',
-    # )
-
     parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
 
     parser.add_argument(
@@ -481,7 +464,7 @@ def main() -> None:
     args: argparse.Namespace = parse_arguments()
 
     try:
-        total_issues, issue_counts = create_pylint_html_report(
+        total_issues, issue_counts = run_pylint_report(
             args.input_file,
             args.output_file,
             args.pylint_score,
