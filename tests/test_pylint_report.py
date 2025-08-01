@@ -13,7 +13,7 @@ Example use:
 import re
 from pathlib import Path
 
-from pylint_report import (
+from rattlesnake.cicd.pylint_report import (
     get_issue_counts,
     get_issues_list_html,
     run_pylint_report,
@@ -161,11 +161,18 @@ def test_generate_html_report_basic():
 def test_create_pylint_html_report():
     """Tests the main report creation."""
 
-    fout = "pylint_report_temp.html"
+    function_debug = False  # set to True to avoid deleting the temporary output file
+
+    fin = Path(__file__).parent / "files" / "pylint_output_20250729_150018_UTC.txt"
+    assert fin.is_file(), "Input file does not exist."
+
+    # Run the pylint report generation
+    # This will create an HTML report in the same directory as this test file
+    fout = Path(__file__).parent / "files" / "pylint_report_temp.html"
 
     _total_issues, _issue_counts, _pylint_score = run_pylint_report(
-        input_file="pylint_output_20250729_150018_UTC.txt",
-        output_file=fout,
+        input_file=str(fin),
+        output_file=str(fout),
         run_id="1234567890",
         ref_name="main",
         github_sha="abc123def456",
@@ -173,4 +180,10 @@ def test_create_pylint_html_report():
     )
 
     # Check if the output file was created
-    assert Path(fout).is_file(), "Output HTML report was not created."
+    assert fout.is_file(), "Output HTML report was not created."
+
+    if not function_debug:
+        # Clean up the output file after the test
+        fout.unlink()
+    else:
+        print(f"Temporary output file created at: {fout}")

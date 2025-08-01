@@ -4,7 +4,6 @@
 
 [![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
 
-* GitHub Pages Home 🏠: [https://sandialabs.github.io/rattlesnake-vibration-controller/](https://sandialabs.github.io/rattlesnake-vibration-controller/)
 * Lint 🧹: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
 
 ## Work in Progress

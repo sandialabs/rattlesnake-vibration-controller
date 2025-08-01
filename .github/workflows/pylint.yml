@@ -56,7 +56,7 @@ jobs:
       run: |
         # Read the pylint output and create a custom HTML report, to be saved to
         # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
-        python pylint_report.py \
+        python src/rattlesnake/cicd/pylint_report.py \
           --input_file ${{ env.PYLINT_OUTPUT_FILE }} \
           --output_file pylint_report.html \
           --run_id ${{ github.run_id }} \
