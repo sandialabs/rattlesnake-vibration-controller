@@ -1,18 +1,19 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
+## Quality Metrics
+
+[![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+
+* GitHub Pages Home 🏠: [https://sandialabs.github.io/rattlesnake-vibration-controller/](https://sandialabs.github.io/rattlesnake-vibration-controller/)
+* Lint 🧹: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+
 ## Work in Progress
 
 ![Coverage](./badges/coverage.svg)
 
 [coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
-## Quality Metrics
-
-[![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
-
-* GitHub Pages Home 🏠: [https://sandialabs.github.io/rattlesnake-vibration-controller/](https://sandialabs.github.io/rattlesnake-vibration-controller/)
-* Lint: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
-* Coverage: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
+* Coverage 🛡️: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 ## Overview
 
