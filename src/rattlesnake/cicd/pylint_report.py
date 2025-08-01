@@ -487,7 +487,7 @@ def main() -> None:
             args.github_repo,
         )
 
-        print(f"✅ Enhanced HTML report generated: {args.output_file}")
+        print(f"✅ Pylint HTML report generated: {args.output_file}")
         print(f"📊 Pylint score: {pylint_score}/10")
         print(f"🔍 Total issues found: {total_issues}")
         print(f"   - Conventions: {issue_counts['convention']}")
