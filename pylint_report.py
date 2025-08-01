@@ -122,6 +122,24 @@ def get_pylint_sections(pylint_content: str) -> Tuple[List[str], List[str]]:
     return issues, summary_lines
 
 
+def get_score_from_summary(summary_lines: List[str]) -> str:
+    """
+    Extract the pylint score from summary lines.
+
+    Args:
+        summary_lines: List of summary lines from pylint output
+
+    Returns:
+        Pylint score as a string, e.g., "6.00" (e.g., from "6.00/10 string)
+    """
+    for line in summary_lines:
+        if "Your code has been rated at" in line:
+            match = re.search(r"(\d+\.\d+)/10", line)
+            if match:
+                return match.group(1)
+    return "0.00"
+
+
 def get_issue_counts(issues: List[str]) -> Dict[str, int]:
     """
     Count issues by type (error, warning, convention).

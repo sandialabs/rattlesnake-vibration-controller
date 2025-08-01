@@ -11,15 +11,17 @@ Example use:
 """
 
 import re
+from pathlib import Path
 
 from pylint_report import (
-    run_pylint_report,
-    get_timestamp,
-    get_pylint_sections,
-    get_score_color,
     get_issue_counts,
     get_issues_list_html,
+    run_pylint_report,
+    get_pylint_sections,
     get_report_html,
+    get_timestamp,
+    get_score_color,
+    get_score_from_summary,
 )
 
 
@@ -83,6 +85,28 @@ Your code has been rated at 6.00/10 (previous run: 7.00/10, -1.00)
     assert counts["refactor"] == 1
 
 
+def test_get_score_from_summary():
+    """Unit test for get_score_from_summary function."""
+
+    # Test cases
+    test_cases = [
+        # Test with a valid score
+        (["Your code has been rated at 6.00/10", "", ""], "6.00"),
+        (["Your code has been rated at 8.75/10", "", ""], "8.75"),
+        # Test with multiple lines, only one containing the score
+        (["Some other message", "Your code has been rated at 7.50/10", ""], "7.50"),
+        # Test with an empty summary
+        ([], "0.00"),
+        # Test with no rating line
+        (["No rating here", "", ""], "0.00"),
+        # Test with an invalid format
+        (["Your code has been rated at invalid/10", "", ""], "0.00"),
+    ]
+
+    for summary_lines, expected_score in test_cases:
+        assert get_score_from_summary(summary_lines) == expected_score
+
+
 def test_generate_issues_html():
     """Test that generate_issues_html() returns valid HTML content.
 
@@ -137,12 +161,17 @@ def test_generate_html_report_basic():
 def test_create_pylint_html_report():
     """Tests the main report creation."""
 
+    fout = "pylint_report_temp.html"
+
     _total_issues, _issue_counts = run_pylint_report(
         input_file="pylint_output_20250729_150018_UTC.txt",
-        output_file="pylint_report.html",
+        output_file=fout,
         pylint_score="8.5",  # TODO: Replace with actual score from file
         run_id="1234567890",
         ref_name="main",
         github_sha="abc123def456",
         github_repo="testuser/testrepo",
     )
+
+    # Check if the output file was created
+    assert Path(fout).is_file(), "Output HTML report was not created."
