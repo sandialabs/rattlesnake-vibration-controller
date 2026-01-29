@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1204</width>
-    <height>813</height>
+    <width>1145</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -960,6 +960,16 @@ Matrices...</string>
                    </size>
                   </property>
                  </spacer>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox">
+                  <property name="suffix">
+                   <string> Hits</string>
+                  </property>
+                  <property name="maximum">
+                   <number>1000000</number>
+                  </property>
+                 </widget>
                 </item>
                 <item>
                  <widget class="QPushButton" name="add_breakpoint_button">
