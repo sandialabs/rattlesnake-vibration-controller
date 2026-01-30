@@ -420,32 +420,32 @@ All Sine Tones</string>
                </property>
                <item>
                 <property name="text">
-                 <string>Positive Primary</string>
+                 <string>Primary Positive</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>Negative Primary</string>
+                 <string>Primary Negative</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>Absolute Maximum Primary</string>
+                 <string>Primary Absolute Maximum</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>Positive Residual</string>
+                 <string>Residual Positive</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>Negative Residual</string>
+                 <string>Residual Positive</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>Absolute Maximum Residual</string>
+                 <string>Residual Absolute Maximum</string>
                 </property>
                </item>
                <item>
@@ -461,6 +461,34 @@ All Sine Tones</string>
                <item>
                 <property name="text">
                  <string>Maximum Absolute Maximum</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_14">
+             <item>
+              <widget class="QLabel" name="label_9">
+               <property name="text">
+                <string>Displacement</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_2">
+               <property name="currentIndex">
+                <number>0</number>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Absolute</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Relative</string>
                 </property>
                </item>
               </widget>
@@ -996,13 +1024,39 @@ Matrices...</string>
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="limit_tab">
+            <widget class="QWidget" name="lower_limit_tab">
              <attribute name="title">
-              <string>Limit Table</string>
+              <string>Lower Limit Table</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout_7">
               <item>
-               <widget class="QTableWidget" name="limit_table">
+               <widget class="QTableWidget" name="lower_limit_table">
+                <row>
+                 <property name="text">
+                  <string>1</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
+                  <string>2</string>
+                 </property>
+                </row>
+                <column>
+                 <property name="text">
+                  <string>Frequency</string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="upper_limit_tab">
+             <attribute name="title">
+              <string>Upper Limit Table</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <item>
+               <widget class="QTableWidget" name="upper_limit_table">
                 <row>
                  <property name="text">
                   <string>1</string>
