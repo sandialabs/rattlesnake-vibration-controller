@@ -254,7 +254,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox">
+            <widget class="QCheckBox" name="use_compensation_pulse_checkbox">
              <property name="text">
               <string>Use Compensation Pulse</string>
              </property>
@@ -314,7 +314,7 @@ Frequency</string>
                 </widget>
                </item>
                <item>
-                <widget class="QDoubleSpinBox" name="compensation_decay_selector_2">
+                <widget class="QDoubleSpinBox" name="compensation_decay_selector">
                  <property name="suffix">
                   <string>%</string>
                  </property>
@@ -405,16 +405,16 @@ All Sine Tones</string>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_13">
+            <layout class="QVBoxLayout" name="srs_type_layout">
              <item>
-              <widget class="QLabel" name="label_8">
+              <widget class="QLabel" name="srs_type_label">
                <property name="text">
                 <string>SRS Type</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox">
+              <widget class="QComboBox" name="srs_type_setter">
                <property name="currentIndex">
                 <number>8</number>
                </property>
@@ -468,16 +468,16 @@ All Sine Tones</string>
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_14">
+            <layout class="QVBoxLayout" name="srs_displacement_layout">
              <item>
-              <widget class="QLabel" name="label_9">
+              <widget class="QLabel" name="srs_displacement_label">
                <property name="text">
                 <string>Displacement</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox_2">
+              <widget class="QComboBox" name="srs_displacement_setter">
                <property name="currentIndex">
                 <number>0</number>
                </property>
@@ -496,9 +496,9 @@ All Sine Tones</string>
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_12">
+            <layout class="QVBoxLayout" name="srs_damping_layout">
              <item>
-              <widget class="QLabel" name="label_7">
+              <widget class="QLabel" name="srs_damping_label">
                <property name="text">
                 <string>SRS Damping</string>
                </property>
@@ -990,7 +990,7 @@ Matrices...</string>
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spinBox">
+                 <widget class="QSpinBox" name="num_hits_spinbox">
                   <property name="suffix">
                    <string> Hits</string>
                   </property>

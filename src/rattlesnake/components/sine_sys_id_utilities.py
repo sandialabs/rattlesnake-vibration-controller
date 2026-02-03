@@ -17,13 +17,17 @@ from scipy import sparse
 from scipy.signal import lfilter, lfiltic, butter
 import pyqtgraph as pqtg
 from qtpy import QtWidgets, uic
-from qtpy.QtCore import Qt, QLocale  # pylint: disable=no-name-in-module
+from qtpy.QtCore import Qt  # pylint: disable=no-name-in-module
 
 from .environments import (
     sine_sweep_table_ui_path,
     filter_explorer_ui_path,
 )
-from .ui_utilities import VaryingNumberOfLinePlot
+from .ui_utilities import (
+    VaryingNumberOfLinePlot,
+    AdaptiveNoWheelSpinBox,
+    NoWheelComboBox,
+)
 from .utilities import wrap
 
 
@@ -304,37 +308,6 @@ def sine_sweep(
     else:
         return_vals = tuple(return_vals)
     return return_vals
-
-
-class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
-    """A simple class to remove the scroll wheel capability from a spin box"""
-
-    def wheelEvent(self, event):  # pylint: disable=invalid-name
-        """Capture the wheel event but ignore it"""
-        event.ignore()
-
-
-class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
-    """A spinbox that changes number of decimals based on the value provided"""
-
-    localization = QLocale(QLocale.English, QLocale.UnitedStates)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.setDecimals(10)
-
-    def textFromValue(self, value):  # pylint: disable=invalid-name
-        """Gets the text to show in the spinbox based on the value stored in the spinbox"""
-        return AdaptiveNoWheelSpinBox.localization.toString(value, "g", self.decimals())
-
-
-class NoWheelComboBox(QtWidgets.QComboBox):
-    """A simple class to remove the scroll wheel capability from a combo box"""
-
-    def wheelEvent(self, event):  # pylint: disable=invalid-name
-        """Capture the wheel event but ignore it"""
-        event.ignore()
 
 
 class SineSweepTable:

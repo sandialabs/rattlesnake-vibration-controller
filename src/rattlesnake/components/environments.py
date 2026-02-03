@@ -38,7 +38,7 @@ class ControlTypes(Enum):
     RANDOM = 1
     TRANSIENT = 2
     SINE = 3
-    SHOCK = 4
+    SDS = 4
     TIME = 5
     # NONLINEAR = 6
     MODAL = 7
@@ -50,7 +50,7 @@ environment_long_names = {}
 environment_long_names[ControlTypes.RANDOM] = "MIMO Random Vibration"
 environment_long_names[ControlTypes.TRANSIENT] = "MIMO Transient"
 environment_long_names[ControlTypes.SINE] = "MIMO Sine Vibration"
-environment_long_names[ControlTypes.SHOCK] = "MIMO Shock"
+environment_long_names[ControlTypes.SDS] = "MIMO Sum-Decayed-Sines Shock"
 environment_long_names[ControlTypes.TIME] = "Time Signal Generation"
 # environment_long_names[ControlTypes.NONLINEAR] = 'Nonlinear Normal Modes'
 environment_long_names[ControlTypes.MODAL] = "Modal Testing"
@@ -61,7 +61,7 @@ combined_environments_capable = [
     ControlTypes.RANDOM,
     ControlTypes.TRANSIENT,
     ControlTypes.SINE,
-    ControlTypes.SHOCK,
+    ControlTypes.SDS,
     ControlTypes.TIME,
     ControlTypes.MODAL,
 ]
@@ -108,13 +108,9 @@ environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.
 sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
 filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
 # Shock Environment
-environment_definition_ui_paths[ControlTypes.SHOCK] = os.path.join(
-    directory, "srs_sds_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.SHOCK] = os.path.join(
-    directory, "srs_sds_prediction.ui"
-)
-environment_run_ui_paths[ControlTypes.SHOCK] = os.path.join(directory, "srs_sds_run.ui")
+environment_definition_ui_paths[ControlTypes.SDS] = os.path.join(directory, "srs_sds_definition.ui")
+environment_prediction_ui_paths[ControlTypes.SDS] = os.path.join(directory, "srs_sds_prediction.ui")
+environment_run_ui_paths[ControlTypes.SDS] = os.path.join(directory, "srs_sds_run.ui")
 shock_prediction_table = os.path.join(directory, "srs_sds_prediction_table.ui")
 shock_sds_override_dialog = os.path.join(directory, "srs_sds_override.ui")
 # Modal Environments
@@ -170,7 +166,7 @@ from .shock_sys_id_environment import (  # noqa # pylint: disable=wrong-import-p
     ShockUI,
 )
 
-environment_processes[ControlTypes.SHOCK] = shock_process
-environment_UIs[ControlTypes.SHOCK] = ShockUI
+environment_processes[ControlTypes.SDS] = shock_process
+environment_UIs[ControlTypes.SDS] = ShockUI
 
 # End of code needed to be modified to create a new environment

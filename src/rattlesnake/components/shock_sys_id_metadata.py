@@ -98,6 +98,8 @@ class CompPulseParameters:
 
 
 class DecayStrategy(Enum):
+    """Enumeration containing different ways to define decay in a sum of decayed sines table"""
+
     DAMPING = 0
     TIME_CONSTANT = 1
     NUM_TIME_CONSTANTS = 2
@@ -125,10 +127,12 @@ class DecayParameters:
         """
         self.decay_strategy = decay_strategy
         self.common_decay = common_decay
-        self.decay_data = decay_data
+        self.decay_data = np.array(decay_data).flatten()
 
 
 class SRSType(Enum):
+    """Enumeration containing different ways to compute an SRS"""
+
     PRIMARY_POS = 1
     PRIMARY_NEG = 2
     PRIMARY_ABSMAX = 3
@@ -141,6 +145,8 @@ class SRSType(Enum):
 
 
 class SRSDisplacementType(Enum):
+    """Enumeration containing different types of displacement to compute SRSs from"""
+
     ABSOLUTE = 1
     RELATIVE = -1
 
@@ -216,6 +222,8 @@ class SpecParameters:
 
 
 class ControlLawType(Enum):
+    """Enumeration containing acceptable types of objects to use for a control law"""
+
     FUNCTION = 0
     GENERATOR = 1
     CLASS = 2
@@ -258,6 +266,7 @@ class ShockMetadata(AbstractSysIdMetadata):
         self,
         *,
         sample_rate: int,
+        num_channels: int,
         block_size: int,
         tone_data: ToneParameters,
         compensation_pulse_data: CompPulseParameters,
@@ -271,22 +280,19 @@ class ShockMetadata(AbstractSysIdMetadata):
         specification_data: SpecParameters,
     ):
         super().__init__()
-        self.number_of_channels = number_of_channels
         self.block_size = block_size
-        self.compensation_pulser_data = compensation_pulse_data
+        self.number_of_channels = num_channels
+        self.compensation_pulse_data = compensation_pulse_data
         self.decay_data = decay_data
         self.srs_data = srs_data
+        self.tone_data = tone_data
+        self.sample_rate = sample_rate
         self.control_script_data = control_script_data
         self.control_channel_indices = control_channel_indices
         self.output_channel_indices = output_channel_indices
         self.response_transformation_matrix = response_transformation_matrix
         self.reference_transformation_matrix = excitation_transformation_matrix
         self.specification_data = specification_data
-
-    @property
-    def ramp_samples(self):
-        """Number of samples to ramp down to zero when aborting a test"""
-        return int(self.test_level_ramp_time * self.sample_rate)
 
     @property
     def number_of_channels(self):
@@ -355,7 +361,60 @@ class ShockMetadata(AbstractSysIdMetadata):
         # netcdf_group_handle.control_python_function_parameters = (
         #     self.control_python_function_parameters
         # )
-        # Save the output signal
+        netcdf_group_handle.block_size = self.block_size
+        # Create groups for different portions of the metadata
+        tone_grp = netcdf_group_handle.createGroup("tone_parameters")
+        decay_grp = netcdf_group_handle.createGroup("decay_parameters")
+        srs_grp = netcdf_group_handle.createGroup("srs_parameters")
+        comp_grp = netcdf_group_handle.createGroup("compensation_pulse_parameters")
+        control_grp = netcdf_group_handle.createGroup("control_parameters")
+        spec_grp = netcdf_group_handle.createGroup("specification_parameters")
+        # Tone group
+        tone_grp.strategy = self.tone_data.tone_strategy.value
+        if self.tone_data.tone_data is not None:
+            tone_grp.createDimension("tone_data_size", self.tone_data.tone_data)
+            var = tone_grp.createVariable("tone_data", "f8", ("tone_data_size"))
+            var[...] = self.tone_data.tone_data
+        # Compensation pulse
+        comp_grp.use_compensation_pulse = self.compensation_pulse_data.use_compensation_pulse
+        if self.compensation_pulse_data.compensation_frequency is not None:
+            comp_grp.compensation_frequency = self.compensation_pulse_data.compensation_frequency
+        if self.compensation_pulse_data.compensation_decay is not None:
+            comp_grp.compensation_decay = self.compensation_pulse_data.compensation_decay
+        # Decay parameters
+        decay_grp.decay_strategy = self.decay_data.decay_strategy.value
+        decay_grp.common_decay = self.decay_data.common_decay
+        if self.decay_data.common_decay:
+            decay_grp.decay_data = self.decay_data.decay_data
+        else:
+            decay_grp.createDimension("num_decays", self.decay_data.decay_data.size)
+            var = decay_grp.createVariable("decay_data", "f8", ("num_decays"))
+            var[...] = self.decay_data.decay_data
+        # SRS Group
+        srs_grp.srs_type = self.srs_data.srs_type.value
+        srs_grp.srs_displacement = self.srs_data.srs_displacement.value
+        srs_grp.srs_damping = self.srs_data.srs_damping
+        # Specification
+        spec_grp.num_hits = self.specification_data.num_hits
+        spec_grp.createDimension("num_frequencies", self.specification_data.frequencies.size)
+        spec_grp.createDimension("num_spec_signals", self.specification_data.srs_spec.shape[1])
+        var = spec_grp.createVariable("frequencies", "f8", ("num_frequencies"))
+        var[...] = self.specification_data.frequencies
+        var = spec_grp.createVariable("srs_spec", "f8", ("num_frequencies", "num_spec_signals"))
+        var[...] = self.specification_data.srs_spec
+        var = spec_grp.createVariable(
+            "srs_lower_limit", "f8", ("num_frequencies", "num_spec_signals")
+        )
+        var[...] = self.specification_data.srs_lower_limit
+        var = spec_grp.createVariable(
+            "srs_upper_limit", "f8", ("num_frequencies", "num_spec_signals")
+        )
+        var[...] = self.specification_data.srs_upper_limit
+        # Control group
+        control_grp.control_type = self.control_script_data.control_type
+        control_grp.control_script = self.control_script_data.control_script
+        control_grp.control_object = self.control_script_data.control_object
+        control_grp.control_parameters = self.control_script_data.control_parameters
         netcdf_group_handle.createDimension("control_channels", len(self.control_channel_indices))
         if self.response_transformation_matrix is None:
             netcdf_group_handle.createDimension(

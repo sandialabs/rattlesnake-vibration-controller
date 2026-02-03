@@ -29,7 +29,7 @@ import openpyxl
 import pyqtgraph
 import requests
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
+from qtpy.QtCore import Qt, QTimer, QLocale  # pylint: disable=no-name-in-module
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
@@ -82,6 +82,37 @@ class ProfileTimer(QTimer):
         self.environment = environment
         self.operation = operation
         self.data = data
+
+
+class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
+    """A simple class to remove the scroll wheel capability from a spin box"""
+
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
+        """Capture the wheel event but ignore it"""
+        event.ignore()
+
+
+class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
+    """A spinbox that changes number of decimals based on the value provided"""
+
+    localization = QLocale(QLocale.English, QLocale.UnitedStates)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setDecimals(10)
+
+    def textFromValue(self, value):  # pylint: disable=invalid-name
+        """Gets the text to show in the spinbox based on the value stored in the spinbox"""
+        return AdaptiveNoWheelSpinBox.localization.toString(value, "g", self.decimals())
+
+
+class NoWheelComboBox(QtWidgets.QComboBox):
+    """A simple class to remove the scroll wheel capability from a combo box"""
+
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
+        """Capture the wheel event but ignore it"""
+        event.ignore()
 
 
 def get_table_strings(tablewidget: QtWidgets.QTableWidget):

@@ -798,9 +798,7 @@ class SineUI(AbstractSysIdUI):
         for channel_name in self.physical_channel_names:
             item = QtWidgets.QListWidgetItem()
             item.setText(channel_name)
-            item.setFlags(
-                item.flags() | Qt.ItemIsUserCheckable
-            )  # | Qt.ItemIsUserTristate) # We will add this when we implement limits
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.Unchecked)
             self.definition_widget.control_channels_selector.addItem(item)
         self.response_transformation_matrix = None
