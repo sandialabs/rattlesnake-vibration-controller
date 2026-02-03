@@ -79,25 +79,10 @@
        <item>
         <layout class="QVBoxLayout" name="excitation_plot_layout">
          <item>
-          <widget class="QTableWidget" name="excitation_sds_table">
-           <property name="selectionMode">
-            <enum>QAbstractItemView::SingleSelection</enum>
+          <widget class="QTabWidget" name="sds_tab_widget">
+           <property name="currentIndex">
+            <number>-1</number>
            </property>
-           <row>
-            <property name="text">
-             <string>1</string>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string>2</string>
-            </property>
-           </row>
-           <column>
-            <property name="text">
-             <string>Frequency</string>
-            </property>
-           </column>
           </widget>
          </item>
          <item>

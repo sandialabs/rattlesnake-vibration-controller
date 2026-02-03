@@ -28,7 +28,6 @@ import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import traceback
-from enum import Enum
 from multiprocessing.queues import Queue
 
 import netCDF4 as nc4
@@ -47,8 +46,22 @@ from .environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .sds_sys_id_metadata import SDSMetadata, DecayStrategy
-from .sds_sys_id_utilities import octspace, convert_damping_strategy
+from .sds_sys_id_metadata import (
+    SDSMetadata,
+    ToneStrategy,
+    ToneParameters,
+    CompPulseParameters,
+    DecayStrategy,
+    DecayParameters,
+    SRSType,
+    SRSParameters,
+    SRSDisplacementType,
+    SpecParameters,
+    ControlLawType,
+    ControlParameters,
+)
+from .sds_sys_id_utilities import octspace, convert_damping_strategy, SDSQueues, SDSCommands
+from .sds_sys_id_prediction_table import SDSPredictionTable
 from .ui_utilities import (
     PlotTimeWindow,
     TransformationMatrixWindow,
@@ -69,83 +82,6 @@ from .utilities import (
 CONTROL_TYPE = ControlTypes.SDS
 MAXIMUM_NAME_LENGTH = 50
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
-
-
-# %% Commands
-class SDSCommands(Enum):
-    """Valid commands for the SDS environment"""
-
-    START_CONTROL = 0
-    STOP_CONTROL = 1
-    PERFORM_CONTROL_PREDICTION = 3
-    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
-
-
-# %% Queues
-
-
-class SDSQueues:
-    """A container class for the queues that this environment will manage."""
-
-    def __init__(
-        self,
-        environment_name: str,
-        environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: Queue,
-        data_out_queue: Queue,
-        log_file_queue: VerboseMessageQueue,
-    ):
-        """A container class for the queues that SDS will manage.
-
-        The environment uses many queues to pass data between the various pieces.
-        This class organizes those queues into one common namespace.
-
-        Parameters
-        ----------
-        environment_name : str
-            Name of the environment
-        environment_command_queue : VerboseMessageQueue
-            Queue that is read by the environment for environment commands
-        gui_update_queue : mp.queues.Queue
-            Queue where various subtasks put instructions for updating the
-            widgets in the user interface
-        controller_communication_queue : VerboseMessageQueue
-            Queue that is read by the controller for global controller commands
-        data_in_queue : mp.queues.Queue
-            Multiprocessing queue that connects the acquisition subtask to the
-            environment subtask.  Each environment will retrieve acquired data
-            from this queue.
-        data_out_queue : mp.queues.Queue
-            Multiprocessing queue that connects the output subtask to the
-            environment subtask.  Each environment will put data that it wants
-            the controller to generate in this queue.
-        log_file_queue : VerboseMessageQueue
-            Queue for putting logging messages that will be read by the logging
-            subtask and written to a file.
-        """
-        self.environment_command_queue = environment_command_queue
-        self.gui_update_queue = gui_update_queue
-        self.data_analysis_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Analysis Command Queue"
-        )
-        self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Signal Generation Command Queue"
-        )
-        self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Spectral Computation Command Queue"
-        )
-        self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Collector Command Queue"
-        )
-        self.controller_communication_queue = controller_communication_queue
-        self.data_in_queue = data_in_queue
-        self.data_out_queue = data_out_queue
-        self.data_for_spectral_computation_queue = mp.Queue()
-        self.updated_spectral_quantities_queue = mp.Queue()
-        self.time_history_to_generate_queue = mp.Queue()
-        self.log_file_queue = log_file_queue
 
 
 # %% UI
@@ -220,6 +156,12 @@ class SDSUI(AbstractSysIdUI):
         self.control_selector_widgets = [self.definition_widget.specification_plot_selector]
 
         self.output_selector_widgets = []
+
+        self.prediction_table = SDSPredictionTable(
+            self.prediction_widget.prediction_table_placeholder,
+            environment_command_queue,
+            self.log_name,
+        )
 
         self.plotwidgets = [
             self.definition_widget.specification_plot,
@@ -723,16 +665,124 @@ class SDSUI(AbstractSysIdUI):
             control_function = self.definition_widget.control_function_input.itemText(
                 self.definition_widget.control_function_input.currentIndex()
             )
-            control_function_type = (
+            control_function_type = ControlLawType(
                 self.definition_widget.control_function_generator_selector.currentIndex()
             )
             control_function_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
-        return None  # SDSMetadata()
+        control_data = ControlParameters(
+            control_module, control_function, control_function_type, control_function_parameters
+        )
+        if self.definition_widget.from_spec_button.isChecked():
+            tone_data = ToneParameters(ToneStrategy.FROM_SPEC, None)
+        elif self.definition_widget.octave_button.isChecked():
+            tone_data = ToneParameters(
+                ToneStrategy.OCTAVE,
+                np.array(
+                    [
+                        self.definition_widget.min_frequency_selector.value(),
+                        self.definition_widget.max_frequency_selector.value(),
+                        self.definition_widget.tones_per_octave_selector.value(),
+                    ]
+                ),
+            )
+        elif self.definition_widget.manual_button.isChecked():
+            num_rows = self.definition_widget.tone_table.rowCount()
+            freq = np.empty(num_rows, "float")
+            for row in num_rows:
+                freq[row] = self.definition_widget.tone_table.cellWidget(row, 0).value()
+            tone_data = ToneParameters(ToneStrategy.MANUAL, freq)
+        else:
+            raise ValueError("Invalid Tone Strategy (how did you get here?!)")
+
+        compensation_pulse_data = CompPulseParameters(
+            self.definition_widget.use_compensation_pulse_checkbox.isChecked(),
+            (
+                None
+                if self.definition_widget.autoselect_comp_frequency_checkbox.isChecked()
+                else self.definition_widget.compensation_frequency_selector.value()
+            ),
+            self.definition_widget.compensation_decay_selector.value() / 100,
+        )
+        if self.definition_widget.damping_zeta_button.isChecked():
+            decay_strategy = DecayStrategy.DAMPING
+        elif self.definition_widget.time_constant_tau_button.isChecked():
+            decay_strategy = DecayStrategy.TIME_CONSTANT
+        elif self.definition_widget.num_time_constants_button.isChecked():
+            decay_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+        else:
+            raise ValueError("Invalid Decay Strategy (how did you get here?!)")
+        common_decay = self.definition_widget.common_decay_checkbox.isChecked()
+        if common_decay:
+            decay_data = self.definition_widget.decay_value_selector.value()
+        else:
+            num_rows = self.definition_widget.tone_table.rowCount()
+            decay_data = np.empty(num_rows, "float")
+            for row in num_rows:
+                decay_data[row] = self.definition_widget.tone_table.cellWidget(row, 1).value()
+        decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
+        srs_data = SRSParameters(
+            SRSType(self.definition_widget.srs_type_setter.currentIndex()),
+            (
+                SRSDisplacementType.ABSOLUTE
+                if self.definition_widget.srs_displacement_setter.currentIndex() == 0
+                else SRSDisplacementType.RELATIVE
+            ),
+            self.definition_widget.srs_damping_setter.value() / 100,
+        )
+        num_freqs = self.definition_widget.breakpoint_table.rowCount()
+        num_control = self.definition_widget.breakpoint_table.columnCount() - 1
+        freqs = np.empty(num_freqs, "float")
+        srss = np.empty((num_freqs, num_control), "float")
+        lower_limits = np.empty((num_freqs, num_control), "float")
+        upper_limits = np.empty((num_freqs, num_control), "float")
+        if self.definition_widget.from_spec_button.isChecked():
+            self.update_tone_table()
+        for row in range(num_freqs):
+            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
+            for col in range(num_control):
+                srss[row, col] = (
+                    np.nan
+                    if self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value() == 0
+                    else self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value()
+                )
+                lower_limits[row, col] = (
+                    np.nan
+                    if self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
+                    == 0
+                    else self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
+                )
+                upper_limits[row, col] = (
+                    np.nan
+                    if self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
+                    == 0
+                    else self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
+                )
+        spec_data = SpecParameters(
+            freqs, srss, lower_limits, upper_limits, self.definition_widget.num_hits_spinbox.value()
+        )
+        return SDSMetadata(
+            sample_rate=self.data_acquisition_parameters.sample_rate,
+            num_channels=len(self.data_acquisition_parameters.channel_list),
+            block_size=self.definition_widget.block_size_selector.value(),
+            tone_data=tone_data,
+            compensation_pulse_data=compensation_pulse_data,
+            decay_data=decay_parameters,
+            srs_data=srs_data,
+            control_script_data=control_data,
+            control_channel_indices=self.physical_control_indices,
+            output_channel_indices=self.physical_output_indices,
+            response_transformation_matrix=self.response_transformation_matrix,
+            excitation_transformation_matrix=self.output_transformation_matrix,
+            specification_data=spec_data,
+        )
 
     def initialize_environment(self):
         super().initialize_environment()
+        self.prediction_table.update_names(
+            self.initialized_output_names, self.initialized_control_names
+        )
         return self.environment_parameters
 
     def define_transformation_matrices(
@@ -1201,7 +1251,7 @@ class SDSUI(AbstractSysIdUI):
             self.definition_widget.decay_value_selector.setValue(decay_values[0])
         else:
             self.definition_widget.common_decay_checkbox.setChecked(False)
-            # TODO: Set set all comboboxes in the sine tone table to these values.
+            # TODO: Set set all spinboxes in the sine tone table to these values.
 
         # SRS
         srs_type_options = [
@@ -1391,9 +1441,25 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         # )
         # self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
 
+        # Persistent Data
+        self.data_acquisition_parameters = None
+        self.environment_parameters = None
+        self.queue_container = queue_container
+        # System ID information
+        self.frames = None
+        self.frequencies = None
+        self.frf = None
+        self.sysid_coherence = None
+        self.sysid_response_cpsd = None
+        self.sysid_reference_cpsd = None
+        self.sysid_condition = None
+        self.sysid_response_noise = None
+        self.sysid_reference_noise = None
+
     def initialize_environment_test_parameters(self, environment_parameters: SDSMetadata):
         super().initialize_environment_test_parameters(environment_parameters)
         self.environment_parameters: SDSMetadata
+        # Check if everything is the same size
 
     def system_id_complete(self, data):
         """Sends the message that system identification is complete and control calculations

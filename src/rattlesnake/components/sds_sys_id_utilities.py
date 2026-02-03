@@ -1,5 +1,88 @@
-from .sds_sys_id_metadata import DecayStrategy
 import numpy as np
+from enum import Enum
+from .utilities import VerboseMessageQueue
+import multiprocessing as mp
+from multiprocessing.queues import Queue
+
+from .sds_sys_id_metadata import DecayStrategy
+
+
+# %% Commands
+class SDSCommands(Enum):
+    """Valid commands for the SDS environment"""
+
+    START_CONTROL = 0
+    STOP_CONTROL = 1
+    PERFORM_CONTROL_PREDICTION = 2
+    SDS_TABLE_PREDICTION = 3
+    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
+
+
+# %% Queues
+
+
+class SDSQueues:
+    """A container class for the queues that this environment will manage."""
+
+    def __init__(
+        self,
+        environment_name: str,
+        environment_command_queue: VerboseMessageQueue,
+        gui_update_queue: Queue,
+        controller_communication_queue: VerboseMessageQueue,
+        data_in_queue: Queue,
+        data_out_queue: Queue,
+        log_file_queue: VerboseMessageQueue,
+    ):
+        """A container class for the queues that SDS will manage.
+
+        The environment uses many queues to pass data between the various pieces.
+        This class organizes those queues into one common namespace.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment
+        environment_command_queue : VerboseMessageQueue
+            Queue that is read by the environment for environment commands
+        gui_update_queue : mp.queues.Queue
+            Queue where various subtasks put instructions for updating the
+            widgets in the user interface
+        controller_communication_queue : VerboseMessageQueue
+            Queue that is read by the controller for global controller commands
+        data_in_queue : mp.queues.Queue
+            Multiprocessing queue that connects the acquisition subtask to the
+            environment subtask.  Each environment will retrieve acquired data
+            from this queue.
+        data_out_queue : mp.queues.Queue
+            Multiprocessing queue that connects the output subtask to the
+            environment subtask.  Each environment will put data that it wants
+            the controller to generate in this queue.
+        log_file_queue : VerboseMessageQueue
+            Queue for putting logging messages that will be read by the logging
+            subtask and written to a file.
+        """
+        self.environment_command_queue = environment_command_queue
+        self.gui_update_queue = gui_update_queue
+        self.data_analysis_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Data Analysis Command Queue"
+        )
+        self.signal_generation_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Signal Generation Command Queue"
+        )
+        self.spectral_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Spectral Computation Command Queue"
+        )
+        self.collector_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Data Collector Command Queue"
+        )
+        self.controller_communication_queue = controller_communication_queue
+        self.data_in_queue = data_in_queue
+        self.data_out_queue = data_out_queue
+        self.data_for_spectral_computation_queue = mp.Queue()
+        self.updated_spectral_quantities_queue = mp.Queue()
+        self.time_history_to_generate_queue = mp.Queue()
+        self.log_file_queue = log_file_queue
 
 
 def octspace(low, high, points_per_octave):
@@ -104,3 +187,56 @@ def convert_damping_strategy(
 
     # If no valid conversion is found, raise an error
     raise ValueError("Invalid conversion between damping strategies.")
+
+
+class DecayedSineTable(np.ndarray):
+
+    def __new__(cls, shape, num_signals, buffer=None, offset=0, strides=None, order=None):
+        # Create the ndarray instance of our type, given the usual
+        # ndarray input arguments.  This will call the standard
+        # ndarray constructor, but return an object of our type.
+        # It also triggers a call to __array_finalize__
+        data_dtype = [
+            ("frequency", "float64"),
+            ("amplitude", "float64", num_signals),
+            ("decay", "float64", num_signals),
+            ("delay", "float64", num_signals),
+        ]
+        obj = super().__new__(cls, shape, data_dtype, buffer, offset, strides, order)
+        # Finally, we must return the newly created object:
+        return obj
+
+
+def decayed_sine_table(
+    frequency,
+    amplitude,
+    decay,
+    delay,
+):
+    """
+    Helper function to create a DecayedSineTable object.
+
+    Parameters
+    ----------
+    frequency : np.ndarray
+        Frequencies of the decaying sine waves.
+    amplitude : np.ndarray
+        Amplitudes of the decaying sine waves.
+    decay : np.ndarray
+        Damping values of the decaying sine waves (zeta, not time constants)
+    delay : np.ndarray
+        Delay values of the decaying sine waves.
+
+    Returns
+    -------
+    DecayedSineTable :
+        A DecayedSineTable object containing the specified information
+
+    """
+    num_frequencies, num_signals = amplitude.shape
+    st = DecayedSineTable(num_frequencies, num_signals)
+    st["frequency"] = frequency
+    st["amplitude"] = amplitude
+    st["decay"] = decay
+    st["delay"] = delay
+    return st

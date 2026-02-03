@@ -133,15 +133,15 @@ class DecayParameters:
 class SRSType(Enum):
     """Enumeration containing different ways to compute an SRS"""
 
-    PRIMARY_POS = 1
-    PRIMARY_NEG = 2
-    PRIMARY_ABSMAX = 3
-    RESIDUAL_POS = 4
-    RESIDUAL_NEG = 5
-    RESIDUAL_ABSMAX = 6
-    MAXIMUM_POS = 7
-    MAXIMUM_NEG = 8
-    MAXIMUM_ABSMAX = 9
+    PRIMARY_POS = 0
+    PRIMARY_NEG = 1
+    PRIMARY_ABSMAX = 2
+    RESIDUAL_POS = 3
+    RESIDUAL_NEG = 4
+    RESIDUAL_ABSMAX = 5
+    MAXIMUM_POS = 6
+    MAXIMUM_NEG = 7
+    MAXIMUM_ABSMAX = 8
 
 
 class SRSDisplacementType(Enum):
@@ -235,10 +235,10 @@ class ControlParameters:
 
     def __init__(
         self,
-        control_script: str,
-        control_object: str,
-        control_type: ControlLawType,
-        control_parameters: str,
+        control_script: str | None,
+        control_object: str | None,
+        control_type: ControlLawType | None,
+        control_parameters: str | None,
     ):
         """Initializes an object to store information about the custom control law
 
