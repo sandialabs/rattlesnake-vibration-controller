@@ -161,7 +161,7 @@ environment_processes[ControlTypes.MODAL] = modal_process
 environment_UIs[ControlTypes.MODAL] = ModalUI
 
 # Shock
-from .shock_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position)
+from .sds_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position)
     shock_process,
     ShockUI,
 )

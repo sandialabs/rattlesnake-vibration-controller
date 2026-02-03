@@ -47,7 +47,7 @@ from .environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .shock_sys_id_metadata import (
+from .sds_sys_id_metadata import (
     ShockMetadata,
 )
 from .ui_utilities import (
