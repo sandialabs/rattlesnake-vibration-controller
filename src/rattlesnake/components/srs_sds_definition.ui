@@ -288,7 +288,7 @@ Frequency</string>
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_15">
                <item>
-                <widget class="QLabel" name="label_10">
+                <widget class="QLabel" name="comp_frequency_label">
                  <property name="text">
                   <string>Comp. Frequency</string>
                  </property>
@@ -296,9 +296,6 @@ Frequency</string>
                </item>
                <item>
                 <widget class="QDoubleSpinBox" name="compensation_frequency_selector">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
                  <property name="suffix">
                   <string> Hz</string>
                  </property>
@@ -312,7 +309,7 @@ Frequency</string>
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_18">
                <item>
-                <widget class="QLabel" name="label_12">
+                <widget class="QLabel" name="comp_decay_label">
                  <property name="text">
                   <string>Comp. Decay</string>
                  </property>
