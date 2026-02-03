@@ -47,9 +47,8 @@ from .environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .sds_sys_id_metadata import (
-    ShockMetadata,
-)
+from .sds_sys_id_metadata import SDSMetadata, DecayStrategy
+from .sds_sys_id_utilities import octspace, convert_damping_strategy
 from .ui_utilities import (
     PlotTimeWindow,
     TransformationMatrixWindow,
@@ -73,8 +72,8 @@ BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
 
 # %% Commands
-class ShockCommands(Enum):
-    """Valid commands for the Shock environment"""
+class SDSCommands(Enum):
+    """Valid commands for the SDS environment"""
 
     START_CONTROL = 0
     STOP_CONTROL = 1
@@ -85,7 +84,7 @@ class ShockCommands(Enum):
 # %% Queues
 
 
-class ShockQueues:
+class SDSQueues:
     """A container class for the queues that this environment will manage."""
 
     def __init__(
@@ -98,7 +97,7 @@ class ShockQueues:
         data_out_queue: Queue,
         log_file_queue: VerboseMessageQueue,
     ):
-        """A container class for the queues that Shock will manage.
+        """A container class for the queues that SDS will manage.
 
         The environment uses many queues to pass data between the various pieces.
         This class organizes those queues into one common namespace.
@@ -174,8 +173,8 @@ from .spectral_processing import (  # noqa: E402 pylint: disable=wrong-import-po
 )
 
 
-class ShockUI(AbstractSysIdUI):
-    """Class defining the user interface for the Shock environment"""
+class SDSUI(AbstractSysIdUI):
+    """Class defining the user interface for the SDS environment"""
 
     def __init__(
         self,
@@ -216,6 +215,7 @@ class ShockUI(AbstractSysIdUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.python_control_module = None
+        self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
 
         self.control_selector_widgets = [self.definition_widget.specification_plot_selector]
 
@@ -231,17 +231,28 @@ class ShockUI(AbstractSysIdUI):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLogMode(True, True)
+
+        self.connect_callbacks()
 
     def connect_callbacks(self):
-        """Connects the callbacks to the Shock UI widgets"""
+        """Connects the callbacks to the SDS UI widgets"""
         # Definition
         self.definition_widget.add_breakpoint_button.clicked.connect(self.add_breakpoint)
         self.definition_widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
         self.definition_widget.from_spec_button.toggled.connect(self.update_tone_table)
         self.definition_widget.octave_button.toggled.connect(self.update_tone_table)
         self.definition_widget.manual_button.toggled.connect(self.update_tone_table)
+        self.definition_widget.min_frequency_selector.valueChanged.connect(self.update_tone_table)
+        self.definition_widget.max_frequency_selector.valueChanged.connect(self.update_tone_table)
+        self.definition_widget.tones_per_octave_selector.valueChanged.connect(
+            self.update_tone_table
+        )
         self.definition_widget.common_decay_checkbox.toggled.connect(self.update_decay_table)
         self.definition_widget.decay_value_selector.valueChanged.connect(self.update_decay_table)
+        self.definition_widget.damping_zeta_button.toggled.connect(self.update_decay_table)
+        self.definition_widget.time_constant_tau_button.toggled.connect(self.update_decay_table)
+        self.definition_widget.num_time_constants_button.toggled.connect(self.update_decay_table)
         self.definition_widget.add_tone_button.clicked.connect(self.add_tone)
         self.definition_widget.remove_tone_button.clicked.connect(self.remove_tone)
         self.definition_widget.transformation_matrices_button.clicked.connect(
@@ -260,6 +271,12 @@ class ShockUI(AbstractSysIdUI):
             self.update_specification
         )
         self.definition_widget.synthesize_button.clicked.connect(self.synthesize_sds)
+        self.definition_widget.use_compensation_pulse_checkbox.toggled.connect(
+            self.update_compensation_pulse
+        )
+        self.definition_widget.autoselect_comp_frequency_checkbox.toggled.connect(
+            self.update_compensation_pulse
+        )
         # Prediction
         # Run Test
 
@@ -712,7 +729,7 @@ class ShockUI(AbstractSysIdUI):
             control_function_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
-        return ShockMetadata()
+        return None  # SDSMetadata()
 
     def initialize_environment(self):
         super().initialize_environment()
@@ -789,8 +806,8 @@ class ShockUI(AbstractSysIdUI):
             self.definition_widget.tone_table.setRowCount(len(frequencies))
             for row, frequency in enumerate(frequencies):
                 # Check to see if there is a widget
-                freq_spinbox = self.definition_widget.tone_table.getCellWidget(row, 0)
-                decay_spinbox = self.definition_widget.tone_table.getCellWidget(row, 1)
+                freq_spinbox = self.definition_widget.tone_table.cellWidget(row, 0)
+                decay_spinbox = self.definition_widget.tone_table.cellWidget(row, 1)
                 # If there isn't, make one
                 if freq_spinbox is None:
                     freq_spinbox = AdaptiveNoWheelSpinBox()
@@ -798,12 +815,14 @@ class ShockUI(AbstractSysIdUI):
                     freq_spinbox.setSingleStep(1)
                     freq_spinbox.setKeyboardTracking(False)
                     freq_spinbox.setDecimals(4)
+                    freq_spinbox.valueChanged.connect(self.update_sine_table)
                     self.definition_widget.tone_table.setCellWidget(row, 0, freq_spinbox)
                 if decay_spinbox is None:
                     decay_spinbox = AdaptiveNoWheelSpinBox()
                     decay_spinbox.setRange(0, 1000000)
                     decay_spinbox.setSingleStep(1)
                     decay_spinbox.setKeyboardTracking(False)
+                    decay_spinbox.valueChanged.connect(self.update_sine_table)
                     if decays is None:
                         decay_spinbox.setValue(self.definition_widget.decay_value_selector.value())
                     self.definition_widget.tone_table.setCellWidget(row, 1, decay_spinbox)
@@ -814,8 +833,8 @@ class ShockUI(AbstractSysIdUI):
             self.definition_widget.tone_table.setRowCount(len(decays))
             for row, decay in enumerate(decays):
                 # Check to see if there is a widget
-                freq_spinbox = self.definition_widget.tone_table.getCellWidget(row, 0)
-                decay_spinbox = self.definition_widget.tone_table.getCellWidget(row, 1)
+                freq_spinbox = self.definition_widget.tone_table.cellWidget(row, 0)
+                decay_spinbox = self.definition_widget.tone_table.cellWidget(row, 1)
                 # If there isn't, make one
                 if freq_spinbox is None:
                     freq_spinbox = AdaptiveNoWheelSpinBox()
@@ -824,21 +843,48 @@ class ShockUI(AbstractSysIdUI):
                     freq_spinbox.setKeyboardTracking(False)
                     freq_spinbox.setDecimals(4)
                     freq_spinbox.setValue(0)
+                    freq_spinbox.valueChanged.connect(self.update_sine_table)
                     self.definition_widget.tone_table.setCellWidget(row, 0, freq_spinbox)
                 if decay_spinbox is None:
                     decay_spinbox = AdaptiveNoWheelSpinBox()
                     decay_spinbox.setRange(0, 1000000)
                     decay_spinbox.setSingleStep(1)
                     decay_spinbox.setKeyboardTracking(False)
+                    decay_spinbox.valueChanged.connect(self.update_sine_table)
                     self.definition_widget.tone_table.setCellWidget(row, 1, decay_spinbox)
                 decay_spinbox.setValue(decay)
-        self.update_tone_table()
+        if decays is None:
+            self.update_decay_table()
 
     def enable_sine_tone_modifications(self, enabled=True):
-        pass
+        self.definition_widget.add_tone_button.setVisible(enabled)
+        self.definition_widget.remove_tone_button.setVisible(enabled)
+        for row in range(self.definition_widget.tone_table.rowCount()):
+            widget = self.definition_widget.tone_table.cellWidget(row, 0)
+            widget.setReadOnly(not enabled)
+            widget.setButtonSymbols(
+                AdaptiveNoWheelSpinBox.UpDownArrows if enabled else AdaptiveNoWheelSpinBox.NoButtons
+            )
 
     def enable_sine_decay_modifications(self, enabled=True):
-        pass
+        for row in range(self.definition_widget.tone_table.rowCount()):
+            widget = self.definition_widget.tone_table.cellWidget(row, 1)
+            widget.setReadOnly(not enabled)
+            widget.setButtonSymbols(
+                AdaptiveNoWheelSpinBox.UpDownArrows if enabled else AdaptiveNoWheelSpinBox.NoButtons
+            )
+        self.definition_widget.decay_value_selector.setVisible(not enabled)
+
+    def enable_octave_buttons(self, enabled=True):
+        for widget in [
+            self.definition_widget.min_frequency_label,
+            self.definition_widget.min_frequency_selector,
+            self.definition_widget.max_frequency_label,
+            self.definition_widget.max_frequency_selector,
+            self.definition_widget.tones_per_octave_label,
+            self.definition_widget.tones_per_octave_selector,
+        ]:
+            widget.setVisible(enabled)
 
     def update_tone_table(self):
         if self.definition_widget.from_spec_button.isChecked():
@@ -849,28 +895,142 @@ class ShockUI(AbstractSysIdUI):
                 freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
             self.set_sine_tone_values(freqs)
             self.enable_sine_tone_modifications(False)
+            self.enable_octave_buttons(False)
         elif self.definition_widget.octave_button.isChecked():
             # Get frequencies from octave spacing
-            
-
+            freqs = octspace(
+                self.definition_widget.min_frequency_selector.value(),
+                self.definition_widget.max_frequency_selector.value(),
+                self.definition_widget.tones_per_octave_selector.value(),
+            )
+            self.set_sine_tone_values(freqs)
+            self.enable_sine_tone_modifications(False)
+            self.enable_octave_buttons(True)
+        elif self.definition_widget.manual_button.isChecked():
+            # Allow manual specification of frequencies
+            self.enable_octave_buttons(False)
+            self.enable_sine_tone_modifications(True)
+        self.update_decay_table()
 
     def update_decay_table(self):
-        pass
+        if self.definition_widget.common_decay_checkbox.isChecked():
+            num_decays = self.definition_widget.tone_table.rowCount()
+            decay_values = self.definition_widget.decay_value_selector.value() * np.ones(num_decays)
+            self.set_sine_tone_values(decays=decay_values)
+            if self.definition_widget.damping_zeta_button.isChecked():
+                self.decay_values_current_strategy = DecayStrategy.DAMPING
+            elif self.definition_widget.time_constant_tau_button.isChecked():
+                self.decay_values_current_strategy = DecayStrategy.TIME_CONSTANT
+            elif self.definition_widget.num_time_constants_button.isChecked():
+                self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+            self.enable_sine_decay_modifications(False)
+        else:
+            # Get old version
+            current_decay_strategy = self.decay_values_current_strategy
+            if self.definition_widget.damping_zeta_button.isChecked():
+                self.decay_values_current_strategy = DecayStrategy.DAMPING
+            elif self.definition_widget.time_constant_tau_button.isChecked():
+                self.decay_values_current_strategy = DecayStrategy.TIME_CONSTANT
+            elif self.definition_widget.num_time_constants_button.isChecked():
+                self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+            num_decays = self.definition_widget.tone_table.rowCount()
+            current_decay_values = np.empty(num_decays, "float")
+            frequency_values = np.empty(num_decays, "float")
+            for row in range(num_decays):
+                current_decay_values[row] = self.definition_widget.tone_table.cellWidget(
+                    row, 1
+                ).value()
+                frequency_values[row] = self.definition_widget.tone_table.cellWidget(row, 0).value()
+            new_decay_values = convert_damping_strategy(
+                current_decay_values,
+                frequency_values,
+                self.definition_widget.block_size_selector.value()
+                / self.definition_widget.sample_rate_display.value(),
+                current_decay_strategy,
+                self.decay_values_current_strategy,
+            )
+            self.set_sine_tone_values(decays=new_decay_values)
+            self.enable_sine_decay_modifications(True)
 
     def add_tone(self):
-        pass
+        selected_indices = self.definition_widget.tone_table.selectedIndexes()
+        if selected_indices:
+            selected_row = selected_indices[0].row()
+        else:
+            # If no row is selected, add the row at the end
+            selected_row = self.definition_widget.tone_table.rowCount()
+        self.definition_widget.tone_table.insertRow(selected_row)
+        freq_spinbox = AdaptiveNoWheelSpinBox()
+        freq_spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        freq_spinbox.setSingleStep(1)
+        freq_spinbox.setKeyboardTracking(False)
+        freq_spinbox.setDecimals(4)
+        freq_spinbox.valueChanged.connect(self.update_sine_table)
+        self.definition_widget.tone_table.setCellWidget(selected_row, 0, freq_spinbox)
+        decay_spinbox = AdaptiveNoWheelSpinBox()
+        decay_spinbox.setRange(0, 1000000)
+        decay_spinbox.setSingleStep(1)
+        decay_spinbox.setKeyboardTracking(False)
+        decay_spinbox.valueChanged.connect(self.update_sine_table)
+        self.definition_widget.tone_table.setCellWidget(selected_row, 1, decay_spinbox)
+        self.enable_sine_tone_modifications(True)
+        self.update_decay_table()
 
     def remove_tone(self):
-        pass
+        selected_indices = self.definition_widget.tone_table.selectedIndexes()
+        if selected_indices:
+            selected_row = selected_indices[0].row()
+        else:
+            # If no row is selected, remove the row at the end
+            selected_row = self.definition_widget.tone_table.rowCount() - 1
+        self.definition_widget.tone_table.removeRow(selected_row)
+
+    def update_compensation_pulse(self):
+        visible = self.definition_widget.use_compensation_pulse_checkbox.isChecked()
+        for widget in [
+            self.definition_widget.autoselect_comp_frequency_checkbox,
+            self.definition_widget.comp_frequency_label,
+            self.definition_widget.compensation_frequency_selector,
+            self.definition_widget.comp_decay_label,
+            self.definition_widget.compensation_decay_selector,
+        ]:
+            widget.setVisible(visible)
+        auto = self.definition_widget.autoselect_comp_frequency_checkbox.isChecked()
+        self.definition_widget.compensation_frequency_selector.setReadOnly(auto)
+        self.definition_widget.compensation_frequency_selector.setButtonSymbols(
+            QtWidgets.QSpinBox.NoButtons if auto else QtWidgets.QSpinBox.UpDownArrows
+        )
+        if auto:
+            min_freq = np.inf
+            for row in range(self.definition_widget.tone_table.rowCount()):
+                widget = self.definition_widget.tone_table.cellWidget(row, 0)
+                if widget is not None:
+                    val = widget.value()
+                    min_freq = min(min_freq, val)
+            if min_freq == np.inf:
+                min_freq = 3
+            self.definition_widget.compensation_frequency_selector.setValue(min_freq / 3)
 
     def update_control_channels(self):
-        pass
+        """Updates the control channels due to selection changes"""
+        self.response_transformation_matrix = None
+        self.output_transformation_matrix = None
+        self.definition_widget.control_channels_display.setValue(len(self.physical_control_indices))
+        self.define_transformation_matrices(None, False)
+        self.clear_and_update_specification_table()
 
     def check_selected_control_channels(self):
-        pass
+        """Checks the selected control channels on the UI"""
+        for item in self.definition_widget.control_channels_selector.selectedItems():
+            item.setCheckState(Qt.Checked)
 
     def uncheck_selected_control_channels(self):
-        pass
+        """Unchecks the selected control channels on the UI"""
+        for item in self.definition_widget.control_channels_selector.selectedItems():
+            item.setCheckState(Qt.Unchecked)
+
+    def update_sine_table(self):
+        self.update_compensation_pulse()
 
     def synthesize_sds(self):
         pass
@@ -914,7 +1074,7 @@ class ShockUI(AbstractSysIdUI):
     def recompute_predictions(self):
         """Recomputes the control predictions"""
         self.environment_command_queue.put(
-            self.log_name, (ShockCommands.PERFORM_CONTROL_PREDICTION, False)
+            self.log_name, (SDSCommands.PERFORM_CONTROL_PREDICTION, False)
         )
 
     # %% Control
@@ -924,7 +1084,7 @@ class ShockUI(AbstractSysIdUI):
 
     def stop_control(self):
         """Starts the sequence of events to stop the controller prematurely"""
-        self.environment_command_queue.put(self.log_name, (ShockCommands.STOP_CONTROL, None))
+        self.environment_command_queue.put(self.log_name, (SDSCommands.STOP_CONTROL, None))
 
     def enable_control(self, enabled):
         """Enables or disables the buttons to start control if it's already running"""
@@ -1194,13 +1354,13 @@ class ShockUI(AbstractSysIdUI):
 # %% Environment
 
 
-class ShockEnvironment(AbstractSysIdEnvironment):
-    """Class defining calculations for the Shock environment"""
+class SDSEnvironment(AbstractSysIdEnvironment):
+    """Class defining calculations for the SDS environment"""
 
     def __init__(
         self,
         environment_name: str,
-        queue_container: ShockQueues,
+        queue_container: SDSQueues,
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
     ):
@@ -1220,20 +1380,20 @@ class ShockEnvironment(AbstractSysIdEnvironment):
             output_active,
         )
         self.map_command(
-            ShockCommands.PERFORM_CONTROL_PREDICTION,
+            SDSCommands.PERFORM_CONTROL_PREDICTION,
             self.perform_control_prediction,
         )
-        self.map_command(ShockCommands.START_CONTROL, self.start_control)
-        self.map_command(ShockCommands.STOP_CONTROL, self.stop_environment)
+        self.map_command(SDSCommands.START_CONTROL, self.start_control)
+        self.map_command(SDSCommands.STOP_CONTROL, self.stop_environment)
         # self.map_command(
         #     GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
         #     self.update_interactive_control_parameters,
         # )
         # self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
 
-    def initialize_environment_test_parameters(self, environment_parameters: ShockMetadata):
+    def initialize_environment_test_parameters(self, environment_parameters: SDSMetadata):
         super().initialize_environment_test_parameters(environment_parameters)
-        self.environment_parameters: ShockMetadata
+        self.environment_parameters: SDSMetadata
 
     def system_id_complete(self, data):
         """Sends the message that system identification is complete and control calculations
@@ -1292,7 +1452,7 @@ class ShockEnvironment(AbstractSysIdEnvironment):
 # %% Process
 
 
-def shock_process(
+def sds_process(
     environment_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: Queue,
@@ -1304,11 +1464,11 @@ def shock_process(
     output_active: mp.sharedctypes.Synchronized,
 ):
     """
-    Shock environment process function called by multiprocessing
+    SDS environment process function called by multiprocessing
 
-    This function defines the Shock Environment process that
+    This function defines the SDS Environment process that
     gets run by the multiprocessing module when it creates a new process.  It
-    creates a ShockEnvironment object and runs it.
+    creates a SDSEnvironment object and runs it.
 
     Parameters
     ----------
@@ -1333,7 +1493,7 @@ def shock_process(
     """
     try:
         # Create vibration queues
-        queue_container = ShockQueues(
+        queue_container = SDSQueues(
             environment_name,
             input_queue,
             gui_update_queue,
@@ -1396,7 +1556,7 @@ def shock_process(
         )
         collection_proc.start()
 
-        process_class = ShockEnvironment(
+        process_class = SDSEnvironment(
             environment_name, queue_container, acquisition_active, output_active
         )
         process_class.run()
