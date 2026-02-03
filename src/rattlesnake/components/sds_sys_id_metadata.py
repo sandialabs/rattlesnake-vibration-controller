@@ -259,7 +259,7 @@ class ControlParameters:
         self.control_parameters = control_parameters
 
 
-class ShockMetadata(AbstractSysIdMetadata):
+class SDSMetadata(AbstractSysIdMetadata):
     """Metadata required to define a Shock control law in rattlesnake."""
 
     def __init__(

@@ -160,13 +160,13 @@ from .modal_environment import (  # noqa # pylint: disable=wrong-import-position
 environment_processes[ControlTypes.MODAL] = modal_process
 environment_UIs[ControlTypes.MODAL] = ModalUI
 
-# Shock
+# Sum-Decayed-Sines
 from .sds_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position)
-    shock_process,
-    ShockUI,
+    sds_process,
+    SDSUI,
 )
 
-environment_processes[ControlTypes.SDS] = shock_process
-environment_UIs[ControlTypes.SDS] = ShockUI
+environment_processes[ControlTypes.SDS] = sds_process
+environment_UIs[ControlTypes.SDS] = SDSUI
 
 # End of code needed to be modified to create a new environment
