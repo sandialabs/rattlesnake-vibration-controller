@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>599</width>
+    <height>411</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_4">
+   <item>
+    <layout class="QHBoxLayout" name="selection_layout">
+     <item>
+      <widget class="QComboBox" name="response_selector"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="synthesize_current_button">
+       <property name="text">
+        <string>Synthesize SDS</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="synthesize_all_button">
+       <property name="text">
+        <string>Synthesize All SDSs</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="selection_spacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <layout class="QVBoxLayout" name="table_layout">
+       <item>
+        <widget class="QTableWidget" name="sds_table">
+         <column>
+          <property name="text">
+           <string>Frequency</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Amplitude</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Delay</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Decay</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_2">
+      <layout class="QVBoxLayout" name="time_history_layout">
+       <item>
+        <widget class="PlotWidget" name="time_history_plot"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_3">
+      <layout class="QVBoxLayout" name="srs_layout">
+       <item>
+        <widget class="PlotWidget" name="srs_plot"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

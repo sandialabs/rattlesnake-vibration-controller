@@ -56,12 +56,14 @@ from .sds_sys_id_metadata import (
     SRSType,
     SRSParameters,
     SRSDisplacementType,
+    SDSParameters,
     SpecParameters,
     ControlLawType,
     ControlParameters,
 )
 from .sds_sys_id_utilities import octspace, convert_damping_strategy, SDSQueues, SDSCommands
 from .sds_sys_id_prediction_table import SDSPredictionTable
+from .sds_sys_id_synthesize_dialog import SDSSynthesizeDialog
 from .ui_utilities import (
     PlotTimeWindow,
     TransformationMatrixWindow,
@@ -229,13 +231,14 @@ class SDSUI(AbstractSysIdUI):
         # Initialize and clear plots
         for plotwidget in self.plotwidgets:
             plotwidget.clear()
+        self.definition_widget.specification_plot.getPlotItem().addLegend()
         self.plot_data_items[
             "specification_srs"
         ] = self.definition_widget.specification_plot.getPlotItem().plot(
             np.array([0, 1]),
             np.zeros(2),
             pen={"color": "b", "width": 1},
-            name="Amplitude",
+            name="Control SRS",
         )
         self.plot_data_items[
             "specification_lower_limit"
@@ -243,7 +246,7 @@ class SDSUI(AbstractSysIdUI):
             np.array([0, 1]),
             np.zeros(2),
             pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
-            name="Warning",
+            name="Limit",
         )
         self.plot_data_items[
             "specification_upper_limit"
@@ -252,7 +255,6 @@ class SDSUI(AbstractSysIdUI):
             np.zeros(2),
             pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
         )
-        self.definition_widget.specification_plot.getPlotItem().addLegend()
 
         # Set up channel names
         # Set up channel names
@@ -653,84 +655,7 @@ class SDSUI(AbstractSysIdUI):
         self.plot_data_items["specification_lower_limit"].setData(freqs, lower_limits)
         self.plot_data_items["specification_upper_limit"].setData(freqs, upper_limits)
 
-    def collect_environment_definition_parameters(self):
-        """Collects the metadata defining the environment from the UI widgets"""
-        if self.python_control_module is None:
-            control_module = None
-            control_function = None
-            control_function_type = None
-            control_function_parameters = None
-        else:
-            control_module = self.definition_widget.control_script_file_path_input.text()
-            control_function = self.definition_widget.control_function_input.itemText(
-                self.definition_widget.control_function_input.currentIndex()
-            )
-            control_function_type = ControlLawType(
-                self.definition_widget.control_function_generator_selector.currentIndex()
-            )
-            control_function_parameters = (
-                self.definition_widget.control_parameters_text_input.toPlainText()
-            )
-        control_data = ControlParameters(
-            control_module, control_function, control_function_type, control_function_parameters
-        )
-        if self.definition_widget.from_spec_button.isChecked():
-            tone_data = ToneParameters(ToneStrategy.FROM_SPEC, None)
-        elif self.definition_widget.octave_button.isChecked():
-            tone_data = ToneParameters(
-                ToneStrategy.OCTAVE,
-                np.array(
-                    [
-                        self.definition_widget.min_frequency_selector.value(),
-                        self.definition_widget.max_frequency_selector.value(),
-                        self.definition_widget.tones_per_octave_selector.value(),
-                    ]
-                ),
-            )
-        elif self.definition_widget.manual_button.isChecked():
-            num_rows = self.definition_widget.tone_table.rowCount()
-            freq = np.empty(num_rows, "float")
-            for row in num_rows:
-                freq[row] = self.definition_widget.tone_table.cellWidget(row, 0).value()
-            tone_data = ToneParameters(ToneStrategy.MANUAL, freq)
-        else:
-            raise ValueError("Invalid Tone Strategy (how did you get here?!)")
-
-        compensation_pulse_data = CompPulseParameters(
-            self.definition_widget.use_compensation_pulse_checkbox.isChecked(),
-            (
-                None
-                if self.definition_widget.autoselect_comp_frequency_checkbox.isChecked()
-                else self.definition_widget.compensation_frequency_selector.value()
-            ),
-            self.definition_widget.compensation_decay_selector.value() / 100,
-        )
-        if self.definition_widget.damping_zeta_button.isChecked():
-            decay_strategy = DecayStrategy.DAMPING
-        elif self.definition_widget.time_constant_tau_button.isChecked():
-            decay_strategy = DecayStrategy.TIME_CONSTANT
-        elif self.definition_widget.num_time_constants_button.isChecked():
-            decay_strategy = DecayStrategy.NUM_TIME_CONSTANTS
-        else:
-            raise ValueError("Invalid Decay Strategy (how did you get here?!)")
-        common_decay = self.definition_widget.common_decay_checkbox.isChecked()
-        if common_decay:
-            decay_data = self.definition_widget.decay_value_selector.value()
-        else:
-            num_rows = self.definition_widget.tone_table.rowCount()
-            decay_data = np.empty(num_rows, "float")
-            for row in num_rows:
-                decay_data[row] = self.definition_widget.tone_table.cellWidget(row, 1).value()
-        decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
-        srs_data = SRSParameters(
-            SRSType(self.definition_widget.srs_type_setter.currentIndex()),
-            (
-                SRSDisplacementType.ABSOLUTE
-                if self.definition_widget.srs_displacement_setter.currentIndex() == 0
-                else SRSDisplacementType.RELATIVE
-            ),
-            self.definition_widget.srs_damping_setter.value() / 100,
-        )
+    def collect_specification(self):
         num_freqs = self.definition_widget.breakpoint_table.rowCount()
         num_control = self.definition_widget.breakpoint_table.columnCount() - 1
         freqs = np.empty(num_freqs, "float")
@@ -762,6 +687,116 @@ class SDSUI(AbstractSysIdUI):
         spec_data = SpecParameters(
             freqs, srss, lower_limits, upper_limits, self.definition_widget.num_hits_spinbox.value()
         )
+        return spec_data
+
+    def collect_control_data(self):
+        if self.python_control_module is None:
+            control_module = None
+            control_function = None
+            control_function_type = None
+            control_function_parameters = None
+        else:
+            control_module = self.definition_widget.control_script_file_path_input.text()
+            control_function = self.definition_widget.control_function_input.itemText(
+                self.definition_widget.control_function_input.currentIndex()
+            )
+            control_function_type = ControlLawType(
+                self.definition_widget.control_function_generator_selector.currentIndex()
+            )
+            control_function_parameters = (
+                self.definition_widget.control_parameters_text_input.toPlainText()
+            )
+        control_data = ControlParameters(
+            control_module, control_function, control_function_type, control_function_parameters
+        )
+        return control_data
+
+    def collect_tone_data(self):
+        if self.definition_widget.from_spec_button.isChecked():
+            tone_data = ToneParameters(ToneStrategy.FROM_SPEC, None)
+        elif self.definition_widget.octave_button.isChecked():
+            tone_data = ToneParameters(
+                ToneStrategy.OCTAVE,
+                np.array(
+                    [
+                        self.definition_widget.min_frequency_selector.value(),
+                        self.definition_widget.max_frequency_selector.value(),
+                        self.definition_widget.tones_per_octave_selector.value(),
+                    ]
+                ),
+            )
+        elif self.definition_widget.manual_button.isChecked():
+            num_rows = self.definition_widget.tone_table.rowCount()
+            freq = np.empty(num_rows, "float")
+            for row in num_rows:
+                freq[row] = self.definition_widget.tone_table.cellWidget(row, 0).value()
+            tone_data = ToneParameters(ToneStrategy.MANUAL, freq)
+        else:
+            raise ValueError("Invalid Tone Strategy (how did you get here?!)")
+        return tone_data
+
+    def collect_compensation_pulse_data(self):
+        compensation_pulse_data = CompPulseParameters(
+            self.definition_widget.use_compensation_pulse_checkbox.isChecked(),
+            (
+                None
+                if self.definition_widget.autoselect_comp_frequency_checkbox.isChecked()
+                else self.definition_widget.compensation_frequency_selector.value()
+            ),
+            self.definition_widget.compensation_decay_selector.value() / 100,
+        )
+        return compensation_pulse_data
+
+    def collect_decay_data(self):
+        if self.definition_widget.damping_zeta_button.isChecked():
+            decay_strategy = DecayStrategy.DAMPING
+        elif self.definition_widget.time_constant_tau_button.isChecked():
+            decay_strategy = DecayStrategy.TIME_CONSTANT
+        elif self.definition_widget.num_time_constants_button.isChecked():
+            decay_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+        else:
+            raise ValueError("Invalid Decay Strategy (how did you get here?!)")
+        common_decay = self.definition_widget.common_decay_checkbox.isChecked()
+        if common_decay:
+            decay_data = self.definition_widget.decay_value_selector.value()
+        else:
+            num_rows = self.definition_widget.tone_table.rowCount()
+            decay_data = np.empty(num_rows, "float")
+            for row in num_rows:
+                decay_data[row] = self.definition_widget.tone_table.cellWidget(row, 1).value()
+        decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
+        return decay_parameters
+
+    def collect_srs_data(self):
+        srs_data = SRSParameters(
+            SRSType(self.definition_widget.srs_type_setter.currentIndex() + 1),
+            (
+                SRSDisplacementType.ABSOLUTE
+                if self.definition_widget.srs_displacement_setter.currentIndex() == 0
+                else SRSDisplacementType.RELATIVE
+            ),
+            self.definition_widget.srs_damping_setter.value() / 100,
+        )
+        return srs_data
+
+    def collect_sds_data(self):
+        sds_data = SDSParameters(
+            self.definition_widget.sds_iterations_selector.value(),
+            self.definition_widget.sds_convergence_selector.value() / 100,
+            self.definition_widget.sds_scale_factor_selector.value() / 100,
+            self.definition_widget.error_tolerance_selector.value() / 100,
+        )
+        return sds_data
+
+    def collect_environment_definition_parameters(self):
+        """Collects the metadata defining the environment from the UI widgets"""
+        control_data = self.collect_control_data()
+        tone_data = self.collect_tone_data()
+        compensation_pulse_data = self.collect_compensation_pulse_data()
+        decay_parameters = self.collect_decay_data()
+        srs_data = self.collect_srs_data()
+        sds_data = self.collect_sds_data()
+        spec_data = self.collect_specification()
         return SDSMetadata(
             sample_rate=self.data_acquisition_parameters.sample_rate,
             num_channels=len(self.data_acquisition_parameters.channel_list),
@@ -770,6 +805,7 @@ class SDSUI(AbstractSysIdUI):
             compensation_pulse_data=compensation_pulse_data,
             decay_data=decay_parameters,
             srs_data=srs_data,
+            sds_data=sds_data,
             control_script_data=control_data,
             control_channel_indices=self.physical_control_indices,
             output_channel_indices=self.physical_output_indices,
@@ -1083,7 +1119,7 @@ class SDSUI(AbstractSysIdUI):
         self.update_compensation_pulse()
 
     def synthesize_sds(self):
-        pass
+        SDSSynthesizeDialog.show_dialog(self)
 
     # %% Predictions
 
@@ -1284,20 +1320,32 @@ class SDSUI(AbstractSysIdUI):
         self.definition_widget.srs_displacement_setter.setCurrentIndex(srs_displacement_index)
         self.definition_widget.srs_damping_setter.setValue(100 * float(worksheet.cell(6, 4).value))
 
+        # SDS
+        self.definition_widget.sds_iterations_selector.setValue(int(worksheet.cell(7, 2).value))
+        self.definition_widget.sds_convergence_selector.setValue(
+            100 * float(worksheet.cell(8, 2).value)
+        )
+        self.definition_widget.sds_scale_factor_selector.setValue(
+            100 * float(worksheet.cell(9, 2).value)
+        )
+        self.definition_widget.error_tolerance_selector.setValue(
+            100 * float(worksheet.cell(10, 2).value)
+        )
+
         # Control Script and Parameters
-        if worksheet.cell(8, 2).value is not None and worksheet.cell(8, 2).value != "":
-            self.select_python_module(None, worksheet.cell(8, 2).value)
+        if worksheet.cell(12, 2).value is not None and worksheet.cell(12, 2).value != "":
+            self.select_python_module(None, worksheet.cell(12, 2).value)
             self.definition_widget.python_class_input.setCurrentIndex(
-                self.definition_widget.python_class_input.findText(worksheet.cell(9, 2).value)
+                self.definition_widget.python_class_input.findText(worksheet.cell(13, 2).value)
             )
         self.definition_widget.control_parameters_text_input.setText(
-            "" if worksheet.cell(10, 2).value is None else str(worksheet.cell(10, 2).value)
+            "" if worksheet.cell(13, 2).value is None else str(worksheet.cell(14, 2).value)
         )
 
         # Control channels
         column_index = 2
         while True:
-            value = worksheet.cell(11, column_index).value
+            value = worksheet.cell(15, column_index).value
             if value is None or (isinstance(value, str) and value.strip() == ""):
                 break
             item = self.definition_widget.control_channels_selector.item(int(value) - 1)
@@ -1305,40 +1353,40 @@ class SDSUI(AbstractSysIdUI):
             column_index += 1
 
         # System identification
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(int(worksheet.cell(12, 2).value))
+        self.system_id_widget.samplesPerFrameSpinBox.setValue(int(worksheet.cell(16, 2).value))
         self.system_id_widget.averagingTypeComboBox.setCurrentIndex(
-            self.system_id_widget.averagingTypeComboBox.findText(worksheet.cell(13, 2).value)
+            self.system_id_widget.averagingTypeComboBox.findText(worksheet.cell(17, 2).value)
         )
-        self.system_id_widget.noiseAveragesSpinBox.setValue(int(worksheet.cell(14, 2).value))
-        self.system_id_widget.systemIDAveragesSpinBox.setValue(int(worksheet.cell(15, 2).value))
+        self.system_id_widget.noiseAveragesSpinBox.setValue(int(worksheet.cell(18, 2).value))
+        self.system_id_widget.systemIDAveragesSpinBox.setValue(int(worksheet.cell(19, 2).value))
         self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(
-            float(worksheet.cell(16, 2).value)
+            float(worksheet.cell(20, 2).value)
         )
         self.system_id_widget.estimatorComboBox.setCurrentIndex(
-            self.system_id_widget.estimatorComboBox.findText(worksheet.cell(17, 2).value)
+            self.system_id_widget.estimatorComboBox.findText(worksheet.cell(21, 2).value)
         )
-        self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(18, 2).value))
+        self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(22, 2).value))
         self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(
-            float(worksheet.cell(19, 2).value)
+            float(worksheet.cell(23, 2).value)
         )
         self.system_id_widget.signalTypeComboBox.setCurrentIndex(
-            self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(20, 2).value)
+            self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(24, 2).value)
         )
         self.system_id_widget.windowComboBox.setCurrentIndex(
-            self.system_id_widget.windowComboBox.findText(worksheet.cell(21, 2).value)
+            self.system_id_widget.windowComboBox.findText(worksheet.cell(25, 2).value)
         )
-        self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(22, 2).value))
-        self.system_id_widget.onFractionDoubleSpinBox.setValue(float(worksheet.cell(23, 2).value))
-        self.system_id_widget.pretriggerDoubleSpinBox.setValue(float(worksheet.cell(24, 2).value))
-        self.system_id_widget.rampFractionDoubleSpinBox.setValue(float(worksheet.cell(25, 2).value))
+        self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(26, 2).value))
+        self.system_id_widget.onFractionDoubleSpinBox.setValue(float(worksheet.cell(27, 2).value))
+        self.system_id_widget.pretriggerDoubleSpinBox.setValue(float(worksheet.cell(28, 2).value))
+        self.system_id_widget.rampFractionDoubleSpinBox.setValue(float(worksheet.cell(29, 2).value))
 
         # Transformation matrices
         response_channels = self.definition_widget.control_channels_display.value()
         output_channels = self.definition_widget.output_channels_display.value()
-        output_transform_row = 27
+        output_transform_row = 31
         if (
-            isinstance(worksheet.cell(26, 2).value, str)
-            and worksheet.cell(26, 2).value.lower() == "none"
+            isinstance(worksheet.cell(30, 2).value, str)
+            and worksheet.cell(30, 2).value.lower() == "none"
         ):
             self.response_transformation_matrix = None
         else:
@@ -1346,12 +1394,12 @@ class SDSUI(AbstractSysIdUI):
                 if worksheet.cell(output_transform_row, 1).value == "Output Transformation Matrix:":
                     break
                 output_transform_row += 1
-            response_size = output_transform_row - 26
+            response_size = output_transform_row - 30
             response_transformation = []
             for i in range(response_size):
                 response_transformation.append([])
                 for j in range(response_channels):
-                    response_transformation[-1].append(float(worksheet.cell(26 + i, 2 + j).value))
+                    response_transformation[-1].append(float(worksheet.cell(30 + i, 2 + j).value))
             self.response_transformation_matrix = np.array(response_transformation)
         if (
             isinstance(worksheet.cell(output_transform_row, 2).value, str)
@@ -1377,7 +1425,7 @@ class SDSUI(AbstractSysIdUI):
         self.define_transformation_matrices(None, dialog=False)
 
         # Load in the specification
-        self.load_specification(None, worksheet.cell(7, 2).value)
+        self.load_specification(None, worksheet.cell(11, 2).value)
 
     @staticmethod
     def create_environment_template(environment_name, workbook):

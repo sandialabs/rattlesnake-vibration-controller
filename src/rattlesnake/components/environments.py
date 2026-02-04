@@ -113,6 +113,7 @@ environment_prediction_ui_paths[ControlTypes.SDS] = os.path.join(directory, "srs
 environment_run_ui_paths[ControlTypes.SDS] = os.path.join(directory, "srs_sds_run.ui")
 sds_prediction_table_ui_path = os.path.join(directory, "srs_sds_prediction_table.ui")
 sds_override_dialog_ui_path = os.path.join(directory, "srs_sds_override.ui")
+sds_synthesize_dialog_ui_path = os.path.join(directory, "srs_sds_synthesize_dialog.ui")
 # Modal Environments
 environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_definition.ui")
 environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_run.ui")

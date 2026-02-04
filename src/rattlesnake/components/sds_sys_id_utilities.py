@@ -3,10 +3,10 @@ from enum import Enum
 from .utilities import VerboseMessageQueue
 import multiprocessing as mp
 from multiprocessing.queues import Queue
-
-from .sds_sys_id_metadata import DecayStrategy
 from scipy.signal import lfilter, oaconvolve
 from scipy.optimize import minimize, NonlinearConstraint, nnls
+
+from .sds_sys_id_metadata import DecayStrategy
 
 
 # %% Commands
@@ -674,8 +674,8 @@ def sum_decayed_sines(
         not specified, they will be set to the value of the SRS at each frequency
         divided by the quality factor of the SRS.
     sine_decays : np.ndarray, optional
-        An array of decay value time constants (often represented by variable
-        tau).  Tau is the time for the amplitude of motion to decay 63% defined
+        An array of decay damping values (often represented by variable
+        zeta).  Tau is the time for the amplitude of motion to decay 63% defined
         by the equation `1/(2*np.pi*freq*zeta)` where `freq` is the frequency
         of the sine tone and `zeta` is the fraction of critical damping.
         If not specified, then either the `tau` or `num_time_constants`
@@ -819,6 +819,8 @@ def sum_decayed_sines(
 
     if compensation_frequency is None:
         compensation_frequency = np.min(sine_frequencies) / 3
+    if compensation_decay is None:
+        compensation_decay = 0.95
 
     # Set up decay terms
     decay_terms_specified = 0
@@ -872,6 +874,7 @@ def sum_decayed_sines(
         compensation_frequency = np.min(sine_frequencies) / 3
 
     # Now we can actually run the generation process
+    # print(f"In sum_decayed_sines: {sine_decays=}")
     (
         acceleration_signal,
         used_frequencies,
@@ -1021,6 +1024,7 @@ def _sum_decayed_sines(
         if verbose:
             print(f"Starting Iteration {i + 1}")
         # Compute updated sine amplitudes and compensation terms
+        # print(f"In _sum_decayed_sines: {sine_decays=}")
         this_sine_amplitudes, this_compensation_amplitude, this_compensation_delay = (
             _sum_decayed_sines_single_iteration(
                 sine_frequencies,
@@ -1246,6 +1250,7 @@ def _sum_decayed_sines_single_iteration(
                 )
             compensation_delay_corrected = compensation_delay + num_shift / sample_rate
             # Find compensating time history
+            # print(f"In _sum_decayed_sines_single_iteration: {sine_decays=}")
             compensation_pulse = sum_decayed_sines_reconstruction(
                 compensation_frequency,
                 compensation_amplitude,
@@ -1562,6 +1567,7 @@ def sum_decayed_sines_reconstruction(
     # Now go through and compute the sine tones
     omegas = 2 * np.pi * sine_frequencies
     this_times = times[:, np.newaxis] - sine_delays
+    # print(f"In sum_decayed_sines_reconstruction: {sine_decays=}")
     response = (
         sine_amplitudes * np.exp(-sine_decays * omegas * this_times) * np.sin(omegas * this_times)
     )

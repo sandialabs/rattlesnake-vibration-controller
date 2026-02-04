@@ -133,15 +133,15 @@ class DecayParameters:
 class SRSType(Enum):
     """Enumeration containing different ways to compute an SRS"""
 
-    PRIMARY_POS = 0
-    PRIMARY_NEG = 1
-    PRIMARY_ABSMAX = 2
-    RESIDUAL_POS = 3
-    RESIDUAL_NEG = 4
-    RESIDUAL_ABSMAX = 5
-    MAXIMUM_POS = 6
-    MAXIMUM_NEG = 7
-    MAXIMUM_ABSMAX = 8
+    PRIMARY_POS = 1
+    PRIMARY_NEG = 2
+    PRIMARY_ABSMAX = 3
+    RESIDUAL_POS = 4
+    RESIDUAL_NEG = 5
+    RESIDUAL_ABSMAX = 6
+    MAXIMUM_POS = 7
+    MAXIMUM_NEG = 8
+    MAXIMUM_ABSMAX = 9
 
 
 class SRSDisplacementType(Enum):
@@ -171,6 +171,18 @@ class SRSParameters:
         self.srs_type = srs_type
         self.srs_displacement = srs_displacement
         self.srs_damping = srs_damping
+
+
+class SDSParameters:
+    """Class defining how sum-of-decayed-sine tables are computed"""
+
+    def __init__(
+        self, iterations: int, convergence: float, scale_factor: float, error_tolerance: float
+    ):
+        self.iterations = iterations
+        self.convervence = convergence
+        self.scale_factor = scale_factor
+        self.error_tolerance = error_tolerance
 
 
 class SpecParameters:
@@ -259,6 +271,9 @@ class ControlParameters:
         self.control_parameters = control_parameters
 
 
+from .sds_sys_id_utilities import octspace, convert_damping_strategy
+
+
 class SDSMetadata(AbstractSysIdMetadata):
     """Metadata required to define a Shock control law in rattlesnake."""
 
@@ -272,6 +287,7 @@ class SDSMetadata(AbstractSysIdMetadata):
         compensation_pulse_data: CompPulseParameters,
         decay_data: DecayParameters,
         srs_data: SRSParameters,
+        sds_data: SDSParameters,
         control_script_data: ControlParameters,
         control_channel_indices: np.ndarray,
         output_channel_indices: np.ndarray,
@@ -285,6 +301,7 @@ class SDSMetadata(AbstractSysIdMetadata):
         self.compensation_pulse_data = compensation_pulse_data
         self.decay_data = decay_data
         self.srs_data = srs_data
+        self.sds_data = sds_data
         self.tone_data = tone_data
         self.sample_rate = sample_rate
         self.control_script_data = control_script_data
@@ -452,3 +469,25 @@ class SDSMetadata(AbstractSysIdMetadata):
                 ("reference_transformation_rows", "reference_transformation_cols"),
             )
             var[...] = self.reference_transformation_matrix
+
+    def get_sds_frequencies(self):
+        if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
+            return self.specification_data.frequencies
+        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
+            return octspace(*self.tone_data.tone_data)
+        if self.tone_data.tone_strategy == ToneStrategy.MANUAL:
+            return self.tone_data.tone_data
+
+    def get_sds_decays(self):
+        frequencies = self.get_sds_frequencies()
+        if self.decay_data.common_decay:
+            decay_values = self.decay_data.decay_data[0] * np.ones(len(frequencies))
+        else:
+            decay_values = self.decay_data.decay_data
+        return convert_damping_strategy(
+            decay_values,
+            frequencies,
+            self.block_size / self.sample_rate,
+            self.decay_data.decay_strategy,
+            DecayStrategy.DAMPING,
+        )
