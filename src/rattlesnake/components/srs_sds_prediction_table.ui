@@ -79,10 +79,27 @@
        <item>
         <layout class="QVBoxLayout" name="excitation_plot_layout">
          <item>
-          <widget class="QTabWidget" name="sds_tab_widget">
-           <property name="currentIndex">
-            <number>-1</number>
-           </property>
+          <widget class="QTableWidget" name="tableWidget">
+           <column>
+            <property name="text">
+             <string>Frequency</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Amplitude</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Delay</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Decay</string>
+            </property>
+           </column>
           </widget>
          </item>
          <item>

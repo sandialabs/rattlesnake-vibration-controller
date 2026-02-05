@@ -14,8 +14,6 @@ def default_control_law(
     sysid_reference_cpsd: np.ndarray,
     multiple_coherence: np.ndarray,
     frames: int,
-    total_frames: int,
-    extra_parameters: str = "",
     last_response_srs: np.ndarray = None,
     last_drive_amplitudes: np.ndarray = None,
     last_drive_decays: np.ndarray = None,
@@ -92,16 +90,20 @@ def default_control_law(
     amplitudes : np.ndarray
         An array of amplitudes at the control_frequencies that is used to
         generate the next drive signals.  The control law must compute the correct amplitudes,
-        decay values, and delay values to best match the control SRS.
+        decay values, and delay values to best match the control SRS.  Should have dimensions
+        (num_frequencies, num_drive_channels)
     decays : np.ndarray
         An array of decay values in terms of damping (zeta) at the control_frequencies that is
         used to generate the next drive signals.  The control law must compute the correct
-        amplitudes, decay values, and delay values to best match the control SRS.
+        amplitudes, decay values, and delay values to best match the control SRS.  Should have
+        dimensions (num_frequencies, num_drive_channels)
     delays : np.ndarray
         An array of time delays at the control_frequencies that is used to
         generate the next drive signals.  The control law must compute the correct amplitudes,
-        decay values, and delay values to best match the control SRS.
+        decay values, and delay values to best match the control SRS.  Should have dimensions
+        (num_frequencies, num_drive_channels)
     """
+    print("Running the default control law!")
 
 
 # Define a function to do the optimization

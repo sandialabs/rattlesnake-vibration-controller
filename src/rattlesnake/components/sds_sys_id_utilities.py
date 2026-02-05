@@ -1571,7 +1571,7 @@ def sum_decayed_sines_reconstruction(
     response = (
         sine_amplitudes * np.exp(-sine_decays * omegas * this_times) * np.sin(omegas * this_times)
     )
-    response[this_times < 0] = 0
+    response[..., this_times < 0, :] = 0
     return np.sum(response, axis=-1)
 
 

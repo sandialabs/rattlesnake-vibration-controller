@@ -62,7 +62,14 @@ from .sds_sys_id_metadata import (
     ControlLawType,
     ControlParameters,
 )
-from .sds_sys_id_utilities import octspace, convert_damping_strategy, SDSQueues, SDSCommands
+from .sds_sys_id_utilities import (
+    octspace,
+    convert_damping_strategy,
+    SDSQueues,
+    SDSCommands,
+    sum_decayed_sines_reconstruction,
+    srs as srs_function,
+)
 from .sds_sys_id_prediction_table import SDSPredictionTable
 from .sds_sys_id_synthesize_dialog import SDSSynthesizeDialog
 from .ui_utilities import (
@@ -168,6 +175,7 @@ class SDSUI(AbstractSysIdUI):
             environment_command_queue,
             self.log_name,
         )
+        self.prediction_table.lock_table()
 
         self.plotwidgets = [
             self.definition_widget.specification_plot,
@@ -588,8 +596,6 @@ class SDSUI(AbstractSysIdUI):
             "sysid_reference_cpsd",
             "multiple_coherence",
             "frames",
-            "total_frames",
-            "extra_parameters",
             "last_response_srs",
             "last_drive_amplitudes",
             "last_drive_decays",
@@ -851,20 +857,14 @@ class SDSUI(AbstractSysIdUI):
         return kwargs
 
     def collect_control_data(self):
-        if self.python_control_module is None:
-            control_module = None
-            control_function = None
-            control_function_type = None
-            control_function_parameters = None
-        else:
-            control_module = self.definition_widget.control_script_file_path_input.text()
-            control_function = self.definition_widget.control_function_input.itemText(
-                self.definition_widget.control_function_input.currentIndex()
-            )
-            control_function_type = ControlLawType(
-                self.definition_widget.control_function_generator_selector.currentIndex()
-            )
-            control_function_parameters = self.collect_control_extra_parameters()
+        control_module = self.definition_widget.control_script_file_path_input.text()
+        control_function = self.definition_widget.control_function_input.itemText(
+            self.definition_widget.control_function_input.currentIndex()
+        )
+        control_function_type = ControlLawType(
+            self.definition_widget.control_function_generator_selector.currentIndex()
+        )
+        control_function_parameters = self.collect_control_extra_parameters()
         control_data = ControlParameters(
             control_module, control_function, control_function_type, control_function_parameters
         )
@@ -978,6 +978,7 @@ class SDSUI(AbstractSysIdUI):
         self.prediction_table.update_names(
             self.initialized_output_names, self.initialized_control_names
         )
+        self.prediction_table.update_parameters(self.environment_parameters)
         return self.environment_parameters
 
     def define_transformation_matrices(
@@ -1346,6 +1347,24 @@ class SDSUI(AbstractSysIdUI):
     def update_gui(self, queue_data):
         if super().update_gui(queue_data):
             return
+        message, data = queue_data
+        if message == "control_predictions":
+            (
+                predicted_amplitudes,
+                predicted_delays,
+                predicted_decays,
+                predicted_drive_time_history,
+                predicted_response_time_history,
+                predicted_response_srs,
+            ) = data
+            self.prediction_table.update_prediction_information(
+                predicted_response_time_history,
+                predicted_response_srs,
+                predicted_amplitudes,
+                predicted_delays,
+                predicted_decays,
+                predicted_drive_time_history,
+            )
 
     def set_parameters_from_template(self, worksheet):
         self.definition_widget.block_size_selector.setValue(int(worksheet.cell(2, 2).value))
@@ -1639,41 +1658,171 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         )
         self.map_command(SDSCommands.START_CONTROL, self.start_control)
         self.map_command(SDSCommands.STOP_CONTROL, self.stop_environment)
-        # self.map_command(
-        #     GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
-        #     self.update_interactive_control_parameters,
-        # )
-        # self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(
+            GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+            self.update_interactive_control_parameters,
+        )
+        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
 
         # Persistent Data
         self.data_acquisition_parameters = None
         self.environment_parameters = None
         self.queue_container = queue_container
         # System ID information
-        self.frames = None
-        self.frequencies = None
-        self.frf = None
+        self.sysid_frames = None
+        self.sysid_frequencies = None
+        self.sysid_frf = None
         self.sysid_coherence = None
         self.sysid_response_cpsd = None
         self.sysid_reference_cpsd = None
         self.sysid_condition = None
         self.sysid_response_noise = None
         self.sysid_reference_noise = None
+        # Control information
+        self.control_module = None
+        self.control_law = None
+        self.control_last_interactive_parameters = None
+        self.control_has_sent_interactive_control_transfer_function_results = False
+        self.last_response_srs = None
+        self.last_response_time_history = None
+        self.last_drive_amplitudes = None
+        self.last_drive_decays = None
+        self.last_drive_delays = None
+        # Prediction information
+        self.predicted_response_srs = None
+        self.predicted_response_time_history = None
+        self.predicted_amplitudes = None
+        self.predicted_decays = None
+        self.predicted_delays = None
+        self.predicted_drive_time_history = None
 
     def initialize_environment_test_parameters(self, environment_parameters: SDSMetadata):
+        # Check if things need to be reset
+        if self.environment_parameters is None or not np.array_equal(
+            self.environment_parameters.control_channel_indices,
+            environment_parameters.control_channel_indices,
+        ):
+            # System ID information
+            self.sysid_frames = None
+            self.sysid_frequencies = None
+            self.sysid_frf = None
+            self.sysid_coherence = None
+            self.sysid_response_cpsd = None
+            self.sysid_reference_cpsd = None
+            self.sysid_condition = None
+            self.sysid_response_noise = None
+            self.sysid_reference_noise = None
+            self.control_last_interactive_parameters = None
+            self.control_has_sent_interactive_control_transfer_function_results = False
+            self.last_response_srs = None
+            self.last_drive_amplitudes = None
+            self.last_drive_decays = None
+            self.last_drive_delays = None
         super().initialize_environment_test_parameters(environment_parameters)
         self.environment_parameters: SDSMetadata
-        # Check if everything is the same size
+        # Load in the control law
+        if (
+            self.environment_parameters.control_script_data.control_script
+            == "rattlesnake.components.sds_sys_id_control_law"
+        ):
+            self.control_module = importlib.import_module(
+                "rattlesnake.components.sds_sys_id_control_law"
+            )
+        else:
+            self.control_module = load_python_module(
+                self.environment_parameters.control_script_data.control_script
+            )
+        # Depending on the type, initialize the control law
+        if self.environment_parameters.control_script_data.control_type == ControlLawType.FUNCTION:
+            self.control_law = getattr(
+                self.control_module, self.environment_parameters.control_script_data.control_object
+            )
+        elif self.environment_parameters.control_script_data.control_type == ControlLawType.CLASS:
+            self.control_law = getattr(
+                self.control_module, self.environment_parameters.control_script_data.control_object
+            )(
+                environment_parameters=self.environment_parameters,
+                transfer_function_frequencies=self.sysid_frequencies,
+                transfer_function=self.sysid_frf,
+                noise_response_cpsd=self.sysid_response_noise,
+                noise_reference_cpsd=self.sysid_reference_noise,
+                sysid_response_cpsd=self.sysid_response_cpsd,
+                sysid_reference_cpsd=self.sysid_reference_cpsd,
+                multiple_coherence=self.sysid_coherence,
+                frames=self.sysid_frames,
+                last_response_srs=self.last_response_srs,
+                last_drive_amplitudes=self.last_drive_amplitudes,
+                last_drive_decays=self.last_drive_decays,
+                last_drive_delays=self.last_drive_delays,
+                **self.environment_parameters.control_script_data.control_parameters,
+            )
+        elif (
+            self.environment_parameters.control_script_data.control_type
+            == ControlLawType.INTERACTIVE_CLASS
+        ):
+            self.control_law = getattr(
+                self.control_module, self.environment_parameters.control_script_data.control_object
+            )(
+                environment_parameters=self.environment_parameters,
+                transfer_function_frequencies=self.sysid_frequencies,
+                transfer_function=self.sysid_frf,
+                noise_response_cpsd=self.sysid_response_noise,
+                noise_reference_cpsd=self.sysid_reference_noise,
+                sysid_response_cpsd=self.sysid_response_cpsd,
+                sysid_reference_cpsd=self.sysid_reference_cpsd,
+                multiple_coherence=self.sysid_coherence,
+                frames=self.sysid_frames,
+                last_response_srs=self.last_response_srs,
+                last_drive_amplitudes=self.last_drive_amplitudes,
+                last_drive_decays=self.last_drive_decays,
+                last_drive_delays=self.last_drive_delays,
+                **self.environment_parameters.control_script_data.control_parameters,
+            )
+            self.control_last_interactive_parameters = None
+            self.control_has_sent_interactive_control_transfer_function_results = False
+        else:
+            raise ValueError(
+                f"Invalid type {self.environment_parameters.control_script_data.control_type}. "
+                "How did you get here?!"
+            )
+
+    def update_interactive_control_parameters(self, interactive_control_parameters):
+        """Updates the interactive control law based on received parameters"""
+        if (
+            self.environment_parameters.control_script_data.control_type
+            == ControlLawType.INTERACTIVE_CLASS
+        ):
+            self.control_law.update_parameters(interactive_control_parameters)
+            self.control_last_interactive_parameters = interactive_control_parameters
+        else:
+            raise ValueError(
+                "Received an UPDATE_INTERACTIVE_CONTROL_PARAMETERS signal without an "
+                "interactive control law.  How did this happen?"
+            )
+
+    def send_interactive_command(self, command):
+        """General method that can be used by an interactive UI object to pass commands
+        and data to its corresponding computation object"""
+        if (
+            self.environment_parameters.control_script_data.control_type
+            == ControlLawType.INTERACTIVE_CLASS
+        ):
+            self.control_law.send_command(command)
+        else:
+            raise ValueError(
+                "Received an SEND_INTERACTIVE_COMMAND signal without an interactive "
+                "control law.  How did this happen?"
+            )
 
     def system_id_complete(self, data):
         """Sends the message that system identification is complete and control calculations
         should be performed"""
         super().system_id_complete(data)
         (
-            self.frames,
+            self.sysid_frames,
             _,  # avg,
-            self.frequencies,
-            self.frf,
+            self.sysid_frequencies,
+            self.sysid_frf,
             self.sysid_coherence,
             self.sysid_response_cpsd,
             self.sysid_reference_cpsd,
@@ -1681,15 +1830,164 @@ class SDSEnvironment(AbstractSysIdEnvironment):
             self.sysid_response_noise,
             self.sysid_reference_noise,
         ) = data
-        # Perform the control prediction
         self.perform_control_prediction(True)
 
     def perform_control_prediction(self, sysid_update):
         """Performs the control prediction based on system identification information"""
+        if self.sysid_frf is None:
+            self.gui_update_queue.put(
+                (
+                    "error",
+                    (
+                        "Perform System Identification",
+                        "Perform System ID before performing test predictions",
+                    ),
+                )
+            )
+            return
+        # Perform the control prediction
+        # Depending on the type, initialize the control law
+        if self.environment_parameters.control_script_data.control_type == ControlLawType.FUNCTION:
+            output_amplitudes, output_decays, output_delays = self.control_law(
+                environment_parameters=self.environment_parameters,
+                transfer_function_frequencies=self.sysid_frequencies,
+                transfer_function=self.sysid_frf,
+                noise_response_cpsd=self.sysid_response_noise,
+                noise_reference_cpsd=self.sysid_reference_noise,
+                sysid_response_cpsd=self.sysid_response_cpsd,
+                sysid_reference_cpsd=self.sysid_reference_cpsd,
+                multiple_coherence=self.sysid_coherence,
+                frames=self.sysid_frames,
+                last_response_srs=self.last_response_srs,
+                last_drive_amplitudes=self.last_drive_amplitudes,
+                last_drive_decays=self.last_drive_decays,
+                last_drive_delays=self.last_drive_delays,
+                **self.environment_parameters.control_script_data.control_parameters,
+            )
+        elif (
+            self.environment_parameters.control_script_data.control_type == ControlLawType.CLASS
+            or self.environment_parameters.control_script_data.control_type
+            == ControlLawType.INTERACTIVE_CLASS
+        ):
+            if sysid_update:
+                self.control_law.system_id_update(
+                    transfer_function_frequencies=self.sysid_frequencies,
+                    transfer_function=self.sysid_frf,
+                    noise_response_cpsd=self.sysid_response_noise,
+                    noise_reference_cpsd=self.sysid_reference_noise,
+                    sysid_response_cpsd=self.sysid_response_cpsd,
+                    sysid_reference_cpsd=self.sysid_reference_cpsd,
+                    multiple_coherence=self.sysid_coherence,
+                    frames=self.sysid_frames,
+                )
+                if (
+                    self.environment_parameters.control_script_data.control_type
+                    == ControlLawType.INTERACTIVE_CLASS
+                ):
+                    self.gui_update_queue.put(
+                        (
+                            self.environment_name,
+                            (
+                                "interactive_control_sysid_update",
+                                (
+                                    self.sysid_frequencies,
+                                    self.sysid_frf,
+                                    self.sysid_response_noise,
+                                    self.sysid_reference_noise,
+                                    self.sysid_response_cpsd,
+                                    self.sysid_reference_cpsd,
+                                    self.sysid_coherence,
+                                    self.sysid_frames,
+                                ),
+                            ),
+                        )
+                    )
+                    self.control_has_sent_interactive_control_transfer_function_results = True
+            if (
+                self.environment_parameters.control_script_data.control_type == ControlLawType.CLASS
+                or self.control_last_interactive_parameters is not None
+            ):
+                output_amplitudes, output_decays, output_delays = self.control_law.control(
+                    last_response_srs=self.last_response_srs,
+                    last_drive_amplitudes=self.last_drive_amplitudes,
+                    last_drive_decays=self.last_drive_decays,
+                    last_drive_delays=self.last_drive_delays,
+                )
+            else:
+                self.log("Have not yet received control parameters from interactive control law!")
+                return
+        else:
+            raise ValueError(
+                f"Invalid type {self.environment_parameters.control_script_data.control_type}. "
+                "How did you get here?!"
+            )
+
+        (
+            self.predicted_drive_time_history,
+            self.predicted_response_time_history,
+            self.predicted_response_srs,
+        ) = self.simulate_response((output_amplitudes, output_decays, output_delays))
+
         self.show_test_prediction()
+
+    def simulate_response(self, data):
+        # Reconstruct drive signals
+        amplitudes, decays, delays = data
+        frequencies = self.environment_parameters.get_sds_frequencies()
+        drive_signals = sum_decayed_sines_reconstruction(
+            frequencies,
+            amplitudes[:, np.newaxis, :].T,
+            decays[:, np.newaxis, :].T,
+            delays[:, np.newaxis, :].T,
+            self.environment_parameters.sample_rate,
+            self.environment_parameters.block_size,
+        )
+        # Simulate responses to those drive signals
+        impulse_responses = np.moveaxis(np.fft.irfft(self.sysid_frf, axis=0), 0, -1)
+
+        predicted_response_time_history = np.zeros(
+            (impulse_responses.shape[0], drive_signals.shape[-1])
+        )
+
+        for i, impulse_response_row in enumerate(impulse_responses):
+            for impulse, drive in zip(impulse_response_row, drive_signals):
+                # print('Convolving {:},{:}'.format(i,j))
+                predicted_response_time_history[i, :] += sig.convolve(drive, impulse, "full")[
+                    : drive_signals.shape[-1]
+                ]
+
+        srss = []
+        for signal in predicted_response_time_history:
+            srss.append(
+                srs_function(
+                    signal,
+                    1 / self.environment_parameters.sample_rate,
+                    frequencies,
+                    self.environment_parameters.srs_data.srs_damping,
+                    self.environment_parameters.srs_data.srs_type.value
+                    * self.environment_parameters.srs_data.srs_displacement.value,
+                )
+            )
+        return drive_signals, predicted_response_time_history, srss
 
     def show_test_prediction(self):
         """Sends the test predictions to the UI"""
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (
+                    "control_predictions",
+                    (
+                        self.predicted_amplitudes,
+                        self.predicted_delays,
+                        self.predicted_decays,
+                        self.predicted_drive_time_history,
+                        self.predicted_response_time_history,
+                        self.predicted_response_srs,
+                    ),
+                ),
+            )
+        )
 
     def get_signal_generation_metadata(self):
         """Collects the metadata required to define the signal generation process"""
