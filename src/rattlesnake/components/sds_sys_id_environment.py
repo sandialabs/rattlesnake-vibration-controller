@@ -29,6 +29,7 @@ import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import traceback
 from multiprocessing.queues import Queue
+from enum import Enum
 
 import netCDF4 as nc4
 import numpy as np
@@ -71,6 +72,7 @@ from .ui_utilities import (
     load_time_history,
     multiline_plotter,
     AdaptiveNoWheelSpinBox,
+    ScientificDoubleSpinBox,
 )
 from .utilities import (
     DataAcquisitionParameters,
@@ -153,6 +155,8 @@ class SDSUI(AbstractSysIdUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.python_control_module = None
+        self.python_function_extra_arguments = []
+        self.python_function_extra_argument_widgets = {}
         self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
 
         self.control_selector_widgets = [self.definition_widget.specification_plot_selector]
@@ -178,6 +182,8 @@ class SDSUI(AbstractSysIdUI):
             plot_item.setLogMode(True, True)
 
         self.connect_callbacks()
+
+        self.select_python_module(default=True)
 
     def connect_callbacks(self):
         """Connects the callbacks to the SDS UI widgets"""
@@ -220,6 +226,9 @@ class SDSUI(AbstractSysIdUI):
         )
         self.definition_widget.autoselect_comp_frequency_checkbox.toggled.connect(
             self.update_compensation_pulse
+        )
+        self.definition_widget.control_function_input.currentIndexChanged.connect(
+            self.set_up_widgets
         )
         # Prediction
         # Run Test
@@ -555,7 +564,115 @@ class SDSUI(AbstractSysIdUI):
         self.definition_widget.upper_limit_table.removeRow(selected_row)
         self.update_specification()
 
-    def select_python_module(self, clicked, filename=None):  # pylint: disable=unused-argument
+    @staticmethod
+    def valid_annotation(annotation):
+        if annotation == int:
+            return True
+        if annotation == float:
+            return True
+        if annotation == str:
+            return True
+        if issubclass(annotation, Enum):
+            return True
+        return False
+
+    @staticmethod
+    def get_valid_control_laws(module):
+        required_control_law_arguments = {
+            "environment_parameters",
+            "transfer_function_frequencies",
+            "transfer_function",
+            "noise_response_cpsd",
+            "noise_reference_cpsd",
+            "sysid_response_cpsd",
+            "sysid_reference_cpsd",
+            "multiple_coherence",
+            "frames",
+            "total_frames",
+            "extra_parameters",
+            "last_response_srs",
+            "last_drive_amplitudes",
+            "last_drive_decays",
+            "last_drive_delays",
+        }
+        valid_control_laws = []
+        members = inspect.getmembers(module)
+        for objname, obj in members:
+            print(f"Analyzing member {objname}")
+            valid_control_law = True
+            # Check if it is a function
+            if inspect.isfunction(obj):
+                signature = inspect.signature(obj)
+                parameters = signature.parameters
+                # Check if is a valid object
+                if not all(arg in parameters for arg in required_control_law_arguments):
+                    print(f"Member {objname} does not have all required arguments")
+                    continue
+                # Get extra arguments
+                extra_arguments = []
+                print(f"{signature=}")
+                print(f"{parameters=}")
+                for name, parameter in parameters.items():
+                    # Extra arguments are not required arguments
+                    if name in required_control_law_arguments:
+                        print(f"  Argument {name} is a required argument")
+                        continue
+                    # Extra arguments must be be able to be set by keyword
+                    elif parameter.kind != inspect.Parameter.POSITIONAL_ONLY:
+                        annotation = parameter.annotation
+                        default = parameter.default
+                        if (
+                            not SDSUI.valid_annotation(annotation)
+                            and default == inspect.Parameter.empty
+                        ):
+                            # If it doesn't have an annotation, we can't automatically create a
+                            # widget for it, so if it also doesn't have a default argument, we can't
+                            # use it.
+                            print(
+                                f"  Argument {name} has no valid annotation or default "
+                                "value, invalid control law"
+                            )
+                            valid_control_law = False
+                            break
+                        if (
+                            not SDSUI.valid_annotation(annotation)
+                            and default != inspect.Parameter.empty
+                        ):
+                            print(
+                                f"  Argument {name} has an invalid annotation but contains a "
+                                "default value which will be used, and will therefore not be "
+                                "treated as an extra parameter"
+                            )
+                            continue
+                        extra_arguments.append([name, annotation, default])
+                    elif (
+                        parameter.kind == inspect.Parameter.POSITIONAL_ONLY
+                        and default == inspect.Parameter.empty
+                    ):
+                        print(
+                            f"  Argument {name} is positional only without a "
+                            "default and therefore cannot be specified."
+                        )
+                        valid_control_law = False
+                        break
+                    else:
+                        print(
+                            f"  Argument {name} is positional only but has a default argument"
+                            "which will be used, and will therefore not be treated as an "
+                            "extra parameter"
+                        )
+                        continue
+                if not valid_control_law:
+                    continue
+                valid_control_laws.append([objname, extra_arguments])
+            else:
+                print(f"Member {objname} is not a valid type of object to be a control law")
+        print(valid_control_laws)
+        return valid_control_laws
+
+    def select_python_module(
+        self, clicked=None, filename=None, default=False
+    ):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
         Parameters
@@ -567,48 +684,76 @@ class SDSUI(AbstractSysIdUI):
             loading from a file (Default value = None).
 
         """
-        if filename is None or not os.path.isfile(filename):
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self.definition_widget,
-                "Select Python Module",
-                filter="Python Modules (*.py)",
+        if default:
+            self.python_control_module = importlib.import_module(
+                "rattlesnake.components.sds_sys_id_control_law"
             )
-            if filename == "":
-                return
-        self.python_control_module = load_python_module(filename)
-        functions = [
-            function
-            for function in inspect.getmembers(self.python_control_module)
-            if (
-                inspect.isfunction(function[1])
-                and len(inspect.signature(function[1]).parameters)
-                >= 6  # TODO: Change proper number of arguments
-            )
-            or inspect.isgeneratorfunction(function[1])
-            or (
-                inspect.isclass(function[1])
-                and all(
-                    [
-                        (
-                            method in function[1].__dict__
-                            and not (
-                                hasattr(function[1].__dict__[method], "__isabstractmethod__")
-                                and function[1].__dict__[method].__isabstractmethod__
-                            )
-                        )
-                        for method in ["system_id_update", "control"]
-                    ]
+            filename = "rattlesnake.components.sds_sys_id_control_law"
+        else:
+            if filename is None or not os.path.isfile(filename):
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self.definition_widget,
+                    "Select Python Module",
+                    filter="Python Modules (*.py)",
                 )
-            )
-        ]
+                if filename == "":
+                    return
+            self.python_control_module = load_python_module(filename)
+
+        # Any valid control law must have the required arguments
+
+        # Analyze the functions and classes in the module
+
+        self.python_function_extra_arguments = SDSUI.get_valid_control_laws(
+            self.python_control_module
+        )
         self.log(
             f"Loaded module {self.python_control_module.__name__} with "
-            f"functions {[function[0] for function in functions]}"
+            f"functions {[function[0] for function in self.python_function_extra_arguments]}"
         )
         self.definition_widget.control_function_input.clear()
         self.definition_widget.control_script_file_path_input.setText(filename)
-        for function in functions:
+        for function in self.python_function_extra_arguments:
             self.definition_widget.control_function_input.addItem(function[0])
+        self.set_up_widgets()
+
+    @staticmethod
+    def create_widget_for_type(arg_type, default_value):
+        if arg_type == int:
+            widget = QtWidgets.QSpinBox()
+            widget.setMinimum(1000000)
+            widget.setMaximum(1000000)
+            widget.setValue(default_value)
+        elif arg_type == float:
+            widget = ScientificDoubleSpinBox()
+            widget.setValue(default_value)
+        elif arg_type == str:
+            widget = QtWidgets.QTextEdit()
+            widget.setText(default_value)
+        elif issubclass(arg_type, Enum):
+            widget = QtWidgets.QComboBox()
+            for e in arg_type:
+                widget.addItem(e.name, e)
+            widget.setCurrentText(default_value.name)
+        else:
+            raise ValueError(f"Unsupported argument type: {arg_type}")
+        return widget
+
+    def set_up_widgets(self):
+        # Clear out existing widgets
+        layout = self.definition_widget.control_parameters_widget_layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.python_function_extra_argument_widgets.clear()
+        index = self.definition_widget.control_function_input.currentIndex()
+        _, extra_arguments = self.python_function_extra_arguments[index]
+        for arg_name, arg_type, arg_default in extra_arguments:
+            widget = SDSUI.create_widget_for_type(arg_type, arg_default)
+            layout.addRow(arg_name, widget)
+            self.python_function_extra_argument_widgets[arg_name] = widget
 
     def update_specification(self):
         channel_index = self.definition_widget.specification_plot_selector.currentIndex()
@@ -689,6 +834,22 @@ class SDSUI(AbstractSysIdUI):
         )
         return spec_data
 
+    def collect_control_extra_parameters(self):
+        kwargs = {}
+        for arg_name, widget in self.python_function_extra_argument_widgets.items():
+            if isinstance(widget, QtWidgets.QSpinBox):
+                kwargs[arg_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+                kwargs[arg_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QTextEdit):
+                kwargs[arg_name] = widget.toPlainText()
+            elif isinstance(widget, QtWidgets.QComboBox):
+                kwargs[arg_name] = widget.currentData()
+            else:
+                raise ValueError(f"Unsupported widget type: {type(widget)}")
+        print(f"Got Arguments {kwargs=}")
+        return kwargs
+
     def collect_control_data(self):
         if self.python_control_module is None:
             control_module = None
@@ -703,9 +864,7 @@ class SDSUI(AbstractSysIdUI):
             control_function_type = ControlLawType(
                 self.definition_widget.control_function_generator_selector.currentIndex()
             )
-            control_function_parameters = (
-                self.definition_widget.control_parameters_text_input.toPlainText()
-            )
+            control_function_parameters = self.collect_control_extra_parameters()
         control_data = ControlParameters(
             control_module, control_function, control_function_type, control_function_parameters
         )
@@ -1338,9 +1497,6 @@ class SDSUI(AbstractSysIdUI):
             self.definition_widget.python_class_input.setCurrentIndex(
                 self.definition_widget.python_class_input.findText(worksheet.cell(13, 2).value)
             )
-        self.definition_widget.control_parameters_text_input.setText(
-            "" if worksheet.cell(13, 2).value is None else str(worksheet.cell(14, 2).value)
-        )
 
         # Control channels
         column_index = 2

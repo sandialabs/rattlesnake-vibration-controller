@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1252</width>
-    <height>867</height>
+    <height>868</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -712,11 +712,6 @@ All Sine Tones</string>
                 </item>
                 <item>
                  <property name="text">
-                  <string>Generator</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
                   <string>Class</string>
                  </property>
                 </item>
@@ -741,22 +736,21 @@ All Sine Tones</string>
              </widget>
             </item>
             <item>
-             <widget class="QTextEdit" name="control_parameters_text_input">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+             <widget class="QScrollArea" name="control_parameters_scroll_area">
+              <property name="widgetResizable">
+               <bool>true</bool>
               </property>
-              <property name="toolTip">
-               <string>Any additional parameters needed by the control law are entered in this text box.  It is up to the control law to define what is needed to be defined in this box.</string>
-              </property>
-              <property name="lineWrapMode">
-               <enum>QTextEdit::NoWrap</enum>
-              </property>
-              <property name="acceptRichText">
-               <bool>false</bool>
-              </property>
+              <widget class="QWidget" name="control_parameters_widget">
+               <property name="geometry">
+                <rect>
+                 <x>0</x>
+                 <y>0</y>
+                 <width>328</width>
+                 <height>165</height>
+                </rect>
+               </property>
+               <layout class="QFormLayout" name="control_parameters_widget_layout"/>
+              </widget>
              </widget>
             </item>
            </layout>

@@ -115,6 +115,39 @@ class NoWheelComboBox(QtWidgets.QComboBox):
         event.ignore()
 
 
+class ScientificDoubleSpinBox(NoWheelSpinBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setDecimals(10)  # Allow for higher precision
+        self.setRange(-1e100, 1e100)  # Set a wide range for scientific values
+        # self.setAlignment(Qt.AlignRight)  # Align text to the right for better readability
+
+    def textFromValue(self, value):
+        """
+        Override to display the value in scientific notation.
+        """
+        return f"{value:g}"  # Format as scientific notation with 10 decimal places
+
+    def valueFromText(self, text):
+        """
+        Override to parse scientific notation input.
+        """
+        try:
+            return float(text)  # Convert the text to a float
+        except ValueError:
+            return 0.0  # Return 0.0 if the input is invalid
+
+    def validate(self, text, pos):
+        """
+        Override to validate scientific notation input.
+        """
+        try:
+            float(text)  # Check if the text can be converted to a float
+            return QtGui.QValidator.Acceptable, text, pos
+        except ValueError:
+            return QtGui.QValidator.Invalid, text, pos
+
+
 def get_table_strings(tablewidget: QtWidgets.QTableWidget):
     """Collect a table of strings from a QTableWidget
 

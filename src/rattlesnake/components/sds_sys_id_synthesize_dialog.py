@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from .ui_utilities import AdaptiveNoWheelSpinBox
 from .sds_sys_id_utilities import (
     sum_decayed_sines,
-    convert_damping_strategy,
     decayed_sine_table,
     srs,
     sum_decayed_sines_reconstruction,

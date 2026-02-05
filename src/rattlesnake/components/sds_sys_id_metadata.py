@@ -237,9 +237,8 @@ class ControlLawType(Enum):
     """Enumeration containing acceptable types of objects to use for a control law"""
 
     FUNCTION = 0
-    GENERATOR = 1
-    CLASS = 2
-    INTERACTIVE_CLASS = 3
+    CLASS = 1
+    INTERACTIVE_CLASS = 2
 
 
 class ControlParameters:
@@ -250,7 +249,7 @@ class ControlParameters:
         control_script: str | None,
         control_object: str | None,
         control_type: ControlLawType | None,
-        control_parameters: str | None,
+        control_parameters: dict | None,
     ):
         """Initializes an object to store information about the custom control law
 
@@ -262,8 +261,8 @@ class ControlParameters:
             The name of the item (function, generator, class) containing the control law
         control_type : ControlLawType
             The type of item defining the control law
-        control_parameters : str
-            Any extra parameters to pass to the control law.
+        control_parameters : dict
+            Any extra keyword arguments to pass to the control law.
         """
         self.control_script = control_script
         self.control_object = control_object
