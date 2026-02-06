@@ -469,6 +469,12 @@ class SDSMetadata(AbstractSysIdMetadata):
             )
             var[...] = self.reference_transformation_matrix
 
+    def get_compensation_pulse_frequency(self):
+        if self.compensation_pulse_data.compensation_frequency is None:
+            return min(self.get_sds_frequencies()) / 3
+        else:
+            return self.compensation_pulse_data.compensation_frequency
+
     def get_sds_frequencies(self):
         if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
             return self.specification_data.frequencies
@@ -490,3 +496,33 @@ class SDSMetadata(AbstractSysIdMetadata):
             self.decay_data.decay_strategy,
             DecayStrategy.DAMPING,
         )
+
+    def get_sds_frequencies_w_compensation_pulse(self):
+        if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
+            frequencies = self.specification_data.frequencies
+        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
+            frequencies = octspace(*self.tone_data.tone_data)
+        if self.tone_data.tone_strategy == ToneStrategy.MANUAL:
+            frequencies = self.tone_data.tone_data
+        if self.compensation_pulse_data.use_compensation_pulse:
+            frequencies = np.concatenate((frequencies, [self.get_compensation_pulse_frequency()]))
+        return frequencies
+
+    def get_sds_decays_w_compensation_pulse(self):
+        frequencies = self.get_sds_frequencies()
+        if self.decay_data.common_decay:
+            decay_values = self.decay_data.decay_data[0] * np.ones(len(frequencies))
+        else:
+            decay_values = self.decay_data.decay_data
+        decay_values = convert_damping_strategy(
+            decay_values,
+            frequencies,
+            self.block_size / self.sample_rate,
+            self.decay_data.decay_strategy,
+            DecayStrategy.DAMPING,
+        )
+        if self.compensation_pulse_data.use_compensation_pulse:
+            decay_values = np.concatenate(
+                (decay_values, [self.compensation_pulse_data.compensation_decay])
+            )
+        return decay_values

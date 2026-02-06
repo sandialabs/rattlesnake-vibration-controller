@@ -21,7 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+# region Imports
 import importlib
 import inspect
 import multiprocessing as mp
@@ -89,13 +89,11 @@ from .utilities import (
     load_python_module,
 )
 
-# %% Global Variables
+# region Globals
 CONTROL_TYPE = ControlTypes.SDS
 MAXIMUM_NAME_LENGTH = 50
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
-
-# %% UI
 
 from .abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
@@ -120,6 +118,7 @@ from .spectral_processing import (  # noqa: E402 pylint: disable=wrong-import-po
 )
 
 
+# region UI
 class SDSUI(AbstractSysIdUI):
     """Class defining the user interface for the SDS environment"""
 
@@ -175,7 +174,7 @@ class SDSUI(AbstractSysIdUI):
             environment_command_queue,
             self.log_name,
         )
-        self.prediction_table.lock_table()
+        self.prediction_table.lock_table(all_data=True)
 
         self.plotwidgets = [
             self.definition_widget.specification_plot,
@@ -241,7 +240,7 @@ class SDSUI(AbstractSysIdUI):
         # Prediction
         # Run Test
 
-    # %% Data Acquisition
+    # region UI Data Acquisition
 
     def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
         super().initialize_data_acquisition(data_acquisition_parameters)
@@ -324,7 +323,7 @@ class SDSUI(AbstractSysIdUI):
         """Names of the physical drive channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
-    # %% Environment
+    # region UI Environment
 
     @property
     def physical_control_indices(self):
@@ -381,6 +380,7 @@ class SDSUI(AbstractSysIdUI):
                 for i in range(self.environment_parameters.reference_transformation_matrix.shape[0])
             ]
 
+    # region UI Specification
     def load_specification(self, clicked, filename=None):  # pylint: disable=unused-argument
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -572,6 +572,86 @@ class SDSUI(AbstractSysIdUI):
         self.definition_widget.upper_limit_table.removeRow(selected_row)
         self.update_specification()
 
+    def update_specification(self):
+        channel_index = self.definition_widget.specification_plot_selector.currentIndex()
+        num_freqs = self.definition_widget.breakpoint_table.rowCount()
+        freqs = np.empty(num_freqs, "float")
+        srss = np.empty(num_freqs, "float")
+        lower_limits = np.empty(num_freqs, "float")
+        upper_limits = np.empty(num_freqs, "float")
+        if self.definition_widget.from_spec_button.isChecked():
+            self.update_tone_table()
+        for row in range(num_freqs):
+            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
+            srss[row] = (
+                np.nan
+                if self.definition_widget.breakpoint_table.cellWidget(
+                    row, 1 + channel_index
+                ).value()
+                == 0
+                else self.definition_widget.breakpoint_table.cellWidget(
+                    row, 1 + channel_index
+                ).value()
+            )
+            lower_limits[row] = (
+                np.nan
+                if self.definition_widget.lower_limit_table.cellWidget(
+                    row, 1 + channel_index
+                ).value()
+                == 0
+                else self.definition_widget.lower_limit_table.cellWidget(
+                    row, 1 + channel_index
+                ).value()
+            )
+            upper_limits[row] = (
+                np.nan
+                if self.definition_widget.upper_limit_table.cellWidget(
+                    row, 1 + channel_index
+                ).value()
+                == 0
+                else self.definition_widget.upper_limit_table.cellWidget(
+                    row, 1 + channel_index
+                ).value()
+            )
+        self.plot_data_items["specification_srs"].setData(freqs, srss)
+        self.plot_data_items["specification_lower_limit"].setData(freqs, lower_limits)
+        self.plot_data_items["specification_upper_limit"].setData(freqs, upper_limits)
+
+    def collect_specification(self):
+        num_freqs = self.definition_widget.breakpoint_table.rowCount()
+        num_control = self.definition_widget.breakpoint_table.columnCount() - 1
+        freqs = np.empty(num_freqs, "float")
+        srss = np.empty((num_freqs, num_control), "float")
+        lower_limits = np.empty((num_freqs, num_control), "float")
+        upper_limits = np.empty((num_freqs, num_control), "float")
+        if self.definition_widget.from_spec_button.isChecked():
+            self.update_tone_table()
+        for row in range(num_freqs):
+            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
+            for col in range(num_control):
+                srss[row, col] = (
+                    np.nan
+                    if self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value() == 0
+                    else self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value()
+                )
+                lower_limits[row, col] = (
+                    np.nan
+                    if self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
+                    == 0
+                    else self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
+                )
+                upper_limits[row, col] = (
+                    np.nan
+                    if self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
+                    == 0
+                    else self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
+                )
+        spec_data = SpecParameters(
+            freqs, srss, lower_limits, upper_limits, self.definition_widget.num_hits_spinbox.value()
+        )
+        return spec_data
+
+    # region UI Control Laws
     @staticmethod
     def valid_annotation(annotation):
         if annotation == int:
@@ -604,7 +684,7 @@ class SDSUI(AbstractSysIdUI):
         valid_control_laws = []
         members = inspect.getmembers(module)
         for objname, obj in members:
-            print(f"Analyzing member {objname}")
+            # print(f"Analyzing member {objname}")
             valid_control_law = True
             # Check if it is a function
             if inspect.isfunction(obj):
@@ -612,16 +692,16 @@ class SDSUI(AbstractSysIdUI):
                 parameters = signature.parameters
                 # Check if is a valid object
                 if not all(arg in parameters for arg in required_control_law_arguments):
-                    print(f"Member {objname} does not have all required arguments")
+                    # print(f"Member {objname} does not have all required arguments")
                     continue
                 # Get extra arguments
                 extra_arguments = []
-                print(f"{signature=}")
-                print(f"{parameters=}")
+                # print(f"{signature=}")
+                # print(f"{parameters=}")
                 for name, parameter in parameters.items():
                     # Extra arguments are not required arguments
                     if name in required_control_law_arguments:
-                        print(f"  Argument {name} is a required argument")
+                        # print(f"  Argument {name} is a required argument")
                         continue
                     # Extra arguments must be be able to be set by keyword
                     elif parameter.kind != inspect.Parameter.POSITIONAL_ONLY:
@@ -634,46 +714,46 @@ class SDSUI(AbstractSysIdUI):
                             # If it doesn't have an annotation, we can't automatically create a
                             # widget for it, so if it also doesn't have a default argument, we can't
                             # use it.
-                            print(
-                                f"  Argument {name} has no valid annotation or default "
-                                "value, invalid control law"
-                            )
+                            # print(
+                            #     f"  Argument {name} has no valid annotation or default "
+                            #     "value, invalid control law"
+                            # )
                             valid_control_law = False
                             break
                         if (
                             not SDSUI.valid_annotation(annotation)
                             and default != inspect.Parameter.empty
                         ):
-                            print(
-                                f"  Argument {name} has an invalid annotation but contains a "
-                                "default value which will be used, and will therefore not be "
-                                "treated as an extra parameter"
-                            )
+                            # print(
+                            #     f"  Argument {name} has an invalid annotation but contains a "
+                            #     "default value which will be used, and will therefore not be "
+                            #     "treated as an extra parameter"
+                            # )
                             continue
                         extra_arguments.append([name, annotation, default])
                     elif (
                         parameter.kind == inspect.Parameter.POSITIONAL_ONLY
                         and default == inspect.Parameter.empty
                     ):
-                        print(
-                            f"  Argument {name} is positional only without a "
-                            "default and therefore cannot be specified."
-                        )
+                        # print(
+                        #     f"  Argument {name} is positional only without a "
+                        #     "default and therefore cannot be specified."
+                        # )
                         valid_control_law = False
                         break
                     else:
-                        print(
-                            f"  Argument {name} is positional only but has a default argument"
-                            "which will be used, and will therefore not be treated as an "
-                            "extra parameter"
-                        )
+                        # print(
+                        #     f"  Argument {name} is positional only but has a default argument"
+                        #     "which will be used, and will therefore not be treated as an "
+                        #     "extra parameter"
+                        # )
                         continue
                 if not valid_control_law:
                     continue
                 valid_control_laws.append([objname, extra_arguments])
-            else:
-                print(f"Member {objname} is not a valid type of object to be a control law")
-        print(valid_control_laws)
+            # else:
+            # print(f"Member {objname} is not a valid type of object to be a control law")
+        # print(valid_control_laws)
         return valid_control_laws
 
     def select_python_module(
@@ -761,85 +841,6 @@ class SDSUI(AbstractSysIdUI):
             layout.addRow(arg_name, widget)
             self.python_function_extra_argument_widgets[arg_name] = widget
 
-    def update_specification(self):
-        channel_index = self.definition_widget.specification_plot_selector.currentIndex()
-        num_freqs = self.definition_widget.breakpoint_table.rowCount()
-        freqs = np.empty(num_freqs, "float")
-        srss = np.empty(num_freqs, "float")
-        lower_limits = np.empty(num_freqs, "float")
-        upper_limits = np.empty(num_freqs, "float")
-        if self.definition_widget.from_spec_button.isChecked():
-            self.update_tone_table()
-        for row in range(num_freqs):
-            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
-            srss[row] = (
-                np.nan
-                if self.definition_widget.breakpoint_table.cellWidget(
-                    row, 1 + channel_index
-                ).value()
-                == 0
-                else self.definition_widget.breakpoint_table.cellWidget(
-                    row, 1 + channel_index
-                ).value()
-            )
-            lower_limits[row] = (
-                np.nan
-                if self.definition_widget.lower_limit_table.cellWidget(
-                    row, 1 + channel_index
-                ).value()
-                == 0
-                else self.definition_widget.lower_limit_table.cellWidget(
-                    row, 1 + channel_index
-                ).value()
-            )
-            upper_limits[row] = (
-                np.nan
-                if self.definition_widget.upper_limit_table.cellWidget(
-                    row, 1 + channel_index
-                ).value()
-                == 0
-                else self.definition_widget.upper_limit_table.cellWidget(
-                    row, 1 + channel_index
-                ).value()
-            )
-        self.plot_data_items["specification_srs"].setData(freqs, srss)
-        self.plot_data_items["specification_lower_limit"].setData(freqs, lower_limits)
-        self.plot_data_items["specification_upper_limit"].setData(freqs, upper_limits)
-
-    def collect_specification(self):
-        num_freqs = self.definition_widget.breakpoint_table.rowCount()
-        num_control = self.definition_widget.breakpoint_table.columnCount() - 1
-        freqs = np.empty(num_freqs, "float")
-        srss = np.empty((num_freqs, num_control), "float")
-        lower_limits = np.empty((num_freqs, num_control), "float")
-        upper_limits = np.empty((num_freqs, num_control), "float")
-        if self.definition_widget.from_spec_button.isChecked():
-            self.update_tone_table()
-        for row in range(num_freqs):
-            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
-            for col in range(num_control):
-                srss[row, col] = (
-                    np.nan
-                    if self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value() == 0
-                    else self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value()
-                )
-                lower_limits[row, col] = (
-                    np.nan
-                    if self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
-                    == 0
-                    else self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
-                )
-                upper_limits[row, col] = (
-                    np.nan
-                    if self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
-                    == 0
-                    else self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
-                )
-        spec_data = SpecParameters(
-            freqs, srss, lower_limits, upper_limits, self.definition_widget.num_hits_spinbox.value()
-        )
-        return spec_data
-
     def collect_control_extra_parameters(self):
         kwargs = {}
         for arg_name, widget in self.python_function_extra_argument_widgets.items():
@@ -853,7 +854,7 @@ class SDSUI(AbstractSysIdUI):
                 kwargs[arg_name] = widget.currentData()
             else:
                 raise ValueError(f"Unsupported widget type: {type(widget)}")
-        print(f"Got Arguments {kwargs=}")
+        # print(f"Got Arguments {kwargs=}")
         return kwargs
 
     def collect_control_data(self):
@@ -870,6 +871,7 @@ class SDSUI(AbstractSysIdUI):
         )
         return control_data
 
+    # region UI Collect Metadata
     def collect_tone_data(self):
         if self.definition_widget.from_spec_button.isChecked():
             tone_data = ToneParameters(ToneStrategy.FROM_SPEC, None)
@@ -1281,7 +1283,7 @@ class SDSUI(AbstractSysIdUI):
     def synthesize_sds(self):
         SDSSynthesizeDialog.show_dialog(self)
 
-    # %% Predictions
+    # region UI Prediction
 
     def show_max_voltage_prediction(self):
         """Callback to find and plot the time history showing the maximum drive voltage required"""
@@ -1323,7 +1325,7 @@ class SDSUI(AbstractSysIdUI):
             self.log_name, (SDSCommands.PERFORM_CONTROL_PREDICTION, False)
         )
 
-    # %% Control
+    # region UI Control
 
     def start_control(self):
         """Starts the chain of events to start the environment"""
@@ -1339,7 +1341,7 @@ class SDSUI(AbstractSysIdUI):
         """Updates the test level based on a profile event"""
         self.run_widget.test_level_selector.setValue(int(test_level))
 
-    # %% Misc
+    # region UI Update and Templates
 
     def retrieve_metadata(self, netcdf_handle: nc4.Dataset = None, environment_name=None):
         group = super().retrieve_metadata(netcdf_handle, environment_name)
@@ -1602,6 +1604,7 @@ class SDSUI(AbstractSysIdUI):
         # Load in the specification
         self.load_specification(None, worksheet.cell(11, 2).value)
 
+    # region Templates
     @staticmethod
     def create_environment_template(environment_name, workbook):
 
@@ -1624,7 +1627,7 @@ class SDSUI(AbstractSysIdUI):
         )
 
 
-# %% Environment
+# region Environment Process
 
 
 class SDSEnvironment(AbstractSysIdEnvironment):
@@ -1696,7 +1699,9 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         self.predicted_delays = None
         self.predicted_drive_time_history = None
 
+    # region Environment
     def initialize_environment_test_parameters(self, environment_parameters: SDSMetadata):
+        print("Environment Initialized Parameters")
         # Check if things need to be reset
         if self.environment_parameters is None or not np.array_equal(
             self.environment_parameters.control_channel_indices,
@@ -1786,6 +1791,7 @@ class SDSEnvironment(AbstractSysIdEnvironment):
                 "How did you get here?!"
             )
 
+    # region Interactive Control Law
     def update_interactive_control_parameters(self, interactive_control_parameters):
         """Updates the interactive control law based on received parameters"""
         if (
@@ -1814,9 +1820,11 @@ class SDSEnvironment(AbstractSysIdEnvironment):
                 "control law.  How did this happen?"
             )
 
+    # region System ID
     def system_id_complete(self, data):
         """Sends the message that system identification is complete and control calculations
         should be performed"""
+        print("Environment System ID Complete!")
         super().system_id_complete(data)
         (
             self.sysid_frames,
@@ -1832,8 +1840,10 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         ) = data
         self.perform_control_prediction(True)
 
+    # region Prediction
     def perform_control_prediction(self, sysid_update):
         """Performs the control prediction based on system identification information"""
+        print("Performing Control Prediction")
         if self.sysid_frf is None:
             self.gui_update_queue.put(
                 (
@@ -1927,13 +1937,16 @@ class SDSEnvironment(AbstractSysIdEnvironment):
             self.predicted_response_time_history,
             self.predicted_response_srs,
         ) = self.simulate_response((output_amplitudes, output_decays, output_delays))
-
+        self.predicted_amplitudes = output_amplitudes
+        self.predicted_decays = output_decays
+        self.predicted_delays = output_delays
         self.show_test_prediction()
 
     def simulate_response(self, data):
+        print("Reconstructing Drives")
         # Reconstruct drive signals
         amplitudes, decays, delays = data
-        frequencies = self.environment_parameters.get_sds_frequencies()
+        frequencies = self.environment_parameters.get_sds_frequencies_w_compensation_pulse()
         drive_signals = sum_decayed_sines_reconstruction(
             frequencies,
             amplitudes[:, np.newaxis, :].T,
@@ -1943,12 +1956,13 @@ class SDSEnvironment(AbstractSysIdEnvironment):
             self.environment_parameters.block_size,
         )
         # Simulate responses to those drive signals
+        print("Computing Impulse Response")
         impulse_responses = np.moveaxis(np.fft.irfft(self.sysid_frf, axis=0), 0, -1)
 
         predicted_response_time_history = np.zeros(
             (impulse_responses.shape[0], drive_signals.shape[-1])
         )
-
+        print("Simulating Response")
         for i, impulse_response_row in enumerate(impulse_responses):
             for impulse, drive in zip(impulse_response_row, drive_signals):
                 # print('Convolving {:},{:}'.format(i,j))
@@ -1957,17 +1971,19 @@ class SDSEnvironment(AbstractSysIdEnvironment):
                 ]
 
         srss = []
+        print("Computing SRS")
         for signal in predicted_response_time_history:
             srss.append(
                 srs_function(
                     signal,
                     1 / self.environment_parameters.sample_rate,
-                    frequencies,
+                    self.environment_parameters.get_sds_frequencies(),
                     self.environment_parameters.srs_data.srs_damping,
                     self.environment_parameters.srs_data.srs_type.value
                     * self.environment_parameters.srs_data.srs_displacement.value,
-                )
+                )[0]
             )
+        srss = np.array(srss).T
         return drive_signals, predicted_response_time_history, srss
 
     def show_test_prediction(self):
@@ -1989,6 +2005,7 @@ class SDSEnvironment(AbstractSysIdEnvironment):
             )
         )
 
+    # region Control
     def get_signal_generation_metadata(self):
         """Collects the metadata required to define the signal generation process"""
         return SignalGenerationMetadata(
@@ -2017,7 +2034,7 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         )
 
 
-# %% Process
+# region Process
 
 
 def sds_process(

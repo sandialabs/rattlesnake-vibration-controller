@@ -104,6 +104,17 @@ def default_control_law(
         (num_frequencies, num_drive_channels)
     """
     print("Running the default control law!")
+    frequencies = environment_parameters.get_sds_frequencies_w_compensation_pulse()
+    num_frequencies = len(frequencies)
+    num_drive_signals = environment_parameters.num_reference_channels
+    decays = environment_parameters.get_sds_decays_w_compensation_pulse()
+    amplitudes = np.ones((num_frequencies, num_drive_signals)) * np.linspace(
+        1, 2, num_drive_signals
+    )
+    amplitudes[1::2] = -1 * amplitudes[1::2]
+    delays = np.zeros((num_frequencies, num_drive_signals))
+    decays = np.ones((num_frequencies, num_drive_signals)) * decays[:, np.newaxis]
+    return amplitudes, decays, delays
 
 
 # Define a function to do the optimization
