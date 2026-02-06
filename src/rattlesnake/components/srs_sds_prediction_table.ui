@@ -79,7 +79,7 @@
        <item>
         <layout class="QVBoxLayout" name="excitation_plot_layout">
          <item>
-          <widget class="QTableWidget" name="tableWidget">
+          <widget class="QTableWidget" name="sds_table">
            <column>
             <property name="text">
              <string>Frequency</string>
