@@ -62,6 +62,7 @@ project:
         - file: book/src/appendix_d.md
     - file: book/src/notation.md
     - file: book/src/contributing.md
+    - file: book/src/sqa.md
     - file: book/src/ui_documentation.md
       children:
         - file: book/src/_generated/random_vibration_definition_doc.md
