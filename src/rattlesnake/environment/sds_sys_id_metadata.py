@@ -26,7 +26,7 @@ import netCDF4 as nc4
 import numpy as np
 
 from rattlesnake.environment.abstract_sysid_environment import AbstractSysIdMetadata
-from rattlesnake.environment.sds_sys_id_utilities import octspace
+from rattlesnake.environment.sds_sys_id_utilities import octspace, DecayedSineTable
 
 
 class ToneStrategy(Enum):
@@ -602,3 +602,19 @@ class SDSMetadata(AbstractSysIdMetadata):
                 (decay_values, [self.compensation_pulse_data.compensation_decay])
             )
         return decay_values
+
+
+class SDSRunMetadata:
+    def __init__(
+        self,
+        sds_table: DecayedSineTable,
+        test_level: int,
+        target_hits_at_level: int,
+        automatic_hits: bool,
+        automatic_interval: float = None,
+    ):
+        self.sds_table = sds_table
+        self.test_level = test_level
+        self.target_hits_at_level = target_hits_at_level
+        self.automatic_hits = automatic_hits
+        self.automatic_interval = automatic_interval

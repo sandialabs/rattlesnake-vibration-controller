@@ -4,6 +4,7 @@ from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSy
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
+    SDSRunMetadata,
     ToneStrategy,
     ToneParameters,
     CompPulseParameters,
@@ -47,6 +48,7 @@ from rattlesnake.utilities import (
 from multiprocessing.queues import Queue
 from rattlesnake.user_interface.sds_sys_id_prediction_table import SDSPredictionTable
 from rattlesnake.user_interface.sds_sys_id_synthesize_dialog import SDSSynthesizeDialog
+from rattlesnake.user_interface.sds_sys_id_run_table import SDSRunTableDialog
 import inspect
 import numpy as np
 import importlib
@@ -112,8 +114,15 @@ class SDSUI(AbstractSysIdUI):
             self.prediction_widget.prediction_table_placeholder,
             environment_command_queue,
             self.log_name,
+            prediction_mode=True,
         )
         self.prediction_table.lock_table(all_data=True)
+
+        self.run_table_dialog = SDSRunTableDialog(
+            environment_command_queue, self.log_name, prediction_mode=False, parent=self.run_widget
+        )
+        self.run_table = self.run_table_dialog.run_table
+        self.run_table.lock_table(frequencies=True)
 
         self.plotwidgets = [
             self.definition_widget.specification_plot,
@@ -177,7 +186,12 @@ class SDSUI(AbstractSysIdUI):
             self.set_up_widgets
         )
         # Prediction
+        self.prediction_widget.recompute_prediction_button.clicked.connect(
+            self.recompute_prediction
+        )
         # Run Test
+        self.run_widget.sds_table_button.clicked.connect(self.show_run_table)
+        self.run_widget.start_test_button.clicked.connect(self.start_control)
 
     # region UI Data Acquisition
 
@@ -919,7 +933,9 @@ class SDSUI(AbstractSysIdUI):
         self.prediction_table.update_names(
             self.initialized_output_names, self.initialized_control_names
         )
+        self.run_table.update_names(self.initialized_output_names, self.initialized_control_names)
         self.prediction_table.update_parameters(self.environment_parameters)
+        self.run_table.update_parameters(self.environment_parameters)
         return self.environment_parameters
 
     def define_transformation_matrices(
@@ -1128,7 +1144,7 @@ class SDSUI(AbstractSysIdUI):
                     row, 1
                 ).value()
                 frequency_values[row] = self.definition_widget.tone_table.cellWidget(row, 0).value()
-            new_decay_values = convert_damping_strategy(
+            new_decay_values = convert_decay_strategy(
                 current_decay_values,
                 frequency_values,
                 self.definition_widget.block_size_selector.value()
@@ -1258,7 +1274,7 @@ class SDSUI(AbstractSysIdUI):
         index = self.prediction_widget.excitation_voltage_list.row(item)
         self.prediction_widget.excitation_selector.setCurrentIndex(index)
 
-    def recompute_predictions(self):
+    def recompute_prediction(self):
         """Recomputes the control predictions"""
         self.environment_command_queue.put(
             self.log_name, (SDSCommands.PERFORM_CONTROL_PREDICTION, False)
@@ -1266,8 +1282,53 @@ class SDSUI(AbstractSysIdUI):
 
     # region UI Control
 
+    def ask_yes_no(self, parent=None, title="Confirm", text="Proceed?") -> bool:
+        btn = QtWidgets.QMessageBox.question(
+            parent,
+            title,
+            text,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,  # default selection (optional)
+        )
+        return btn == QtWidgets.QMessageBox.Yes
+
+    def show_run_table(self):
+        self.run_table_dialog.show()
+
+    def collect_run_metadata(self):
+        metadata = SDSRunMetadata(
+            self.run_table.sds_table,
+            self.run_widget.current_test_level_selector.value(),
+            self.run_widget.target_hits_at_level_selector.value(),
+            self.run_widget.auto_hits_checkbox.isChecked(),
+            QtCore.QTime(0, 0).secsTo(self.run_widget.auto_hit_interval_selector.time()),
+        )
+        return metadata
+
     def start_control(self):
         """Starts the chain of events to start the environment"""
+        if (
+            self.run_widget.current_hits_at_level_display.value()
+            >= self.run_widget.target_hits_at_level_selector.value()
+        ):
+            confirm = self.ask_yes_no(
+                self.run_widget,
+                "Target Hits Reached, Are you Sure?",
+                "The number of target hits at this level has been reached.\n\n"
+                "Are you sure you wish to continue?",
+            )
+            if not confirm:
+                return
+        metadata = self.collect_run_metadata()
+        self.enable_control(False)
+        self.environment_command_queue.put(
+            self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
+        )
+        self.environment_command_queue.put(self.log_name, (SDSCommands.START_CONTROL, metadata))
+        if self.run_widget.current_test_level_selector.value >= 0:
+            self.controller_communication_queue.put(
+                self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
+            )
 
     def stop_control(self):
         """Starts the sequence of events to stop the controller prematurely"""
@@ -1275,10 +1336,21 @@ class SDSUI(AbstractSysIdUI):
 
     def enable_control(self, enabled):
         """Enables or disables the buttons to start control if it's already running"""
+        for widget in [
+            self.run_widget.test_level_selector,
+            self.run_widget.target_hits_at_level_selector,
+            self.run_widget.manual_hits_checkbox,
+            self.run_widget.auto_hits_checkbox,
+            self.run_widget.auto_hit_interval_selector,
+            self.run_widget.start_test_button,
+        ]:
+            widget.setEnabled(enabled)
+        for widget in [self.run_widget.stop_test_button]:
+            widget.setEnabled(not enabled)
 
     def change_test_level_from_profile(self, test_level):
         """Updates the test level based on a profile event"""
-        self.run_widget.test_level_selector.setValue(int(test_level))
+        self.run_widget.current_test_level_selector.setValue(int(test_level))
 
     # region UI Update and Templates
 
@@ -1299,6 +1371,23 @@ class SDSUI(AbstractSysIdUI):
                 predicted_response_srs,
             ) = data
             self.prediction_table.update_prediction_information(
+                predicted_response_time_history,
+                predicted_response_srs,
+                predicted_amplitudes,
+                predicted_delays,
+                predicted_decays,
+                predicted_drive_time_history,
+            )
+        elif message == "control_run_predictions":
+            (
+                predicted_amplitudes,
+                predicted_delays,
+                predicted_decays,
+                predicted_drive_time_history,
+                predicted_response_time_history,
+                predicted_response_srs,
+            ) = data
+            self.run_table.update_prediction_information(
                 predicted_response_time_history,
                 predicted_response_srs,
                 predicted_amplitudes,

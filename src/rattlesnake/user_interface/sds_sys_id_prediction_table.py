@@ -21,16 +21,19 @@ class SDSPredictionTable:
         parent_widget: QtWidgets.QWidget,
         environment_command_queue: VerboseMessageQueue,
         log_name: str,
+        prediction_mode: bool,
         sds_table: None | DecayedSineTable = None,
         drive_names: None | np.ndarray = None,
         response_names: None | np.ndarray = None,
         sds_parameters: None | SDSMetadata = None,
     ):
         uic.loadUi(sds_prediction_table_ui_path, parent_widget)
-        # Processing data
+        # Utility Information
         self.parent_widget = parent_widget
         self.environment_command_queue = environment_command_queue
         self.log_name = log_name
+        self.prediction_mode = prediction_mode
+        # Processing data
         self.sds_table = sds_table
         self.drive_names = drive_names
         self.response_names = response_names
@@ -197,6 +200,8 @@ class SDSPredictionTable:
         drive_decays: np.ndarray = None,
         drive_time_histories: np.ndarray = None,
     ):
+        for widget in self.sds_table_widgets:
+            widget.blockSignals(True)
         self.predicted_response_time_history = response_time_history
         self.predicted_response_srs = response_srs
         if drive_amplitudes is not None:
@@ -210,11 +215,19 @@ class SDSPredictionTable:
         self.update_drive_plot_ui()
         self.update_response_plot_ui()
         self.update_all_voltages_ui()
+        for widget in self.sds_table_widgets:
+            widget.blockSignals(False)
 
     def perform_prediction(self):
-        self.environment_command_queue.put(
-            self.log_name, (SDSCommands.SDS_TABLE_PREDICTION, self.sds_table)
-        )
+        print("Performing Prediction!")
+        if self.prediction_mode:
+            self.environment_command_queue.put(
+                self.log_name, (SDSCommands.SDS_TABLE_PREDICTION, self.sds_table)
+            )
+        else:
+            self.environment_command_queue.put(
+                self.log_name, (SDSCommands.SDS_RUN_TABLE_PREDICTION, self.sds_table)
+            )
 
     def synchronize_sds_table(self):
         """This function is called when a widget is modified in the table to update the internal
@@ -228,6 +241,7 @@ class SDSPredictionTable:
                 else:
                     self.sds_table[name][row_index, index] = value
         self.update_voltage_ui(index)
+        self.perform_prediction()
 
     def lock_table(
         self, frequencies=None, amplitudes=None, delays=None, decays=None, all_data=None

@@ -115,6 +115,7 @@ environment_run_ui_paths[ControlTypes.SDS] = os.path.join(directory, "srs_sds_ru
 sds_prediction_table_ui_path = os.path.join(directory, "srs_sds_prediction_table.ui")
 sds_override_dialog_ui_path = os.path.join(directory, "srs_sds_override.ui")
 sds_synthesize_dialog_ui_path = os.path.join(directory, "srs_sds_synthesize_dialog.ui")
+sds_run_table_ui_path = os.path.join(directory, "srs_sds_run_table.ui")
 
 
 class ProfileTimer(QTimer):

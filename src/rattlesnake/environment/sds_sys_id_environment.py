@@ -120,6 +120,14 @@ class SDSEnvironment(AbstractSysIdEnvironment):
             SDSCommands.PERFORM_CONTROL_PREDICTION,
             self.perform_control_prediction,
         )
+        self.map_command(
+            SDSCommands.SDS_TABLE_PREDICTION,
+            self.perform_prediction_table_prediction,
+        )
+        self.map_command(
+            SDSCommands.SDS_RUN_TABLE_PREDICTION,
+            self.perform_run_table_prediction,
+        )
         self.map_command(SDSCommands.START_CONTROL, self.start_control)
         self.map_command(SDSCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(
@@ -152,6 +160,8 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         self.last_drive_amplitudes = None
         self.last_drive_decays = None
         self.last_drive_delays = None
+        self.hit_level_history = None
+        self.run_metadata = None
         # Prediction information
         self.predicted_response_srs = None
         self.predicted_response_time_history = None
@@ -403,6 +413,38 @@ class SDSEnvironment(AbstractSysIdEnvironment):
         self.predicted_delays = output_delays
         self.show_test_prediction()
 
+    def perform_prediction_table_prediction(self, sds_table):
+        self.perform_table_prediction(sds_table, run_table=False)
+
+    def perform_run_table_prediction(self, sds_table):
+        self.perform_table_prediction(sds_table, run_table=True)
+
+    def perform_table_prediction(self, sds_table, run_table: bool):
+        output_amplitudes = sds_table["amplitude"]
+        output_decays = sds_table["decay"]
+        output_delays = sds_table["delay"]
+        (
+            predicted_drive_time_history,
+            predicted_response_time_history,
+            predicted_response_srs,
+        ) = self.simulate_response((output_amplitudes, output_decays, output_delays))
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (
+                    "control_run_predictions" if run_table else "control_predictions",
+                    (
+                        output_amplitudes,
+                        output_delays,
+                        output_decays,
+                        predicted_drive_time_history,
+                        predicted_response_time_history,
+                        predicted_response_srs,
+                    ),
+                ),
+            )
+        )
+
     def simulate_response(self, data):
         print("Reconstructing Drives")
         # Reconstruct drive signals
@@ -449,22 +491,23 @@ class SDSEnvironment(AbstractSysIdEnvironment):
 
     def show_test_prediction(self):
         """Sends the test predictions to the UI"""
-        self.gui_update_queue.put(
-            (
-                self.environment_name,
+        for message in ("control_predictions", "control_run_predictions"):
+            self.gui_update_queue.put(
                 (
-                    "control_predictions",
+                    self.environment_name,
                     (
-                        self.predicted_amplitudes,
-                        self.predicted_delays,
-                        self.predicted_decays,
-                        self.predicted_drive_time_history,
-                        self.predicted_response_time_history,
-                        self.predicted_response_srs,
+                        message,
+                        (
+                            self.predicted_amplitudes,
+                            self.predicted_delays,
+                            self.predicted_decays,
+                            self.predicted_drive_time_history,
+                            self.predicted_response_time_history,
+                            self.predicted_response_srs,
+                        ),
                     ),
-                ),
+                )
             )
-        )
 
     # region Control
     def get_signal_generation_metadata(self):
