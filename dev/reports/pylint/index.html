@@ -78,10 +78,10 @@
             <h1>Pylint Report</h1>
             <div class="score">Score: 9.33/10</div>
             <div class="metadata">
-                <div><strong>Generated:</strong> 2026-03-24 14:29:33 UTC (2026-03-24 10:29:33 EST / 2026-03-24 08:29:33 MST)</div>
-                <div><strong>Run ID:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/23494795926"> 23494795926</a></div>
+                <div><strong>Generated:</strong> 2026-03-24 15:02:42 UTC (2026-03-24 11:02:42 EST / 2026-03-24 09:02:42 MST)</div>
+                <div><strong>Run ID:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/23496425804"> 23496425804</a></div>
                 <div><strong>Branch:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev"> dev</a></div>
-                <div><strong>Commit:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/commit/3d95ef810865ac23564388afe232193bfdb73538"> 3d95ef8</a></div>
+                <div><strong>Commit:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/commit/3ba2cf50e641771e2ff4965be5813f94aaa6b20e"> 3ba2cf5</a></div>
                 <div><strong>Repository:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">sandialabs/rattlesnake-vibration-controller</a></div>
             </div>
         </div>
@@ -1226,49 +1226,49 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         else:
             self.definition_widget.control_function_generator_selector.setCurrentIndex(0)
 
-    def initialize_environment(self): (duplicate-code)
+    def show_specification(self):
+        &quot;&quot;&quot;Show the specification on the GUI&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==ui_registry:[28:67]
 ==user_interface:[661:699]
-    worksheet.cell(row=1, column=2, value=&quot;Test Article Definition&quot;)
-    worksheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
-    worksheet.cell(row=1, column=5, value=&quot;Instrument Definition&quot;)
-    worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
-    worksheet.cell(row=1, column=12, value=&quot;Channel Definition&quot;)
-    worksheet.merge_cells(start_row=1, start_column=12, end_row=1, end_column=19)
-    worksheet.cell(row=1, column=20, value=&quot;Output Feedback&quot;)
-    worksheet.merge_cells(start_row=1, start_column=20, end_row=1, end_column=21)
-    worksheet.cell(row=1, column=22, value=&quot;Limits&quot;)
-    worksheet.merge_cells(start_row=1, start_column=22, end_row=1, end_column=23)
-    for col_idx, val in enumerate(
-        [
-            &quot;Channel Index&quot;,
-            &quot;Node Number&quot;,
-            &quot;Node Direction&quot;,
-            &quot;Comment&quot;,
-            &quot;Serial Number&quot;,
-            &quot;Triax DoF&quot;,
-            &quot;Sensitivity  (mV/EU)&quot;,
-            &quot;Engineering Unit&quot;,
-            &quot;Make&quot;,
-            &quot;Model&quot;,
-            &quot;Calibration Exp Date&quot;,
-            &quot;Physical Device&quot;,
-            &quot;Physical Channel&quot;,
-            &quot;Type&quot;,
-            &quot;Minimum Value (V)&quot;,
-            &quot;Maximum Value (V)&quot;,
-            &quot;Coupling&quot;,
-            &quot;Current Excitation Source&quot;,
-            &quot;Current Excitation Value&quot;,
-            &quot;Physical Device&quot;,
-            &quot;Physical Channel&quot;,
-            &quot;Warning Level (EU)&quot;,
-            &quot;Abort Level (EU)&quot;,
-        ]
-    ):
-        worksheet.cell(row=2, column=1 + col_idx, value=val)
-    # Fill out the hardware worksheet (duplicate-code)
+            worksheet.cell(row=1, column=2, value=&quot;Test Article Definition&quot;)
+            worksheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
+            worksheet.cell(row=1, column=5, value=&quot;Instrument Definition&quot;)
+            worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
+            worksheet.cell(row=1, column=12, value=&quot;Channel Definition&quot;)
+            worksheet.merge_cells(start_row=1, start_column=12, end_row=1, end_column=19)
+            worksheet.cell(row=1, column=20, value=&quot;Output Feedback&quot;)
+            worksheet.merge_cells(start_row=1, start_column=20, end_row=1, end_column=21)
+            worksheet.cell(row=1, column=22, value=&quot;Limits&quot;)
+            worksheet.merge_cells(start_row=1, start_column=22, end_row=1, end_column=23)
+            for col_idx, val in enumerate(
+                [
+                    &quot;Channel Index&quot;,
+                    &quot;Node Number&quot;,
+                    &quot;Node Direction&quot;,
+                    &quot;Comment&quot;,
+                    &quot;Serial Number&quot;,
+                    &quot;Triax DoF&quot;,
+                    &quot;Sensitivity  (mV/EU)&quot;,
+                    &quot;Engineering Unit&quot;,
+                    &quot;Make&quot;,
+                    &quot;Model&quot;,
+                    &quot;Calibration Exp Date&quot;,
+                    &quot;Physical Device&quot;,
+                    &quot;Physical Channel&quot;,
+                    &quot;Type&quot;,
+                    &quot;Minimum Value (V)&quot;,
+                    &quot;Maximum Value (V)&quot;,
+                    &quot;Coupling&quot;,
+                    &quot;Current Excitation Source&quot;,
+                    &quot;Current Excitation Value&quot;,
+                    &quot;Physical Device&quot;,
+                    &quot;Physical Channel&quot;,
+                    &quot;Warning Level (EU)&quot;,
+                    &quot;Abort Level (EU)&quot;,
+                ]
+            ):
+                worksheet.cell(row=2, column=1 + col_idx, value=val) (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[403:439]
 ==transient_sys_id_environment:[275:313]
@@ -1345,7 +1345,9 @@ _direction_map = {
     &quot;&quot;: 0,
     None: 0,
 }
- (duplicate-code)
+
+
+# region: Acqusition (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.cicd.report_pylint:[188:220]
 ==rattlesnake.cicd.report_pytest:[121:153]
@@ -1525,7 +1527,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         environment.
 
         This function is the &quot;write&quot; counterpart to the
-        ``set_parameters_from_template`` function in the ``ModalUI`` class,
+        ``set_parameters_from_template`` function in the ``TimeUI`` class,
         which reads the values from the template file to populate the user
         interface.
 
@@ -1704,29 +1706,29 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_environment:[881:904]
 ==sine_sys_id_environment:[1956:1979]
-            environment_name,
-            input_queue,
-            gui_update_queue,
-            controller_communication_queue,
-            data_in_queue,
-            data_out_queue,
-            log_file_queue,
-        )
+        environment_name,
+        input_queue,
+        gui_update_queue,
+        controller_communication_queue,
+        data_in_queue,
+        data_out_queue,
+        log_file_queue,
+    )
 
-        spectral_proc = mp.Process(
-            target=spectral_processing_process,
-            args=(
-                environment_name,
-                queue_container.spectral_command_queue,
-                queue_container.data_for_spectral_computation_queue,
-                queue_container.updated_spectral_quantities_queue,
-                queue_container.environment_command_queue,
-                queue_container.gui_update_queue,
-                queue_container.log_file_queue,
-            ),
-        )
-        spectral_proc.start()
-        analysis_proc = mp.Process( (duplicate-code)
+    spectral_proc = mp.Process(
+        target=spectral_processing_process,
+        args=(
+            environment_name,
+            queue_container.spectral_command_queue,
+            queue_container.data_for_spectral_computation_queue,
+            queue_container.updated_spectral_quantities_queue,
+            queue_container.environment_command_queue,
+            queue_container.gui_update_queue,
+            queue_container.log_file_queue,
+        ),
+    )
+    spectral_proc.start()
+    analysis_proc = mp.Process( (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sysid_environment:[399:424]
 ==random_vibration_sys_id_environment:[571:596]
@@ -1753,8 +1755,8 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             reference_transformation_matrix=self.environment_parameters.reference_transformation_matrix,
         )
 
-    def get_sysid_spectral_processing_metadata(self, is_noise=False) -&gt; SpectralProcessingMetadata:
-        &quot;&quot;&quot;Collects metadata to send to the spectral processing process&quot;&quot;&quot; (duplicate-code)
+    def get_signal_generation_metadata(self):
+        &quot;&quot;&quot;Gets relevant metadata for the signal generation process&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_environment:[667:693]
 ==random_vibration_sys_id_environment:[490:514]
@@ -1781,9 +1783,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
                 self.get_spectral_processing_metadata(),
             ),
         )
-
-    def get_data_collector_metadata(self) -&gt; CollectorMetadata:
-        &quot;&quot;&quot;Collects metadata used to define the data collector&quot;&quot;&quot; (duplicate-code)
+        # Set up the data analysis (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_environment:[1111:1133]
 ==random_vibration_sys_id_environment:[881:903]
@@ -2136,20 +2136,20 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==data_physics_interface:[120:134]
 ==user_interface:[1160:1174]
-                2048,
-                2560,
-                3200,
-                4096,
-                5120,
-                6400,
-                8192,
-                10240,
-                12800,
-                20480,
-                25600,
-                40960,
-                51200,
-                102400, (duplicate-code)
+                    2048,
+                    2560,
+                    3200,
+                    4096,
+                    5120,
+                    6400,
+                    8192,
+                    10240,
+                    12800,
+                    20480,
+                    25600,
+                    40960,
+                    51200,
+                    102400, (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_ui:[1358:1372]
 ==random_vibration_sys_id_ui:[1821:1835]
@@ -2348,14 +2348,14 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_ui:[410:430]
 ==transient_sys_id_ui:[253:273]
-        return [
-            f&quot;Transformed Response {i + 1}&quot;
-            for i in range(self.environment_parameters.response_transformation_matrix.shape[0])
-        ]
+            return [
+                f&quot;Transformed Response {i + 1}&quot;
+                for i in range(self.environment_parameters.response_transformation_matrix.shape[0])
+            ]
 
     @property
     def initialized_output_names(self):
-        &quot;&quot;&quot;Gets the names of the drive channels that have been initialized&quot;&quot;&quot;
+        &quot;&quot;&quot;Names of the drive channels that have been initialized&quot;&quot;&quot;
         if self.environment_parameters.reference_transformation_matrix is None:
             return self.physical_output_names
         else:
@@ -2365,7 +2365,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             ]
 
     def update_control_channels(self):
-        &quot;&quot;&quot;Updates the control channels due to selection changes&quot;&quot;&quot;
+        &quot;&quot;&quot;Callback called when control channels are updated in the UI&quot;&quot;&quot;
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
@@ -2478,8 +2478,8 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             num_frequency_lines,
         )
 
-    def get_sysid_signal_generation_metadata(self) -&gt; SignalGenerationMetadata:
-        &quot;&quot;&quot;Collects metadata to send to the signal generation process&quot;&quot;&quot; (duplicate-code)
+    def recompute_prediction(self, data):  # pylint: disable=unused-argument
+        &quot;&quot;&quot;Sends a signal to the data analysis process to recompute test predictions&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_environment:[849:861]
 ==transient_sys_id_environment:[667:678]
@@ -2511,11 +2511,11 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[252:263]
 ==transient_sys_id_environment:[568:579]
-                                    self.sysid_response_noise,  # Noise levels and correlation
-                                    self.sysid_reference_noise,  # from the system identification
-                                    self.sysid_response_cpsd,  # Response levels and correlation
-                                    self.sysid_reference_cpsd,  # from the system identification
-                                    self.sysid_coherence,  # Coherence from the system id
+                                    self.sysid_response_noise,
+                                    self.sysid_reference_noise,
+                                    self.sysid_response_cpsd,
+                                    self.sysid_reference_cpsd,
+                                    self.sysid_coherence,
                                 ),
                             ),
                         )
@@ -2623,8 +2623,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             else:
                 channel_data = [&quot;&quot; if val is None else val for val in channel_data]
             for i, cd in enumerate(channel_data):
-                var[i] = cd
-        # Now write all the environment data to the netCDF file (duplicate-code)
+                var[i] = cd (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sys_id_user_interface:[916:931]
 ==random_vibration_sys_id_ui:[1774:1785]
@@ -2697,12 +2696,12 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             window.move(col_ind * window_width, row_ind * window_height)
 
     def close_windows(self):
-        &quot;&quot;&quot;Closes all the plot windows&quot;&quot;&quot;
+        &quot;&quot;&quot;Close all subwindows&quot;&quot;&quot;
         for window in self.plot_windows:
             window.close()
 
     def save_control_data_from_profile(self, filename):
-        &quot;&quot;&quot;Saves the current control data to the specified file name&quot;&quot;&quot; (duplicate-code)
+        &quot;&quot;&quot;Saves the control data to a file when requested by a profile argument&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_ui:[318:330]
 ==transient_sys_id_ui:[197:209]
@@ -2730,7 +2729,22 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         self.map_command(
             SpectralProcessingCommands.SHUTDOWN_ACHIEVED,
             self.spectral_shutdown_achieved_fn,
-        ) (duplicate-code)
+        )
+
+    def initialize_data_acquisition_parameters(
+        self, data_acquisition_parameters: DataAcquisitionParameters
+    ):
+        &quot;&quot;&quot;Initialize the data acquisition parameters in the environment.
+
+        The environment will receive the global data acquisition parameters from
+        the controller, and must set itself up accordingly.
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters :
+            A container containing data acquisition parameters, including
+            channels active in the environment as well as sampling parameters.
+        &quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sysid_environment:[452:462]
 ==modal_environment:[789:799]
@@ -2768,22 +2782,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             self.environment_name,
             (SpectralProcessingCommands.RUN_SPECTRAL_PROCESSING, None),
         )
-
-    def stop_environment(self, data):
-        &quot;&quot;&quot;Stop the environment gracefully
-
-        This function defines the operations to shut down the environment
-        gracefully so there is no hard stop that might damage test equipment
-        or parts.
-
-        Parameters
-        ----------
-        data : Ignored
-            This parameter is not used by the function but must be present
-            due to the calling signature of functions called through the
-            ``command_map``
-
-        &quot;&quot;&quot; (duplicate-code)
+ (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[925:936]
 ==transient_sys_id_environment:[510:520]
@@ -2881,6 +2880,20 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_environment:[849:861]
 ==sine_sys_id_environment:[1425:1436]
+            self.queue_container.signal_generation_command_queue.put(
+                self.environment_name,
+                (
+                    SignalGenerationCommands.INITIALIZE_PARAMETERS,
+                    self.get_signal_generation_metadata(),
+                ),
+            )
+            self.queue_container.signal_generation_command_queue.put(
+                self.environment_name,
+                (
+                    SignalGenerationCommands.INITIALIZE_SIGNAL_GENERATOR, (duplicate-code)
+src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
+==random_vibration_sys_id_environment:[687:699]
+==transient_sys_id_environment:[667:678]
         self.queue_container.signal_generation_command_queue.put(
             self.environment_name,
             (
@@ -2894,34 +2907,20 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             (
                 SignalGenerationCommands.INITIALIZE_SIGNAL_GENERATOR, (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
-==random_vibration_sys_id_environment:[687:699]
-==transient_sys_id_environment:[667:678]
-            self.queue_container.signal_generation_command_queue.put(
-                self.environment_name,
-                (
-                    SignalGenerationCommands.INITIALIZE_PARAMETERS,
-                    self.get_signal_generation_metadata(),
-                ),
-            )
-            self.queue_container.signal_generation_command_queue.put(
-                self.environment_name,
-                (
-                    SignalGenerationCommands.INITIALIZE_SIGNAL_GENERATOR, (duplicate-code)
-src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[812:824]
 ==sine_sys_id_ui_utilities:[872:884]
-                )
-                generator.send(None)
+            )
+            generator.send(None)
 
-            # print(f&quot;{self.signal.shape=}&quot;)
-            start_index = 0
-            reconstructed_signals = []
-            reconstructed_amplitudes = []
-            reconstructed_phases = []
+        # print(f&quot;{self.signal.shape=}&quot;)
+        start_index = 0
+        reconstructed_signals = []
+        reconstructed_amplitudes = []
+        reconstructed_phases = []
 
-            last_data = False
-            while not last_data:
-                end_index = start_index + block_size (duplicate-code)
+        last_data = False
+        while not last_data:
+            end_index = start_index + block_size (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==data_physics_dp900_interface:[370:406]
 ==data_physics_interface:[313:341]
@@ -2931,22 +2930,30 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
                 f&quot;Current status is {self.status.name}.&quot;
             )
 
-    def setup_input_parameters(self, coupling_array, sensitivity_array, range_array):
-        &quot;&quot;&quot;Sets up the acquisition channels for the data acquisition system
+    def setup_input_parameters(self, coupling_array, channel_array, sensitivity_array, range_array):
+        &quot;&quot;&quot;
+        Tells the API how many channels will be used; as well as the hardware
+        settings for those parameters.
 
         Parameters
         ----------
-        coupling_array : np.ndarray
-            An array of coupling values for the data acquisition system
-        sensitivity_array : np.ndarray
-            An array of sensitivity values for the data acquisition system
-        range_array : np.ndarray
-            An array of ranges for the data acquisition system
-
-        Raises
-        ------
-        ValueError
-            if any invalid values are passed or the arrays are not the same size
+        coupling_array : array of DP900Coupling
+            Pointer to an integer array, of length num_inps representing the
+            hardware coupling for each channel
+        channel_array : array of integers
+            Array of integers of length num_inps where the nth value represents
+            the nth input channel number.  If channels are to be skipped
+            (eg. enabling channels 1, 2, 5, 6) the array will contain
+            non-consecutive numbers (eg [1, 2, 5, 6] with num_inps=4)
+        sensitivity_array : array of float
+            Pointer to a float array, of length numInps where the nth value
+            represents the sensitivity of the nth input channel. After voltages
+            are read from the hardware, each channel is scaled by its
+            sensitivity before being recorded or passed to the API.
+        range_array : array of float
+            Pointer to a float array, of length numInps where the nth value
+            represents the voltage range of the nth input channel.  Can be
+            0.1, 0.3, 1.0, 3.0, 10.0, 30.0
         &quot;&quot;&quot;
         # Set up the channel arrays
         if len(coupling_array) != len(sensitivity_array):
@@ -3232,42 +3239,69 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 
     @number_of_channels.setter
     def number_of_channels(self, value):
+        &quot;&quot;&quot;Sets the stored value of the number of channels in the environment&quot;&quot;&quot;
         self._number_of_channels = value
 
     @property
     def reference_channel_indices(self):
+        &quot;&quot;&quot;Indices corresponding to the drive channels&quot;&quot;&quot;
         return self.output_channel_indices
 
     @property
     def response_channel_indices(self):
+        &quot;&quot;&quot;Indices corresponding to the control channels&quot;&quot;&quot;
         return self.control_channel_indices
 
     @property
     def response_transformation_matrix(self):
+        &quot;&quot;&quot;Transformation matrix applied to the control channels&quot;&quot;&quot;
         return self._response_transformation_matrix
 
     @response_transformation_matrix.setter
     def response_transformation_matrix(self, value):
+        &quot;&quot;&quot;Sets the transformation matrix applied to the control channels&quot;&quot;&quot;
         self._response_transformation_matrix = value
 
     @property
     def reference_transformation_matrix(self):
+        &quot;&quot;&quot;Transformation matrix applied to the drive channels&quot;&quot;&quot;
         return self._reference_transformation_matrix
 
     @reference_transformation_matrix.setter
     def reference_transformation_matrix(self, value):
+        &quot;&quot;&quot;Sets the transformation matrix applied to the drive channels&quot;&quot;&quot;
         self._reference_transformation_matrix = value
 
-    @property
-    def samples_per_acquire(self):
-        &quot;&quot;&quot;Property returning the samples per acquisition step given the overlap&quot;&quot;&quot; (duplicate-code)
+    def store_to_netcdf(
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
+    ):
+        &quot;&quot;&quot;Store parameters to a group in a netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment&#x27;s name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment&#x27;s parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the &quot;write&quot; counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        netcdf_group_handle : nc4._netCDF4.Group
+            A reference to the Group within the netCDF dataset where the
+            environment&#x27;s metadata is stored.
+
+        &quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_environment:[592:606]
 ==transient_sys_id_environment:[648:662]
         )
 
     def get_signal_generation_metadata(self):
-        &quot;&quot;&quot;Gets relevant metadata for the signal generation process&quot;&quot;&quot;
+        &quot;&quot;&quot;Collects the metadata required to define the signal generation process&quot;&quot;&quot;
         return SignalGenerationMetadata(
             samples_per_write=self.data_acquisition_parameters.samples_per_write,
             level_ramp_samples=self.environment_parameters.test_level_ramp_time
@@ -3276,8 +3310,8 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             output_transformation_matrix=self.environment_parameters.reference_transformation_matrix,
         )
 
-    def get_signal_generator(self):
-        &quot;&quot;&quot;Gets the signal generator object that will generate signals for the environment&quot;&quot;&quot; (duplicate-code)
+    def start_control(self, data):
+        &quot;&quot;&quot;Starts up the control to generate the signal&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[767:780]
 ==transient_sys_id_environment:[497:509]
@@ -3297,25 +3331,26 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_ui:[1533:1541]
 ==sine_sys_id_utilities:[93:101]
-                frequency,
-                amplitude,
-                phase,
-                sweep_type,
-                sweep_rate,
-                warning,
-                abort,
-                start_time, (duplicate-code)
+        frequency,
+        amplitude,
+        phase,
+        sweep_type,
+        sweep_rate,
+        warning,
+        abort,
+        start_time, (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sysid_data_analysis:[360:369]
 ==random_vibration_sys_id_data_analysis:[83:91]
-            command_queue,
-            data_in_queue,
-            data_out_queue,
-            environment_command_queue,
-            log_file_queue,
-            gui_update_queue,
-            environment_name,
-        ) (duplicate-code)
+        command_queue,
+        data_in_queue,
+        data_out_queue,
+        environment_command_queue,
+        log_file_queue,
+        gui_update_queue,
+        environment_name,
+    )
+ (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[583:592]
 ==signal_generation_process:[463:472]
@@ -3401,10 +3436,10 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 ==transient_sys_id_ui:[730:743]
         )
 
-    # %% Control
+    # %% Run Control
 
     def start_control(self):
-        &quot;&quot;&quot;Starts the chain of events to start the environment&quot;&quot;&quot;
+        &quot;&quot;&quot;Runs the corresponding environment in the controller&quot;&quot;&quot;
         self.enable_control(False)
         self.controller_communication_queue.put(
             self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
@@ -3422,11 +3457,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         self.define_transformation_matrices(None, False)
         self.definition_widget.input_channels_display.setValue(len(self.physical_channel_names))
         self.definition_widget.output_channels_display.setValue(len(self.physical_output_indices))
-        self.definition_widget.control_channels_display.setValue(0)
-
-    @property
-    def physical_output_names(self):
-        &quot;&quot;&quot;Names of the physical drive channels&quot;&quot;&quot; (duplicate-code)
+        self.definition_widget.control_channels_display.setValue(0) (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_ui:[661:669]
 ==transient_sys_id_ui:[492:500]
@@ -3486,7 +3517,8 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 
     # Write the HTML report
     write_report(html_content, output_file)
- (duplicate-code)
+
+    # Count issues by type (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_environment:[1112:1120]
 ==time_environment:[511:519]
@@ -3501,13 +3533,13 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[657:664]
 ==transient_sys_id_environment:[404:411]
-        _, file = os.path.split(environment_parameters.control_python_script)
-        file, _ = os.path.splitext(file)
-        spec = importlib.util.spec_from_file_location(
-            file, environment_parameters.control_python_script
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module) (duplicate-code)
+            _, file = os.path.split(environment_parameters.control_python_script)
+            file, _ = os.path.splitext(file)
+            spec = importlib.util.spec_from_file_location(
+                file, environment_parameters.control_python_script
+            )
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module) (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[1496:1503]
 ==transient_sys_id_environment:[758:765]
@@ -3521,13 +3553,13 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sysid_data_analysis:[181:188]
 ==sine_sys_id_environment:[766:773]
-            self.sysid_frf,
-            self.sysid_coherence,
-            self.sysid_response_cpsd,
-            self.sysid_reference_cpsd,
-            self.sysid_condition,
-            self.sysid_response_noise,
-            self.sysid_reference_noise, (duplicate-code)
+                        self.sysid_frf,
+                        self.sysid_coherence,
+                        self.sysid_response_cpsd,
+                        self.sysid_reference_cpsd,
+                        self.sysid_condition,
+                        self.sysid_response_noise,
+                        self.sysid_reference_noise, (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[685:692]
 ==sine_sys_id_ui:[1561:1568]
@@ -3550,8 +3582,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             )
 
     def send_interactive_command(self, command):
-        &quot;&quot;&quot;General method that can be used by an interactive UI object to pass commands
-        and data to its corresponding computation object&quot;&quot;&quot; (duplicate-code)
+        &quot;&quot;&quot;Sends a command to the interactive control law&quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==exodus_modal_solution_hardware:[89:96]
 ==sdynpy_system_virtual_hardware:[115:122]
@@ -3603,8 +3634,8 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             try:
                 forces = self.queue.get(timeout=self.frame_time)
             except mp.queues.Empty:
-                # If we don&#x27;t get an output in time, this likely means output has stopped so
-                # just put zeros. (duplicate-code)
+                # If we don&#x27;t get an output in time, this likely means output has stopped
+                # so just put zeros. (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sys_id_user_interface:[1153:1160]
 ==streaming:[179:187]
@@ -3641,11 +3672,11 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 ==sine_sys_id_ui:[379:400]
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
-    # %% Environment
+    # %% Define Environments
 
     @property
     def physical_control_indices(self):
-        &quot;&quot;&quot;Gets the physical control indices currently checked&quot;&quot;&quot;
+        &quot;&quot;&quot;Indices corresponding to the physical channels that are used as outputs&quot;&quot;&quot;
         return [
             i
             for i in range(self.definition_widget.control_channels_selector.count())
@@ -3654,12 +3685,11 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 
     @property
     def physical_control_names(self):
-        &quot;&quot;&quot;Gets the names for the physical control channels currently checked&quot;&quot;&quot;
+        &quot;&quot;&quot;Names of the physical control channels&quot;&quot;&quot;
         return [self.physical_channel_names[i] for i in self.physical_control_indices]
 
     @property
-    def physical_control_units(self):
-        &quot;&quot;&quot;Gets the unit for the control channels currently checked&quot;&quot;&quot; (duplicate-code)
+    def initialized_control_names(self): (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_ui:[779:787]
 ==sine_sys_id_ui:[966:973]
@@ -3802,8 +3832,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         except (AttributeError, KeyError):
             return False
 
-
-# region: Environment (duplicate-code)
+ (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_environment:[1162:1170]
 ==random_vibration_sys_id_environment:[944:952]
@@ -3823,10 +3852,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         self.controller_communication_queue = controller_communication_queue
         self.data_in_queue = data_in_queue
         self.data_out_queue = data_out_queue
-        self.log_file_queue = log_file_queue
-
-
-# region: Metadata (duplicate-code)
+        self.log_file_queue = log_file_queue (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_environment:[442:448]
 ==time_environment:[204:210]
@@ -3853,7 +3879,8 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         netcdf_group_handle.control_python_function_type = self.control_python_function_type
         netcdf_group_handle.control_python_function_parameters = (
             self.control_python_function_parameters
-        ) (duplicate-code)
+        )
+        # Save the output signal (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[538:544]
 ==transient_sys_id_environment:[356:362]
@@ -3876,7 +3903,6 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 ==sine_sys_id_environment:[1867:1875]
 ==transient_sys_id_environment:[848:855]
         except mp.queues.Empty:
-            # print(&quot;Didn&#x27;t Find Data&quot;)
             last_acquisition = False
         # See if we need to keep going
         if self.siggen_shutdown_achieved and last_acquisition:
@@ -3980,9 +4006,7 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         except (AttributeError, KeyError):
             return False
 
-    @property
-    def requires_full_spectral_response(self):
-        &quot;&quot;&quot;Checks if the requested outputs require calculation the full response CPSD matrix&quot;&quot;&quot; (duplicate-code)
+ (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_ui:[842:848]
 ==streaming:[179:185]
@@ -4095,7 +4119,30 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
                 widget.clear()
                 widget.addItems([f&quot;{d:.3f}&quot; for d in data])
 
-    def set_parameters_from_template(self, worksheet): (duplicate-code)
+    @staticmethod
+    def create_environment_template(
+        environment_name: str, workbook: openpyxl.workbook.workbook.Workbook
+    ):
+        &quot;&quot;&quot;Creates a template worksheet in an Excel workbook defining the
+        environment.
+
+        This function creates a template worksheet in an Excel workbook that
+        when filled out could be read by the controller to re-create the
+        environment.
+
+        This function is the &quot;write&quot; counterpart to the
+        ``set_parameters_from_template`` function in the ``ModalUI`` class,
+        which reads the values from the template file to populate the user
+        interface.
+
+        Parameters
+        ----------
+        environment_name : str :
+            The name of the environment that will specify the worksheet&#x27;s name
+        workbook : openpyxl.workbook.workbook.Workbook :
+            A reference to an ``openpyxl`` workbook.
+
+        &quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==modal_ui:[1360:1366]
 ==time_ui:[483:489]
@@ -4217,7 +4264,20 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
         with open(output_file, &quot;w&quot;, encoding=&quot;utf-8&quot;) as f:
             f.write(html_content)
     except IOError as e:
-        raise IOError(f&#x27;Error writing output file &quot;{output_file}&quot;: {e}&#x27;) from e (duplicate-code)
+        raise IOError(f&#x27;Error writing output file &quot;{output_file}&quot;: {e}&#x27;) from e
+
+
+def run_reports_main_page(
+    github_repo: str, pylint_score: str, output_file: str
+) -&gt; None:
+    &quot;&quot;&quot;
+    Main function to create HTML report.
+
+    Args:
+        github_repo: The name of the GitHub repository (e.g., &#x27;user/repo&#x27;).
+        pylint_score: The pylint score.
+        output_file: Path for the generated HTML report
+    &quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_environment:[342:411]
 ==abstract_message_process:[176:200]
@@ -4244,7 +4304,52 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             that it is time to close down the environment.
 
         &quot;&quot;&quot;
-        return True (duplicate-code)
+        return True
+
+
+# region: Process
+def run_process(
+    environment_name: str,
+    input_queue: VerboseMessageQueue,
+    gui_update_queue: Queue,
+    controller_communication_queue: VerboseMessageQueue,
+    log_file_queue: Queue,
+    data_in_queue: Queue,
+    data_out_queue: Queue,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    output_active: mp.sharedctypes.Synchronized,
+):
+    &quot;&quot;&quot;A function called by ``multiprocessing.Process`` to start the environment
+
+    This function should not be called directly, but used as a template for
+    other environments to start up.
+
+    Parameters
+    ----------
+    environment_name : str :
+        The name of the environment
+
+    input_queue : VerboseMessageQueue :
+        The command queue for the environment
+
+    gui_update_queue : Queue :
+        The queue that accepts GUI update ``(message,data)`` pairs.
+
+    controller_communication_queue : VerboseMessageQueue :
+        The queue where global instructions to the controller can be written
+
+    log_file_queue : Queue :
+        The queue where logging messages can be written
+
+    data_in_queue : Queue :
+        The queue from which the environment will receive data from the
+        acquisition hardware
+
+    data_out_queue : Queue :
+        The queue to which the environment should write data so it will be output
+        to the excitation devices in the output hardware
+
+    &quot;&quot;&quot; (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==abstract_sysid_environment:[1046:1051]
 ==random_vibration_sys_id_environment:[794:799]
@@ -4264,11 +4369,11 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[677:682]
 ==transient_sys_id_environment:[428:433]
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
+            self.sysid_response_noise,  # Noise levels and correlation
+            self.sysid_reference_noise,  # from the system identification
+            self.sysid_response_cpsd,  # Response levels and correlation
+            self.sysid_reference_cpsd,  # from the system identification
+            self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==sine_sys_id_environment:[947:952]
 ==transient_sys_id_environment:[450:455]
@@ -4288,12 +4393,12 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[213:219]
 ==sine_sys_id_environment:[676:682]
-            self.sysid_frf,  # Transfer Functions
-            self.sysid_response_noise,  # Noise levels and correlation
-            self.sysid_reference_noise,  # from the system identification
-            self.sysid_response_cpsd,  # Response levels and correlation
-            self.sysid_reference_cpsd,  # from the system identification
-            self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
+                    self.sysid_frf,  # Transfer Functions
+                    self.sysid_response_noise,  # Noise levels and correlation
+                    self.sysid_reference_noise,  # from the system identification
+                    self.sysid_response_cpsd,  # Response levels and correlation
+                    self.sysid_reference_cpsd,  # from the system identification
+                    self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[235:241]
 ==sine_sys_id_environment:[946:952]
@@ -4314,11 +4419,11 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[236:241]
 ==transient_sys_id_environment:[550:555]
-                    self.sysid_response_noise,  # Noise levels and correlation
-                    self.sysid_reference_noise,  # from the system identification
-                    self.sysid_response_cpsd,  # Response levels and correlation
-                    self.sysid_reference_cpsd,  # from the system identification
-                    self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
+                        self.sysid_response_noise,  # Noise levels and correlation
+                        self.sysid_reference_noise,  # from the system identification
+                        self.sysid_response_cpsd,  # Response levels and correlation
+                        self.sysid_reference_cpsd,  # from the system identification
+                        self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[291:296]
 ==transient_sys_id_environment:[568:573]
@@ -4330,11 +4435,11 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==random_vibration_sys_id_data_analysis:[252:257]
 ==transient_sys_id_environment:[595:600]
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification (duplicate-code)
+                                    self.sysid_response_noise,  # Noise levels and correlation
+                                    self.sysid_reference_noise,  # from the system identification
+                                    self.sysid_response_cpsd,  # Response levels and correlation
+                                    self.sysid_reference_cpsd,  # from the system identification
+                                    self.sysid_coherence,  # Coherence from the system id (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==data_physics_dp900_interface:[59:66]
 ==data_physics_interface:[39:46]
@@ -4361,12 +4466,12 @@ src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 
             try:
                 forces = self.queue.get(timeout=self.frame_time)
             except mp.queues.Empty:
-                # If we don&#x27;t get an output in time, this likely means output has stopped
-                # so just put zeros.
+                # If we don&#x27;t get an output in time, this likely means output has stopped so
+                # just put zeros.
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
 
-        # Now extract a force that is the correct size (including past samples for convolution) (duplicate-code)
+        # Now extract a force that is the correct size (duplicate-code)
 src/rattlesnake/user_interface/user_interface.py:1:0: R0801: Similar lines in 2 files
 ==exodus_modal_solution_hardware:[92:97]
 ==state_space_virtual_hardware:[79:84]
