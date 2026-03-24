@@ -1,0 +1,123 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: 060cd82a-0b83-4d67-9875-cf6b1b8348eb
+  title:  Rattlesnake Vibration Controller
+  description: User's Manual and Examples for the Rattlesnake Vibration Controller
+  abstract: |
+    Rattlesnake is a combined-environments, multiple input/multiple output control system for
+    dynamic excitation of structures under test.  It provides capabilities to control multiple
+    responses on the part using multiple exciters using various control strategies.  Rattlesnake
+    is written in the Python programming language to facilitate multiple input/multiple output
+    vibration research by allowing users to prescribe custom control laws to the controller.
+    Rattlesnake can target multiple hardware devices, or even perform synthetic control to simulate
+    a test virtually.  Rattlesnake has been used to execute control problems with up to 200
+    response channels and 24 shaker drives.  This document describes the functionality,
+    architecture, and usage of the Rattlesnake controller to perform combined environments testing.
+  keywords:
+    - mimo
+    - vibration
+    - modal
+    - structural-dynamics
+  # authors:
+  #   - name: Daniel Rohe
+  #     affiliation: Sandia National Laboratories
+  #     email: dprohe@sandia.gov
+  #   - name: Ryan Schultz
+  #     affiliation: Sandia National Laboratories
+  #     email: rschult@sandia.gov
+  #   - name: Norman Hunter
+  #     affiliation: Sandia National Laboratories
+  #     email: nfhunte@sandia.gov
+  github: https://github.com/sandialabs/rattlesnake-vibration-controller
+  toc:
+    - file: book/src/chapter_01.md
+    - file: book/src/document_overview.md
+    - file: book/src/part_1.md
+      children:
+        - file: book/src/chapter_02.md
+        - file: book/src/chapter_03.md
+    - file: book/src/part_2.md
+      children:
+        - file: book/src/chapter_04.md
+        - file: book/src/chapter_05.md
+        - file: book/src/chapter_06.md
+        - file: book/src/chapter_07.md
+        - file: book/src/chapter_08.md
+        - file: book/src/chapter_09.md
+        - file: book/src/chapter_10.md
+        - file: book/src/chapter_11.md
+    - file: book/src/part_3.md
+      children:
+        - file: book/src/chapter_12.md
+        - file: book/src/chapter_13.md
+        - file: book/src/chapter_14.md
+        - file: book/src/chapter_15.md
+        - file: book/src/chapter_16.md
+        - file: book/src/chapter_17.md
+    - file: book/src/examples.md
+      children:
+        - file: book/src/appendix_b.md
+        - file: book/src/appendix_c.md
+        - file: book/src/appendix_d.md
+    - file: book/src/notation.md
+    - file: book/src/contributing.md
+    - file: book/src/ui_documentation.md
+      children:
+        - file: book/src/_generated/random_vibration_definition_doc.md
+        - file: book/src/_generated/random_vibration_prediction_doc.md
+        - file: book/src/_generated/random_vibration_run_doc.md
+  numbering:
+    headings: true
+    heading_1:
+      continue: false
+    heading_2:
+      template: "Chapter %s"
+    figure:
+      continue: false
+    table:
+      continue: false
+    equation:
+      continue: false
+  thumbnail: book/src/figures/Rattlesnake_Logo_Banner.png
+  abbreviations:
+    6DoF: Six Degree-of-Freedom
+    API: Application Programming Interface
+    APSD: Auto-Power Spectral Density
+    CCLD: Constant Current Line Drive
+    COLA: Constant Overlap and Add
+    CPSD: Cross-Power Spectral Density
+    FEM: Finite Element Model
+    FFT: Fast Fourier Transform
+    FRF: Frequency Response Function
+    GUI: Graphical User Interface
+    ICP: Integrated Circuit Piezoelectric
+    IDE: Integrated Development Environment
+    IEPE: Integrated Electronics PiezoElectric
+    IFFT: Inverse Fast Fourier Transform
+    IP: Internet Protocol
+    JSON: Javascript Object Notation
+    MIMO: Multiple Input, Multiple Output
+    ReST: Representational State Transfer
+    RMS: Root-Mean-Square
+    SVD: Singular Value Decomposition
+    TRAC: Time Response Assurance Criterion
+    UI: User Interface
+  bibliography:
+    - book/bibliography.bib
+site:
+  template: book-theme
+  options:
+    favicon: book/src/figures/Rattlesnake_Icon.ico
+    logo: book/src/figures/Rattlesnake_Icon.ico
+    logo_text: Rattlesnake Vibration Controller
+    hide_authors: false
+    numbered_references: true
+    hide_title_block: false
+  parts:
+    primary_sidebar_footer: |
+      [Github Repository](https://github.com/sandialabs/rattlesnake-vibration-controller)
+
+      [Python Package Index](https://pypi.org/project/rattlesnake-vibration-controller/)
+
+      [Report an Issue](https://github.com/sandialabs/rattlesnake-vibration-controller/issues)

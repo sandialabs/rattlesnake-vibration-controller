@@ -3,15 +3,16 @@ from unittest import mock
 
 import numpy as np
 import pytest
+
 # from PyQt5 import QtWidgets  # unused import
 
-from rattlesnake.components.signal_generation_process import (
+from rattlesnake.process.signal_generation_process import (
     SignalGenerationCommands,
     SignalGenerationMetadata,
     SignalGenerationProcess,
     signal_generation_process,
 )
-from rattlesnake.components.utilities import VerboseMessageQueue
+from rattlesnake.utilities import VerboseMessageQueue
 
 
 # Create log_file_queue
@@ -76,9 +77,7 @@ def test_signal_generation_process_init(log_file_queue):
     assert isinstance(signal_generation_process, SignalGenerationProcess)
 
 
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.log"
-)
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.log")
 def test_signal_generation_process_initialize_parameters(
     mock_log, signal_generation_process_obj, signal_generation_metadata
 ):
@@ -102,17 +101,11 @@ def test_signal_generation_process_initialize_signal_generator(
     assert signal_generation_process_obj.signal_remainder == None
 
 
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.shutdown"
-)
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.output"
-)
-@mock.patch("rattlesnake.components.signal_generation_process.flush_queue")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.log"
-)
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.shutdown")
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.output")
+@mock.patch("rattlesnake.process.signal_generation_process.flush_queue")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.log")
 def test_signal_generation_process_generate_signals(
     mock_log,
     mock_vput,
@@ -139,7 +132,9 @@ def test_signal_generation_process_generate_signals(
     signal_generation_process_obj.generate_signals(None)
     mock_siggen.generate_frame.assert_not_called()
     assert not signal_generation_process_obj.startup
-    mock_siggen.ready_for_next_output = True # Assume that reading in the data now allows a frame to be generated.
+    mock_siggen.ready_for_next_output = (
+        True  # Assume that reading in the data now allows a frame to be generated.
+    )
     signal_generation_process_obj.generate_signals(None)
 
     mock_siggen.generate_frame.assert_called()
@@ -155,17 +150,11 @@ def test_signal_generation_process_generate_signals(
         mock.call("Outputting Data"),
     ]
     mock_log.assert_has_calls(log_calls)
-    np.testing.assert_array_equal(
-        mock_output.call_args_list[0][0][0], np.ones((2, 100))
-    )
-    mock_vput.assert_called_with(
-        "Process Name", (SignalGenerationCommands.GENERATE_SIGNALS, None)
-    )
+    np.testing.assert_array_equal(mock_output.call_args_list[0][0][0], np.ones((2, 100)))
+    mock_vput.assert_called_with("Process Name", (SignalGenerationCommands.GENERATE_SIGNALS, None))
 
 
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.log"
-)
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.log")
 def test_signal_generation_process_output(mock_log, signal_generation_process_obj):
     data = np.ones((2, 50))
     testing_data_enabled = np.concatenate(
@@ -187,9 +176,7 @@ def test_signal_generation_process_output(mock_log, signal_generation_process_ob
         mock.call("Sending data to data_out queue"),
     ]
     mock_log.assert_has_calls(log_calls)
-    np.testing.assert_array_almost_equal(
-        mock_data_out.put.call_args_list[0][0][0][0], testing_data
-    )
+    np.testing.assert_array_almost_equal(mock_data_out.put.call_args_list[0][0][0][0], testing_data)
 
 
 def test_signal_generation_process_mute(signal_generation_process_obj):
@@ -214,12 +201,8 @@ def test_signal_generation_process_set_test_level(signal_generation_process_obj)
     assert signal_generation_process_obj.test_level_change == 0
 
 
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.log"
-)
-def test_signal_generation_process_adjust_test_level(
-    mock_log, signal_generation_process_obj
-):
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.log")
+def test_signal_generation_process_adjust_test_level(mock_log, signal_generation_process_obj):
     signal_generation_process_obj.current_test_level = 2
     signal_generation_process_obj.ramp_samples = 20
     data = 1
@@ -228,15 +211,13 @@ def test_signal_generation_process_adjust_test_level(
 
     assert signal_generation_process_obj.test_level_target == data
     assert signal_generation_process_obj.test_level_change
-    mock_log.assert_called_with(
-        "Changed test level from 2 to 1, -0.05 change per sample"
-    )
+    mock_log.assert_called_with("Changed test level from 2 to 1, -0.05 change per sample")
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.flush")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.flush")
 @mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.adjust_test_level"
+    "rattlesnake.process.signal_generation_process.SignalGenerationProcess.adjust_test_level"
 )
 def test_signal_generation_process_start_shutdown(
     mock_adjust, mock_flush, mock_put, signal_generation_process_obj
@@ -249,16 +230,12 @@ def test_signal_generation_process_start_shutdown(
 
     assert signal_generation_process_obj.shutdown_flag == True
     mock_flush.assert_called_with("Process Name")
-    mock_put.assert_called_with(
-        "Process Name", (SignalGenerationCommands.GENERATE_SIGNALS, None)
-    )
+    mock_put.assert_called_with("Process Name", (SignalGenerationCommands.GENERATE_SIGNALS, None))
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.flush")
-@mock.patch(
-    "rattlesnake.components.signal_generation_process.SignalGenerationProcess.log"
-)
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.flush")
+@mock.patch("rattlesnake.process.signal_generation_process.SignalGenerationProcess.log")
 def test_signal_generation_process_shutdown(
     mock_log, mock_flush, mock_put, signal_generation_process_obj
 ):
@@ -266,9 +243,7 @@ def test_signal_generation_process_shutdown(
 
     mock_log.assert_called_with("Shutting Down Signal Generation")
     mock_flush.assert_called_with("Process Name")
-    mock_put.assert_called_with(
-        "Process Name", (SignalGenerationCommands.SHUTDOWN_ACHIEVED, None)
-    )
+    mock_put.assert_called_with("Process Name", (SignalGenerationCommands.SHUTDOWN_ACHIEVED, None))
     assert signal_generation_process_obj.startup == True
     assert signal_generation_process_obj.shutdown_flag == False
     assert signal_generation_process_obj.done_generating == False
@@ -276,9 +251,7 @@ def test_signal_generation_process_shutdown(
 
 # Test the signal_generation_process function
 # Prevent run while loop from starting
-@mock.patch(
-    "rattlesnake.components.abstract_message_process.AbstractMessageProcess.run"
-)
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_signal_generation_process_func(mock_run, log_file_queue):
     signal_generation_process(
         "Environment Name",

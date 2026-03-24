@@ -11,14 +11,15 @@ import pytest
 from functions.common_functions import DummyMainWindow
 from qtpy import QtWidgets
 
-from rattlesnake.components.time_environment import (
+from rattlesnake.environment.time_environment import (
     TimeEnvironment,
     TimeParameters,
     TimeQueues,
-    TimeUI,
     time_process,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.user_interface.time_ui import TimeUI
+from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,
@@ -73,7 +74,7 @@ def data_acquisition_parameters(channel):
     environment_booleans = np.array([[True]])
     acquisition_processes = 1
     task_trigger = 0
-    task_trigger_output_channel = ''
+    task_trigger_output_channel = ""
     data_acquisition_parameters = DataAcquisitionParameters(
         channel_list,
         sample_rate,
@@ -84,9 +85,9 @@ def data_acquisition_parameters(channel):
         environments,
         environment_booleans,
         output_oversample,
-        maximum_acquisition_processes = acquisition_processes,
+        maximum_acquisition_processes=acquisition_processes,
         task_trigger=task_trigger,
-        task_trigger_output_channel=task_trigger_output_channel
+        task_trigger_output_channel=task_trigger_output_channel,
     )
 
     return data_acquisition_parameters
@@ -211,15 +212,15 @@ def test_time_parameters_store_to_netcdf(time_parameters):
 #     assert isinstance(time_ui, TimeUI)
 
 
-# @mock.patch("rattlesnake.components.time_environment.TimeParameters")
+# @mock.patch("rattlesnake.environment.time_environment.TimeParameters")
 # def test_time_ui_collect_environment_definition_parameters(mock_metadata, time_ui):
 #     time_ui.collect_environment_definition_parameters()
 
 #     mock_metadata.from_ui.assert_called_with(time_ui)
 
 
-# @mock.patch("rattlesnake.components.time_environment.multiline_plotter")
-# @mock.patch("rattlesnake.components.time_environment.TimeUI.log")
+# @mock.patch("rattlesnake.environment.time_environment.multiline_plotter")
+# @mock.patch("rattlesnake.environment.time_environment.TimeUI.log")
 # def test_time_ui_initialize_data_acquisition(mock_log, mock_plot, time_ui, data_acquisition_parameters):
 #     time_ui.initialize_data_acquisition(data_acquisition_parameters)
 
@@ -229,10 +230,10 @@ def test_time_parameters_store_to_netcdf(time_parameters):
 
 
 # @pytest.mark.parametrize("filename", ["Filename.npy", None])
-# @mock.patch("rattlesnake.components.time_environment.TimeUI.show_signal")
-# @mock.patch("rattlesnake.components.time_environment.rms_time")
-# @mock.patch("rattlesnake.components.time_environment.load_time_history")
-# @mock.patch("rattlesnake.components.time_environment.QtWidgets.QFileDialog.getOpenFileName")
+# @mock.patch("rattlesnake.environment.time_environment.TimeUI.show_signal")
+# @mock.patch("rattlesnake.environment.time_environment.rms_time")
+# @mock.patch("rattlesnake.environment.time_environment.load_time_history")
+# @mock.patch("rattlesnake.environment.time_environment.QtWidgets.QFileDialog.getOpenFileName")
 # def test_time_ui_load_signal(mock_file, mock_signal, mock_rms, mock_show, time_ui_init_data, filename):
 #     time_ui_init_data.definition_widget.output_sample_rate_display.setValue(2000)
 #     mock_file.return_value = (filename, "File filter")
@@ -266,8 +267,8 @@ def test_time_parameters_store_to_netcdf(time_parameters):
 #         np.testing.assert_array_equal((0, 0), mock_plot.setData.call_args[0][1])
 
 
-# @mock.patch("rattlesnake.components.time_environment.TimeUI.collect_environment_definition_parameters")
-# @mock.patch("rattlesnake.components.time_environment.TimeUI.log")
+# @mock.patch("rattlesnake.environment.time_environment.TimeUI.collect_environment_definition_parameters")
+# @mock.patch("rattlesnake.environment.time_environment.TimeUI.log")
 # def test__time_ui_initialize_enviornment(mock_log, mock_metadata, time_ui_init_data, time_parameters):
 #     mock_out_plot = mock.MagicMock()
 #     mock_res_plot = mock.MagicMock()
@@ -285,7 +286,7 @@ def test_time_parameters_store_to_netcdf(time_parameters):
 #     assert metadata == time_parameters
 
 
-# @mock.patch("rattlesnake.components.time_environment.TimeUI.show_signal")
+# @mock.patch("rattlesnake.environment.time_environment.TimeUI.show_signal")
 # def test_time_ui_retrieve_metadata(mock_show, time_ui_init_data):
 #     mock_netcdf = mock.MagicMock()
 #     mock_netcdf.cancel_rampdown_time = 0.2
@@ -373,7 +374,7 @@ def test_time_parameters_store_to_netcdf(time_parameters):
 #     mock_worksheet.cell.assert_has_calls(worksheet_calls)
 
 
-# @mock.patch("rattlesnake.components.time_environment.TimeUI.load_signal")
+# @mock.patch("rattlesnake.environment.time_environment.TimeUI.load_signal")
 # def test_time_ui_set_parameters_from_template(mock_load, time_ui):
 #     filename = os.path.join("tests","TemplateFiles","TimeEnvironmentTemplate.xlsx")
 #     workbook = openpyxl.load_workbook(filename)
@@ -393,7 +394,7 @@ def test_time_environment_init(time_queue):
     assert isinstance(time_environment, TimeEnvironment)
 
 
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.log")
 def test_time_environment_initialize_data_acquisition_parameters(
     mock_log, time_environment, data_acquisition_parameters
 ):
@@ -403,7 +404,7 @@ def test_time_environment_initialize_data_acquisition_parameters(
     assert time_environment.data_acquisition_parameters == data_acquisition_parameters
 
 
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.log")
 def test_time_environment_initialize_environment_test_parameters(
     mock_log, time_environment, time_parameters
 ):
@@ -413,14 +414,14 @@ def test_time_environment_initialize_environment_test_parameters(
     assert time_environment.environment_parameters == time_parameters
 
 
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.shutdown")
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.output")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.empty")
-@mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.get")
-@mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.get_nowait")
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.shutdown")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.output")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.environment.time_environment.mp.queues.Queue.put")
+@mock.patch("rattlesnake.environment.time_environment.mp.queues.Queue.empty")
+@mock.patch("rattlesnake.environment.time_environment.mp.queues.Queue.get")
+@mock.patch("rattlesnake.environment.time_environment.mp.queues.Queue.get_nowait")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.log")
 def test_time_environment_run_environment(
     mock_log,
     mock_get_no,
@@ -450,27 +451,17 @@ def test_time_environment_run_environment(
     ]
     mock_log.assert_has_calls(log_calls)
     mock_shutdown.assert_called()
-    np.testing.assert_array_equal(
-        np.ones((1, 500)), mock_output.call_args_list[0][0][0]
-    )
+    np.testing.assert_array_equal(np.ones((1, 500)), mock_output.call_args_list[0][0][0])
     assert mock_output.call_args_list[0][0][1] == False
-    np.testing.assert_array_equal(
-        np.ones((1, 1, 1200)), mock_put.call_args_list[0][0][0][1][1][0]
-    )
-    np.testing.assert_array_equal(
-        np.ones((1, 1, 1200)), mock_put.call_args_list[2][0][0][1][1][0]
-    )
-    mock_vput.assert_called_with(
-        "Environment Name", (GlobalCommands.START_ENVIRONMENT, None)
-    )
+    np.testing.assert_array_equal(np.ones((1, 1, 1200)), mock_put.call_args_list[0][0][0][1][1][0])
+    np.testing.assert_array_equal(np.ones((1, 1, 1200)), mock_put.call_args_list[2][0][0][1][1][0])
+    mock_vput.assert_called_with("Environment Name", (GlobalCommands.START_ENVIRONMENT, None))
 
 
 @pytest.mark.parametrize("test_level_change", [0, -0.001])
-@mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
-def test_time_environment_output(
-    mock_log, mock_put, time_environment, test_level_change
-):
+@mock.patch("rattlesnake.environment.time_environment.mp.queues.Queue.put")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.log")
+def test_time_environment_output(mock_log, mock_put, time_environment, test_level_change):
     time_environment.test_level_change = test_level_change
     time_environment.current_test_level = 1
     time_environment.test_level_target = 0.8
@@ -492,23 +483,19 @@ def test_time_environment_output(
     target_indices = np.where(output_array <= 0.8)
     output_array[target_indices] = 0.8
     output_array = output_array.reshape(1, -1)
-    np.testing.assert_array_almost_equal(
-        output_array, mock_put.call_args_list[0][0][0][0]
-    )
+    np.testing.assert_array_almost_equal(output_array, mock_put.call_args_list[0][0][0][0])
     assert mock_put.call_args_list[0][0][0][1] == False
 
 
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.adjust_test_level")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.adjust_test_level")
 def test_time_environment_stop_environment(mock_adjust, time_environment):
     time_environment.stop_environment(None)
 
     mock_adjust.assert_called_with(0.0)
 
 
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
-def test_time_environment_adjust_test_level(
-    mock_log, time_environment, time_parameters
-):
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.log")
+def test_time_environment_adjust_test_level(mock_log, time_environment, time_parameters):
     time_environment.current_test_level = 1
     time_environment.test_level_target = 0.1
     time_environment.environment_parameters = time_parameters
@@ -523,25 +510,25 @@ def test_time_environment_adjust_test_level(
     )
 
 
-@mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.flush")
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
+@mock.patch("rattlesnake.environment.time_environment.mp.queues.Queue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.flush")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.log")
 def test_time_environment_shutdown(mock_log, mock_flush, mock_put, time_environment):
     time_environment.shutdown()
 
     mock_log.assert_called_with("Shutting Down Time History Generation")
     mock_flush.assert_called_with("Environment Name")
     put_calls = [
-        mock.call(("Environment Name", ("enable", "test_level_selector"))),
-        mock.call(("Environment Name", ("enable", "repeat_signal_checkbox"))),
-        mock.call(("Environment Name", ("enable", "start_test_button"))),
-        mock.call(("Environment Name", ("disable", "stop_test_button"))),
+        mock.call(("Environment Name", (UICommands.ENABLE, "test_level_selector"))),
+        mock.call(("Environment Name", (UICommands.ENABLE, "repeat_signal_checkbox"))),
+        mock.call(("Environment Name", (UICommands.ENABLE, "start_test_button"))),
+        mock.call(("Environment Name", (UICommands.DISABLE, "stop_test_button"))),
     ]
     mock_put.assert_has_calls(put_calls)
     assert time_environment.startup == True
 
 
-@mock.patch("rattlesnake.components.time_environment.TimeEnvironment.run")
+@mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.run")
 def test_time_process_function(mock_run, log_file_queue):
     time_process(
         "Environment Name",

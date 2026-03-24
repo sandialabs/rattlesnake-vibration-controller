@@ -3,14 +3,12 @@ from unittest import mock
 
 import pytest
 from functions.common_functions import fake_time
+
 # from PyQt5 import QtWidgets  # comment out unused import
 
-from rattlesnake.components.abstract_environment import (
-    AbstractEnvironment,
-    AbstractMetadata,
-    AbstractUI,
-)
-from rattlesnake.components.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
+from rattlesnake.user_interface.abstract_user_interface import AbstractUI
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
 
 # Initialize log_file_queue that verbose queues will use
@@ -72,9 +70,7 @@ class DummyAbstractMetadata(AbstractMetadata):
 
 # Create a dummy AbstractUI class
 class DummyAbstractUI(AbstractUI):
-    def __init__(
-        self, log_file_queue, environment_command_queue, controller_command_queue
-    ):
+    def __init__(self, log_file_queue, environment_command_queue, controller_command_queue):
         super().__init__(
             "Environment Name",
             environment_command_queue,
@@ -135,9 +131,7 @@ class DummyAbstractEnvironment(AbstractEnvironment):
         )
 
     def initialize_data_acquisition_parameters(self, data_acquisition_parameters):
-        return super().initialize_data_acquisition_parameters(
-            data_acquisition_parameters
-        )
+        return super().initialize_data_acquisition_parameters(data_acquisition_parameters)
 
     def initialize_environment_test_parameters(self, environment_parameters):
         return super().initialize_environment_test_parameters(environment_parameters)
@@ -149,9 +143,7 @@ class DummyAbstractEnvironment(AbstractEnvironment):
 # Initialize the AbstractUI class
 @pytest.fixture
 def abstract_ui(log_file_queue, environment_command_queue, controller_command_queue):
-    return DummyAbstractUI(
-        log_file_queue, environment_command_queue, controller_command_queue
-    )
+    return DummyAbstractUI(log_file_queue, environment_command_queue, controller_command_queue)
 
 
 # Initialize the AbstractEnvironment class
@@ -205,9 +197,9 @@ def test_abstract_metadata_init():
 
 # Test the AbstractUI log function
 # Prevent from writing to the log_file_queue
-@mock.patch("rattlesnake.components.abstract_environment.Queue.put")
+@mock.patch("rattlesnake.environment.abstract_environment.Queue.put")
 # Replace the date and time with a string
-@mock.patch("rattlesnake.components.abstract_environment.datetime")
+@mock.patch("rattlesnake.user_interface.abstract_user_interface.datetime")
 def test_abstract_ui_log(mock_time, mock_put, abstract_ui):
     message = "Test Message"
     mock_time.now = fake_time
@@ -247,9 +239,7 @@ def test_abstract_environment_init(
     # Test the environment_command_queue property
     assert abstract_environment.environment_command_queue == environment_command_queue
     # Test the controller_communication_queue property
-    assert (
-        abstract_environment.controller_communication_queue == controller_command_queue
-    )
+    assert abstract_environment.controller_communication_queue == controller_command_queue
     # Test the log_file_queue property
     assert abstract_environment.log_file_queue == log_file_queue
     # Test the gui_update_queue property
@@ -271,9 +261,9 @@ def test_abstract_environment_init(
 
 # Test the AbstractEnvironment log function
 # Prevent from writing to the log_file_queue
-@mock.patch("rattlesnake.components.abstract_environment.Queue.put")
+@mock.patch("rattlesnake.environment.abstract_environment.Queue.put")
 # Replace the date and time with a string
-@mock.patch("rattlesnake.components.abstract_environment.datetime")
+@mock.patch("rattlesnake.environment.abstract_environment.datetime")
 def test_abstract_environment_log(mock_time, mock_put, abstract_environment):
     message = "Test Message"
     mock_time.now = fake_time
@@ -281,9 +271,7 @@ def test_abstract_environment_log(mock_time, mock_put, abstract_environment):
     abstract_environment.log(message)
 
     # Test if the correct string was writtin to log_file_queue
-    mock_put.assert_called_with(
-        "{:}: {:} -- {:}\n".format("Datetime", "Environment Name", message)
-    )
+    mock_put.assert_called_with("{:}: {:} -- {:}\n".format("Datetime", "Environment Name", message))
 
 
 # Test the AbstractEnvironment quit function
@@ -319,9 +307,9 @@ def test_abstract_environment_map_command(abstract_environment):
     ],
 )
 # Force get command to return values
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.get")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.get")
 # Prevent from writing to log_file_queue
-@mock.patch("rattlesnake.components.abstract_environment.AbstractEnvironment.log")
+@mock.patch("rattlesnake.environment.abstract_environment.AbstractEnvironment.log")
 def test_abstract_environment_run(
     mock_log, mock_get, mock_function, mock_key, abstract_environment
 ):

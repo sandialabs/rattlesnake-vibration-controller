@@ -34,5 +34,12 @@ dist/**
 .coverage
 coverage.html
 coverage.xml
-# ignore local build target for mdbook
-documentation/mdbook/book/
+# ignore local build target for book
+# documentation/book/book/
+# documentation/_build/
+# ignore local documentation that is automatically generated
+# note: removed this to demonstrate embedding.
+# documentation/book/src/_generated/**
+
+# ignore local documentation built by Jupyter Book
+documentation/_build/**

@@ -3,10 +3,11 @@ from unittest import mock
 
 import pytest
 from functions.common_functions import fake_time
+
 # from PyQt5 import QtWidgets  # comment out unused import
 
-from rattlesnake.components.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
 
 # Create log_file_queue
@@ -36,9 +37,7 @@ def abstract_message_process(log_file_queue, abstract_command_queue, gui_update_
 
 
 # Test
-def test_abstract_message_process_init(
-    log_file_queue, abstract_command_queue, gui_update_queue
-):
+def test_abstract_message_process_init(log_file_queue, abstract_command_queue, gui_update_queue):
     abstract_message_process = AbstractMessageProcess(
         "Process Name", log_file_queue, abstract_command_queue, gui_update_queue
     )
@@ -61,9 +60,9 @@ def test_abstract_message_process_init(
 
 # Test the AbstractMessageProcess log function
 # Prevent anything from being written to log_file_queue
-@mock.patch("rattlesnake.components.abstract_message_process.Queue.put")
+@mock.patch("rattlesnake.process.abstract_message_process.Queue.put")
 # Replace date and time with a string
-@mock.patch("rattlesnake.components.abstract_message_process.datetime")
+@mock.patch("rattlesnake.process.abstract_message_process.datetime")
 def test_abstract_message_process_log(mock_time, mock_put, abstract_message_process):
     message = "Test Message"
     mock_time.now = fake_time
@@ -71,9 +70,7 @@ def test_abstract_message_process_log(mock_time, mock_put, abstract_message_proc
     abstract_message_process.log(message)
 
     # Test if the correct string was stored to log_file_queue
-    mock_put.assert_called_with(
-        "{:}: {:} -- {:}\n".format("Datetime", "Process Name", message)
-    )
+    mock_put.assert_called_with("{:}: {:} -- {:}\n".format("Datetime", "Process Name", message))
 
 
 # Test if the quit function works
@@ -110,11 +107,9 @@ def test_abstract_message_process_map_command(abstract_message_process):
     ],
 )
 # Force command_queue.get function to return data
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.get")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.get")
 # Prevent from storing to log_file_queue
-@mock.patch(
-    "rattlesnake.components.abstract_message_process.AbstractMessageProcess.log"
-)
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_abstract_message_process_run(
     mock_log, mock_get, mock_function, mock_key, abstract_message_process
 ):
@@ -138,9 +133,7 @@ def test_abstract_message_process_run(
 
 if __name__ == "__main__":
     log_file_queue = mp.Queue()
-    abstract_command_queue = VerboseMessageQueue(
-        log_file_queue, "Spectral Command Queue"
-    )
+    abstract_command_queue = VerboseMessageQueue(log_file_queue, "Spectral Command Queue")
     abstract_message_process = AbstractMessageProcess(
         "Process Name", log_file_queue, abstract_command_queue, mp.Queue()
     )

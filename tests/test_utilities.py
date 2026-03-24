@@ -24,7 +24,7 @@ from functions.common_functions import fake_time
 from functions.queues_functions import clear_log_queue, clear_verbose_queue
 
 # from rattlesnake.components.environments import ControlTypes  # unused import
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,
@@ -141,7 +141,7 @@ def test_data_acquisition_parameters_initialization(channel):
     environment_booleans = [[True]]
     acquisition_processes = 1
     task_trigger = 0
-    task_trigger_output_channel = ''
+    task_trigger_output_channel = ""
     data_acquisition_parameters = DataAcquisitionParameters(
         channel_list,
         sample_rate,
@@ -152,9 +152,9 @@ def test_data_acquisition_parameters_initialization(channel):
         environments,
         environment_booleans,
         output_oversample,
-        maximum_acquisition_processes = acquisition_processes,
+        maximum_acquisition_processes=acquisition_processes,
         task_trigger=task_trigger,
-        task_trigger_output_channel=task_trigger_output_channel
+        task_trigger_output_channel=task_trigger_output_channel,
     )
 
     # Test if variable is a DataAcquisitionParameters object
@@ -162,10 +162,7 @@ def test_data_acquisition_parameters_initialization(channel):
     # Test nyquist_frequency property
     assert data_acquisition_parameters.nyquist_frequency == sample_rate / 2
     # Test output_sample_rate property
-    assert (
-        data_acquisition_parameters.output_sample_rate
-        == sample_rate * output_oversample
-    )
+    assert data_acquisition_parameters.output_sample_rate == sample_rate * output_oversample
 
 
 # Test log_file_task
@@ -189,13 +186,9 @@ def test_log_file_process(mock_file, log_file_queue):
 
 # Test initialziation of queue container
 def test_queue_container_init(log_file_queue):
-    acquisition_command_queue = VerboseMessageQueue(
-        log_file_queue, "Acquisition Command Queue"
-    )
+    acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
     output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
-    streaming_command_queue = VerboseMessageQueue(
-        log_file_queue, "Streaming Command Queue"
-    )
+    streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
     input_output_sync_queue = mp.Queue()
     single_process_hardware_queue = mp.Queue()
     gui_update_queue = mp.Queue()
@@ -250,9 +243,9 @@ def test_verbose_message_id(verbose_queue, random_seed=42):
 
 # Test verbose message queue put
 # Mock the message id return string
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.generate_message_id")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
 # Prevent the Queue object form putting stuff into it
-@mock.patch("rattlesnake.components.utilities.mp.queues.Queue.put")
+@mock.patch("rattlesnake.utilities.mp.queues.Queue.put")
 def test_verbose_message_queue_put(mock_put, mock_id, verbose_queue):
     # Mock message id
     message_id = "1"
@@ -269,7 +262,7 @@ def test_verbose_message_queue_put(mock_put, mock_id, verbose_queue):
 
 # Test verbose message queue get
 # Prevent the Queue object from getting from an empty queue
-@mock.patch("rattlesnake.components.utilities.mp.queues.Queue.get")
+@mock.patch("rattlesnake.utilities.mp.queues.Queue.get")
 def test_verbose_message_queue_get(mock_get, verbose_queue):
     # Mock the data to get from the queue
     message_id = "1"
@@ -320,9 +313,9 @@ def test_verbose_message_queue_get(mock_get, verbose_queue):
 
 # Test log_file_queue for verbose push and verbose get)
 # Mock the message_id for the log message
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.generate_message_id")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
 # Mock the datetime in the log message
-@mock.patch("rattlesnake.components.utilities.datetime")
+@mock.patch("rattlesnake.utilities.datetime")
 def test_verbose_message_queue_log(mock_time, mock_id, log_file_queue, verbose_queue):
     # Generate multiprocessing arrays to store data and log message to
     verbose_array = mp.Array("i", 1)
@@ -346,9 +339,7 @@ def test_verbose_message_queue_log(mock_time, mock_id, log_file_queue, verbose_q
     verbose_process.join()
 
     # Clear the log_file_queue and store the messages to log_string
-    log_file_process = mp.Process(
-        target=clear_log_queue, args=(log_file_queue, log_string)
-    )
+    log_file_process = mp.Process(target=clear_log_queue, args=(log_file_queue, log_string))
     log_file_process.start()
     log_file_process.join()
 
@@ -359,8 +350,8 @@ def test_verbose_message_queue_log(mock_time, mock_id, log_file_queue, verbose_q
     )
 
 
-@mock.patch("rattlesnake.components.utilities.importlib.util.module_from_spec")
-@mock.patch("rattlesnake.components.utilities.importlib.util.spec_from_file_location")
+@mock.patch("rattlesnake.utilities.importlib.util.module_from_spec")
+@mock.patch("rattlesnake.utilities.importlib.util.spec_from_file_location")
 def test_load_python_module(mock_from_spec, mock_module):
     mock_spec = mock.MagicMock()
     mock_from_spec.return_value = mock_spec

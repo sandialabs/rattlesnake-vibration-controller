@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>801</width>
+    <height>581</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QComboBox" name="channel_selector">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the control channel to apply the filter to.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="1" column="0">
+      <widget class="PlotWidget" name="full_time_history_plot">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Full Time History Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the time history of the control channel including all sine tones in Blue and the sine tones extracted by the filter in Orange.  If noise is applied, it is not shown on the desired (Blue) signal, but its effects will be shown on the extracted filter time history (Orange).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QComboBox" name="filter_type_selector">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Filter Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The type of filter used to extract the sinusoidal components from the running time data. The Digital Tracking Filter is a less computationally intensive filter, but can struggle to reject noise, other environments, or multiple sine tones. The Overlapped Vold-Kalman filter will do a better job rejecting noise and other environments, and can seamlessly handle multiple overlapping sine tones if they are all defined in this environment. For large tests, the Overlapped Vold-Kalman filter may not be able to be run real-time, which can cause underflow issues as the controller is waiting for its next control decision. Investigate both the filter accuracy as well as the computation time while selecting filters: if a filter takes 10 seconds to analyze 5 seconds of data, then it will not be able to keep up during the test.  Keep in mind that the filter is only being applied to a single channel.  If multiple control channels exist, the filter computation time should be multiplied by the number of channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <item>
+          <property name="text">
+           <string>Digital Tracking Filter</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Overlapped Vold-Kalman Filter</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="filter_order_layout">
+         <item>
+          <widget class="QLabel" name="filter_order_label">
+           <property name="text">
+            <string>Vold-Kalman Filter Order</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="filter_order_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Vold-Kalman Filter Order&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This value specifies the filter order of the Vold-Kalman filter, which modifies the filter response speed and computational complexity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>1</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>3</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="filter_bandwidth_layout">
+         <item>
+          <widget class="QLabel" name="filter_bandwidth_label">
+           <property name="text">
+            <string>Vold-Kalman Filter Bandwidth</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="filter_bandwidth_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Vold-Kalman Filter Bandwidth&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This parameter adjusts the pass-band of the Vold-Kalman filter, which allows the users to specify the trade-off between noise rejection and filter response time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="suffix">
+            <string> Hz</string>
+           </property>
+           <property name="decimals">
+            <number>3</number>
+           </property>
+           <property name="minimum">
+            <double>0.001000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>1000000.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>2.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="filter_block_size_layout">
+         <item>
+          <widget class="QLabel" name="filter_block_size_label">
+           <property name="text">
+            <string>Filter Block Size</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="filter_block_size_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Vold-Kalman Filter Block Size&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The Vold-Kalman filter is meant to be run on entire signals and has start and end effects.  To transform the Vold-Kalman filter into an on-line filter, an Overlap-and-Add strategy is utilized.  This parameter specifies the size of the blocks of data analyzed by each pass of the Vold-Kalman filter.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="minimum">
+            <number>10</number>
+           </property>
+           <property name="maximum">
+            <number>999999999</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="filter_block_overlap_layout">
+         <item>
+          <widget class="QLabel" name="filter_block_overlap_label">
+           <property name="text">
+            <string>Filter Block Overlap</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="filter_block_overlap_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Vold-Kalman Filter Block Overlap&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The Vold-Kalman filter is meant to be run on entire signals and has start and end effects. To transform the Vold-Kalman filter into an on-line filter, an Overlap-and-Add strategy is utilized. This parameter specifies the overlap between subsequent measurement frames, aiming to remove the end effects of the filter.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <double>0.500000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>0.150000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="tracking_filter_cutoff_layout">
+         <item>
+          <widget class="QLabel" name="tracking_filter_cutoff_label">
+           <property name="text">
+            <string>Tracking Filter Cutoff</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="tracking_filter_cutoff_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tracking Filter Cutoff&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A cutoff in percent of the nominal frequency to use in the digital tracking filter.  This value allows the user to specify the trade-off between a faster filter with less noise rejection and a slower filter with more noise rejection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="suffix">
+            <string>%</string>
+           </property>
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>5.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>15.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="tracking_filter_order_layout">
+         <item>
+          <widget class="QLabel" name="tracking_filter_order_label">
+           <property name="text">
+            <string>Tracking Filter Order</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="tracking_filter_order_selector">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tracking Filter Order&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This value allows the user to specify the order of the filter used in the digital tracking filter.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="maximum">
+            <number>8</number>
+           </property>
+           <property name="value">
+            <number>2</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="noise_layout">
+         <item>
+          <widget class="QLabel" name="noise_label">
+           <property name="text">
+            <string>Noise Level</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="noise_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Noise Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Simulate noise on the measurements to investigate noise rejection capabilities of the filter.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <double>1000000.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="plot_separate_frames_selector">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Plot Separate Frames&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the plots will show each frame of data as a separate color so end effects can be more easily identifier.  If not selected, a single plot curve will be shown, which is more computationally efficient.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>Plot Separate Frames</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="compute_button">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compute&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Click this button to start the filter computation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>Compute</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item row="2" column="1">
+      <widget class="QListWidget" name="order_selector">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sine Tone Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the sine tone to visualize in the result plots.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::SingleSelection</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="PlotWidget" name="order_time_history_plot">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Order Time History Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the time history of the specified sine tone of the chosen control signal in Blue and the corresponding time signal identified by the specified filter parameters in Orange.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="PlotWidget" name="order_amplitude_plot">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sine Tone Amplitude Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Plots the amplitude of the specification for the selected control channel and sine tone (Blue) compared to the amplitude extracted from the filtered time signal (Orange) for each frequency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="PlotWidget" name="order_phase_plot">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sine Tone Phase Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Plots the phase of the specification for the selected control channel and sine tone (Blue) compared to the phase extracted from the filtered time signal (Orange) for each frequency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout"/>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="accept_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Accept&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Accepts the specified filter parameters and puts their settings into the Environment Definition user interface.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Accept</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="reject_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Cancel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Cancels the filter parameter selection and discards any changes made in this dialog box.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

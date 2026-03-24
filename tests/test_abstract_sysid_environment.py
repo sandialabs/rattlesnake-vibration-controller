@@ -1,4 +1,5 @@
 import multiprocessing as mp
+
 # from unittest import mock  # unused import
 
 import numpy as np
@@ -9,10 +10,11 @@ from functions.abstract_sysid_functions import (
     # DummyAbstractSysIdUI,  # usused import
 )
 from functions.common_functions import DummyMainWindow
+
 # from PyQt5 import QtWidgets  # unused import
 
-from rattlesnake.components.abstract_sysid_environment import SystemIdCommands
-from rattlesnake.components.utilities import VerboseMessageQueue
+from rattlesnake.environment.abstract_sysid_environment import SystemIdCommands
+from rattlesnake.utilities import VerboseMessageQueue
 
 
 @pytest.fixture()

@@ -6,62 +6,92 @@ on:
   push:
     branches:
       - main
-      - dev
-      - "!*doc*" # Explicitly ignores branches with "doc" in the name
+      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
   pull_request:
     branches:
       - main
-      - dev
-      - "!*doc*" # Explicitly ignores branches with "doc" in the name
+      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+
+# Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # `BASE_URL` determines the website is served from, including CSS & JS assets
+  # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
+  BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
 
 jobs:
-  lint:
+
+  # 2026-03-13: We cannot use uv with the test matrix because of Qt.  There is
+  # a known challenge with PyQt5 on modern macOS (particularly M1/M2/M3 Silicon)
+  # and some Windows environments.  PyQt does not have pre-built wheels for every
+  # combination of OS and Python version, and uv is very strict about this.
+  pytest_matrix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.11"]
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
 
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+
+      - name: Run tests
+        run: |
+          python -m pytest -v
+
+  lint:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v3
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
       with:
-        python-version: "3.11"
-
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        enable-cache: true
+        python-version: "3.12"
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install .[dev]
+        uv venv
+        uv pip install .[dev]
         
     - name: pylint analysis and custom pylint HTML report
       run: |
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
-        
-        # Generate text report
-        pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$PYLINT_OUTPUT_FILE" || true
-        
-        # Extract the score from pylint output
-        SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-        
+
+        # Run pylint once, capturing the output to a variable.
+        # This avoids reading the file twice.
+        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
+
+        # Extract the score from the captured output
+        SCORE=$(echo "$PYLINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+
         # Output the score and file name
         echo "🏁 Pylint analysis completed. 🏁"
         echo "    📄 Output file: $PYLINT_OUTPUT_FILE"
         echo "    🏆 Pylint score: $SCORE out of 10"
 
-        # Read the pylint output and create a custom HTML report.
-        python src/rattlesnake/cicd/report_pylint.py \
+        # The report_pylint.py script still needs the file, which we created above.
+        uv run python src/rattlesnake/cicd/report_pylint.py \
           --input_file "$PYLINT_OUTPUT_FILE" \
           --output_file pylint_report.html \
           --timestamp "$TIMESTAMP" \
@@ -79,42 +109,30 @@ jobs:
           pylint_output_*.txt
 
   coverage:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.11"]
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          enable-cache: true
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
+          uv venv
+          uv pip install .[dev]
 
       - name: pytest coverage and custom coverage HTML report
         run: |
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
-          python src/rattlesnake/cicd/report_pytest.py \
+          uv run python src/rattlesnake/cicd/report_pytest.py \
             --input_file coverage.xml \
             --output_file pytest_report.html \
             --timestamp "$TIMESTAMP" \
@@ -132,32 +150,57 @@ jobs:
             htmlcov/
             coverage.xml
 
-  deploy:
-    needs: [lint, coverage]
+  # This job builds the Jupyter Book documentation and uploads it as an artifact. It runs on Ubuntu with Python 3.12.
+  # To test locally:
+  # 1. Install uv: https://astral.sh/uv/installation/
+  # 2. Run `uv pip install "jupyter-book>=2.0.0"`
+  # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
+  docs_jupyter_book:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install "jupyter-book>=2.0.0"
+
+      - name: Build the book
+        run: |
+          # Build the book. We use --strict to ensure any errors fail the job.
+          cd documentation && uv run jupyter book build --html --strict && cd ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jupyter-book-report
+          path: documentation/_build/html
+
+  deploy:
+    needs: [pytest_matrix, lint, coverage, docs_jupyter_book]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
         with:
-          python-version: "3.11"
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          enable-cache: true
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
+          uv venv
+          uv pip install .[dev]
 
       - name: Download pylint artifact
         uses: actions/download-artifact@v4
@@ -171,19 +214,33 @@ jobs:
           name: pytest-report
           path: pytest-report
 
+      - name: Download jupyter book artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jupyter-book-report
+          path: jupyter-book-report
+
+      - name: Set Deploy Directory
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "DEPLOY_SUBDIR=main" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_SUBDIR=dev" >> $GITHUB_ENV
+          fi
+
       - name: Create badges
         run: |
           # Pylint badge
           PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
           SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          python3 src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
+          uv run python src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
           mkdir -p badges
           curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
           cat > badges/pylint-info.json << EOF
           {
             "score": "${SCORE}",
             "color": "${{ env.BADGE_COLOR }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/pylint/",
+            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/pylint/",
             "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
             "run_id": "${{ github.run_id }}",
             "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -191,7 +248,7 @@ jobs:
           EOF
 
           # Pytest badge
-          python3 src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
+          uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
           
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
           WORKFLOW_URL="${REPO_URL}/actions/workflows/ci.yml"
@@ -200,7 +257,7 @@ jobs:
           {
             "coverage": "${{ env.COVERAGE }}",
             "color": "${{ env.BADGE_COLOR_COV }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/coverage/",
+            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/coverage/",
             "workflow_url": "${WORKFLOW_URL}",
             "run_id": "${{ github.run_id }}",
             "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}",
@@ -221,11 +278,16 @@ jobs:
 
       - name: Assemble pages directory
         run: |
-          mkdir -p pages/reports/pylint
-          mkdir -p pages/reports/coverage
-          mv pylint-report/pylint_report.html pages/reports/pylint/index.html
-          mv pytest-report/pytest_report.html pages/reports/coverage/index.html
-          mv pytest-report/htmlcov pages/reports/coverage/
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
+          
+          mv pylint-report/pylint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint/index.html"
+          mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
+          mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
+          mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          
+          # Create a root index.html that redirects or links to both versions
           cat > pages/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -237,20 +299,33 @@ jobs:
                   body { font-family: sans-serif; margin: 40px; background-color: #f6f8fa; }
                   .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                   h1 { color: #333; }
+                  h2 { color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; }
                   a { color: #0366d6; text-decoration: none; }
                   a:hover { text-decoration: underline; }
                   ul { list-style-type: none; padding: 0; }
-                  li { background-color: #f1f1f1; margin: 10px 0; padding: 15px; border-radius: 4px; }
+                  li { background-color: #f1f1f1; margin: 10px 0; padding: 15px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+                  .badge { font-weight: bold; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+                  .badge-main { background-color: #0366d6; color: white; }
+                  .badge-dev { background-color: #f66a0a; color: white; }
               </style>
           </head>
           <body>
               <div class="container">
-                  <h1>Rattlesnake Vibration Controller - Reports</h1>
-                  <p>This page provides links to the latest reports generated by the CI/CD pipeline.</p>
+                  <h1>Rattlesnake Vibration Controller - CI/CD Hub</h1>
+                  <p>Access the latest documentation and quality reports for both the stable and development versions.</p>
+                  
+                  <h2>🚀 Released (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file">Main Branch</a>)</h2>
                   <ul>
-                      <li><a href="reports/pylint/index.html">Pylint Report</a></li>
-                      <li><a href="reports/coverage/index.html">Pytest Coverage Report</a></li>
-                      <li><a href="book/index.html">mdBook</a></li>
+                      <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
+                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a></li>
+                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a></li>
+                  </ul>
+
+                  <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
+                  <ul>
+                      <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
+                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
+                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a></li>
                   </ul>
               </div>
           </body>
@@ -264,36 +339,4 @@ jobs:
           publish_dir: ./pages
           publish_branch: gh-pages
           keep_files: true
-          commit_message: 'Deploy reports for ${{ github.sha }}'
-
-  matrix:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
-
-      - name: Run tests
-        run: |
-          pytest -v
+          commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
