@@ -76,23 +76,23 @@
     <div class="container">
         <div class="header">
             <h1>Pylint Report</h1>
-            <div class="score">Score: 9.19/10</div>
+            <div class="score">Score: 9.22/10</div>
             <div class="metadata">
-                <div><strong>Generated:</strong> 2026-03-25 17:40:55 UTC (2026-03-25 13:40:55 EST / 2026-03-25 11:40:55 MST)</div>
-                <div><strong>Run ID:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/23555315441"> 23555315441</a></div>
+                <div><strong>Generated:</strong> 2026-03-25 21:01:18 UTC (2026-03-25 17:01:18 EST / 2026-03-25 15:01:18 MST)</div>
+                <div><strong>Run ID:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/23563910834"> 23563910834</a></div>
                 <div><strong>Branch:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev"> dev</a></div>
-                <div><strong>Commit:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/commit/8693bce6e942dfa9cab333225df3c07082774204"> 8693bce</a></div>
+                <div><strong>Commit:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/commit/715d8933c219698aa1772d14653e4c60841839d0"> 715d893</a></div>
                 <div><strong>Repository:</strong> <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">sandialabs/rattlesnake-vibration-controller</a></div>
             </div>
         </div>
         
         <div class="section">
             <h2 id="summary">Summary</h2>
-            <div class="summary">Your code has been rated at 9.19/10</div>
+            <div class="summary">Your code has been rated at 9.22/10</div>
             
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-number">67</div>
+                    <div class="stat-number">69</div>
                     <div>Total Issues</div>
                 </div>
                 <div class="stat-card">
@@ -100,7 +100,7 @@
                     <div>Conventions</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">6</div>
+                    <div class="stat-number">8</div>
                     <div>Warnings</div>
                 </div>
                 <div class="stat-card">
@@ -116,14 +116,22 @@
         
         <!--div class="section">
             <h2 id="issues">Issues Detail</h2>
-            <div class="issues-list"><div class="issue convention">src/rattlesnake/utilities.py:1:0: C0302: Too many lines in module (1271/1000) (too-many-lines)</div><div class="issue refactor">src/rattlesnake/utilities.py:242:30: R1719: The if expression can be replaced with &#x27;not test&#x27; (simplifiable-if-expression)</div><div class="issue refactor">src/rattlesnake/utilities.py:247:44: R1719: The if expression can be replaced with &#x27;not test&#x27; (simplifiable-if-expression)</div><div class="issue refactor">src/rattlesnake/utilities.py:253:0: R0902: Too many instance attributes (11/7) (too-many-instance-attributes)</div><div class="issue refactor">src/rattlesnake/utilities.py:256:4: R0913: Too many arguments (12/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:256:4: R0917: Too many positional arguments (12/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:253:0: R0903: Too few public methods (0/2) (too-few-public-methods)</div><div class="issue refactor">src/rattlesnake/utilities.py:327:0: R0902: Too many instance attributes (22/7) (too-many-instance-attributes)</div><div class="issue refactor">src/rattlesnake/utilities.py:330:4: R0913: Too many arguments (23/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:330:4: R0917: Too many positional arguments (23/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:330:4: R0914: Too many local variables (23/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:429:4: R0914: Too many local variables (25/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:327:0: R0903: Too few public methods (1/2) (too-few-public-methods)</div><div class="issue refactor">src/rattlesnake/utilities.py:496:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)</div><div class="issue refactor">src/rattlesnake/utilities.py:499:4: R0913: Too many arguments (10/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:499:4: R0917: Too many positional arguments (10/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:670:4: R1705: Unnecessary &quot;else&quot; after &quot;return&quot;, remove the &quot;else&quot; and de-indent the code inside it (no-else-return)</div><div class="issue refactor">src/rattlesnake/utilities.py:737:0: R0914: Too many local variables (17/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:1035:0: R0914: Too many local variables (17/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:1189:21: R1728: Consider using a generator instead &#x27;tuple(slice(-self.buffer_data.shape[self.buffer_axis], None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))&#x27; (consider-using-generator)</div><div class="issue refactor">src/rattlesnake/utilities.py:1202:25: R1728: Consider using a generator instead &#x27;tuple(slice(new_data_size, None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))&#x27; (consider-using-generator)</div><div class="issue refactor">src/rattlesnake/utilities.py:1228:21: R1728: Consider using a generator instead &#x27;tuple(slice(data_start, None if data_end == 0 else data_end) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))&#x27; (consider-using-generator)</div><div class="issue refactor">src/rattlesnake/utilities.py:1252:8: R1731: Consider using &#x27;self._buffer_position = max(self._buffer_position, 0)&#x27; instead of unnecessary if block (consider-using-max-builtin)</div><div class="issue refactor">src/rattlesnake/utilities.py:1254:8: R1730: Consider using &#x27;self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])&#x27; instead of unnecessary if block (consider-using-min-builtin)</div><div class="issue refactor">src/rattlesnake/utilities.py:1260:8: R1731: Consider using &#x27;self._buffer_position = max(self._buffer_position, 0)&#x27; instead of unnecessary if block (consider-using-max-builtin)</div><div class="issue refactor">src/rattlesnake/utilities.py:1262:8: R1730: Consider using &#x27;self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])&#x27; instead of unnecessary if block (consider-using-min-builtin)</div><div class="issue refactor">src/rattlesnake/main.py:37:0: R0914: Too many local variables (31/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/main.py:37:0: R0912: Too many branches (14/12) (too-many-branches)</div><div class="issue refactor">src/rattlesnake/main.py:37:0: R0915: Too many statements (82/50) (too-many-statements)</div><div class="issue convention">src/rattlesnake/main.py:31:0: C0411: standard import &quot;datetime&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/main.py:32:0: C0411: standard import &quot;multiprocessing&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/main.py:33:0: C0411: standard import &quot;sys&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/main.py:34:0: C0411: third party import &quot;qtpy.QtWidgets&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/cicd/badge_color_pylint.py:13:0: C0116: Missing function or method docstring (missing-function-docstring)</div><div class="issue convention">src/rattlesnake/cicd/badge_color_pylint.py:16:4: C0103: Variable name &quot;COLOR&quot; doesn&#x27;t conform to snake_case naming style (invalid-name)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:264:0: C0301: Line too long (130/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:265:0: C0301: Line too long (126/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:266:0: C0301: Line too long (136/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:267:0: C0301: Line too long (116/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:308:0: C0301: Line too long (138/100) (line-too-long)</div><div class="issue warning">src/rattlesnake/cicd/report_pylint.py:134:9: W0511: TODO: exactly match to &quot;refactor&quot; via r&quot;R\d{4}:&quot; and add an &quot;unknown&quot; (fixme)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:150:0: R0913: Too many arguments (9/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:150:0: R0917: Too many positional arguments (9/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:339:0: R0913: Too many arguments (7/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:339:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)</div><div class="issue warning">src/rattlesnake/cicd/report_pylint.py:475:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue warning">src/rattlesnake/cicd/report_jupyter_book.py:120:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue warning">src/rattlesnake/cicd/badge_color_coverage.py:26:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue refactor">src/rattlesnake/cicd/utilities.py:24:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)</div><div class="issue refactor">src/rattlesnake/cicd/utilities.py:48:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:169:0: C0301: Line too long (130/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:170:0: C0301: Line too long (126/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:171:0: C0301: Line too long (136/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:172:0: C0301: Line too long (116/100) (line-too-long)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:80:0: R0913: Too many arguments (6/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:80:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:187:0: R0913: Too many arguments (7/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:187:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)</div><div class="issue warning">src/rattlesnake/cicd/report_pytest.py:309:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue warning">src/rattlesnake/cicd/reports_main_page.py:187:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files</div></div>
+            <div class="issues-list"><div class="issue refactor">src/rattlesnake/main.py:37:0: R0914: Too many local variables (31/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/main.py:37:0: R0912: Too many branches (14/12) (too-many-branches)</div><div class="issue refactor">src/rattlesnake/main.py:37:0: R0915: Too many statements (82/50) (too-many-statements)</div><div class="issue convention">src/rattlesnake/main.py:31:0: C0411: standard import &quot;datetime&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/main.py:32:0: C0411: standard import &quot;multiprocessing&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/main.py:33:0: C0411: standard import &quot;sys&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/main.py:34:0: C0411: third party import &quot;qtpy.QtWidgets&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)</div><div class="issue convention">src/rattlesnake/utilities.py:1:0: C0302: Too many lines in module (1271/1000) (too-many-lines)</div><div class="issue refactor">src/rattlesnake/utilities.py:242:30: R1719: The if expression can be replaced with &#x27;not test&#x27; (simplifiable-if-expression)</div><div class="issue refactor">src/rattlesnake/utilities.py:247:44: R1719: The if expression can be replaced with &#x27;not test&#x27; (simplifiable-if-expression)</div><div class="issue refactor">src/rattlesnake/utilities.py:253:0: R0902: Too many instance attributes (11/7) (too-many-instance-attributes)</div><div class="issue refactor">src/rattlesnake/utilities.py:256:4: R0913: Too many arguments (12/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:256:4: R0917: Too many positional arguments (12/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:253:0: R0903: Too few public methods (0/2) (too-few-public-methods)</div><div class="issue refactor">src/rattlesnake/utilities.py:327:0: R0902: Too many instance attributes (22/7) (too-many-instance-attributes)</div><div class="issue refactor">src/rattlesnake/utilities.py:330:4: R0913: Too many arguments (23/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:330:4: R0917: Too many positional arguments (23/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:330:4: R0914: Too many local variables (23/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:429:4: R0914: Too many local variables (25/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:327:0: R0903: Too few public methods (1/2) (too-few-public-methods)</div><div class="issue refactor">src/rattlesnake/utilities.py:496:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)</div><div class="issue refactor">src/rattlesnake/utilities.py:499:4: R0913: Too many arguments (10/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:499:4: R0917: Too many positional arguments (10/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/utilities.py:670:4: R1705: Unnecessary &quot;else&quot; after &quot;return&quot;, remove the &quot;else&quot; and de-indent the code inside it (no-else-return)</div><div class="issue refactor">src/rattlesnake/utilities.py:737:0: R0914: Too many local variables (17/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:1035:0: R0914: Too many local variables (17/15) (too-many-locals)</div><div class="issue refactor">src/rattlesnake/utilities.py:1189:21: R1728: Consider using a generator instead &#x27;tuple(slice(-self.buffer_data.shape[self.buffer_axis], None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))&#x27; (consider-using-generator)</div><div class="issue refactor">src/rattlesnake/utilities.py:1202:25: R1728: Consider using a generator instead &#x27;tuple(slice(new_data_size, None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))&#x27; (consider-using-generator)</div><div class="issue refactor">src/rattlesnake/utilities.py:1228:21: R1728: Consider using a generator instead &#x27;tuple(slice(data_start, None if data_end == 0 else data_end) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))&#x27; (consider-using-generator)</div><div class="issue refactor">src/rattlesnake/utilities.py:1252:8: R1731: Consider using &#x27;self._buffer_position = max(self._buffer_position, 0)&#x27; instead of unnecessary if block (consider-using-max-builtin)</div><div class="issue refactor">src/rattlesnake/utilities.py:1254:8: R1730: Consider using &#x27;self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])&#x27; instead of unnecessary if block (consider-using-min-builtin)</div><div class="issue refactor">src/rattlesnake/utilities.py:1260:8: R1731: Consider using &#x27;self._buffer_position = max(self._buffer_position, 0)&#x27; instead of unnecessary if block (consider-using-max-builtin)</div><div class="issue refactor">src/rattlesnake/utilities.py:1262:8: R1730: Consider using &#x27;self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])&#x27; instead of unnecessary if block (consider-using-min-builtin)</div><div class="issue warning">src/rattlesnake/cicd/report_jupyter_book.py:120:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue refactor">src/rattlesnake/cicd/utilities.py:24:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)</div><div class="issue refactor">src/rattlesnake/cicd/utilities.py:48:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)</div><div class="issue convention">src/rattlesnake/cicd/badge_pylint.py:92:0: C0301: Line too long (102/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/badge_pylint.py:93:0: C0301: Line too long (104/100) (line-too-long)</div><div class="issue warning">src/rattlesnake/cicd/badge_pylint.py:26:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue warning">src/rattlesnake/cicd/badge_pylint.py:83:15: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:169:0: C0301: Line too long (130/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:170:0: C0301: Line too long (126/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:171:0: C0301: Line too long (136/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pytest.py:172:0: C0301: Line too long (116/100) (line-too-long)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:80:0: R0913: Too many arguments (6/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:80:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:187:0: R0913: Too many arguments (7/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pytest.py:187:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)</div><div class="issue warning">src/rattlesnake/cicd/report_pytest.py:309:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue warning">src/rattlesnake/cicd/badge_color_coverage.py:26:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue warning">src/rattlesnake/cicd/reports_main_page.py:187:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:264:0: C0301: Line too long (130/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:265:0: C0301: Line too long (126/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:266:0: C0301: Line too long (136/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:267:0: C0301: Line too long (116/100) (line-too-long)</div><div class="issue convention">src/rattlesnake/cicd/report_pylint.py:308:0: C0301: Line too long (138/100) (line-too-long)</div><div class="issue warning">src/rattlesnake/cicd/report_pylint.py:134:9: W0511: TODO: exactly match to &quot;refactor&quot; via r&quot;R\d{4}:&quot; and add an &quot;unknown&quot; (fixme)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:150:0: R0913: Too many arguments (9/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:150:0: R0917: Too many positional arguments (9/5) (too-many-positional-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:339:0: R0913: Too many arguments (7/5) (too-many-arguments)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:339:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)</div><div class="issue warning">src/rattlesnake/cicd/report_pylint.py:475:11: W0718: Catching too general exception Exception (broad-exception-caught)</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div><div class="issue refactor">src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files</div></div>
         </div-->
         
         <div class="section">
             <h2 id="statistics">Full Report</h2>
             <details>
                 <summary>Click to view complete pylint output</summary>
-                <pre style="background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto;">************* Module rattlesnake.utilities
+                <pre style="background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto;">************* Module rattlesnake.main
+src/rattlesnake/main.py:37:0: R0914: Too many local variables (31/15) (too-many-locals)
+src/rattlesnake/main.py:37:0: R0912: Too many branches (14/12) (too-many-branches)
+src/rattlesnake/main.py:37:0: R0915: Too many statements (82/50) (too-many-statements)
+src/rattlesnake/main.py:31:0: C0411: standard import &quot;datetime&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
+src/rattlesnake/main.py:32:0: C0411: standard import &quot;multiprocessing&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
+src/rattlesnake/main.py:33:0: C0411: standard import &quot;sys&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
+src/rattlesnake/main.py:34:0: C0411: third party import &quot;qtpy.QtWidgets&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
+************* Module rattlesnake.utilities
 src/rattlesnake/utilities.py:1:0: C0302: Too many lines in module (1271/1000) (too-many-lines)
 src/rattlesnake/utilities.py:242:30: R1719: The if expression can be replaced with &#x27;not test&#x27; (simplifiable-if-expression)
 src/rattlesnake/utilities.py:247:44: R1719: The if expression can be replaced with &#x27;not test&#x27; (simplifiable-if-expression)
@@ -150,17 +158,30 @@ src/rattlesnake/utilities.py:1252:8: R1731: Consider using &#x27;self._buffer_po
 src/rattlesnake/utilities.py:1254:8: R1730: Consider using &#x27;self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])&#x27; instead of unnecessary if block (consider-using-min-builtin)
 src/rattlesnake/utilities.py:1260:8: R1731: Consider using &#x27;self._buffer_position = max(self._buffer_position, 0)&#x27; instead of unnecessary if block (consider-using-max-builtin)
 src/rattlesnake/utilities.py:1262:8: R1730: Consider using &#x27;self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])&#x27; instead of unnecessary if block (consider-using-min-builtin)
-************* Module rattlesnake.main
-src/rattlesnake/main.py:37:0: R0914: Too many local variables (31/15) (too-many-locals)
-src/rattlesnake/main.py:37:0: R0912: Too many branches (14/12) (too-many-branches)
-src/rattlesnake/main.py:37:0: R0915: Too many statements (82/50) (too-many-statements)
-src/rattlesnake/main.py:31:0: C0411: standard import &quot;datetime&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
-src/rattlesnake/main.py:32:0: C0411: standard import &quot;multiprocessing&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
-src/rattlesnake/main.py:33:0: C0411: standard import &quot;sys&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
-src/rattlesnake/main.py:34:0: C0411: third party import &quot;qtpy.QtWidgets&quot; should be placed before first party imports &quot;rattlesnake.user_interface.ui_utilities.ControlSelect&quot;, &quot;rattlesnake.user_interface.ui_registry.EnvironmentSelect&quot;, &quot;rattlesnake.user_interface.user_interface.Ui&quot; (...) &quot;rattlesnake.process.output.output_process&quot;, &quot;rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS&quot;, &quot;rattlesnake.process.streaming.streaming_process&quot;  (wrong-import-order)
-************* Module rattlesnake.cicd.badge_color_pylint
-src/rattlesnake/cicd/badge_color_pylint.py:13:0: C0116: Missing function or method docstring (missing-function-docstring)
-src/rattlesnake/cicd/badge_color_pylint.py:16:4: C0103: Variable name &quot;COLOR&quot; doesn&#x27;t conform to snake_case naming style (invalid-name)
+************* Module rattlesnake.cicd.report_jupyter_book
+src/rattlesnake/cicd/report_jupyter_book.py:120:11: W0718: Catching too general exception Exception (broad-exception-caught)
+************* Module rattlesnake.cicd.utilities
+src/rattlesnake/cicd/utilities.py:24:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)
+src/rattlesnake/cicd/utilities.py:48:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)
+************* Module rattlesnake.cicd.badge_pylint
+src/rattlesnake/cicd/badge_pylint.py:92:0: C0301: Line too long (102/100) (line-too-long)
+src/rattlesnake/cicd/badge_pylint.py:93:0: C0301: Line too long (104/100) (line-too-long)
+src/rattlesnake/cicd/badge_pylint.py:26:11: W0718: Catching too general exception Exception (broad-exception-caught)
+src/rattlesnake/cicd/badge_pylint.py:83:15: W0718: Catching too general exception Exception (broad-exception-caught)
+************* Module rattlesnake.cicd.report_pytest
+src/rattlesnake/cicd/report_pytest.py:169:0: C0301: Line too long (130/100) (line-too-long)
+src/rattlesnake/cicd/report_pytest.py:170:0: C0301: Line too long (126/100) (line-too-long)
+src/rattlesnake/cicd/report_pytest.py:171:0: C0301: Line too long (136/100) (line-too-long)
+src/rattlesnake/cicd/report_pytest.py:172:0: C0301: Line too long (116/100) (line-too-long)
+src/rattlesnake/cicd/report_pytest.py:80:0: R0913: Too many arguments (6/5) (too-many-arguments)
+src/rattlesnake/cicd/report_pytest.py:80:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+src/rattlesnake/cicd/report_pytest.py:187:0: R0913: Too many arguments (7/5) (too-many-arguments)
+src/rattlesnake/cicd/report_pytest.py:187:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+src/rattlesnake/cicd/report_pytest.py:309:11: W0718: Catching too general exception Exception (broad-exception-caught)
+************* Module rattlesnake.cicd.badge_color_coverage
+src/rattlesnake/cicd/badge_color_coverage.py:26:11: W0718: Catching too general exception Exception (broad-exception-caught)
+************* Module rattlesnake.cicd.reports_main_page
+src/rattlesnake/cicd/reports_main_page.py:187:11: W0718: Catching too general exception Exception (broad-exception-caught)
 ************* Module rattlesnake.cicd.report_pylint
 src/rattlesnake/cicd/report_pylint.py:264:0: C0301: Line too long (130/100) (line-too-long)
 src/rattlesnake/cicd/report_pylint.py:265:0: C0301: Line too long (126/100) (line-too-long)
@@ -173,26 +194,7 @@ src/rattlesnake/cicd/report_pylint.py:150:0: R0917: Too many positional argument
 src/rattlesnake/cicd/report_pylint.py:339:0: R0913: Too many arguments (7/5) (too-many-arguments)
 src/rattlesnake/cicd/report_pylint.py:339:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
 src/rattlesnake/cicd/report_pylint.py:475:11: W0718: Catching too general exception Exception (broad-exception-caught)
-************* Module rattlesnake.cicd.report_jupyter_book
-src/rattlesnake/cicd/report_jupyter_book.py:120:11: W0718: Catching too general exception Exception (broad-exception-caught)
-************* Module rattlesnake.cicd.badge_color_coverage
-src/rattlesnake/cicd/badge_color_coverage.py:26:11: W0718: Catching too general exception Exception (broad-exception-caught)
-************* Module rattlesnake.cicd.utilities
-src/rattlesnake/cicd/utilities.py:24:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)
-src/rattlesnake/cicd/utilities.py:48:8: R1705: Unnecessary &quot;elif&quot; after &quot;return&quot;, remove the leading &quot;el&quot; from &quot;elif&quot; (no-else-return)
-************* Module rattlesnake.cicd.report_pytest
-src/rattlesnake/cicd/report_pytest.py:169:0: C0301: Line too long (130/100) (line-too-long)
-src/rattlesnake/cicd/report_pytest.py:170:0: C0301: Line too long (126/100) (line-too-long)
-src/rattlesnake/cicd/report_pytest.py:171:0: C0301: Line too long (136/100) (line-too-long)
-src/rattlesnake/cicd/report_pytest.py:172:0: C0301: Line too long (116/100) (line-too-long)
-src/rattlesnake/cicd/report_pytest.py:80:0: R0913: Too many arguments (6/5) (too-many-arguments)
-src/rattlesnake/cicd/report_pytest.py:80:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
-src/rattlesnake/cicd/report_pytest.py:187:0: R0913: Too many arguments (7/5) (too-many-arguments)
-src/rattlesnake/cicd/report_pytest.py:187:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
-src/rattlesnake/cicd/report_pytest.py:309:11: W0718: Catching too general exception Exception (broad-exception-caught)
-************* Module rattlesnake.cicd.reports_main_page
-src/rattlesnake/cicd/reports_main_page.py:187:11: W0718: Catching too general exception Exception (broad-exception-caught)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.cicd.report_pylint:[188:220]
 ==rattlesnake.cicd.report_pytest:[121:153]
     &lt;style&gt;
@@ -227,7 +229,7 @@ src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
             background: #0256cc;
         }}
         .section {{ (duplicate-code)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.cicd.report_pylint:[309:364]
 ==rattlesnake.cicd.report_pytest:[175:212]
         &lt;/div&gt;
@@ -241,7 +243,25 @@ src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
     return html_content
 
 
-def run_pytest_report(
+# def write_report(html_content: str, output_file: str) -&gt; None:
+#     &quot;&quot;&quot;
+#     Write HTML content to file.
+#
+#     Args:
+#         html_content: The HTML content to write
+#         output_file: Path for the output HTML file
+#
+#     Raises:
+#         IOError: If the file cannot be written.
+#     &quot;&quot;&quot;
+#     try:
+#         with open(output_file, &quot;w&quot;, encoding=&quot;utf-8&quot;) as f:
+#             f.write(html_content)
+#     except IOError as e:
+#         raise IOError(f&#x27;Error writing output file &quot;{output_file}&quot;: {e}&#x27;) from e
+
+
+def run_pylint_report(
     input_file: str,
     output_file: str,
     timestamp: str,
@@ -249,12 +269,12 @@ def run_pytest_report(
     ref_name: str,
     github_sha: str,
     github_repo: str,
-) -&gt; CoverageMetric:
+) -&gt; Tuple[int, Dict[str, int], float]:
     &quot;&quot;&quot;
-    Main function to create HTML report from pytest output.
+    Main function to create HTML report from pylint output.
 
     Args:
-        input_file: Path to the pytest output text file
+        input_file: Path to the pylint output text file
         output_file: Path for the generated HTML report
         timestamp: The timestampe from bash when pylint ran, in format YYYYMMDD_HHMMSS_UTC
             e.g., 20250815_211112_UTC
@@ -264,10 +284,10 @@ def run_pytest_report(
         github_repo: GitHub repository name
 
     Returns:
-        CoverageMetric
+        Tuple of (total_issues, issue_counts_dict)
     &quot;&quot;&quot;
-    # Get the coverage metric (duplicate-code)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
+    # Read the pylint output (duplicate-code)
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.cicd.report_pylint:[378:389]
 ==rattlesnake.cicd.report_pytest:[218:228]
         timestamp,
@@ -279,34 +299,17 @@ src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
 
     # Write the HTML report
     write_report(html_content, output_file)
-
-    # Count issues by type (duplicate-code)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
-==rattlesnake.cicd.report_pylint:[253:259]
+ (duplicate-code)
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.cicd.report_pytest:[155:161]
+==rattlesnake.cicd.reports_main_page:[45:51]
         }}
     &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
     &lt;div class=&quot;container&quot;&gt;
         &lt;div class=&quot;header&quot;&gt; (duplicate-code)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
-==rattlesnake.cicd.report_pylint:[262:267]
-==rattlesnake.cicd.report_pytest:[167:172]
-                &lt;div&gt;&lt;strong&gt;Generated:&lt;/strong&gt; {timestamp_ext}&lt;/div&gt;
-                &lt;div&gt;&lt;strong&gt;Run ID:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}/actions/runs/{run_id}&quot;&gt; {run_id}&lt;/a&gt;&lt;/div&gt;
-                &lt;div&gt;&lt;strong&gt;Branch:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}/tree/{ref_name}&quot;&gt; {ref_name}&lt;/a&gt;&lt;/div&gt;
-                &lt;div&gt;&lt;strong&gt;Commit:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}/commit/{github_sha}&quot;&gt; {github_sha[:7]}&lt;/a&gt;&lt;/div&gt;
-                &lt;div&gt;&lt;strong&gt;Repository:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}&quot;&gt;{github_repo}&lt;/a&gt;&lt;/div&gt; (duplicate-code)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
-==rattlesnake.cicd.report_pylint:[409:414]
-==rattlesnake.cicd.report_pytest:[246:251]
-    --timestamp 20240101_120000_UTC \
-    --run_id 1234567890 \
-    --ref_name main \
-    --github_sha abc123def456 \
-    --github_repo owner/repo-name (duplicate-code)
-src/rattlesnake/cicd/reports_main_page.py:1:0: R0801: Similar lines in 2 files
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
 ==rattlesnake.cicd.reports_main_page:[115:133]
 ==rattlesnake.cicd.utilities:[181:186]
     try:
@@ -327,11 +330,27 @@ def run_reports_main_page(
         pylint_score: The pylint score.
         output_file: Path for the generated HTML report
     &quot;&quot;&quot; (duplicate-code)
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
+==rattlesnake.cicd.report_pylint:[262:267]
+==rattlesnake.cicd.report_pytest:[167:172]
+                &lt;div&gt;&lt;strong&gt;Generated:&lt;/strong&gt; {timestamp_ext}&lt;/div&gt;
+                &lt;div&gt;&lt;strong&gt;Run ID:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}/actions/runs/{run_id}&quot;&gt; {run_id}&lt;/a&gt;&lt;/div&gt;
+                &lt;div&gt;&lt;strong&gt;Branch:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}/tree/{ref_name}&quot;&gt; {ref_name}&lt;/a&gt;&lt;/div&gt;
+                &lt;div&gt;&lt;strong&gt;Commit:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}/commit/{github_sha}&quot;&gt; {github_sha[:7]}&lt;/a&gt;&lt;/div&gt;
+                &lt;div&gt;&lt;strong&gt;Repository:&lt;/strong&gt; &lt;a href=&quot;https://github.com/{github_repo}&quot;&gt;{github_repo}&lt;/a&gt;&lt;/div&gt; (duplicate-code)
+src/rattlesnake/cicd/report_pylint.py:1:0: R0801: Similar lines in 2 files
+==rattlesnake.cicd.report_pylint:[409:414]
+==rattlesnake.cicd.report_pytest:[246:251]
+    --timestamp 20240101_120000_UTC \
+    --run_id 1234567890 \
+    --ref_name main \
+    --github_sha abc123def456 \
+    --github_repo owner/repo-name (duplicate-code)
 
 
 Report
 ======
-827 statements analysed.
+879 statements analysed.
 
 Statistics by type
 ------------------
@@ -345,7 +364,7 @@ Statistics by type
 +---------+-------+-----------+-----------+------------+---------+
 |method   |26     |NC         |NC         |100.00      |0.00     |
 +---------+-------+-----------+-----------+------------+---------+
-|function |58     |NC         |NC         |98.28       |0.00     |
+|function |60     |NC         |NC         |100.00      |0.00     |
 +---------+-------+-----------+-----------+------------+---------+
 
 
@@ -358,12 +377,13 @@ External dependencies
     pytz (rattlesnake.cicd.utilities)
     qtpy 
       \-QtWidgets (rattlesnake.main,rattlesnake.utilities)
+    requests (rattlesnake.cicd.badge_pylint)
     scipy 
       \-signal (rattlesnake.utilities)
 
 
 
-2968 lines have been analyzed
+3045 lines have been analyzed
 
 Raw metrics
 -----------
@@ -371,13 +391,13 @@ Raw metrics
 +----------+-------+------+---------+-----------+
 |type      |number |%     |previous |difference |
 +==========+=======+======+=========+===========+
-|code      |1591   |53.61 |NC       |NC         |
+|code      |1645   |54.02 |NC       |NC         |
 +----------+-------+------+---------+-----------+
-|docstring |976    |32.88 |NC       |NC         |
+|docstring |983    |32.28 |NC       |NC         |
 +----------+-------+------+---------+-----------+
-|comment   |111    |3.74  |NC       |NC         |
+|comment   |115    |3.78  |NC       |NC         |
 +----------+-------+------+---------+-----------+
-|empty     |290    |9.77  |NC       |NC         |
+|empty     |302    |9.92  |NC       |NC         |
 +----------+-------+------+---------+-----------+
 
 
@@ -405,7 +425,7 @@ Messages by category
 +-----------+-------+---------+-----------+
 |refactor   |45     |NC       |NC         |
 +-----------+-------+---------+-----------+
-|warning    |6      |NC       |NC         |
+|warning    |8      |NC       |NC         |
 +-----------+-------+---------+-----------+
 |error      |0      |NC       |NC         |
 +-----------+-------+---------+-----------+
@@ -418,23 +438,23 @@ Messages by category
 +--------------------------------------+------+--------+---------+-----------+
 |module                                |error |warning |refactor |convention |
 +======================================+======+========+=========+===========+
-|rattlesnake.cicd.report_pylint        |0.00  |33.33   |8.89     |31.25      |
+|rattlesnake.cicd.report_pylint        |0.00  |25.00   |24.44    |31.25      |
 +--------------------------------------+------+--------+---------+-----------+
-|rattlesnake.cicd.reports_main_page    |0.00  |16.67   |15.56    |0.00       |
+|rattlesnake.cicd.badge_pylint         |0.00  |25.00   |0.00     |12.50      |
 +--------------------------------------+------+--------+---------+-----------+
-|rattlesnake.cicd.report_pytest        |0.00  |16.67   |8.89     |25.00      |
+|rattlesnake.cicd.report_pytest        |0.00  |12.50   |8.89     |25.00      |
 +--------------------------------------+------+--------+---------+-----------+
-|rattlesnake.cicd.report_jupyter_book  |0.00  |16.67   |0.00     |0.00       |
+|rattlesnake.cicd.reports_main_page    |0.00  |12.50   |0.00     |0.00       |
 +--------------------------------------+------+--------+---------+-----------+
-|rattlesnake.cicd.badge_color_coverage |0.00  |16.67   |0.00     |0.00       |
+|rattlesnake.cicd.report_jupyter_book  |0.00  |12.50   |0.00     |0.00       |
++--------------------------------------+------+--------+---------+-----------+
+|rattlesnake.cicd.badge_color_coverage |0.00  |12.50   |0.00     |0.00       |
 +--------------------------------------+------+--------+---------+-----------+
 |rattlesnake.utilities                 |0.00  |0.00    |55.56    |6.25       |
 +--------------------------------------+------+--------+---------+-----------+
 |rattlesnake.main                      |0.00  |0.00    |6.67     |25.00      |
 +--------------------------------------+------+--------+---------+-----------+
 |rattlesnake.cicd.utilities            |0.00  |0.00    |4.44     |0.00       |
-+--------------------------------------+------+--------+---------+-----------+
-|rattlesnake.cicd.badge_color_pylint   |0.00  |0.00    |0.00     |12.50      |
 +--------------------------------------+------+--------+---------+-----------+
 
 
@@ -445,7 +465,7 @@ Messages
 +------------------------------+------------+
 |message id                    |occurrences |
 +==============================+============+
-|line-too-long                 |9           |
+|line-too-long                 |11          |
 +------------------------------+------------+
 |too-many-positional-arguments |7           |
 +------------------------------+------------+
@@ -453,9 +473,9 @@ Messages
 +------------------------------+------------+
 |duplicate-code                |7           |
 +------------------------------+------------+
-|too-many-locals               |5           |
+|broad-exception-caught        |7           |
 +------------------------------+------------+
-|broad-exception-caught        |5           |
+|too-many-locals               |5           |
 +------------------------------+------------+
 |wrong-import-order            |4           |
 +------------------------------+------------+
@@ -479,10 +499,6 @@ Messages
 +------------------------------+------------+
 |too-many-branches             |1           |
 +------------------------------+------------+
-|missing-function-docstring    |1           |
-+------------------------------+------------+
-|invalid-name                  |1           |
-+------------------------------+------------+
 |fixme                         |1           |
 +------------------------------+------------+
 
@@ -490,7 +506,7 @@ Messages
 
 
 -----------------------------------
-Your code has been rated at 9.19/10
+Your code has been rated at 9.22/10
 </pre>
             </details>
         </div>
