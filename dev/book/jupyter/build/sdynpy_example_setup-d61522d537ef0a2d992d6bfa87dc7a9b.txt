@@ -1,0 +1,97 @@
+#%% Import relevant Python packages
+
+# Import SDynPy module to get structural dynamics functionality
+import sdynpy as sdpy
+# We'll also import some common Python packages
+import numpy as np # NumPy for numeric calculations
+import matplotlib.pyplot as plt # Matplotlib for plotting
+
+#%% Create our demo beam object
+
+# Create a system and geometry object using the beam functionality in SDynPy
+system,geometry = sdpy.System.beam(
+    length = 24 * 0.0254, # meters
+    width = 0.75 * 0.0254, # meters
+    height = 1.0 * 0.0254, # meters
+    num_nodes = 25,
+    material = 'steel')
+
+#%% Plot the geometry with degree of freedom labels
+
+# We want to see which degrees of freedom we have to work with, so we will
+# plot the geometry with coordinate labels
+geometry.plot_coordinate(label_dofs=True,arrow_scale=0.02)
+
+#%% Create a modal system of equations
+
+# The finite element model system of equations is too large to integrate
+# real-time, so we will create a reduced modal system to integrate based on the
+# desired bandwidth of the test
+test_bandwidth = 2560 # Hz
+
+# Solve for modes up to 1.5x the bandwidth to lessen modal truncation effects
+modes = system.eigensolution(maximum_frequency = test_bandwidth*1.5)
+
+# This also gives us the option to add some damping to the model
+modes.damping = 0.005
+
+# Transform to modal system: modal mass, modal stiffness, modal damping
+modal_system = modes.system()
+
+# Save it to a file that we will load in Rattlesnake
+modal_system.save('sdynpy_system.npz')
+
+#%% Degree of freedom selection
+
+# Now let's select some degrees of freedom for our test.  We will measure all
+# points in the vertical (z) direction.
+response_dofs = sdpy.coordinate_array([2,13,19,24],'Y-')
+
+# Let's also select some excitation degrees of freedom for the test
+excitation_dofs = sdpy.coordinate_array(geometry.node.id[::3],'Y-')
+
+geometry.plot_coordinate(response_dofs,label_dofs=True,arrow_scale=0.05)
+geometry.plot_coordinate(excitation_dofs,label_dofs=True,arrow_scale=0.05)
+
+#%% Create a specification that we want to run for the test
+
+# Let's simulate the multi-hammer impact that was performed on the test article
+# in the example problem
+
+frame_length = test_bandwidth*2 # Samples
+
+responses, references = modal_system.simulate_test(
+    bandwidth = test_bandwidth,
+    frame_length = frame_length,
+    num_averages = 30,
+    excitation = 'multi-hammer',
+    references = excitation_dofs,
+    responses = response_dofs,
+    excitation_level = 0.1,
+    excitation_max_frequency = test_bandwidth*1.5)
+
+# Now we will convert that into a CPSD and a transient specification that we
+# will try to replicate.
+cpsd = responses.cpsd(frame_length, overlap = 0.0, window = 'boxcar')
+
+# We'll truncate the low frequency to make sure that we don't get huge rigid
+# body response as well as the high frequency above the antialiasing filters of
+# the system
+cpsd.ordinate[(cpsd.abscissa < 20) | (cpsd.abscissa > 2000)] = 0
+
+# Plot the diagonal so we can see levels
+cpsd.plot_asds({'layout':'constrained','sharex':True,'sharey':True})
+
+# We'll also grab just the first average to make into a rattlesnake transient
+# specification
+transient = responses.idx_by_el[:frame_length]
+
+transient.plot(
+    one_axis=False,
+    subplots_kwargs={'layout':'constrained'},
+    plot_kwargs={'linewidth':0.5})
+
+# Now we can save these to specifications for Rattlesnake
+cpsd.to_rattlesnake_specification('random_specification.npz')
+transient.to_rattlesnake_specification('transient_specification.npz')
+
