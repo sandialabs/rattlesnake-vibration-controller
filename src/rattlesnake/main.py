@@ -18,67 +18,60 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.rattlesnake import RattlesnakeController
-from rattlesnake.process.streaming import streaming_process
 import datetime
 import multiprocessing as mp
 import sys
-from qtpy import QtWidgets
+
+from qtpy import QtWidgets, QtCore
+
+from rattlesnake.process.streaming import streaming_process
+from rattlesnake.rattlesnake import RattlesnakeController
+from rattlesnake.user_interface.user_interface import RattlesnakeUI
 
 
-def main():
-    """Main Rattlesnake Application Entry Point"""
+def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
+    """
+    Function for launching rattlesnake ui with the default formatting
+    that scales correcctly.
 
-    rattlesnake = Rattlesnake(threaded=True, timeout=30)
-
-    from rattlesnake.user_interface.example_files.metadata import (
-        make_sdynpy_system_metadata,
-        make_time_environment_metadata,
-        make_time_environment_event_list,
-        make_time_environment_stream_metadata,
-        make_time_environment_instructions,
-        make_modal_environment_metadata,
-        make_sine_environment_metadata,
-    )
-
-    hardware_metadata = make_sdynpy_system_metadata()
-    time_environment_metadata = make_time_environment_metadata(hardware_metadata)
-    time_profile_event_list = make_time_environment_event_list()
-    time_stream_metadata = make_time_environment_stream_metadata()
-    time_environment_instructions = make_time_environment_instructions()
-    modal_environment_metadata = make_modal_environment_metadata(hardware_metadata)
-    sine_environment_metadata = make_sine_environment_metadata(hardware_metadata)
-
-    rattlesnake.set_hardware(hardware_metadata)
-    # Time Environment
-    # rattlesnake.set_environments([time_environment_metadata])
-    # rattlesnake.set_profile_event_list(time_profile_event_list)
-    # rattlesnake.set_stream_metadata(time_stream_metadata)
-    # rattlesnake.start_acquisition(time_stream_metadata)
-    # rattlesnake.start_environment(time_environment_instructions)
-    # Modal Environment
-    # rattlesnake.set_environments([modal_environment_metadata])
-    # # Sine Environment
-    # rattlesnake.set_environments([sine_environment_metadata])
-
-    # This is a fix for scaling Rattlesnake to different resolution monitors
+    Parameters
+    ----------
+    rattlesnake : RattlesnakeController
+        The rattlesnake controller object that the UI is going to represent.
+    """
+    # Fix to scale font for different size monitors
     font_size = 10  # pt size
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
     QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
         QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
+
+    # Build app
     app = QtWidgets.QApplication(sys.argv)
+
+    # Scale app to current monitor
     screen = app.primaryScreen()
     dpi = screen.logicalDotsPerInch()
-    scale_factor = dpi / 96  # 96 DPI = standard
+    scale_factor = dpi / 96  # 96 DPI
     font = app.font()
-    font.setPointSizeF(font_size * scale_factor)  # base font 12pt
+    font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
     app.setFont(font)
+
+    # Execute UI object
     _ = RattlesnakeUI(rattlesnake)
     app.exec_()
 
+    # Shutdown processes
     rattlesnake.shutdown()
+
+
+def main():
+    """Main Rattlesnake Application Entry Point"""
+
+    rattlesnake = RattlesnakeController()
+
+    launch_rattlesnake_ui(rattlesnake)
 
 
 if __name__ == "__main__":
