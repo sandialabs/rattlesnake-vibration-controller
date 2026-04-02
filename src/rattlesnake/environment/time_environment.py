@@ -33,14 +33,17 @@ import netCDF4 as nc4
 import numpy as np
 import openpyxl
 from qtpy import QtCore, QtWidgets, uic
-from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
+from rattlesnake.environment.abstract_environment import (
+    AbstractEnvironment,
+    AbstractMetadata,
+)
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
 CONTROL_TYPE = ControlTypes.TIME
 TEST_LEVEL_THRESHOLD = 1.01
@@ -134,7 +137,8 @@ class TimeParameters(AbstractMetadata):
         return int(self.cancel_rampdown_time * self.sample_rate)
 
     def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
         """
         Stores parameters to a netCDF group so they can be recovered.
@@ -248,16 +252,22 @@ class TimeEnvironment(AbstractEnvironment):
         self.data_acquisition_parameters = data_acquisition_parameters
         self.measurement_channels = [
             index
-            for index, channel in enumerate(self.data_acquisition_parameters.channel_list)
+            for index, channel in enumerate(
+                self.data_acquisition_parameters.channel_list
+            )
             if channel.feedback_device is None
         ]
         self.output_channels = [
             index
-            for index, channel in enumerate(self.data_acquisition_parameters.channel_list)
+            for index, channel in enumerate(
+                self.data_acquisition_parameters.channel_list
+            )
             if channel.feedback_device is not None
         ]
 
-    def initialize_environment_test_parameters(self, environment_parameters: TimeParameters):
+    def initialize_environment_test_parameters(
+        self, environment_parameters: TimeParameters
+    ):
         """
         Initialize the environment parameters specific to this environment
 
@@ -307,11 +317,16 @@ class TimeEnvironment(AbstractEnvironment):
             self.startup = False
         # See if any data has come in
         try:
-            acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
+            acquisition_data, last_acquisition = (
+                self.queue_container.data_in_queue.get_nowait()
+            )
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
             self.queue_container.gui_update_queue.put(
-                (self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data)))
+                (
+                    self.environment_name,
+                    (TimeUICommands.TIME_DATA, (measurement_data, output_data)),
+                )
             )
         except mp.queues.Empty:
             last_acquisition = False
@@ -320,7 +335,8 @@ class TimeEnvironment(AbstractEnvironment):
             last_signal = False
             # See if there is enough in the remainder
             if (
-                self.data_acquisition_parameters.samples_per_write > self.signal_remainder.shape[-1]
+                self.data_acquisition_parameters.samples_per_write
+                > self.signal_remainder.shape[-1]
                 and self.repeat
             ):
                 self.signal_remainder = np.concatenate(
@@ -334,7 +350,9 @@ class TimeEnvironment(AbstractEnvironment):
             ) or self.current_test_level == 0.0:
                 last_signal = True
             self.output(
-                self.signal_remainder[:, : self.data_acquisition_parameters.samples_per_write],
+                self.signal_remainder[
+                    :, : self.data_acquisition_parameters.samples_per_write
+                ],
                 last_signal,
             )
             self.signal_remainder = self.signal_remainder[
@@ -344,7 +362,9 @@ class TimeEnvironment(AbstractEnvironment):
                 # Wait until we get the last signal from the acquisition
                 while not last_acquisition:
                     self.log("Waiting for Last Acquisition")
-                    acquisition_data, last_acquisition = self.queue_container.data_in_queue.get()
+                    acquisition_data, last_acquisition = (
+                        self.queue_container.data_in_queue.get()
+                    )
                     measurement_data = acquisition_data[self.measurement_channels]
                     output_data = acquisition_data[self.output_channels]
                     self.queue_container.gui_update_queue.put(

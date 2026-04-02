@@ -1,4 +1,5 @@
-from rattlesnake.utilities import VerboseMessageQueue, DataAcquisitionParameters
+from rattlesnake.utilities import VerboseMessageQueue
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from abc import ABC, abstractmethod
 from multiprocessing.queues import Queue
@@ -85,7 +86,9 @@ class AbstractUI(ABC):
         """
 
     @abstractmethod
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
+    def initialize_data_acquisition(
+        self, data_acquisition_parameters: DataAcquisitionParameters
+    ):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -239,7 +242,9 @@ class AbstractUI(ABC):
         """
 
     @abstractmethod
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def set_parameters_from_template(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """
         Collects parameters for the user interface from the Excel template file
 

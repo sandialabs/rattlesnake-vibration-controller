@@ -39,8 +39,8 @@ from rattlesnake.utilities import (
     load_csv_matrix,
     save_csv_matrix,
     trac,
-    DataAcquisitionParameters,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
 
 # region Global

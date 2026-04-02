@@ -30,10 +30,10 @@ import numpy as np
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     QueueContainer,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
 
 class StreamingProcess(AbstractMessageProcess):
@@ -119,7 +119,8 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.file_version = "3.0.0"
         self.netcdf_handle.sample_rate = global_data_parameters.sample_rate
         self.netcdf_handle.time_per_write = (
-            global_data_parameters.samples_per_write / global_data_parameters.output_sample_rate
+            global_data_parameters.samples_per_write
+            / global_data_parameters.output_sample_rate
         )
         self.netcdf_handle.time_per_read = (
             global_data_parameters.samples_per_read / global_data_parameters.sample_rate
@@ -137,7 +138,9 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.createVariable(
             self.stream_variable, "f8", ("response_channels", self.stream_dimension)
         )
-        var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
+        var = self.netcdf_handle.createVariable(
+            "environment_names", str, ("num_environments",)
+        )
         for i, name in enumerate(global_data_parameters.environment_names):
             var[i] = name
         var = self.netcdf_handle.createVariable(
@@ -176,7 +179,8 @@ class StreamingProcess(AbstractMessageProcess):
                 "/channels/" + label, netcdf_datatype, ("response_channels",)
             )
             channel_data = [
-                getattr(channel, label) for channel in global_data_parameters.channel_list
+                getattr(channel, label)
+                for channel in global_data_parameters.channel_list
             ]
             if netcdf_datatype == "i1":
                 channel_data = np.array([1 if val else 0 for val in channel_data])
@@ -202,7 +206,9 @@ class StreamingProcess(AbstractMessageProcess):
         if self.netcdf_handle is None:
             return
         test_data = data
-        timesteps = slice(self.netcdf_handle.dimensions[self.stream_dimension].size, None, None)
+        timesteps = slice(
+            self.netcdf_handle.dimensions[self.stream_dimension].size, None, None
+        )
         self.netcdf_handle.variables[self.stream_variable][:, timesteps] = test_data
 
     def create_new_stream(self, data):  # pylint: disable=unused-argument

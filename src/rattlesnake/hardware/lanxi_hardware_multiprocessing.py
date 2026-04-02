@@ -32,7 +32,7 @@ import requests
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
 from rattlesnake.hardware.lanxi_stream import OpenapiHeader, OpenapiMessage
-from rattlesnake.utilities import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.hardware.hardware_utilities import Channel
 
 OUTPUT_RATE = 131072

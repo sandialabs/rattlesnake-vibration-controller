@@ -33,7 +33,10 @@ import netCDF4 as nc4
 import numpy as np
 
 from rattlesnake.process.abstract_sysid_data_analysis import SysIDDataAnalysisCommands
-from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
+from rattlesnake.environment.abstract_environment import (
+    AbstractEnvironment,
+    AbstractMetadata,
+)
 from rattlesnake.process.data_collector import (
     Acceptance,
     AcquisitionType,
@@ -59,7 +62,8 @@ from rattlesnake.process.spectral_processing import (
     SpectralProcessingCommands,
     SpectralProcessingMetadata,
 )
-from rattlesnake.utilities import DataAcquisitionParameters, GlobalCommands, VerboseMessageQueue
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
 
 class SystemIdCommands(Enum):
@@ -181,7 +185,8 @@ class AbstractSysIdMetadata(AbstractMetadata):
 
     @abstractmethod
     def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
         """Store parameters to a group in a netCDF streaming file.
 
@@ -219,12 +224,17 @@ class AbstractSysIdMetadata(AbstractMetadata):
         netcdf_group_handle.sysid_pretrigger = self.sysid_pretrigger
         netcdf_group_handle.sysid_burst_ramp_fraction = self.sysid_burst_ramp_fraction
         netcdf_group_handle.sysid_low_frequency_cutoff = self.sysid_low_frequency_cutoff
-        netcdf_group_handle.sysid_high_frequency_cutoff = self.sysid_high_frequency_cutoff
+        netcdf_group_handle.sysid_high_frequency_cutoff = (
+            self.sysid_high_frequency_cutoff
+        )
 
     def __eq__(self, other):
         try:
             return np.all(
-                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
+                [
+                    np.all(value == other.__dict__[field])
+                    for field, value in self.__dict__.items()
+                ]
             )
         except (AttributeError, KeyError):
             return False
@@ -287,7 +297,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             output_active,
         )
         self.map_command(SystemIdCommands.PREVIEW_NOISE, self.preview_noise)
-        self.map_command(SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, self.preview_transfer_function)
+        self.map_command(
+            SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, self.preview_transfer_function
+        )
         self.map_command(SystemIdCommands.START_SYSTEM_ID, self.start_noise)
         self.map_command(SystemIdCommands.STOP_SYSTEM_ID, self.stop_system_id)
         self.map_command(
@@ -309,7 +321,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             SysIDDataAnalysisCommands.START_SHUTDOWN_AND_RUN_SYSID,
             self.start_shutdown_and_run_sysid,
         )
-        self.map_command(SysIDDataAnalysisCommands.SYSTEM_ID_COMPLETE, self.system_id_complete)
+        self.map_command(
+            SysIDDataAnalysisCommands.SYSTEM_ID_COMPLETE, self.system_id_complete
+        )
         self.map_command(SysIDDataAnalysisCommands.LOAD_NOISE, self.load_noise)
         self.map_command(
             SysIDDataAnalysisCommands.LOAD_TRANSFER_FUNCTION,
@@ -347,7 +361,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         """
         self.data_acquisition_parameters = data_acquisition_parameters
 
-    def initialize_environment_test_parameters(self, environment_parameters: AbstractSysIdMetadata):
+    def initialize_environment_test_parameters(
+        self, environment_parameters: AbstractSysIdMetadata
+    ):
         """
         Initialize the environment parameters specific to this environment
 
@@ -366,7 +382,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         """Collects metadata to send to the data collector"""
         num_channels = self.environment_parameters.number_of_channels
         response_channel_indices = self.environment_parameters.response_channel_indices
-        reference_channel_indices = self.environment_parameters.reference_channel_indices
+        reference_channel_indices = (
+            self.environment_parameters.reference_channel_indices
+        )
         if self.environment_parameters.sysid_signal_type in [
             "Random",
             "Pseudorandom",
@@ -395,7 +413,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         pretrigger_fraction = self.environment_parameters.sysid_pretrigger
         frame_size = self.environment_parameters.sysid_frame_size
         window = (
-            Window.HANN if self.environment_parameters.sysid_window == "Hann" else Window.RECTANGLE
+            Window.HANN
+            if self.environment_parameters.sysid_window == "Hann"
+            else Window.RECTANGLE
         )
         kurtosis_buffer_length = self.environment_parameters.sysid_averages
 
@@ -420,7 +440,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             reference_transformation_matrix=self.environment_parameters.reference_transformation_matrix,
         )
 
-    def get_sysid_spectral_processing_metadata(self, is_noise=False) -> SpectralProcessingMetadata:
+    def get_sysid_spectral_processing_metadata(
+        self, is_noise=False
+    ) -> SpectralProcessingMetadata:
         """Collects metadata to send to the spectral processing process"""
         averaging_type = (
             AveragingTypes.LINEAR
@@ -444,7 +466,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         elif self.environment_parameters.sysid_estimator == "Hv":
             frf_estimator = Estimator.HV
         else:
-            raise ValueError(f"Invalid FRF Estimator {self.environment_parameters.sysid_estimator}")
+            raise ValueError(
+                f"Invalid FRF Estimator {self.environment_parameters.sysid_estimator}"
+            )
         num_response_channels = self.environment_parameters.num_response_channels
         num_reference_channels = self.environment_parameters.num_reference_channels
         frequency_spacing = self.environment_parameters.sysid_frequency_spacing
@@ -1049,7 +1073,10 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             and self.collector_shutdown_achieved
             and self.spectral_shutdown_achieved
             and self.analysis_shutdown_achieved
-            and ((not self.acquisition_active) or self._waiting_to_start_transfer_function)
+            and (
+                (not self.acquisition_active)
+                or self._waiting_to_start_transfer_function
+            )
             and ((not self.output_active) or self._waiting_to_start_transfer_function)
         ):
             self.log("Shutdown Achieved")
@@ -1075,7 +1102,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
                 waiting_for.append("Data Analysis")
             if self.output_active and (not self._waiting_to_start_transfer_function):
                 waiting_for.append("Output Shutdown")
-            if self.acquisition_active and (not self._waiting_to_start_transfer_function):
+            if self.acquisition_active and (
+                not self._waiting_to_start_transfer_function
+            ):
                 waiting_for.append("Acquisition Shutdown")
             self.log(f"Waiting for {' and '.join(waiting_for)}")
             self.environment_command_queue.put(

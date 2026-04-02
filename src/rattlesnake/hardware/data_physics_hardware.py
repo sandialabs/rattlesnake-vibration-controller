@@ -34,7 +34,7 @@ from rattlesnake.hardware.data_physics_interface import (
     QuattroCoupling,
     QuattroStatus,
 )
-from rattlesnake.utilities import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3

@@ -4,11 +4,15 @@ from rattlesnake.environment.time_environment import TimeParameters, TimeUIComma
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
-    DataAcquisitionParameters,
     rms_time,
     db2scale,
 )
-from rattlesnake.user_interface.ui_utilities import UICommands, multiline_plotter, load_time_history
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
+    multiline_plotter,
+    load_time_history,
+)
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
@@ -86,7 +90,9 @@ class TimeUI(AbstractUI):
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
+        uic.loadUi(
+            environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget
+        )
         definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
@@ -141,7 +147,9 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.clicked.connect(self.start_control)
         self.run_widget.stop_test_button.clicked.connect(self.stop_control)
 
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
+    def initialize_data_acquisition(
+        self, data_acquisition_parameters: DataAcquisitionParameters
+    ):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -159,8 +167,12 @@ class TimeUI(AbstractUI):
         self.signal = None
         # Get channel information
         channels = data_acquisition_parameters.channel_list
-        num_measurements = len([channel for channel in channels if channel.feedback_device is None])
-        num_output = len([channel for channel in channels if channel.feedback_device is not None])
+        num_measurements = len(
+            [channel for channel in channels if channel.feedback_device is None]
+        )
+        num_output = len(
+            [channel for channel in channels if channel.feedback_device is not None]
+        )
         self.physical_output_names = [
             f"{'' if channel.channel_type is None else channel.channel_type} "
             f"{channel.node_number}{channel.node_direction}"
@@ -185,7 +197,9 @@ class TimeUI(AbstractUI):
             checkbox.setChecked(True)
             checkbox.stateChanged.connect(self.show_signal)
             self.show_signal_checkboxes.append(checkbox)
-            self.definition_widget.signal_information_table.setCellWidget(i, 0, checkbox)
+            self.definition_widget.signal_information_table.setCellWidget(
+                i, 0, checkbox
+            )
             item = QtWidgets.QTableWidgetItem()
             item.setText("0.0")
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
@@ -195,9 +209,12 @@ class TimeUI(AbstractUI):
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
             self.definition_widget.signal_information_table.setItem(i, 3, item)
         # Fill in the info at the bottom
-        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
+        self.definition_widget.sample_rate_display.setValue(
+            data_acquisition_parameters.sample_rate
+        )
         self.definition_widget.output_sample_rate_display.setValue(
-            data_acquisition_parameters.sample_rate * data_acquisition_parameters.output_oversample
+            data_acquisition_parameters.sample_rate
+            * data_acquisition_parameters.output_oversample
         )
         self.definition_widget.output_channels_display.setValue(num_output)
 
@@ -266,13 +283,18 @@ class TimeUI(AbstractUI):
         )
         self.definition_widget.signal_samples_display.setValue(self.signal.shape[-1])
         self.definition_widget.signal_time_display.setValue(
-            self.signal.shape[-1] / self.definition_widget.output_sample_rate_display.value()
+            self.signal.shape[-1]
+            / self.definition_widget.output_sample_rate_display.value()
         )
         maxs = np.max(np.abs(self.signal), axis=-1)
         rmss = rms_time(self.signal, axis=-1)
         for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
-            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
+            self.definition_widget.signal_information_table.item(i, 2).setText(
+                f"{mx:0.2f}"
+            )
+            self.definition_widget.signal_information_table.item(i, 3).setText(
+                f"{rms:0.2f}"
+            )
         self.show_signal()
 
     def show_signal(self):
@@ -347,7 +369,8 @@ class TimeUI(AbstractUI):
         return data
 
     def retrieve_metadata(
-        self, netcdf_handle: nc4._netCDF4.Dataset  # pylint: disable=c-extension-no-member
+        self,
+        netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
     ):
         """Collects environment parameters from a netCDF dataset.
 
@@ -374,12 +397,18 @@ class TimeUI(AbstractUI):
         """
         group = netcdf_handle.groups[self.environment_name]
         self.signal = group.variables["output_signal"][...].data
-        self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
+        self.definition_widget.cancel_rampdown_selector.setValue(
+            group.cancel_rampdown_time
+        )
         maxs = np.max(np.abs(self.signal), axis=-1)
         rmss = rms_time(self.signal, axis=-1)
         for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
-            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
+            self.definition_widget.signal_information_table.item(i, 2).setText(
+                f"{mx:0.2f}"
+            )
+            self.definition_widget.signal_information_table.item(i, 3).setText(
+                f"{rms:0.2f}"
+            )
         self.show_signal()
 
     def start_control(self):
@@ -407,7 +436,9 @@ class TimeUI(AbstractUI):
 
     def stop_control(self):
         """Stops running the environment"""
-        self.environment_command_queue.put(self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None))
+        self.environment_command_queue.put(
+            self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None)
+        )
 
     def change_test_level_from_profile(self, test_level):
         """Sets the test level from a profile instruction
@@ -465,7 +496,9 @@ class TimeUI(AbstractUI):
                 self.plot_data_items["output_signal_measurement"], output_data
             ):
                 x, y = curve.getData()
-                y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
+                y = np.concatenate(
+                    (y[this_output.size :], this_output[-x.size :]), axis=0
+                )
                 curve.setData(x, y)
         elif message == UICommands.ENABLE:
             widget = None
@@ -542,7 +575,9 @@ class TimeUI(AbstractUI):
             "Note: Replace cells with hash marks (#) to provide the requested parameters.",
         )
         worksheet.cell(2, 1, "Signal File")
-        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
+        worksheet.cell(
+            2, 2, "# Path to the file that contains the time signal that will be output"
+        )
         worksheet.cell(3, 1, "Cancel Rampdown Time")
         worksheet.cell(
             3,
@@ -550,7 +585,9 @@ class TimeUI(AbstractUI):
             "# Time for the environment to ramp to zero if the environment is cancelled.",
         )
 
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def set_parameters_from_template(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """
         Collects parameters for the user interface from the Excel template file
 
@@ -573,4 +610,6 @@ class TimeUI(AbstractUI):
 
         """
         self.load_signal(None, worksheet.cell(2, 2).value)
-        self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))
+        self.definition_widget.cancel_rampdown_selector.setValue(
+            float(worksheet.cell(3, 2).value)
+        )

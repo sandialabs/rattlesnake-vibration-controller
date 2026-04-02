@@ -32,7 +32,8 @@ import scipy.signal as signal
 from scipy.io import loadmat
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import flush_queue
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.hardware.hardware_utilities import Channel
 
 

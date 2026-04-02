@@ -44,11 +44,11 @@ from rattlesnake.process.signal_generation import (
     SquareSignalGenerator,
 )
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
     flush_queue,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
 CONTROL_TYPE = ControlTypes.MODAL
 WAIT_TIME = 0.02

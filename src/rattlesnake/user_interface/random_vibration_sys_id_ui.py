@@ -1,11 +1,11 @@
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
     db2scale,
     load_python_module,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
     RandomVibrationCommands,

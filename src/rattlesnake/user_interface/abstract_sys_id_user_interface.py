@@ -1,6 +1,7 @@
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import error_message_qt
-from rattlesnake.utilities import VerboseMessageQueue, DataAcquisitionParameters
+from rattlesnake.utilities import VerboseMessageQueue
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,

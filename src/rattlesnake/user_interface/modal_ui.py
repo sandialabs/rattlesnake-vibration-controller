@@ -8,9 +8,9 @@ from rattlesnake.environment.modal_environment import (
 from rattlesnake.utilities import (
     VerboseMessageQueue,
     GlobalCommands,
-    DataAcquisitionParameters,
     load_python_module,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,

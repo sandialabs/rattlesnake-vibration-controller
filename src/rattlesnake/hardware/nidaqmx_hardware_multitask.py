@@ -32,7 +32,7 @@ import nidaqmx.stream_writers as ni_write
 import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3

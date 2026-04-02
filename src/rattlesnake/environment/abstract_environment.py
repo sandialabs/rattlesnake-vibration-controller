@@ -31,10 +31,10 @@ from datetime import datetime
 from multiprocessing.queues import Queue
 import netCDF4 as nc4
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
 )
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.user_interface.ui_utilities import UICommands
 
 PICKLE_ON_ERROR = False
@@ -187,7 +187,9 @@ class AbstractEnvironment(ABC):
         """
 
     @abstractmethod
-    def initialize_environment_test_parameters(self, environment_parameters: AbstractMetadata):
+    def initialize_environment_test_parameters(
+        self, environment_parameters: AbstractMetadata
+    ):
         """
         Initialize the environment parameters specific to this environment
 
@@ -263,7 +265,9 @@ class AbstractEnvironment(ABC):
         message : str :
             A message that will be written to the log file.
         """
-        self.log_file_queue.put(f"{datetime.now()}: {self.environment_name} -- {message}\n")
+        self.log_file_queue.put(
+            f"{datetime.now()}: {self.environment_name} -- {message}\n"
+        )
 
     @property
     def environment_name(self) -> str:
@@ -333,10 +337,14 @@ class AbstractEnvironment(ABC):
                 )
                 if PICKLE_ON_ERROR:
                     with open(
-                        f"debug_data/{self.environment_name}_error_state.txt", "w", encoding="utf-8"
+                        f"debug_data/{self.environment_name}_error_state.txt",
+                        "w",
+                        encoding="utf-8",
                     ) as f:
                         f.write(f"{tb}")
-                    with open(f"debug_data/{self.environment_name}_error_state.pkl", "wb") as f:
+                    with open(
+                        f"debug_data/{self.environment_name}_error_state.pkl", "wb"
+                    ) as f:
                         dic = self.dump_to_dict()
                         pickle.dump(dic, f)
                     print("Done Writing Pickle File from Error...")
