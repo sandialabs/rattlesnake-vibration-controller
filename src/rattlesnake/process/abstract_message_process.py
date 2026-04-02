@@ -22,16 +22,43 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import traceback
+# -*- coding: utf-8 -*-
+"""
+Defines abstract processes that can be used as subprocesses in the controller.
+Uses the message,data producer and consumer paradigm.
+
+Rattlesnake Vibration Control Software
+Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
+(NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
+Government retains certain rights in this software.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
 from abc import ABC
 from datetime import datetime
-from multiprocessing.queues import Queue
+import multiprocessing as mp
+import multiprocessing.queues as mpqueue
+import multiprocessing.synchronize  # pylint: disable=unused-import
+import os
+import queue as thqueue
+import traceback
 
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
 
+# region: AbstractMessageProcess
 class AbstractMessageProcess(ABC):
     """Abstract class for a subprocess of an environment.
 
@@ -43,9 +70,10 @@ class AbstractMessageProcess(ABC):
     def __init__(
         self,
         process_name: str,
-        log_file_queue: Queue,
+        log_file_queue: mp.Queue,
         command_queue: VerboseMessageQueue,
-        gui_update_queue: Queue,
+        gui_update_queue: mp.Queue,
+        ready_event: mp.synchronize.Event = None,
     ):
         """
         Constructor for the AbstractMessageProcess class.
@@ -69,6 +97,9 @@ class AbstractMessageProcess(ABC):
         self._log_file_queue = log_file_queue
         self._gui_update_queue = gui_update_queue
         self._command_queue = command_queue
+        if ready_event:
+            self._ready_event = ready_event
+            self.set_ready()
         self._command_map = {GlobalCommands.QUIT: self.quit}
 
     def log(self, message):
@@ -100,9 +131,21 @@ class AbstractMessageProcess(ABC):
         return self._command_map
 
     @property
-    def gui_update_queue(self) -> Queue:
+    def gui_update_queue(self) -> mp.Queue:
         """Queue to which GUI update instructions will be written."""
         return self._gui_update_queue
+
+    @property
+    def ready_event(self):
+        return self._ready_event
+
+    def set_ready(self):
+        if self._ready_event:
+            self._ready_event.set()
+
+    def clear_ready(self):
+        if self._ready_event:
+            self._ready_event.clear()
 
     def map_command(self, key, function):
         """Maps commands to instructions
@@ -133,7 +176,7 @@ class AbstractMessageProcess(ABC):
         """Queue to which log file messages should be written."""
         return self._log_file_queue
 
-    def run(self):
+    def run(self, shutdown_event: mp.synchronize.Event = None):
         """The main function that is run by the process
 
         A function that is called by the process function that
@@ -150,8 +193,17 @@ class AbstractMessageProcess(ABC):
         """
         self.log(f"Starting Process with PID {os.getpid()}")
         while True:
+            # Check shutdown event
+            if shutdown_event is not None and shutdown_event.is_set():
+                break
+
             # Get the message from the queue
-            message, data = self.command_queue.get(self.process_name)
+            try:
+                message, data = self.command_queue.get(
+                    self.process_name, timeout=0.1
+                )  # non-blocking-ish
+            except (thqueue.Empty, mpqueue.Empty):
+                continue
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]
@@ -170,7 +222,7 @@ class AbstractMessageProcess(ABC):
                         UICommands.ERROR,
                         (
                             f"{self.process_name} Error",
-                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
+                            f"ERROR:\n\n{tb}",
                         ),
                     )
                 )

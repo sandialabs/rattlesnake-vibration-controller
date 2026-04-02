@@ -72,7 +72,7 @@ class ControllerProcess(AbstractMessageProcess):
             GlobalCommands.START_SYSTEM_ID_TRANSFER, self.start_system_id_transfer
         )
         self.map_command(GlobalCommands.STOP_SYSTEM_ID, self.stop_system_id)
-        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
+        # self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)

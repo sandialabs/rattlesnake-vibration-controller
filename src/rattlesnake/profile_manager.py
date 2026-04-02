@@ -124,7 +124,7 @@ class ProfileManager:
         self.command_map[GlobalCommands.STOP_HARDWARE] = self.stop_hardware
         self.command_map[GlobalCommands.START_STREAMING] = self.start_streaming
         self.command_map[GlobalCommands.STOP_STREAMING] = self.stop_streaming
-        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
+        # self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
         self.command_map[GlobalCommands.STOP_ENVIRONMENT] = self.stop_environment
         for command_type in ENVIRONMENT_COMMANDS.values():
             self.command_map.update(
