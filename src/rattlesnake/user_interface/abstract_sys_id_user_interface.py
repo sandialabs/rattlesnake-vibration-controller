@@ -1,5 +1,6 @@
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
-from rattlesnake.utilities import VerboseMessageQueue, DataAcquisitionParameters, error_message_qt
+from rattlesnake.user_interface.ui_utilities import error_message_qt
+from rattlesnake.utilities import VerboseMessageQueue, DataAcquisitionParameters
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
@@ -58,7 +59,9 @@ class RotatedAxisItem(pg.AxisItem):  # pylint: disable=abstract-method
             x_offset = np.ceil(np.fabs(np.sin(np.radians(self._angle)) * rect.width()))
             if self._angle < 0:
                 x_offset = -x_offset
-            p.translate(x_offset / 2, 0)  # Move the coordinate system (relatively) downwards
+            p.translate(
+                x_offset / 2, 0
+            )  # Move the coordinate system (relatively) downwards
 
             p.drawText(rect, flags, text)
             p.restore()  # restore the painter state
@@ -142,13 +145,13 @@ class AbstractSysIdUI(AbstractUI):
         self.last_condition = None
         self.last_kurtosis = None
 
-        self.time_response_plot = self.system_id_widget.time_data_graphicslayout.addPlot(
-            row=0, column=0
+        self.time_response_plot = (
+            self.system_id_widget.time_data_graphicslayout.addPlot(row=0, column=0)
         )
         self.time_response_plot.setLabel("left", "Response")
         self.time_response_plot.setLabel("bottom", "Time (s)")
-        self.time_reference_plot = self.system_id_widget.time_data_graphicslayout.addPlot(
-            row=0, column=1
+        self.time_reference_plot = (
+            self.system_id_widget.time_data_graphicslayout.addPlot(row=0, column=1)
         )
         self.time_reference_plot.setLabel("left", "Reference")
         self.time_reference_plot.setLabel("bottom", "Time (s)")
@@ -163,17 +166,21 @@ class AbstractSysIdUI(AbstractUI):
         self.level_reference_plot.setLabel("left", "Reference PSD")
         self.level_reference_plot.setLabel("bottom", "Frequency (Hz)")
         self.transfer_function_phase_plot = (
-            self.system_id_widget.transfer_function_graphics_layout.addPlot(row=0, column=0)
+            self.system_id_widget.transfer_function_graphics_layout.addPlot(
+                row=0, column=0
+            )
         )
         self.transfer_function_phase_plot.setLabel("left", "Phase")
         self.transfer_function_phase_plot.setLabel("bottom", "Frequency (Hz)")
         self.transfer_function_magnitude_plot = (
-            self.system_id_widget.transfer_function_graphics_layout.addPlot(row=0, column=1)
+            self.system_id_widget.transfer_function_graphics_layout.addPlot(
+                row=0, column=1
+            )
         )
         self.transfer_function_magnitude_plot.setLabel("left", "Amplitude")
         self.transfer_function_magnitude_plot.setLabel("bottom", "Frequency (Hz)")
-        self.impulse_response_plot = self.system_id_widget.impulse_graphicslayout.addPlot(
-            row=0, column=0
+        self.impulse_response_plot = (
+            self.system_id_widget.impulse_graphicslayout.addPlot(row=0, column=0)
         )
         self.impulse_response_plot.setLabel("left", "Impulse Response")
         self.impulse_response_plot.setLabel("bottom", "Time (s)")
@@ -194,11 +201,11 @@ class AbstractSysIdUI(AbstractUI):
         self.reference_nodes = []
         self.all_response_indices = []
         self.all_reference_indices = []
-        self.kurtosis_response_plot = self.system_id_widget.kurtosis_graphicslayout.addPlot(
-            row=0, column=0
+        self.kurtosis_response_plot = (
+            self.system_id_widget.kurtosis_graphicslayout.addPlot(row=0, column=0)
         )
-        self.kurtosis_reference_plot = self.system_id_widget.kurtosis_graphicslayout.addPlot(
-            row=0, column=1
+        self.kurtosis_reference_plot = (
+            self.system_id_widget.kurtosis_graphicslayout.addPlot(row=0, column=1)
         )
         self.kurtosis_response_plot.setLabel("left", "Response")
         self.kurtosis_reference_plot.setLabel("left", "Reference")
@@ -228,7 +235,9 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.preview_system_id_button.clicked.connect(
             self.preview_transfer_function
         )
-        self.system_id_widget.start_button.clicked.connect(self.acquire_transfer_function)
+        self.system_id_widget.start_button.clicked.connect(
+            self.acquire_transfer_function
+        )
         self.system_id_widget.stop_button.clicked.connect(self.stop_system_id)
         self.system_id_widget.select_transfer_function_stream_file_button.clicked.connect(
             self.select_transfer_function_stream_file
@@ -239,14 +248,24 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.reference_selector.itemSelectionChanged.connect(
             self.update_sysid_plots
         )
-        self.system_id_widget.coherence_checkbox.stateChanged.connect(self.show_hide_coherence)
-        self.system_id_widget.levels_checkbox.stateChanged.connect(self.show_hide_levels)
-        self.system_id_widget.time_data_checkbox.stateChanged.connect(self.show_hide_time_data)
-        self.system_id_widget.impulse_checkbox.stateChanged.connect(self.show_hide_impulse)
+        self.system_id_widget.coherence_checkbox.stateChanged.connect(
+            self.show_hide_coherence
+        )
+        self.system_id_widget.levels_checkbox.stateChanged.connect(
+            self.show_hide_levels
+        )
+        self.system_id_widget.time_data_checkbox.stateChanged.connect(
+            self.show_hide_time_data
+        )
+        self.system_id_widget.impulse_checkbox.stateChanged.connect(
+            self.show_hide_impulse
+        )
         self.system_id_widget.transfer_function_checkbox.stateChanged.connect(
             self.show_hide_transfer_function
         )
-        self.system_id_widget.kurtosis_checkbox.stateChanged.connect(self.show_hide_kurtosis)
+        self.system_id_widget.kurtosis_checkbox.stateChanged.connect(
+            self.show_hide_kurtosis
+        )
         self.system_id_widget.signalTypeComboBox.currentIndexChanged.connect(
             self.update_signal_type
         )
@@ -258,7 +277,9 @@ class AbstractSysIdUI(AbstractUI):
         )
 
     @abstractmethod
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
+    def initialize_data_acquisition(
+        self, data_acquisition_parameters: DataAcquisitionParameters
+    ):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -316,10 +337,14 @@ class AbstractSysIdUI(AbstractUI):
     def update_sysid_metadata(self, metadata: AbstractSysIdMetadata):
         """Updates the provided system identification metadata based on current UI widget values"""
         metadata.sysid_frame_size = self.system_id_widget.samplesPerFrameSpinBox.value()
-        metadata.sysid_averaging_type = self.system_id_widget.averagingTypeComboBox.itemText(
-            self.system_id_widget.averagingTypeComboBox.currentIndex()
+        metadata.sysid_averaging_type = (
+            self.system_id_widget.averagingTypeComboBox.itemText(
+                self.system_id_widget.averagingTypeComboBox.currentIndex()
+            )
         )
-        metadata.sysid_noise_averages = self.system_id_widget.noiseAveragesSpinBox.value()
+        metadata.sysid_noise_averages = (
+            self.system_id_widget.noiseAveragesSpinBox.value()
+        )
         metadata.sysid_averages = self.system_id_widget.systemIDAveragesSpinBox.value()
         metadata.sysid_exponential_averaging_coefficient = (
             self.system_id_widget.averagingCoefficientDoubleSpinBox.value()
@@ -328,7 +353,9 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.estimatorComboBox.currentIndex()
         )
         metadata.sysid_level = self.system_id_widget.levelDoubleSpinBox.value()
-        metadata.sysid_level_ramp_time = self.system_id_widget.levelRampTimeDoubleSpinBox.value()
+        metadata.sysid_level_ramp_time = (
+            self.system_id_widget.levelRampTimeDoubleSpinBox.value()
+        )
         metadata.sysid_signal_type = self.system_id_widget.signalTypeComboBox.itemText(
             self.system_id_widget.signalTypeComboBox.currentIndex()
         )
@@ -340,13 +367,21 @@ class AbstractSysIdUI(AbstractUI):
             if metadata.sysid_signal_type == "Random"
             else 0.0
         )
-        metadata.sysid_burst_on = self.system_id_widget.onFractionDoubleSpinBox.value() / 100
-        metadata.sysid_pretrigger = self.system_id_widget.pretriggerDoubleSpinBox.value() / 100
+        metadata.sysid_burst_on = (
+            self.system_id_widget.onFractionDoubleSpinBox.value() / 100
+        )
+        metadata.sysid_pretrigger = (
+            self.system_id_widget.pretriggerDoubleSpinBox.value() / 100
+        )
         metadata.sysid_burst_ramp_fraction = (
             self.system_id_widget.rampFractionDoubleSpinBox.value() / 100
         )
-        metadata.sysid_low_frequency_cutoff = self.system_id_widget.lowFreqCutoffSpinBox.value()
-        metadata.sysid_high_frequency_cutoff = self.system_id_widget.highFreqCutoffSpinBox.value()
+        metadata.sysid_low_frequency_cutoff = (
+            self.system_id_widget.lowFreqCutoffSpinBox.value()
+        )
+        metadata.sysid_high_frequency_cutoff = (
+            self.system_id_widget.highFreqCutoffSpinBox.value()
+        )
         # for key in dir(metadata):
         #     if '__' == key[:2]:
         #         continue
@@ -506,7 +541,9 @@ class AbstractSysIdUI(AbstractUI):
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(True)
         if self.system_id_widget.stream_transfer_function_data_checkbox.isChecked():
-            stream_name = self.system_id_widget.transfer_function_stream_file_display.text()
+            stream_name = (
+                self.system_id_widget.transfer_function_stream_file_display.text()
+            )
         else:
             stream_name = None
         self.environment_command_queue.put(
@@ -617,13 +654,17 @@ class AbstractSysIdUI(AbstractUI):
                     self.transfer_function_phase_plot.plot(
                         self.frequencies, np.angle(frf) * 180 / np.pi, pen=i
                     )
-                    self.transfer_function_magnitude_plot.plot(self.frequencies, np.abs(frf), pen=i)
+                    self.transfer_function_magnitude_plot.plot(
+                        self.frequencies, np.abs(frf), pen=i
+                    )
                     self.impulse_response_plot.plot(
                         np.arange(imp.size) / self.environment_parameters.sample_rate,
                         imp,
                         pen=i,
                     )
-                for i, coherence in enumerate(self.last_coherence[..., response_indices].T):
+                for i, coherence in enumerate(
+                    self.last_coherence[..., response_indices].T
+                ):
                     self.coherence_plot.plot(self.frequencies, coherence, pen=i)
             if self.last_condition is not None:
                 self.condition_plot.plot(self.frequencies, self.last_condition, pen=0)
@@ -631,28 +672,38 @@ class AbstractSysIdUI(AbstractUI):
             reference_noise = (
                 None
                 if self.last_reference_noise is None or len(reference_indices) == 0
-                else self.last_reference_noise[..., reference_indices, reference_indices].real
+                else self.last_reference_noise[
+                    ..., reference_indices, reference_indices
+                ].real
             )
             response_noise = (
                 None
                 if self.last_response_noise is None or len(response_indices) == 0
-                else self.last_response_noise[..., response_indices, response_indices].real
+                else self.last_response_noise[
+                    ..., response_indices, response_indices
+                ].real
             )
             reference_level = (
                 None
                 if self.last_reference_cpsd is None or len(reference_indices) == 0
-                else self.last_reference_cpsd[..., reference_indices, reference_indices].real
+                else self.last_reference_cpsd[
+                    ..., reference_indices, reference_indices
+                ].real
             )
             response_level = (
                 None
                 if self.last_response_cpsd is None or len(response_indices) == 0
-                else self.last_response_cpsd[..., response_indices, response_indices].real
+                else self.last_response_cpsd[
+                    ..., response_indices, response_indices
+                ].real
             )
             self.level_reference_plot.clear()
             self.level_response_plot.clear()
             for i in range(len(reference_indices)):
                 if reference_noise is not None:
-                    self.level_reference_plot.plot(self.frequencies, reference_noise[:, i], pen=i)
+                    self.level_reference_plot.plot(
+                        self.frequencies, reference_noise[:, i], pen=i
+                    )
                 if reference_level is not None:
                     try:
                         self.level_reference_plot.plot(
@@ -662,10 +713,14 @@ class AbstractSysIdUI(AbstractUI):
                         pass
             for i in range(len(response_indices)):
                 if response_noise is not None:
-                    self.level_response_plot.plot(self.frequencies, response_noise[:, i], pen=i)
+                    self.level_response_plot.plot(
+                        self.frequencies, response_noise[:, i], pen=i
+                    )
                 if response_level is not None:
                     try:
-                        self.level_response_plot.plot(self.frequencies, response_level[:, i], pen=i)
+                        self.level_response_plot.plot(
+                            self.frequencies, response_level[:, i], pen=i
+                        )
                     except Exception:
                         pass
 
@@ -749,7 +804,9 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.bandwidthLabel.show()
             self.system_id_widget.lowFreqCutoffSpinBox.show()
             self.system_id_widget.highFreqCutoffSpinBox.show()
-        elif self.system_id_widget.signalTypeComboBox.currentIndex() == 1:  # Pseudorandom
+        elif (
+            self.system_id_widget.signalTypeComboBox.currentIndex() == 1
+        ):  # Pseudorandom
             self.system_id_widget.windowComboBox.setCurrentIndex(1)
             self.system_id_widget.overlapDoubleSpinBox.hide()
             self.system_id_widget.overlapLabel.hide()
@@ -830,7 +887,9 @@ class AbstractSysIdUI(AbstractUI):
         ]
         self.system_id_widget.samplesPerFrameSpinBox.setValue(group.sysid_frame_size)
         self.system_id_widget.averagingTypeComboBox.setCurrentIndex(
-            self.system_id_widget.averagingTypeComboBox.findText(group.sysid_averaging_type)
+            self.system_id_widget.averagingTypeComboBox.findText(
+                group.sysid_averaging_type
+            )
         )
         self.system_id_widget.noiseAveragesSpinBox.setValue(group.sysid_noise_averages)
         self.system_id_widget.systemIDAveragesSpinBox.setValue(group.sysid_averages)
@@ -841,7 +900,9 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.estimatorComboBox.findText(group.sysid_estimator)
         )
         self.system_id_widget.levelDoubleSpinBox.setValue(group.sysid_level)
-        self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(group.sysid_level_ramp_time)
+        self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(
+            group.sysid_level_ramp_time
+        )
         self.system_id_widget.signalTypeComboBox.setCurrentIndex(
             self.system_id_widget.signalTypeComboBox.findText(group.sysid_signal_type)
         )
@@ -849,15 +910,23 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.windowComboBox.findText(group.sysid_window)
         )
         self.system_id_widget.overlapDoubleSpinBox.setValue(group.sysid_overlap * 100)
-        self.system_id_widget.onFractionDoubleSpinBox.setValue(group.sysid_burst_on * 100)
-        self.system_id_widget.pretriggerDoubleSpinBox.setValue(group.sysid_pretrigger * 100)
+        self.system_id_widget.onFractionDoubleSpinBox.setValue(
+            group.sysid_burst_on * 100
+        )
+        self.system_id_widget.pretriggerDoubleSpinBox.setValue(
+            group.sysid_pretrigger * 100
+        )
         self.system_id_widget.rampFractionDoubleSpinBox.setValue(
             group.sysid_burst_ramp_fraction * 100
         )
         if hasattr(group, "sysid_low_frequency_cutoff"):
-            self.system_id_widget.lowFreqCutoffSpinBox.setValue(group.sysid_low_frequency_cutoff)
+            self.system_id_widget.lowFreqCutoffSpinBox.setValue(
+                group.sysid_low_frequency_cutoff
+            )
         if hasattr(group, "sysid_high_frequency_cutoff"):
-            self.system_id_widget.highFreqCutoffSpinBox.setValue(group.sysid_high_frequency_cutoff)
+            self.system_id_widget.highFreqCutoffSpinBox.setValue(
+                group.sysid_high_frequency_cutoff
+            )
         return group
 
     @abstractmethod
@@ -1028,7 +1097,9 @@ class AbstractSysIdUI(AbstractUI):
         """
 
     @abstractmethod
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def set_parameters_from_template(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """
         Collects parameters for the user interface from the Excel template file
 
@@ -1119,16 +1190,22 @@ class AbstractSysIdUI(AbstractUI):
                 if self.data_acquisition_parameters.hardware_file is None
                 else self.data_acquisition_parameters.hardware_file
             )
-            netcdf_handle.output_oversample = self.data_acquisition_parameters.output_oversample
+            netcdf_handle.output_oversample = (
+                self.data_acquisition_parameters.output_oversample
+            )
             for (
                 name,
                 value,
             ) in self.data_acquisition_parameters.extra_parameters.items():
                 setattr(netcdf_handle, name, value)
             # Create Variables
-            var = netcdf_handle.createVariable("environment_names", str, ("num_environments",))
+            var = netcdf_handle.createVariable(
+                "environment_names", str, ("num_environments",)
+            )
             this_environment_index = None
-            for i, name in enumerate(self.data_acquisition_parameters.environment_names):
+            for i, name in enumerate(
+                self.data_acquisition_parameters.environment_names
+            ):
                 var[i] = name
                 if name == self.environment_name:
                     this_environment_index = i
@@ -1137,7 +1214,11 @@ class AbstractSysIdUI(AbstractUI):
                 "i1",
                 ("response_channels", "num_environments"),
             )
-            var[...] = self.data_acquisition_parameters.environment_active_channels.astype("int8")[
+            var[
+                ...
+            ] = self.data_acquisition_parameters.environment_active_channels.astype(
+                "int8"
+            )[
                 self.data_acquisition_parameters.environment_active_channels[
                     :, this_environment_index
                 ],
@@ -1260,15 +1341,21 @@ class AbstractSysIdUI(AbstractUI):
                 if self.data_acquisition_parameters.hardware_file is None
                 else self.data_acquisition_parameters.hardware_file
             )
-            field_dict["output_oversample"] = self.data_acquisition_parameters.output_oversample
+            field_dict["output_oversample"] = (
+                self.data_acquisition_parameters.output_oversample
+            )
             field_dict["frf_data"] = self.last_transfer_function
             field_dict["response_cpsd"] = self.last_response_cpsd
             field_dict["reference_cpsd"] = self.last_reference_cpsd
             field_dict["coherence"] = self.last_coherence
             field_dict["response_noise_cpsd"] = self.last_response_noise
             field_dict["reference_noise_cpsd"] = self.last_reference_noise
-            field_dict["response_indices"] = self.environment_parameters.response_channel_indices
-            field_dict["reference_indices"] = self.environment_parameters.reference_channel_indices
+            field_dict["response_indices"] = (
+                self.environment_parameters.response_channel_indices
+            )
+            field_dict["reference_indices"] = (
+                self.environment_parameters.reference_channel_indices
+            )
             field_dict["response_transformation_matrix"] = (
                 np.nan
                 if self.environment_parameters.response_transformation_matrix is None
@@ -1292,7 +1379,11 @@ class AbstractSysIdUI(AbstractUI):
             for label, _ in labels:
                 field_dict["channel_" + label] = np.array(
                     [
-                        ("" if getattr(channel, label) is None else getattr(channel, label))
+                        (
+                            ""
+                            if getattr(channel, label) is None
+                            else getattr(channel, label)
+                        )
                         for channel in self.data_acquisition_parameters.channel_list
                     ]
                 )
@@ -1352,7 +1443,9 @@ class AbstractSysIdUI(AbstractUI):
             combine = np.vectorize(complex)
             try:
                 self.last_transfer_function = np.array(
-                    combine(variables["frf_data_real"][:], variables["frf_data_imag"][:])
+                    combine(
+                        variables["frf_data_real"][:], variables["frf_data_imag"][:]
+                    )
                 )
                 self.last_coherence = np.array(variables["frf_coherence"][:])
                 self.last_response_cpsd = np.array(
@@ -1392,7 +1485,9 @@ class AbstractSysIdUI(AbstractUI):
         elif file_filter == "SDynPy FRF (*.npz)":
             sdynpy_dict = np.load(filename)
             if sdynpy_dict["function_type"].item() != 4:
-                raise ValueError("File must contain a Sdynpy FrequencyResponseFunctionArray")
+                raise ValueError(
+                    "File must contain a Sdynpy FrequencyResponseFunctionArray"
+                )
             self.last_transfer_function = np.moveaxis(
                 np.array(sdynpy_dict["data"]["ordinate"]), -1, 0
             )

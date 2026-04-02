@@ -36,7 +36,6 @@ from enum import Enum
 from rattlesnake.utilities import (
     DIRECTORY,
     coherence,
-    error_message_qt,
     load_csv_matrix,
     save_csv_matrix,
     trac,
@@ -65,6 +64,20 @@ class UICommands(Enum):
     def label(self):
         """Used by UI as names for"""
         return self.name.replace("_", " ").title()
+
+
+def error_message_qt(title, message):
+    """Helper class to create an error dialog.
+
+    Parameters
+    ----------
+    title : str :
+        Title of the window that the error message will appear in.
+    message : str :
+        Error message that will be displayed.
+
+    """
+    QtWidgets.QMessageBox.critical(None, title, message)
 
 
 colororder = [

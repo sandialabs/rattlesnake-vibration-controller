@@ -583,24 +583,6 @@ class DataAcquisitionParameters:
 # endregion
 
 
-# region User Interface
-def error_message_qt(title, message):
-    """Helper class to create an error dialog.
-
-    Parameters
-    ----------
-    title : str :
-        Title of the window that the error message will appear in.
-    message : str :
-        Error message that will be displayed.
-
-    """
-    QtWidgets.QMessageBox.critical(None, title, message)
-
-
-# endregion
-
-
 # region Loading
 def load_csv_matrix(file):
     """Loads a matrix from a CSV file
