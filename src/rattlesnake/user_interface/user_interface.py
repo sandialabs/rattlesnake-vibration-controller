@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import copy
 import datetime
 import multiprocessing as mp
+from typing import Any
 
 # pyqtgraph.setConfigOption('leftButtonPan',False)
 import os
@@ -364,24 +365,322 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         )
         self.run_profile_widget.setEnabled(False)
 
-    def log(self, string):
-        """Pass a message to the log_file_queue along with date/time and task name
+    def load_rattlesnake_to_ui(self):
+        """
+        Gets the current state of the rattlesnake object and formats
+        user interface to represent that state.
+        """
+        # Get rattlesnake state
+        state = self.rattlesnake.state
+        has_profile = self.rattlesnake.has_profile
+        has_streamed = self.rattlesnake.has_streamed
+
+        # Reset UI
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+
+        environment_names = list(self.environment_uis.keys())
+        for environment_name in environment_names:
+            self.remove_environment(None, environment_name)
+
+        for event_idx in reversed(range(self.profile_table.rowCount())):
+            self.remove_profile_event(None, event_idx)
+
+        # Stores state to UI
+        match state:
+            case RattlesnakeState.INIT:
+                return
+            case RattlesnakeState.HARDWARE_STORE:
+                self.load_stored_hardware()
+            case RattlesnakeState.ENVIRONMENT_STORE:
+                self.load_stored_hardware()
+                self.load_stored_environments()
+                if has_profile:
+                    self.load_stored_profile()
+                if has_streamed:
+                    self.load_stored_stream()
+            case RattlesnakeState.HARDWARE_ACTIVE:
+                self.load_stored_hardware()
+                self.load_stored_environments()
+                if has_profile:
+                    self.load_stored_profile()
+                self.load_stored_stream()
+                self.display_acquisition_started()
+            case RattlesnakeState.ENVIRONMENT_ACTIVE:
+                self.load_stored_hardware()
+                self.load_stored_environments()
+                if has_profile:
+                    self.load_stored_profile()
+                self.load_stored_stream()
+                self.display_acquisition_started()
+                for (
+                    queue_name,
+                    active_event,
+                ) in self.rattlesnake.event_container.environment_active_events.items():
+                    if active_event.is_set():
+                        environment_name = (
+                            self.rattlesnake.environment_manager.environment_names[
+                                queue_name
+                            ]
+                        )
+                        self.environment_uis[
+                            environment_name
+                        ].display_environment_started()
+
+    def load_hardware_to_ui(self):
+        """
+        Loads the channel table and hardware setup values from the hardware
+        metadata object owned by the rattlesnake object to the user interface.
+        """
+        hardware_metadata = self.rattlesnake.hardware_metadata
+
+        # Fill out channel table
+        channel_list = hardware_metadata.channel_list
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+        match hardware_metadata.hardware_type:
+            case HardwareType.SDYNPY_SYSTEM:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("SDynPy System Integration...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.integration_oversample_selector.setValue(
+                    hardware_metadata.output_oversample
+                )
+            case _:
+                self.display_error(
+                    f"{hardware_metadata.hardware_type} is not yet implemented"
+                )
+
+    def load_environments_to_ui(self):
+        """
+        Loads the environment metadata list from the rattlesnake object to
+        the user interface.
+        """
+        hardware_metadata = self.rattlesnake.hardware_metadata
+        environment_metadata_dict = self.rattlesnake.environment_metadata
+
+        for environment_idx, environment_metadata in enumerate(
+            environment_metadata_dict.values()
+        ):
+            # Add environments
+            environment_type = environment_metadata.environment_type
+            self.add_environment(environment_type)
+
+            environment_name = environment_metadata.environment_name
+            if (
+                environment_name not in self.environment_uis.keys()
+            ):  # Dont rename if they were already using default name
+                self.rename_environment(environment_idx, environment_name)
+
+            self.environment_uis[environment_name].initialize_hardware(
+                hardware_metadata
+            )
+            self.environment_uis[environment_name].set_environment_metadata(
+                environment_metadata
+            )
+            self.environment_uis[environment_name].initialize_environment(
+                environment_metadata
+            )
+
+        self.update_environment_tabs()
+        streaming_environment_items = [""] + list(self.environment_uis.keys())
+        self.streaming_environment_select_combobox.clear()
+        self.streaming_environment_select_combobox.addItems(streaming_environment_items)
+        self.rattlesnake_tabs.setTabEnabled(1, True)
+        self.rattlesnake_tabs.setCurrentIndex(1)
+
+    def load_profile_to_ui(self):
+        """
+        Loads the profile event list from the rattlesnake object to the
+        user interface.
+        """
+        profile_event_list = self.rattlesnake.last_profile_event_list
+
+        for profile_event in profile_event_list:
+            timestamp = profile_event.timestamp
+            environment_name = profile_event.environment_name
+            command = profile_event.command
+            data = profile_event.data
+
+            # If command is START_ENVIRONMENT, add the instructions command so that
+            # the user can remove those instructions if they desire
+            if command is GlobalCommands.START_ENVIRONMENT and isinstance(
+                data, EnvironmentInstructions
+            ):
+                self.add_profile_event()
+                row = self.profile_table.rowCount() - 1
+                timestamp_spinbox = self.profile_table.cellWidget(row, 0)
+                timestamp_spinbox.setValue(timestamp)
+                environment_combobox = self.profile_table.cellWidget(row, 1)
+                environment_combobox.setCurrentText(environment_name)
+                command_combobox = self.profile_table.cellWidget(row, 2)
+                command_combobox.setCurrentText(
+                    UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label
+                )
+                data_item = QtWidgets.QTableWidgetItem("")
+                data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
+                self.profile_table.setItem(row, 3, data_item)
+                data = None
+
+            data = str(data) if data is not None else ""
+            data = data if data.strip() != "" else ""
+
+            self.add_profile_event()
+            row = self.profile_table.rowCount() - 1
+            timestamp_spinbox = self.profile_table.cellWidget(row, 0)
+            timestamp_spinbox.setValue(timestamp)
+            environment_combobox = self.profile_table.cellWidget(row, 1)
+            environment_combobox.setCurrentText(environment_name)
+            command_combobox = self.profile_table.cellWidget(row, 2)
+            command_combobox.setCurrentText(command.label)
+            data_item = QtWidgets.QTableWidgetItem(data)
+            self.profile_table.setItem(row, 3, data_item)
+
+        self.rattlesnake_tabs.setTabEnabled(4, True)
+        self.rattlesnake_tabs.setCurrentIndex(4)
+
+    def load_stream_metadata_to_ui(self):
+        """
+        Loads the stream metadata object from the rattlesnake object to
+        the user interface.
+        """
+        stream_metadata = self.rattlesnake.last_stream_metadata
+
+        match stream_metadata.stream_type:
+            case StreamType.NO_STREAM:
+                self.no_streaming_radiobutton.setChecked(True)
+            case StreamType.PROFILE_INSTRUCTION:
+                self.profile_streaming_radiobutton.setChecked(True)
+            case StreamType.TEST_LEVEL:
+                self.test_level_streaming_radiobutton.setChecked(True)
+                self.streaming_environment_select_combobox.setCurrentText(
+                    stream_metadata.test_level_environment_name
+                )
+            case StreamType.IMMEDIATELY:
+                self.immediate_streaming_radiobutton.setChecked(True)
+            case StreamType.MANUAL:
+                self.manual_streaming_radiobutton.setChecked(True)
+
+        self.streaming_file_display.setText(stream_metadata.stream_file)
+
+        self.initialize_profile()
+
+    def load_test_file_to_ui(self, filepath=None):
+        """
+        Callback to select file path, verify existance and load that file to
+        the user interface.
+        """
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Rattlesnake Template File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        try:
+            self.rattlesnake.load_data_from_file(filepath)
+        except Exception:  # pylint: disable=broad-exception-caught
+            tb = traceback.format_exc()
+            self.display_error(tb)
+            return
+
+        self.load_from_rattlesnake_state()
+
+    def stop_program(self):
+        """
+        Callback to stop the entire program.
+        """
+        self.close()
+
+    def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
+        """
+        Event triggered when closing the software to gracefully shut down.
+
+        Parameters
+        ----------
+        event :
+            The close event, which is accepted.
+        """
+        for (
+            _,
+            command_queue,
+        ) in self.queue_container.environment_command_queues.items():
+            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+
+        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.queue_container.controller_communication_queue.put(
+            TASK_NAME, (GlobalCommands.QUIT, None)
+        )
+
+        for command_queue in [
+            self.queue_container.acquisition_command_queue,
+            self.queue_container.output_command_queue,
+            self.queue_container.streaming_command_queue,
+        ]:
+            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+
+        event.accept()
+
+    # endregion
+
+    # region Process
+    @property
+    def gui_update_queue(self):
+        return self.rattlesnake.queue_container.gui_update_queue
+
+    @property
+    def log_file_queue(self):
+        return self.rattlesnake.queue_container.log_file_queue
+
+    @property
+    def timeout(self):
+        return self.rattlesnake.timeout
+
+    @property
+    def has_system_id(self):
+        if self.system_id_environment_tabs.count() != 0:
+            return True
+        return False
+
+    @property
+    def has_test_pred(self):
+        if self.test_prediction_environment_tabs.count() != 0:
+            return True
+        return False
+
+    def log(self, string: str):
+        """
+        Pass a message to the log_file_queue along with date/time and task name.
 
         Parameters
         ----------
         string : str
-            Message that will be written to the queue
-
+            Message that will be written to the queue.
         """
         self.queue_container.log_file_queue.put(
             f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
         )
 
-    def stop_program(self):
-        """Callback to stop the entire program"""
-        self.close()
-
-    def update_gui(self, queue_data):
+    def update_gui(self, queue_data: tuple[str, Any]):
         """Update the graphical interface for the main controller
 
         Parameters
@@ -432,61 +731,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             elif isinstance(widget, QtWidgets.QListWidget):
                 widget.clear()
                 widget.addItems([f"{d:.3f}" for d in data])
-
-    def closeEvent(self, event):  # pylint: disable=invalid-name
-        """Event triggered when closing the software to gracefully shut down.
-
-        Parameters
-        ----------
-        event :
-            The close event, which is accepted.
-
-        """
-        for (
-            _,
-            command_queue,
-        ) in self.queue_container.environment_command_queues.items():
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-
-        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.QUIT, None)
-        )
-
-        for command_queue in [
-            self.queue_container.acquisition_command_queue,
-            self.queue_container.output_command_queue,
-            self.queue_container.streaming_command_queue,
-        ]:
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-
-        event.accept()
-
-    def change_color_theme(self, text: str):
-        """Updates the color scheme of the UI"""
-        if text == "Light":
-            self.setStyleSheet("")
-        elif text == "Dark":
-            dark_theme_path = os.path.join(DIRECTORY, "themes", "dark_theme.txt")
-            with open(dark_theme_path, encoding="utf-8") as file:
-                stylesheet = file.read()
-            images_path = os.path.join(DIRECTORY, "themes", "images").replace("\\", "/")
-            print(f"Images Path: {images_path}")
-            stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
-            self.setStyleSheet(stylesheet)
-
-    def show_channel_monitor(self):
-        """
-        Shows the channel monitor window
-        """
-        if (self.channel_monitor_window is None) or (
-            not self.channel_monitor_window.isVisible()
-        ):
-            self.channel_monitor_window = ChannelMonitor(
-                None, self.global_daq_parameters
-            )
-        else:
-            pass  # TODO Need to raise the window to the front, or close and reopen
 
     # endregion
 
@@ -1762,6 +2006,35 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.queue_container.acquisition_command_queue.put(
                 TASK_NAME, (GlobalCommands.START_STREAMING, None)
             )
+
+    # endregion
+
+    # region Unimplemented
+    def change_color_theme(self, text: str):
+        """Updates the color scheme of the UI"""
+        if text == "Light":
+            self.setStyleSheet("")
+        elif text == "Dark":
+            dark_theme_path = os.path.join(DIRECTORY, "themes", "dark_theme.txt")
+            with open(dark_theme_path, encoding="utf-8") as file:
+                stylesheet = file.read()
+            images_path = os.path.join(DIRECTORY, "themes", "images").replace("\\", "/")
+            print(f"Images Path: {images_path}")
+            stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
+            self.setStyleSheet(stylesheet)
+
+    def show_channel_monitor(self):
+        """
+        Shows the channel monitor window.
+        """
+        if (self.channel_monitor_window is None) or (
+            not self.channel_monitor_window.isVisible()
+        ):
+            self.channel_monitor_window = ChannelMonitor(
+                None, self.global_daq_parameters
+            )
+        else:
+            pass  # TODO Need to raise the window to the front, or close and reopen
 
     # endregion
 
