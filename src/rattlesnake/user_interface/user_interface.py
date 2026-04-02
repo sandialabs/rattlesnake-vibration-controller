@@ -40,8 +40,8 @@ import pyqtgraph
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from rattlesnake.rattlesnake import RattlesnakeState, RattlesnakeController
-from rattlesnake.utilities import DIRECTORY, RattlesnakeError, Channel, GlobalCommands
-from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.utilities import DIRECTORY, RattlesnakeError, GlobalCommands
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,

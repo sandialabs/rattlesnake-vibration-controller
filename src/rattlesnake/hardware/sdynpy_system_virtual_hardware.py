@@ -29,7 +29,8 @@ import numpy as np
 import scipy.signal as signal
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import DataAcquisitionParameters, flush_queue
+from rattlesnake.hardware.hardware_utilities import Channel
 
 _direction_map = {
     "X+": 1,
@@ -112,7 +113,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.sdynpy_system_data = {key: val for key, val in np.load(system_file).items()}
+        self.sdynpy_system_data = {
+            key: val for key, val in np.load(system_file).items()
+        }
         self.system = None
         self.times = None
         self.state = None
@@ -194,7 +197,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             channel_indices.append(channel_index)
             channel_signs.append(
                 np.sign(direction)
-                * np.sign(self.sdynpy_system_data["coordinate"][channel_index]["direction"])
+                * np.sign(
+                    self.sdynpy_system_data["coordinate"][channel_index]["direction"]
+                )
             )
         channel_indices = np.array(channel_indices)
         channel_signs = np.array(channel_signs)
@@ -301,7 +306,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
                 C_response.append(C_accel[response_index])
                 D_response.append(D_accel[response_index])
             else:
-                print(f"Unknown Channel Type for Channel {i + 1}: {channel.channel_type}")
+                print(
+                    f"Unknown Channel Type for Channel {i + 1}: {channel.channel_type}"
+                )
                 C_response.append(C_disp[response_index])
                 D_response.append(D_disp[response_index])
             response_index += 1
@@ -335,11 +342,13 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
-            test_data.sample_rate * self.integration_oversample
-        )
+        self.times = np.arange(
+            test_data.samples_per_read * self.integration_oversample + 1
+        ) / (test_data.sample_rate * self.integration_oversample)
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
+        self.acquisition_delay = (
+            test_data.samples_per_write / test_data.output_oversample
+        )
 
     def start(self):
         """Method to start acquiring data.
@@ -405,7 +414,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             np.savez(
                 FILE_OUTPUT.format(num_files),
                 force_in=this_force.T,
-                response_out_full_resolution=sys_out.T[..., : -1 : self.integration_oversample],
+                response_out_full_resolution=sys_out.T[
+                    ..., : -1 : self.integration_oversample
+                ],
                 response_out_downsampled=sys_out.T[..., :-1],
             )
 

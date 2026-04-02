@@ -31,7 +31,8 @@ import numpy as np
 import scipy.signal as signal
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import DataAcquisitionParameters, flush_queue
+from rattlesnake.hardware.hardware_utilities import Channel
 
 DEBUG = False
 
@@ -151,7 +152,10 @@ class ExodusAcquisition(HardwareAcquisition):
             dtype="bool",
         )
         self.phi_full = np.array(
-            [self._create_channel(channel, displacements, node_numbers) for channel in channel_data]
+            [
+                self._create_channel(channel, displacements, node_numbers)
+                for channel in channel_data
+            ]
         )
         # Need to add a signal buffer in case the write size is not equal to
         # the read size
@@ -186,12 +190,14 @@ class ExodusAcquisition(HardwareAcquisition):
         self.system = signal.StateSpace(a, b, c, d)
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
-            test_data.sample_rate * self.integration_oversample
-        )
+        self.times = np.arange(
+            test_data.samples_per_read * self.integration_oversample + 1
+        ) / (test_data.sample_rate * self.integration_oversample)
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
         self.state = np.zeros(nmodes * 2)
-        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
+        self.acquisition_delay = (
+            test_data.samples_per_write / test_data.output_oversample
+        )
         if DEBUG:
             np.savez(TEST_FILES_SYSTEM_NAME, a=a, b=b, c=c, d=d, times=self.times)
 
@@ -252,7 +258,9 @@ class ExodusAcquisition(HardwareAcquisition):
         # print('Got Force')
         # print('this_force shape: {:}'.format(this_force.shape))
 
-        modal_forces = np.einsum("ij,ki->kj", self.phi[~self.response_channels], this_force)
+        modal_forces = np.einsum(
+            "ij,ki->kj", self.phi[~self.response_channels], this_force
+        )
         # print('modal_forces shape: {:}'.format(modal_forces.shape))
 
         # print('Integrating...')
@@ -261,7 +269,9 @@ class ExodusAcquisition(HardwareAcquisition):
         # print('times: {:}\n{:}'.format(self.times.shape,self.times))
         # print('state: {:}\n{:}'.format(self.state.shape,self.state))
 
-        times_out, sys_out, _ = signal.lsim(self.system, modal_forces, self.times, self.state)
+        times_out, sys_out, _ = signal.lsim(
+            self.system, modal_forces, self.times, self.state
+        )
         # print('output: {:}\n{:}'.format(sys_out.shape,sys_out))
 
         sys_accels = sys_out[:, 2 * self.phi.shape[-1] : 3 * self.phi.shape[-1]]
@@ -271,7 +281,9 @@ class ExodusAcquisition(HardwareAcquisition):
         self.state[:] = sys_out[-1, 0 : 2 * self.phi.shape[-1]]
 
         # Now we need to combine accelerations with forces in the same way
-        output = np.zeros((len(self.response_channels), len(self.times)))  # n channels x n times
+        output = np.zeros(
+            (len(self.response_channels), len(self.times))
+        )  # n channels x n times
         output[self.response_channels] = accelerations
         output[~self.response_channels] = this_force.T
 
@@ -298,7 +310,9 @@ class ExodusAcquisition(HardwareAcquisition):
             )
         # We don't want to return the last sample because it
         # will be the initial state for the next sample
-        return output[..., : -1 : self.integration_oversample] + NOISE_LEVEL * np.random.randn(
+        return output[
+            ..., : -1 : self.integration_oversample
+        ] + NOISE_LEVEL * np.random.randn(
             *output[..., : -1 : self.integration_oversample].shape
         )
 
@@ -368,7 +382,9 @@ class ExodusAcquisition(HardwareAcquisition):
         elif channel.node_direction.lower().replace(" ", "") in ["z-", "-z"]:
             direction = np.array([0, 0, -1])
         else:
-            direction = np.array([float(val) for val in channel.node_direction.split(",")])
+            direction = np.array(
+                [float(val) for val in channel.node_direction.split(",")]
+            )
             direction /= np.linalg.norm(direction)
         phi_row = np.einsum("i,ij", direction, displacement[..., node_index])
         return phi_row
@@ -535,7 +551,8 @@ class Exodus:
         return np.array(
             [
                 self.get_node_variable_values(
-                    displacement_name + (val.upper() if capital_coordinates else val.lower())
+                    displacement_name
+                    + (val.upper() if capital_coordinates else val.lower())
                 )
                 for val in "xyz"[: self.num_dimensions]
             ]
@@ -570,7 +587,9 @@ class Exodus:
             raise ExodusError("Node Variable Names are not defined!") from e
         node_var_names = tuple(
             "".join(
-                value.decode() for value in line if not isinstance(value, np.ma.core.MaskedConstant)
+                value.decode()
+                for value in line
+                if not isinstance(value, np.ma.core.MaskedConstant)
             )
             for line in raw_records
         )

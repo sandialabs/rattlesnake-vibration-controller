@@ -29,7 +29,8 @@ from typing import List
 import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import DataAcquisitionParameters, flush_queue
+from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
@@ -245,7 +246,9 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
             output_sensitivities = np.array(output_sensitivities)[self.output_sorting]
 
             # Now send the data to the dp900 device
-            self.dp900.setup_output_parameters(output_sensitivities, output_ranges, output_channels)
+            self.dp900.setup_output_parameters(
+                output_sensitivities, output_ranges, output_channels
+            )
 
             # Since the outputs are at the end, we want to adjust the sorting to
             # put the outputs at the end
@@ -277,7 +280,9 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
             # Pause for a bit to allow more samples to accumulate
             time.sleep(self.time_per_read / SLEEP_FACTOR)
         # Read the data now that we have enough samples
-        read_data = self.dp900.read_input_data(self.data_acquisition_parameters.samples_per_read)
+        read_data = self.dp900.read_input_data(
+            self.data_acquisition_parameters.samples_per_read
+        )
         # Now we need to sort the data correctly to give it back to the channel table
         read_data[self.channel_sorting] = read_data.copy()
         return read_data

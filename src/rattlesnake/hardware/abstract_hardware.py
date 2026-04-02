@@ -26,7 +26,8 @@ from typing import List
 
 import numpy as np
 
-from rattlesnake.utilities import Channel, DataAcquisitionParameters
+from rattlesnake.utilities import DataAcquisitionParameters
+from rattlesnake.hardware.hardware_utilities import Channel
 
 
 # region: Acqusition

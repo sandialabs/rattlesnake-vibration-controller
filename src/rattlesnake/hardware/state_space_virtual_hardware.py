@@ -32,7 +32,8 @@ import scipy.signal as signal
 from scipy.io import loadmat
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import DataAcquisitionParameters, flush_queue
+from rattlesnake.hardware.hardware_utilities import Channel
 
 
 # region: Acqusition
@@ -151,11 +152,13 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
-            test_data.sample_rate * self.integration_oversample
-        )
+        self.times = np.arange(
+            test_data.samples_per_read * self.integration_oversample + 1
+        ) / (test_data.sample_rate * self.integration_oversample)
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
+        self.acquisition_delay = (
+            test_data.samples_per_write / test_data.output_oversample
+        )
 
     def start(self):
         """Method to start acquiring data.
