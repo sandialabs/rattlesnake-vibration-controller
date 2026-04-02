@@ -31,14 +31,14 @@ import threading
 import queue as thqueue
 from enum import Enum
 from datetime import datetime
-from typing import List
+from typing import Dict, List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
 THREADING = True
 
 
-# region: State
+# region State
 class RattlesnakeState(Enum):
     # We don't check for stored stream/profiles because they can be left blank
     INIT = 0  # Nothing is stored yet
@@ -49,9 +49,36 @@ class RattlesnakeState(Enum):
     SYS_ID_ACTIVE = 5  # System identification is being performed
 
 
-# region: Rattlesnake
+# region Rattlesnake
 class Rattlesnake:
+    """Object responsible for setting up, sending data to, and running processes that
+    make up the rattlesnake vibration controller."""
+
+    # region Global
     def __init__(self, *, threaded: bool = THREADING, timeout: float = 30):
+        """
+        Initializes a blank rattlesnake object and spins up multiple processes required
+        to run a vibration test.
+
+        Running in the threaded mode results in much quicker data transfer rates as commands
+        do not have to be copied in the RAM. This mode allows the control laws to respond quicker
+        to changes in response data. The downside is that threaded mode can be overloaded if
+        the processor is not fast enough which can result in a crash.
+
+        The timeout is used for waiting for processes to confirm they have recieved a command
+        which prevents rattlesnake from overloading the processes with new commands when it is
+        running in headless mode.
+
+        Parameters
+        ----------
+        threaded : bool
+            Tells rattlesnake whether to run on a single core or multiple processing cores. A
+            value of True corresponds to single threaded
+        timeout : float
+            The amount of time rattlesnake waits for a process to respond after giving it a
+            command. A timeout error will roll back to the previous state and require you to
+            perform the command again.
+        """
         # Initialize values for checking state
         self._threaded = threaded
         self._blocking = True  # Wait for ready events?, True for IDE, False for UI
@@ -243,7 +270,7 @@ class Rattlesnake:
         self.profile_manager = ProfileManager(
             self.queue_container
         )  # Contains instructions/profile events
-        self.hardware_metadata = None
+        self._hardware_metadata = None
         # These are only used for UI to pull from if they have already been set to the controller. These
         # are not used for any logic in this controller
         self.last_stream_metadata = None
@@ -260,13 +287,22 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-    # region: Properties
+    # endregion
+
+    @property
+    def hardware_metadata(self):
+        return self._hardware_metadata
+
+    @hardware_metadata.setter
+    def hardware_metadata(self, value: HardwareMetadata):
+        self._hardware_metadata = value
+
     @property
     def environment_metadata(self):
         return self.environment_manager.environment_metadata
 
     @environment_metadata.setter
-    def environment_metadata(self, value):
+    def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
         self.environment_manager.environment_metadata = value
 
     @property
@@ -347,9 +383,15 @@ class Rattlesnake:
         return False
 
     def set_blocking(self):
+        """
+        Tells rattlesnake to wait for a response from a process after sending a command.
+        """
         self._blocking = True
 
     def clear_blocking(self):
+        """
+        Tells rattlesnake to not check for response from a process after sending commands.
+        """
         self._blocking = False
 
     def wait_for_events(
@@ -359,6 +401,26 @@ class Rattlesnake:
         *,
         active_event_check: bool = None,
     ):
+        """
+        Checks for response from processes after rattlesnake has sent a command.
+
+        The events in the ready_event_list are cleared after they are set as the
+        ready state for that process has been confirmed. The events in the
+        active_event_list are not cleared after being checked.
+
+        Parameters
+        ----------
+        ready_event_list : List[mp.synchronize.Event]
+            Events that processes use to confirm that they have recieved data. These
+            events are cleared automatically after the confirmation
+        active_event_list : List[mp.synchronize.Event]
+            Events that processes use to confirm that they are ready to recieve data
+            from other processes. These events are not cleared after being checked.
+        active_event_check: bool
+            This determines whether to check if the active_event_list processes are
+            active or not active. True correspondes to active, False corresponds to not
+            active.
+        """
         start_time = time.time()
 
         while True:
@@ -375,8 +437,8 @@ class Rattlesnake:
                     event.set()
                 raise RattlesnakeError("Timeout waiting for all events to be ready")
 
-    # region: Loading
-    def load_data_from_file(self, filepath):
+    # region Loading
+    def load_data_from_file(self, filepath: str):
         filename, filetype = os.path.splitext(filepath)
 
         if not os.access(filepath, os.R_OK):
