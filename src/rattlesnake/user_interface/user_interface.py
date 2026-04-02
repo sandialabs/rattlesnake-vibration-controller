@@ -23,60 +23,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import copy
+import ctypes
 import datetime
 import multiprocessing as mp
-from typing import Any
-
-# pyqtgraph.setConfigOption('leftButtonPan',False)
 import os
 import re
+import sys
 import time
 import traceback
-import ctypes
-import sys
+from typing import Any
 
 import netCDF4
 import numpy as np
 import openpyxl
 import pyqtgraph
-from qtpy import QtGui, QtWidgets, uic, QtCore
-from qtpy.QtCore import (  # pylint: disable=no-name-in-module
-    QDir,
-    QEvent,
-    QObject,
-    QRunnable,
-    QThreadPool,
-    QTimer,
-    Signal,
-    Slot,
-)
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from rattlesnake.user_interface.ui_registry import (
-    ENVIRONMENT_UIS as all_environment_UIs,
-)
-from rattlesnake.user_interface.ui_utilities import ui_path, UICommands
-from rattlesnake.user_interface.ui_utilities import (
-    ChannelMonitor,
-    IPAddress,
-    IPAddressManager,
-    ProfileTimer,
-    get_table_bools,
-)
-from rattlesnake.utilities import (
-    DIRECTORY,
-    Channel,
-    DataAcquisitionParameters,
-    GlobalCommands,
-    QueueContainer,
-    VerboseMessageQueue,
-    error_message_qt,
-)
-from rattlesnake.rattlesnake import Rattlesnake
+from rattlesnake.rattlesnake import RattlesnakeController
+from rattlesnake.utilities import DIRECTORY
 
+# pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
 pyqtgraph.setConfigOption("foreground", "k")
 
-QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
+QtCore.QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
 
 TASK_NAME = "UI"
 VERSION = "3.1.1"
@@ -187,7 +157,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.complete_ui()
 
         # Store any presets to the UI
-        self.load_from_rattlesnake_state()
+        self.load_rattlesnake_controller_to_ui()
 
         # Show UI
         self.show()
@@ -389,7 +359,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.load_from_rattlesnake_state()
 
-    def load_rattlesnake_to_ui(self):
+    def load_rattlesnake_controller_to_ui(self):
         """
         Gets the current state of the rattlesnake object and formats
         user interface to represent that state.

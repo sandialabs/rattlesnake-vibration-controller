@@ -25,10 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import Enum
 
 
-class ControlTypes(Enum):
+class EnvironmentType(Enum):
     """Enumeration of the possible control types"""
 
-    COMBINED = 0
     RANDOM = 1
     TRANSIENT = 2
     SINE = 3
@@ -40,19 +39,18 @@ class ControlTypes(Enum):
 
 # Name for each environment
 environment_long_names = {}
-environment_long_names[ControlTypes.RANDOM] = "MIMO Random Vibration"
-environment_long_names[ControlTypes.TRANSIENT] = "MIMO Transient"
-environment_long_names[ControlTypes.SINE] = "MIMO Sine Vibration"
-environment_long_names[ControlTypes.TIME] = "Time Signal Generation"
+environment_long_names[EnvironmentType.RANDOM] = "MIMO Random Vibration"
+environment_long_names[EnvironmentType.TRANSIENT] = "MIMO Transient"
+environment_long_names[EnvironmentType.SINE] = "MIMO Sine Vibration"
+environment_long_names[EnvironmentType.TIME] = "Time Signal Generation"
 # environment_long_names[ControlTypes.NONLINEAR] = 'Nonlinear Normal Modes'
-environment_long_names[ControlTypes.MODAL] = "Modal Testing"
-environment_long_names[ControlTypes.COMBINED] = "Combined Environments..."
+environment_long_names[EnvironmentType.MODAL] = "Modal Testing"
 
 # Add the environment here if it can be used for combined environments
 combined_environments_capable = [
-    ControlTypes.RANDOM,
-    ControlTypes.TRANSIENT,
-    ControlTypes.SINE,
-    ControlTypes.TIME,
-    ControlTypes.MODAL,
+    EnvironmentType.RANDOM,
+    EnvironmentType.TRANSIENT,
+    EnvironmentType.SINE,
+    EnvironmentType.TIME,
+    EnvironmentType.MODAL,
 ]
