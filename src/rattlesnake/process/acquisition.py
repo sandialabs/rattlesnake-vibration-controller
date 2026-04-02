@@ -44,13 +44,6 @@ from rattlesnake.utilities import (
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
 
-DEBUG = False
-if DEBUG:
-    from glob import glob
-
-    FILE_OUTPUT = "debug_data/acquisition_{:}.npz"
-
-
 TASK_NAME = "Acquisition"
 
 DEBUG = False
