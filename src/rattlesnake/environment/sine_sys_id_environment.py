@@ -39,7 +39,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sine_sys_id_utilities import (
     DefaultSineControlLaw,
     SineSpecification,
@@ -73,7 +73,7 @@ from rattlesnake.process.spectral_processing import (  # pylint: disable=wrong-i
 )
 
 # %% Global Variables
-CONTROL_TYPE = ControlTypes.SINE
+CONTROL_TYPE = EnvironmentType.SINE
 MAXIMUM_SAMPLES_TO_PLOT = 1000000
 
 DEBUG = False
@@ -380,7 +380,9 @@ class SineMetadata(AbstractSysIdMetadata):
         )
         netcdf_group_handle.phase_fit = 1 if self.phase_fit else 0
         netcdf_group_handle.control_convergence = self.control_convergence
-        netcdf_group_handle.allow_automatic_aborts = 1 if self.allow_automatic_aborts else 0
+        netcdf_group_handle.allow_automatic_aborts = (
+            1 if self.allow_automatic_aborts else 0
+        )
         netcdf_group_handle.control_python_script = (
             "" if self.control_python_script is None else self.control_python_script
         )
@@ -400,7 +402,9 @@ class SineMetadata(AbstractSysIdMetadata):
         netcdf_group_handle.buffer_blocks = self.buffer_blocks
 
         # Control channels
-        netcdf_group_handle.createDimension("control_channels", len(self.control_channel_indices))
+        netcdf_group_handle.createDimension(
+            "control_channels", len(self.control_channel_indices)
+        )
         var = netcdf_group_handle.createVariable(
             "control_channel_indices", "i4", ("control_channels")
         )
@@ -522,12 +526,18 @@ class SineEnvironment(AbstractSysIdEnvironment):
             acquisition_active,
             output_active,
         )
-        self.map_command(SineCommands.PERFORM_CONTROL_PREDICTION, self.perform_control_prediction)
+        self.map_command(
+            SineCommands.PERFORM_CONTROL_PREDICTION, self.perform_control_prediction
+        )
         self.map_command(SineCommands.START_CONTROL, self.start_control)
         self.map_command(SineCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(SineCommands.SAVE_CONTROL_DATA, self.save_control_data)
-        self.map_command(SineCommands.SEND_RESPONSE_PREDICTION, self.send_response_prediction)
-        self.map_command(SineCommands.SEND_EXCITATION_PREDICTION, self.send_excitation_prediction)
+        self.map_command(
+            SineCommands.SEND_RESPONSE_PREDICTION, self.send_response_prediction
+        )
+        self.map_command(
+            SineCommands.SEND_EXCITATION_PREDICTION, self.send_excitation_prediction
+        )
         # Persistent data
         self.data_acquisition_parameters = None
         self.environment_parameters = None
@@ -603,7 +613,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
         self.control_end_index = None
         self.good_line_threshold = 0.25
 
-    def initialize_environment_test_parameters(self, environment_parameters: SineMetadata):
+    def initialize_environment_test_parameters(
+        self, environment_parameters: SineMetadata
+    ):
         # Check if all specifications are equal
         if (
             self.environment_parameters is None
@@ -653,7 +665,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
         self.environment_parameters: SineMetadata
         if environment_parameters.control_python_script is None:
             control_class = DefaultSineControlLaw
-            self.extra_control_parameters = environment_parameters.control_python_parameters
+            self.extra_control_parameters = (
+                environment_parameters.control_python_parameters
+            )
         else:
             _, file = os.path.split(environment_parameters.control_python_script)
             file, _ = os.path.splitext(file)
@@ -662,7 +676,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
             )
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            self.extra_control_parameters = environment_parameters.control_python_parameters
+            self.extra_control_parameters = (
+                environment_parameters.control_python_parameters
+            )
             control_class = getattr(module, environment_parameters.control_python_class)
         self.control_class = control_class(
             self.data_acquisition_parameters.sample_rate,
@@ -831,7 +847,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 if self.environment_parameters.tracking_filter_type == 0:
                     amps = []
                     phss = []
-                    for arg, freq, gen in zip(block_arguments, block_frequencies, generator):
+                    for arg, freq, gen in zip(
+                        block_arguments, block_frequencies, generator
+                    ):
                         amp, phs = gen.send((block, freq, arg))
                         amps.append(amp)
                         phss.append(phs)
@@ -851,14 +869,20 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 start_index += block_size
 
             predicted_signals.append(np.concatenate(reconstructed_signals, axis=-1))
-            predicted_amplitudes.append(np.concatenate(reconstructed_amplitudes, axis=-1))
+            predicted_amplitudes.append(
+                np.concatenate(reconstructed_amplitudes, axis=-1)
+            )
             predicted_phases.append(np.concatenate(reconstructed_phases, axis=-1))
 
         self.predicted_response_signals = np.array(predicted_signals).transpose(1, 0, 2)
-        self.predicted_response_amplitudes = np.array(predicted_amplitudes).transpose(1, 0, 2)
+        self.predicted_response_amplitudes = np.array(predicted_amplitudes).transpose(
+            1, 0, 2
+        )
         self.predicted_response_phases = np.array(predicted_phases).transpose(1, 0, 2)
         # Pull out the data to compute maximum amplitude error
-        self.predicted_amplitude_error = np.zeros(self.specification_amplitudes.shape[:2])
+        self.predicted_amplitude_error = np.zeros(
+            self.specification_amplitudes.shape[:2]
+        )
         for tone_index, (specs, preds, start_index, end_index) in enumerate(
             zip(
                 self.specification_amplitudes,
@@ -889,12 +913,16 @@ class SineEnvironment(AbstractSysIdEnvironment):
         for tone_index in range(amps.shape[0]):
             freqs = self.excitation_signal_frequencies[
                 tone_index,
-                self.specification_start_indices[tone_index] : self.specification_end_indices[
+                self.specification_start_indices[
+                    tone_index
+                ] : self.specification_end_indices[
                     tone_index
                 ] : self.data_acquisition_parameters.output_oversample,
             ]
             for channel_index in range(amps.shape[1]):
-                warning_levels = specs[tone_index].interpolate_warning(channel_index, freqs)
+                warning_levels = specs[tone_index].interpolate_warning(
+                    channel_index, freqs
+                )
                 abort_levels = specs[tone_index].interpolate_abort(channel_index, freqs)
                 predicted = amps[
                     tone_index,
@@ -953,7 +981,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 self.sysid_frames,  # Number of frames in the CPSD and FRF matrices
             )
             self.excitation_signals_combined = np.sum(self.excitation_signals, axis=0)
-            self.peak_voltages = np.max(np.abs(self.excitation_signals_combined), axis=-1)
+            self.peak_voltages = np.max(
+                np.abs(self.excitation_signals_combined), axis=-1
+            )
             self.log("Done!")
         # print('Performing Response Prediction')
         # print('Drive Signals {:}'.format(self.next_drive.shape))
@@ -1003,10 +1033,16 @@ class SineEnvironment(AbstractSysIdEnvironment):
     def show_test_prediction(self):
         """Starts the process to show the predictions by requesting the current plot choices"""
         self.gui_update_queue.put(
-            (self.environment_name, (SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES, None))
+            (
+                self.environment_name,
+                (SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES, None),
+            )
         )
         self.gui_update_queue.put(
-            (self.environment_name, (SineUICommands.EXCITATION_VOLTAGE_LIST, self.peak_voltages))
+            (
+                self.environment_name,
+                (SineUICommands.EXCITATION_VOLTAGE_LIST, self.peak_voltages),
+            )
         )
         self.gui_update_queue.put(
             (
@@ -1030,7 +1066,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
             if tone_index == -1:
                 ordinate = self.excitation_signals_combined[
                     channel_index,
-                    :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                    :: self.plot_downsample
+                    * self.data_acquisition_parameters.output_oversample,
                 ]
                 abscissa = (
                     np.arange(ordinate.shape[-1])
@@ -1041,7 +1078,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 ordinate = self.excitation_signals[
                     tone_index,
                     channel_index,
-                    :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                    :: self.plot_downsample
+                    * self.data_acquisition_parameters.output_oversample,
                 ]
                 abscissa = (
                     np.arange(ordinate.shape[-1])
@@ -1052,7 +1090,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
             ordinate = self.excitation_signal_amplitudes[
                 tone_index,
                 channel_index,
-                :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                :: self.plot_downsample
+                * self.data_acquisition_parameters.output_oversample,
             ]
             abscissa = (
                 np.arange(ordinate.shape[-1])
@@ -1081,11 +1120,13 @@ class SineEnvironment(AbstractSysIdEnvironment):
             ordinate = self.excitation_signal_amplitudes[
                 tone_index,
                 channel_index,
-                :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                :: self.plot_downsample
+                * self.data_acquisition_parameters.output_oversample,
             ]
             abscissa = self.specification_frequencies[
                 tone_index,
-                :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                :: self.plot_downsample
+                * self.data_acquisition_parameters.output_oversample,
             ]
         elif type_index == 4:  # Phase Vs Frequency
             ordinate = (
@@ -1102,14 +1143,18 @@ class SineEnvironment(AbstractSysIdEnvironment):
             )
             abscissa = self.specification_frequencies[
                 tone_index,
-                :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                :: self.plot_downsample
+                * self.data_acquisition_parameters.output_oversample,
             ]
         else:
             raise ValueError(f"Undefined type_index {type_index}")
         # print(f'{ordinate.shape=}, {abscissa.shape=}')
         # print(f'{abscissa.min()=}, {abscissa.max()=}')
         self.gui_update_queue.put(
-            (self.environment_name, (SineUICommands.EXCITATION_PREDICTION, (abscissa, ordinate)))
+            (
+                self.environment_name,
+                (SineUICommands.EXCITATION_PREDICTION, (abscissa, ordinate)),
+            )
         )
 
     def send_response_prediction(self, response_plot_choices):
@@ -1155,7 +1200,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 self.specification_amplitudes[
                     tone_index,
                     channel_index,
-                    :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                    :: self.plot_downsample
+                    * self.data_acquisition_parameters.output_oversample,
                 ],
                 self.predicted_response_amplitudes[
                     tone_index, channel_index, :: self.plot_downsample
@@ -1171,11 +1217,14 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 self.specification_phases[
                     tone_index,
                     channel_index,
-                    :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                    :: self.plot_downsample
+                    * self.data_acquisition_parameters.output_oversample,
                 ]
                 * 180
                 / np.pi,
-                self.predicted_response_phases[tone_index, channel_index, :: self.plot_downsample]
+                self.predicted_response_phases[
+                    tone_index, channel_index, :: self.plot_downsample
+                ]
                 * 180
                 / np.pi,
             ]
@@ -1189,7 +1238,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 self.specification_amplitudes[
                     tone_index,
                     channel_index,
-                    :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                    :: self.plot_downsample
+                    * self.data_acquisition_parameters.output_oversample,
                 ],
                 self.predicted_response_amplitudes[
                     tone_index, channel_index, :: self.plot_downsample
@@ -1197,31 +1247,39 @@ class SineEnvironment(AbstractSysIdEnvironment):
             ]
             abscissa = self.specification_frequencies[
                 tone_index,
-                :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                :: self.plot_downsample
+                * self.data_acquisition_parameters.output_oversample,
             ]
         elif type_index == 4:  # Phase Vs Frequency
             ordinate = [
                 self.specification_phases[
                     tone_index,
                     channel_index,
-                    :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                    :: self.plot_downsample
+                    * self.data_acquisition_parameters.output_oversample,
                 ]
                 * 180
                 / np.pi,
-                self.predicted_response_phases[tone_index, channel_index, :: self.plot_downsample]
+                self.predicted_response_phases[
+                    tone_index, channel_index, :: self.plot_downsample
+                ]
                 * 180
                 / np.pi,
             ]
             abscissa = self.specification_frequencies[
                 tone_index,
-                :: self.plot_downsample * self.data_acquisition_parameters.output_oversample,
+                :: self.plot_downsample
+                * self.data_acquisition_parameters.output_oversample,
             ]
         else:
             raise ValueError(f"Undefined type_index {type_index}")
         # print(f'{ordinate[0].shape=}, {ordinate[1].shape=}, {abscissa.shape=}')
         # print(f'{abscissa.min()=}, {abscissa.max()=}')
         self.gui_update_queue.put(
-            (self.environment_name, (SineUICommands.RESPONSE_PREDICTION, (abscissa, ordinate)))
+            (
+                self.environment_name,
+                (SineUICommands.RESPONSE_PREDICTION, (abscissa, ordinate)),
+            )
         )
 
     def compute_spec_amplitudes_and_phases(self):
@@ -1232,26 +1290,33 @@ class SineEnvironment(AbstractSysIdEnvironment):
         spec_frequencies = []
         spec_arguments = []
 
-        for channel_index in range(len(self.environment_parameters.control_channel_indices)):
+        for channel_index in range(
+            len(self.environment_parameters.control_channel_indices)
+        ):
             spec = self.environment_parameters.specification
             # Convert octave per min to octave per second
             sweep_rates = spec["sweep_rate"].copy()
-            sweep_rates[spec["sweep_type"] == 1] = sweep_rates[spec["sweep_type"] == 1] / 60
+            sweep_rates[spec["sweep_type"] == 1] = (
+                sweep_rates[spec["sweep_type"] == 1] / 60
+            )
             # Create the sweep types array
             sweep_types = [
-                "lin" if sweep_type == 0 else "log" for sweep_type in spec["sweep_type"][:-1]
+                "lin" if sweep_type == 0 else "log"
+                for sweep_type in spec["sweep_type"][:-1]
             ]
-            spec_ordinate, spec_argument, spec_frequency, spec_amplitude, spec_phase = sine_sweep(
-                1 / self.data_acquisition_parameters.sample_rate,
-                spec["frequency"],
-                sweep_rates,
-                sweep_types,
-                spec["amplitude"][:, channel_index],
-                spec["phase"][:, channel_index],
-                return_frequency=True,
-                return_argument=True,
-                return_amplitude=True,
-                return_phase=True,
+            spec_ordinate, spec_argument, spec_frequency, spec_amplitude, spec_phase = (
+                sine_sweep(
+                    1 / self.data_acquisition_parameters.sample_rate,
+                    spec["frequency"],
+                    sweep_rates,
+                    sweep_types,
+                    spec["amplitude"][:, channel_index],
+                    spec["phase"][:, channel_index],
+                    return_frequency=True,
+                    return_argument=True,
+                    return_amplitude=True,
+                    return_phase=True,
+                )
             )
             spec_ordinates.append(spec_ordinate)
             spec_amplitudes.append(spec_amplitude)
@@ -1295,7 +1360,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 self.control_tones = None
             if self.control_tones is None:
                 self.control_tones = slice(None)
-                self.control_tone_indices = np.arange(self.excitation_signal_arguments.shape[0])
+                self.control_tone_indices = np.arange(
+                    self.excitation_signal_arguments.shape[0]
+                )
             else:
                 self.control_tone_indices = self.control_tones
             # Precompute the number of channels for convenience
@@ -1307,7 +1374,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
             n_output_channels = (
                 len(self.environment_parameters.output_channel_indices)
                 if self.environment_parameters.reference_transformation_matrix is None
-                else self.environment_parameters.reference_transformation_matrix.shape[0]
+                else self.environment_parameters.reference_transformation_matrix.shape[
+                    0
+                ]
             )
 
             self.control_time_delay = (
@@ -1378,9 +1447,13 @@ class SineEnvironment(AbstractSysIdEnvironment):
             # Set up the tracking filters to track amplitude and phase information
             self.control_filters = []
             if self.environment_parameters.tracking_filter_type == 0:
-                self.control_block_size = self.data_acquisition_parameters.samples_per_read
+                self.control_block_size = (
+                    self.data_acquisition_parameters.samples_per_read
+                )
             else:
-                self.control_block_size = self.environment_parameters.vk_filter_blocksize
+                self.control_block_size = (
+                    self.environment_parameters.vk_filter_blocksize
+                )
             for signal in self.predicted_response_signals_combined:
                 if self.environment_parameters.tracking_filter_type == 0:
                     generator = [
@@ -1402,7 +1475,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
                         overlap=self.environment_parameters.vk_filter_overlap,
                         bandwidth=self.environment_parameters.vk_filter_bandwidth,
                         filter_order=self.environment_parameters.vk_filter_order,
-                        buffer_size_factor=self.environment_parameters.buffer_blocks + 1,
+                        buffer_size_factor=self.environment_parameters.buffer_blocks
+                        + 1,
                     )
                     generator.send(None)
                     self.control_filters.append(generator)
@@ -1483,7 +1557,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
         # See if any data has come in
         try:
             # print('Listening for Data')
-            acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
+            acquisition_data, last_acquisition = (
+                self.queue_container.data_in_queue.get_nowait()
+            )
             # print('Got Data')
             if last_acquisition:
                 self.log(
@@ -1492,24 +1568,32 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 )
             else:
                 self.log("Acquired Data")
-            scale_factor = 0.0 if self.control_test_level < 1e-10 else 1 / self.control_test_level
+            scale_factor = (
+                0.0 if self.control_test_level < 1e-10 else 1 / self.control_test_level
+            )
             # print('Parsing Control and Excitation Data')
             control_data = (
-                acquisition_data[self.environment_parameters.control_channel_indices] * scale_factor
+                acquisition_data[self.environment_parameters.control_channel_indices]
+                * scale_factor
             )
             if self.environment_parameters.response_transformation_matrix is not None:
                 control_data = (
-                    self.environment_parameters.response_transformation_matrix @ control_data
+                    self.environment_parameters.response_transformation_matrix
+                    @ control_data
                 )
             excitation_data = (
-                acquisition_data[self.environment_parameters.output_channel_indices] * scale_factor
+                acquisition_data[self.environment_parameters.output_channel_indices]
+                * scale_factor
             )
             if self.environment_parameters.reference_transformation_matrix is not None:
                 excitation_data = (
-                    self.environment_parameters.reference_transformation_matrix @ excitation_data
+                    self.environment_parameters.reference_transformation_matrix
+                    @ excitation_data
                 )
             block_size = acquisition_data.shape[-1]
-            block_slice = slice(self.control_read_index, self.control_read_index + block_size)
+            block_slice = slice(
+                self.control_read_index, self.control_read_index + block_size
+            )
             # print(f'Read Block Range {block_slice}')
             # Send the time data to the GUI
             # print('Sending Time Data')
@@ -1540,7 +1624,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
                     1 / self.data_acquisition_parameters.sample_rate,
                 )
                 good_lines = (
-                    np.abs(reference_fft) / np.max(np.abs(reference_fft), axis=-1, keepdims=True)
+                    np.abs(reference_fft)
+                    / np.max(np.abs(reference_fft), axis=-1, keepdims=True)
                     > self.good_line_threshold
                 )
                 good_lines[..., 0] = False
@@ -1584,13 +1669,16 @@ class SineEnvironment(AbstractSysIdEnvironment):
                         for tone_argument, tone_frequency, tone_filter in zip(
                             block_arguments, block_frequencies, tone_filters
                         ):
-                            amp, phs = tone_filter.send((signal, tone_frequency, tone_argument))
+                            amp, phs = tone_filter.send(
+                                (signal, tone_frequency, tone_argument)
+                            )
                             amps.append(amp)
                             phss.append(phs)  # Radians
                         achieved_amplitudes.append(np.array(amps))
                         achieved_phases.append(np.array(phss))
                         achieved_signals.append(
-                            np.array(amps) * np.cos(block_arguments + np.array(phss))  # Radians
+                            np.array(amps)
+                            * np.cos(block_arguments + np.array(phss))  # Radians
                         )
                 else:
                     for signal, vk_filter in zip(block_signal, self.control_filters):
@@ -1602,19 +1690,24 @@ class SineEnvironment(AbstractSysIdEnvironment):
                         achieved_signals.append(vk_signals)
 
                 finish_time = time.time()
-                self.log(f"Signal filtering achieved in {finish_time - start_time:0.2f}s.")
+                self.log(
+                    f"Signal filtering achieved in {finish_time - start_time:0.2f}s."
+                )
                 achieved_signals = np.array(achieved_signals)
                 achieved_amplitudes = np.array(achieved_amplitudes)
                 achieved_phases = np.array(achieved_phases)
                 if not np.all(
-                    achieved_signals == None  # noqa: E711 # pylint: disable=singleton-comparison
+                    achieved_signals
+                    == None  # noqa: E711 # pylint: disable=singleton-comparison
                 ):
                     # print('Got Amplitude and Phase Data')
                     block_start = self.control_analysis_index
                     block_end = self.control_analysis_index + achieved_signals.shape[-1]
                     block_slice = slice(block_start, block_end)
                     # print(f'Analysis Block Range {block_slice}')
-                    achieved_frequencies = self.control_response_frequencies[..., block_slice]
+                    achieved_frequencies = self.control_response_frequencies[
+                        ..., block_slice
+                    ]
                     # print('Analysis Frequencies')
                     # print(achieved_frequencies)
                     # print(f'Achieved Frequency Size {achieved_frequencies.shape=}')
@@ -1636,9 +1729,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
                     # achieved vs phase desired
                     if self.environment_parameters.phase_fit:
                         # print('Fitting Phases')
-                        target = self.control_target_amplitudes[..., block_slice] * np.exp(
-                            1j * self.control_target_phases[..., block_slice]
-                        )
+                        target = self.control_target_amplitudes[
+                            ..., block_slice
+                        ] * np.exp(1j * self.control_target_phases[..., block_slice])
                         achieved = achieved_amplitudes * np.exp(1j * achieved_phases)
                         phase_change_fit = np.angle(np.sum(target * achieved.conj()))
                         achieved_phases = achieved_phases + phase_change_fit
@@ -1662,7 +1755,8 @@ class SineEnvironment(AbstractSysIdEnvironment):
                             )
                             // self.data_acquisition_parameters.output_oversample,
                             block_start,
-                            self.ramp_samples // self.data_acquisition_parameters.output_oversample,
+                            self.ramp_samples
+                            // self.data_acquisition_parameters.output_oversample,
                         )
                         compare_end = min(
                             (
@@ -1671,7 +1765,11 @@ class SineEnvironment(AbstractSysIdEnvironment):
                             )
                             // self.data_acquisition_parameters.output_oversample,
                             block_end,
-                            (self.control_end_index - self.control_start_index - self.ramp_samples)
+                            (
+                                self.control_end_index
+                                - self.control_start_index
+                                - self.ramp_samples
+                            )
                             // self.data_acquisition_parameters.output_oversample,
                         )
                         if compare_start >= compare_end:
@@ -1701,16 +1799,22 @@ class SineEnvironment(AbstractSysIdEnvironment):
                                 f"{compare_amplitudes[np.isinf(self.control_amplitude_errors[tone_index])]}"
                             )
                         for channel_index in range(amplitudes.shape[0]):
-                            compare_warnings = self.environment_parameters.specifications[
-                                full_tone_index
-                            ].interpolate_warning(channel_index, compare_frequencies)
+                            compare_warnings = (
+                                self.environment_parameters.specifications[
+                                    full_tone_index
+                                ].interpolate_warning(
+                                    channel_index, compare_frequencies
+                                )
+                            )
                             compare_aborts = self.environment_parameters.specifications[
                                 full_tone_index
                             ].interpolate_abort(channel_index, compare_frequencies)
                             warning_ratio = amplitudes[channel_index] / compare_warnings
                             abort_ratio = amplitudes[channel_index] / compare_aborts
                             if np.any(warning_ratio[0] < 1.0):
-                                self.control_warning_flags[tone_index, channel_index] = True
+                                self.control_warning_flags[
+                                    tone_index, channel_index
+                                ] = True
                                 self.log(
                                     f"Lower Warning at Tone {full_tone_index} Channel "
                                     f"{channel_index} Frequency "
@@ -1723,7 +1827,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
                                     f"Warning Level: {compare_warnings[0, warning_ratio[0] < 1.0]}"
                                 )
                             if np.any(warning_ratio[1] > 1.0):
-                                self.control_warning_flags[tone_index, channel_index] = True
+                                self.control_warning_flags[
+                                    tone_index, channel_index
+                                ] = True
                                 self.log(
                                     f"Upper Warning at Tone {full_tone_index} Channel "
                                     f"{channel_index} Frequency "
@@ -1736,7 +1842,9 @@ class SineEnvironment(AbstractSysIdEnvironment):
                                     f"Warning Level: {compare_warnings[1, warning_ratio[1] > 1.0]}"
                                 )
                             if np.any(abort_ratio[0] < 1.0):
-                                self.control_abort_flags[tone_index, channel_index] = True
+                                self.control_abort_flags[tone_index, channel_index] = (
+                                    True
+                                )
                                 self.log(
                                     f"Lower Abort at Tone {full_tone_index} Channel "
                                     f"{channel_index} Frequency "
@@ -1745,9 +1853,13 @@ class SineEnvironment(AbstractSysIdEnvironment):
                                 self.log(
                                     f"Amplitudes: {amplitudes[channel_index, abort_ratio[0] < 1.0]}"
                                 )
-                                self.log(f"Abort Level: {compare_aborts[0, abort_ratio[0] < 1.0]}")
+                                self.log(
+                                    f"Abort Level: {compare_aborts[0, abort_ratio[0] < 1.0]}"
+                                )
                             if np.any(abort_ratio[1] > 1.0):
-                                self.control_abort_flags[tone_index, channel_index] = True
+                                self.control_abort_flags[tone_index, channel_index] = (
+                                    True
+                                )
                                 self.log(
                                     f"Upper Abort at Tone {full_tone_index} Channel {channel_index} "
                                     f"Frequency {compare_frequencies[abort_ratio[1] > 1.0]}"
@@ -1755,26 +1867,33 @@ class SineEnvironment(AbstractSysIdEnvironment):
                                 self.log(
                                     f"Amplitudes: {amplitudes[channel_index, abort_ratio[1] > 1.0]}"
                                 )
-                                self.log(f"Abort Level: {compare_aborts[1, abort_ratio[1] > 1.0]}")
+                                self.log(
+                                    f"Abort Level: {compare_aborts[1, abort_ratio[1] > 1.0]}"
+                                )
                     # print('Populating Full Block Data')
                     full_achieved_signals = np.zeros(
-                        (self.specification_signals.shape[0],) + achieved_signals.shape[1:]
+                        (self.specification_signals.shape[0],)
+                        + achieved_signals.shape[1:]
                     )
                     full_achieved_signals[self.control_tones] = achieved_signals
                     full_achieved_amplitudes = np.zeros(
-                        (self.specification_amplitudes.shape[0],) + achieved_amplitudes.shape[1:]
+                        (self.specification_amplitudes.shape[0],)
+                        + achieved_amplitudes.shape[1:]
                     )
                     full_achieved_amplitudes[self.control_tones] = achieved_amplitudes
                     full_achieved_phases = np.zeros(
-                        (self.specification_phases.shape[0],) + achieved_phases.shape[1:]
+                        (self.specification_phases.shape[0],)
+                        + achieved_phases.shape[1:]
                     )
                     full_achieved_phases[self.control_tones] = achieved_phases
                     full_achieved_frequencies = np.zeros(
-                        (self.specification_frequencies.shape[0],) + achieved_frequencies.shape[1:]
+                        (self.specification_frequencies.shape[0],)
+                        + achieved_frequencies.shape[1:]
                     )
                     full_achieved_frequencies[self.control_tones] = achieved_frequencies
                     full_drive_modification = np.zeros(
-                        (self.specification_frequencies.shape[0],) + drive_modification.shape[1:],
+                        (self.specification_frequencies.shape[0],)
+                        + drive_modification.shape[1:],
                         dtype=complex,
                     )
                     full_drive_modification[self.control_tones] = drive_modification
@@ -1790,12 +1909,17 @@ class SineEnvironment(AbstractSysIdEnvironment):
                         + self.control_warning_flags.shape[1:],
                         dtype=bool,
                     )
-                    full_achieved_warning_flags[self.control_tones] = self.control_warning_flags
+                    full_achieved_warning_flags[self.control_tones] = (
+                        self.control_warning_flags
+                    )
                     full_achieved_abort_flags = np.zeros(
-                        (self.specification_signals.shape[0],) + self.control_abort_flags.shape[1:],
+                        (self.specification_signals.shape[0],)
+                        + self.control_abort_flags.shape[1:],
                         dtype=bool,
                     )
-                    full_achieved_abort_flags[self.control_tones] = self.control_abort_flags
+                    full_achieved_abort_flags[self.control_tones] = (
+                        self.control_abort_flags
+                    )
                     self.control_response_amplitudes.append(achieved_amplitudes)
                     self.control_response_phases.append(achieved_phases)
 
@@ -1807,11 +1931,15 @@ class SineEnvironment(AbstractSysIdEnvironment):
                                 SineUICommands.CONTROL_DATA,
                                 (
                                     full_achieved_signals[..., :: self.plot_downsample],
-                                    full_achieved_amplitudes[..., :: self.plot_downsample],
+                                    full_achieved_amplitudes[
+                                        ..., :: self.plot_downsample
+                                    ],
                                     full_achieved_phases[..., :: self.plot_downsample]
                                     * 180
                                     / np.pi,
-                                    full_achieved_frequencies[..., :: self.plot_downsample],
+                                    full_achieved_frequencies[
+                                        ..., :: self.plot_downsample
+                                    ],
                                     full_drive_modification,
                                     full_achieved_amplitude_errors,
                                     full_achieved_warning_flags,
@@ -1840,14 +1968,17 @@ class SineEnvironment(AbstractSysIdEnvironment):
             # we don't want to run out of samples being generated on the output hardware
             # print('Checking if New Data is Needed')
             if (
-                self.control_write_index // self.data_acquisition_parameters.output_oversample
+                self.control_write_index
+                // self.data_acquisition_parameters.output_oversample
                 < self.control_read_index
                 + self.environment_parameters.buffer_blocks
                 * self.data_acquisition_parameters.samples_per_write
             ) and not self.control_finished:
                 # print('Generating New Data')
                 self.log("Generating New Data")
-                excitation_signal, self.control_finished = self.control_class.generate_signal()
+                excitation_signal, self.control_finished = (
+                    self.control_class.generate_signal()
+                )
                 # print('Data Generation Complete')
                 if self.control_finished:
                     # print('Generated Last Data')
@@ -1879,10 +2010,16 @@ class SineEnvironment(AbstractSysIdEnvironment):
     def shutdown(self):
         """Handles the environment after it has shut down"""
         self.log("Environment Shut Down")
-        self.log(f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}")
+        self.log(
+            f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
+        )
         flush_queue(self.queue_container.time_history_to_generate_queue, timeout=0.01)
-        self.log(f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}")
-        self.gui_update_queue.put((self.environment_name, (SineUICommands.ENABLE_CONTROL, None)))
+        self.log(
+            f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
+        )
+        self.gui_update_queue.put(
+            (self.environment_name, (SineUICommands.ENABLE_CONTROL, None))
+        )
         self.control_startup = True
 
     def stop_environment(self, data):
@@ -1910,8 +2047,12 @@ class SineEnvironment(AbstractSysIdEnvironment):
         ]:
             output_dict[label] = getattr(self, label)
         output_dict["sample_rate"] = self.data_acquisition_parameters.sample_rate
-        output_dict["output_oversample"] = self.data_acquisition_parameters.output_oversample
-        output_dict["names"] = [spec.name for spec in self.environment_parameters.specifications]
+        output_dict["output_oversample"] = (
+            self.data_acquisition_parameters.output_oversample
+        )
+        output_dict["names"] = [
+            spec.name for spec in self.environment_parameters.specifications
+        ]
         np.savez(filename, **output_dict)
 
 

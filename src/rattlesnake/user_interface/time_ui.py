@@ -13,7 +13,7 @@ from rattlesnake.user_interface.ui_utilities import (
     multiline_plotter,
     load_time_history,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_run_ui_paths,
@@ -24,7 +24,7 @@ import numpy as np
 import openpyxl
 import netCDF4 as nc4
 
-CONTROL_TYPE = ControlTypes.TIME
+CONTROL_TYPE = EnvironmentType.TIME
 MAX_RESPONSES_TO_PLOT = 20
 MAX_SAMPLES_TO_PLOT = 100000
 

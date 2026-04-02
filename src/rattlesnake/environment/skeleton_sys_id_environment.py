@@ -31,7 +31,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.utilities import VerboseMessageQueue
 from rattlesnake.process.data_collector import (
     data_collector_process,
@@ -43,9 +43,9 @@ from rattlesnake.process.spectral_processing import (
     spectral_processing_process,
 )
 
-# Update this line to define the controller type, and add to the ControlTypes enumeration in
+# Update this line to define the controller type, and add to the EnvironmentType enumeration in
 # components/environments.py
-control_type = ControlTypes.Skeleton  # noqa pylint: disable=no-member
+control_type = EnvironmentType.Skeleton  # noqa pylint: disable=no-member
 
 
 # region: Queues

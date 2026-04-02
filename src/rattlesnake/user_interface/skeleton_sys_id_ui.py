@@ -1,6 +1,6 @@
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.utilities import VerboseMessageQueue
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
@@ -9,7 +9,7 @@ from rattlesnake.user_interface.ui_utilities import (
 from qtpy import QtWidgets, uic
 from multiprocessing.queues import Queue
 
-control_type = ControlTypes.Skeleton  # noqa pylint: disable=no-member
+control_type = EnvironmentType.Skeleton  # noqa pylint: disable=no-member
 
 
 class SkeletonUI(AbstractSysIdUI):
@@ -33,11 +33,15 @@ class SkeletonUI(AbstractSysIdUI):
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_definition_ui_paths[control_type], self.definition_widget)
+        uic.loadUi(
+            environment_definition_ui_paths[control_type], self.definition_widget
+        )
         definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the control prediction tabwidget
         self.prediction_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_prediction_ui_paths[control_type], self.prediction_widget)
+        uic.loadUi(
+            environment_prediction_ui_paths[control_type], self.prediction_widget
+        )
         test_predictions_tabwidget.addTab(self.prediction_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()

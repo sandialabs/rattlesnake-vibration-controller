@@ -36,7 +36,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
@@ -65,7 +65,7 @@ from rattlesnake.process.spectral_processing import (
 )
 
 # %% Global Variables
-CONTROL_TYPE = ControlTypes.TRANSIENT
+CONTROL_TYPE = EnvironmentType.TRANSIENT
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
 
@@ -247,7 +247,8 @@ class TransientMetadata(AbstractSysIdMetadata):
         return self.control_signal.shape[-1]
 
     def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
         """Stores the metadata in a netcdf group
 
@@ -260,13 +261,19 @@ class TransientMetadata(AbstractSysIdMetadata):
         netcdf_group_handle.test_level_ramp_time = self.test_level_ramp_time
         netcdf_group_handle.control_python_script = self.control_python_script
         netcdf_group_handle.control_python_function = self.control_python_function
-        netcdf_group_handle.control_python_function_type = self.control_python_function_type
+        netcdf_group_handle.control_python_function_type = (
+            self.control_python_function_type
+        )
         netcdf_group_handle.control_python_function_parameters = (
             self.control_python_function_parameters
         )
         # Save the output signal
-        netcdf_group_handle.createDimension("control_channels", len(self.control_channel_indices))
-        netcdf_group_handle.createDimension("specification_channels", self.control_signal.shape[0])
+        netcdf_group_handle.createDimension(
+            "control_channels", len(self.control_channel_indices)
+        )
+        netcdf_group_handle.createDimension(
+            "specification_channels", self.control_signal.shape[0]
+        )
         netcdf_group_handle.createDimension("signal_samples", self.signal_samples)
         var = netcdf_group_handle.createVariable(
             "control_signal", "f8", ("specification_channels", "signal_samples")
@@ -346,7 +353,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
         )
-        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(
+            GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
+        )
         # Persistent data
         self.data_acquisition_parameters = None
         self.environment_parameters = None
@@ -377,7 +386,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         self.has_sent_interactive_control_transfer_function_results = False
         self.last_interactive_parameters = None
 
-    def initialize_environment_test_parameters(self, environment_parameters: TransientMetadata):
+    def initialize_environment_test_parameters(
+        self, environment_parameters: TransientMetadata
+    ):
         if (
             self.environment_parameters is None
             or self.environment_parameters.control_signal.shape
@@ -410,16 +421,22 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.control_function_type = environment_parameters.control_python_function_type
-        self.extra_control_parameters = environment_parameters.control_python_function_parameters
+        self.extra_control_parameters = (
+            environment_parameters.control_python_function_parameters
+        )
         if self.control_function_type == 1:  # Generator
             # Get the generator function
-            generator_function = getattr(module, environment_parameters.control_python_function)()
+            generator_function = getattr(
+                module, environment_parameters.control_python_function
+            )()
             # Get us to the first yield statement
             next(generator_function)
             # Define the control function as the generator's send function
             self.control_function = generator_function.send
         elif self.control_function_type == 2:  # Class
-            self.control_function = getattr(module, environment_parameters.control_python_function)(
+            self.control_function = getattr(
+                module, environment_parameters.control_python_function
+            )(
                 self.data_acquisition_parameters.sample_rate,
                 self.environment_parameters.control_signal,
                 self.data_acquisition_parameters.output_oversample,
@@ -438,7 +455,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.aligned_response,
             )  # Last response signal for error-based correction
         elif self.control_function_type == 3:  # Interactive Class
-            control_class = getattr(module, environment_parameters.control_python_function)
+            control_class = getattr(
+                module, environment_parameters.control_python_function
+            )
             self.control_function = control_class(
                 self.environment_name,
                 self.gui_update_queue,
@@ -462,7 +481,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.last_interactive_parameters = None
             self.has_sent_interactive_control_transfer_function_results = False
         else:  # Function
-            self.control_function = getattr(module, environment_parameters.control_python_function)
+            self.control_function = getattr(
+                module, environment_parameters.control_python_function
+            )
 
     def update_interactive_control_parameters(self, interactive_control_parameters):
         """Updates the interactive control law based on received parameters"""
@@ -584,7 +605,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                     self.next_drive, self.predicted_response
                 )
             else:
-                self.log("Have not yet received control parameters from interactive control law!")
+                self.log(
+                    "Have not yet received control parameters from interactive control law!"
+                )
                 output_time_history = None
                 return
         else:  # Function
@@ -612,13 +635,19 @@ class TransientEnvironment(AbstractSysIdEnvironment):
     def show_test_prediction(self):
         """Sends the test predictions to the UI"""
         # print('Drive Signals {:}'.format(self.next_drive.shape))
-        drive_signals = self.next_drive[:, :: self.data_acquisition_parameters.output_oversample]
+        drive_signals = self.next_drive[
+            :, :: self.data_acquisition_parameters.output_oversample
+        ]
         impulse_responses = np.moveaxis(np.fft.irfft(self.frf, axis=0), 0, -1)
 
-        self.predicted_response = np.zeros((impulse_responses.shape[0], drive_signals.shape[-1]))
+        self.predicted_response = np.zeros(
+            (impulse_responses.shape[0], drive_signals.shape[-1])
+        )
 
         for i, impulse_response_row in enumerate(impulse_responses):
-            for _, (impulse, drive) in enumerate(zip(impulse_response_row, drive_signals)):
+            for _, (impulse, drive) in enumerate(
+                zip(impulse_response_row, drive_signals)
+            ):
                 # print('Convolving {:},{:}'.format(i,j))
                 self.predicted_response[i, :] += sig.convolve(drive, impulse, "full")[
                     : drive_signals.shape[-1]
@@ -626,12 +655,16 @@ class TransientEnvironment(AbstractSysIdEnvironment):
 
         # print('Response Prediction {:}'.format(self.predicted_response.shape))
         # print('Control Signal {:}'.format(self.environment_parameters.control_signal.shape))
-        time_trac = trac(self.predicted_response, self.environment_parameters.control_signal)
+        time_trac = trac(
+            self.predicted_response, self.environment_parameters.control_signal
+        )
         peak_voltages = np.max(np.abs(self.next_drive), axis=-1)
         self.gui_update_queue.put(
             (self.environment_name, ("excitation_voltage_list", peak_voltages))
         )
-        self.gui_update_queue.put((self.environment_name, ("response_error_list", time_trac)))
+        self.gui_update_queue.put(
+            (self.environment_name, ("response_error_list", time_trac))
+        )
         self.gui_update_queue.put(
             (
                 self.environment_name,
@@ -696,7 +729,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             n_output_channels = (
                 len(self.environment_parameters.output_channel_indices)
                 if self.environment_parameters.reference_transformation_matrix is None
-                else self.environment_parameters.reference_transformation_matrix.shape[0]
+                else self.environment_parameters.reference_transformation_matrix.shape[
+                    0
+                ]
             )
             self.control_buffer = FrameBuffer(
                 n_control_channels,
@@ -745,9 +780,13 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.startup = False
         # See if any data has come in
         try:
-            acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
+            acquisition_data, last_acquisition = (
+                self.queue_container.data_in_queue.get_nowait()
+            )
             if self.last_signal_found is not None:
-                self.last_signal_found -= self.data_acquisition_parameters.samples_per_read
+                self.last_signal_found -= (
+                    self.data_acquisition_parameters.samples_per_read
+                )
             if last_acquisition:
                 self.log(
                     f"Acquired Last Data, Signal Generation "
@@ -757,18 +796,22 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.log("Acquired Data")
             scale_factor = 0.0 if self.test_level < 1e-10 else 1 / self.test_level
             control_data = (
-                acquisition_data[self.environment_parameters.control_channel_indices] * scale_factor
+                acquisition_data[self.environment_parameters.control_channel_indices]
+                * scale_factor
             )
             if self.environment_parameters.response_transformation_matrix is not None:
                 control_data = (
-                    self.environment_parameters.response_transformation_matrix @ control_data
+                    self.environment_parameters.response_transformation_matrix
+                    @ control_data
                 )
             output_data = (
-                acquisition_data[self.environment_parameters.output_channel_indices] * scale_factor
+                acquisition_data[self.environment_parameters.output_channel_indices]
+                * scale_factor
             )
             if self.environment_parameters.reference_transformation_matrix is not None:
                 output_data = (
-                    self.environment_parameters.reference_transformation_matrix @ output_data
+                    self.environment_parameters.reference_transformation_matrix
+                    @ output_data
                 )
             # Add the data to the buffers
             self.control_buffer.add_data(control_data)
@@ -783,7 +826,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                     _,
                 ) = align_signals(
                     self.output_buffer[:],
-                    self.next_drive[:, :: self.data_acquisition_parameters.output_oversample],
+                    self.next_drive[
+                        :, :: self.data_acquisition_parameters.output_oversample
+                    ],
                     correlation_threshold=0.5,
                 )
             else:
@@ -796,7 +841,10 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.queue_container.gui_update_queue.put(
                 (
                     self.environment_name,
-                    (TransientUICommands.TIME_DATA, (control_data, output_data, sample_delay)),
+                    (
+                        TransientUICommands.TIME_DATA,
+                        (control_data, output_data, sample_delay),
+                    ),
                 )
             )  # Sample_delay will be None if the alignment is not found
             if self.aligned_output is not None:
@@ -807,7 +855,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                     sample_delay,
                     phase_change,
                 )
-                time_trac = trac(self.aligned_response, self.environment_parameters.control_signal)
+                time_trac = trac(
+                    self.aligned_response, self.environment_parameters.control_signal
+                )
                 self.gui_update_queue.put(
                     (
                         self.environment_name,

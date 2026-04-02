@@ -5,7 +5,7 @@ from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from functions.common_functions import create_data_acquisition_parameters
 from unittest import mock
 import multiprocessing as mp
@@ -63,7 +63,11 @@ def test_streaming_process_initialize(
 ):
     mock_metadata = mock.MagicMock()
     mock_dataset().createGroup.return_value = "Group Handle"
-    data = ("Filename", data_acquisition_parameters, {"Environment Name": mock_metadata})
+    data = (
+        "Filename",
+        data_acquisition_parameters,
+        {"Environment Name": mock_metadata},
+    )
 
     streaming_process_obj.initialize(data)
 
@@ -153,4 +157,6 @@ if __name__ == "__main__":
     data_acquisition_parameters = create_data_acquisition_parameters()
 
     # test_streaming_process_initialize(streaming_process_obj = streaming_process_obj, data_acquisition_parameters = data_acquisition_parameters)
-    test_streaming_process_create_new_stream(streaming_process_obj=streaming_process_obj)
+    test_streaming_process_create_new_stream(
+        streaming_process_obj=streaming_process_obj
+    )

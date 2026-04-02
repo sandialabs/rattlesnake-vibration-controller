@@ -37,7 +37,7 @@ from rattlesnake.environment.abstract_environment import (
     AbstractEnvironment,
     AbstractMetadata,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
     GlobalCommands,
@@ -45,7 +45,7 @@ from rattlesnake.utilities import (
 )
 from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
-CONTROL_TYPE = ControlTypes.TIME
+CONTROL_TYPE = EnvironmentType.TIME
 TEST_LEVEL_THRESHOLD = 1.01
 
 

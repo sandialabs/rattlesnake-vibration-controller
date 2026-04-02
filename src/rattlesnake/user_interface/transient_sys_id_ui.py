@@ -9,7 +9,7 @@ from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: 
     ControlLawUICommands,
 )
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
@@ -33,7 +33,7 @@ import os
 import numpy as np
 import netCDF4 as nc4
 
-CONTROL_TYPE = ControlTypes.TRANSIENT
+CONTROL_TYPE = EnvironmentType.TRANSIENT
 MAXIMUM_NAME_LENGTH = 50
 
 

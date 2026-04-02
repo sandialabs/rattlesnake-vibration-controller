@@ -34,7 +34,7 @@ from rattlesnake.environment.abstract_environment import (
     AbstractEnvironment,
     AbstractMetadata,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
@@ -50,7 +50,7 @@ from rattlesnake.utilities import (
 )
 from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 
-CONTROL_TYPE = ControlTypes.MODAL
+CONTROL_TYPE = EnvironmentType.MODAL
 WAIT_TIME = 0.02
 
 

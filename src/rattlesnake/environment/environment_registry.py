@@ -1,4 +1,4 @@
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
     TransientMetadata,
@@ -35,30 +35,30 @@ ENVIRONMENT_CLASS = {}
 ENVIRONMENT_PROCESS = {}
 
 # Time Environment
-ENVIRONMENT_METADATA[ControlTypes.TIME] = TimeParameters
-ENVIRONMENT_CLASS[ControlTypes.TIME] = TimeEnvironment
-ENVIRONMENT_PROCESS[ControlTypes.TIME] = time_process
+ENVIRONMENT_METADATA[EnvironmentType.TIME] = TimeParameters
+ENVIRONMENT_CLASS[EnvironmentType.TIME] = TimeEnvironment
+ENVIRONMENT_PROCESS[EnvironmentType.TIME] = time_process
 
 # Modal Environment
-ENVIRONMENT_COMMANDS[ControlTypes.MODAL] = ModalCommands
-ENVIRONMENT_METADATA[ControlTypes.MODAL] = ModalMetadata
-ENVIRONMENT_CLASS[ControlTypes.MODAL] = ModalEnvironment
-ENVIRONMENT_PROCESS[ControlTypes.MODAL] = modal_process
+ENVIRONMENT_COMMANDS[EnvironmentType.MODAL] = ModalCommands
+ENVIRONMENT_METADATA[EnvironmentType.MODAL] = ModalMetadata
+ENVIRONMENT_CLASS[EnvironmentType.MODAL] = ModalEnvironment
+ENVIRONMENT_PROCESS[EnvironmentType.MODAL] = modal_process
 
 # Sine Environment
-ENVIRONMENT_COMMANDS[ControlTypes.SINE] = SineCommands
-ENVIRONMENT_METADATA[ControlTypes.SINE] = SineMetadata
-ENVIRONMENT_CLASS[ControlTypes.SINE] = SineEnvironment
-ENVIRONMENT_PROCESS[ControlTypes.SINE] = sine_process
+ENVIRONMENT_COMMANDS[EnvironmentType.SINE] = SineCommands
+ENVIRONMENT_METADATA[EnvironmentType.SINE] = SineMetadata
+ENVIRONMENT_CLASS[EnvironmentType.SINE] = SineEnvironment
+ENVIRONMENT_PROCESS[EnvironmentType.SINE] = sine_process
 
 # Transient Environment
-ENVIRONMENT_COMMANDS[ControlTypes.TRANSIENT] = TransientCommands
-ENVIRONMENT_METADATA[ControlTypes.TRANSIENT] = TransientMetadata
-ENVIRONMENT_CLASS[ControlTypes.TRANSIENT] = TransientEnvironment
-ENVIRONMENT_PROCESS[ControlTypes.TRANSIENT] = transient_process
+ENVIRONMENT_COMMANDS[EnvironmentType.TRANSIENT] = TransientCommands
+ENVIRONMENT_METADATA[EnvironmentType.TRANSIENT] = TransientMetadata
+ENVIRONMENT_CLASS[EnvironmentType.TRANSIENT] = TransientEnvironment
+ENVIRONMENT_PROCESS[EnvironmentType.TRANSIENT] = transient_process
 
 # Random Environment
-ENVIRONMENT_COMMANDS[ControlTypes.RANDOM] = RandomVibrationCommands
-ENVIRONMENT_METADATA[ControlTypes.RANDOM] = RandomVibrationMetadata
-ENVIRONMENT_CLASS[ControlTypes.RANDOM] = RandomVibrationEnvironment
-ENVIRONMENT_PROCESS[ControlTypes.RANDOM] = random_vibration_process
+ENVIRONMENT_COMMANDS[EnvironmentType.RANDOM] = RandomVibrationCommands
+ENVIRONMENT_METADATA[EnvironmentType.RANDOM] = RandomVibrationMetadata
+ENVIRONMENT_CLASS[EnvironmentType.RANDOM] = RandomVibrationEnvironment
+ENVIRONMENT_PROCESS[EnvironmentType.RANDOM] = random_vibration_process

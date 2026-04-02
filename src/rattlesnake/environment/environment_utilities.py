@@ -25,6 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import Enum
 
 
+class ControlTypes(Enum):
+    pass
+
+
 class EnvironmentType(Enum):
     """Enumeration of the possible control types"""
 

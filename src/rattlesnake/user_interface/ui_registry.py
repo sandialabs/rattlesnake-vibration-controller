@@ -1,4 +1,4 @@
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.transient_sys_id_ui import TransientUI
 from rattlesnake.user_interface.random_vibration_sys_id_ui import RandomVibrationUI
 from rattlesnake.user_interface.sine_sys_id_ui import SineUI
@@ -11,11 +11,11 @@ from rattlesnake.environment.environment_utilities import combined_environments_
 
 ENVIRONMENT_UIS = {}
 
-ENVIRONMENT_UIS[ControlTypes.TIME] = TimeUI
-ENVIRONMENT_UIS[ControlTypes.MODAL] = ModalUI
-ENVIRONMENT_UIS[ControlTypes.SINE] = SineUI
-ENVIRONMENT_UIS[ControlTypes.RANDOM] = RandomVibrationUI
-ENVIRONMENT_UIS[ControlTypes.TRANSIENT] = TransientUI
+ENVIRONMENT_UIS[EnvironmentType.TIME] = TimeUI
+ENVIRONMENT_UIS[EnvironmentType.MODAL] = ModalUI
+ENVIRONMENT_UIS[EnvironmentType.SINE] = SineUI
+ENVIRONMENT_UIS[EnvironmentType.RANDOM] = RandomVibrationUI
+ENVIRONMENT_UIS[EnvironmentType.TRANSIENT] = TransientUI
 
 
 def save_combined_environments_profile_template(filename, environment_data):
@@ -85,9 +85,13 @@ def save_combined_environments_profile_template(filename, environment_data):
     hardware_worksheet.cell(3, 1, "Sample Rate")
     hardware_worksheet.cell(3, 2, "# Sample Rate of Data Acquisition System")
     hardware_worksheet.cell(4, 1, "Time Per Read")
-    hardware_worksheet.cell(4, 2, "# Number of seconds per Read from the Data Acquisition System")
+    hardware_worksheet.cell(
+        4, 2, "# Number of seconds per Read from the Data Acquisition System"
+    )
     hardware_worksheet.cell(5, 1, "Time Per Write")
-    hardware_worksheet.cell(5, 2, "# Number of seconds per Write to the Data Acquisition System")
+    hardware_worksheet.cell(
+        5, 2, "# Number of seconds per Write to the Data Acquisition System"
+    )
     hardware_worksheet.cell(6, 1, "Maximum Acquisition Processes")
     hardware_worksheet.cell(
         6,
@@ -118,7 +122,9 @@ def save_combined_environments_profile_template(filename, environment_data):
         "trigger.  Only used for NI hardware.  This row can be deleted if NI is not used.",
     )
     hardware_worksheet.cell(9, 1, "Task Trigger Output Channel")
-    hardware_worksheet.cell(9, 2, "# Physical device and channel that generates a trigger signal")
+    hardware_worksheet.cell(
+        9, 2, "# Physical device and channel that generates a trigger signal"
+    )
     hardware_worksheet.cell(
         9,
         3,
@@ -192,7 +198,7 @@ class EnvironmentSelect(QtWidgets.QDialog):
         environment_data = []
         for row in range(self.environment_display_table.rowCount()):
             combobox = self.environment_display_table.cellWidget(row, 0)
-            value = ControlTypes(combobox.currentData())
+            value = EnvironmentType(combobox.currentData())
             name = self.environment_display_table.item(row, 1).text()
             environment_data.append((value, name))
         save_combined_environments_profile_template(filename, environment_data)
@@ -239,7 +245,7 @@ class EnvironmentSelect(QtWidgets.QDialog):
             if result:
                 for row in range(dialog.environment_display_table.rowCount()):
                     combobox = dialog.environment_display_table.cellWidget(row, 0)
-                    value = ControlTypes(combobox.currentData())
+                    value = EnvironmentType(combobox.currentData())
                     name = dialog.environment_display_table.item(row, 1).text()
                     environment_table.append([value, name])
             # print(environment_table)
@@ -254,7 +260,7 @@ class EnvironmentSelect(QtWidgets.QDialog):
                 and sheet.cell(1, 1).value == "Control Type"
             ]
             environment_table = [
-                (ControlTypes[sheet.cell(1, 2).value.upper()], sheet.title)
+                (EnvironmentType[sheet.cell(1, 2).value.upper()], sheet.title)
                 for sheet in environment_sheets
             ]
             workbook.close()

@@ -11,7 +11,7 @@ from rattlesnake.utilities import (
     load_python_module,
 )
 from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
@@ -31,7 +31,7 @@ import os
 import scipy.signal as sig
 import netCDF4 as nc4
 
-CONTROL_TYPE = ControlTypes.MODAL
+CONTROL_TYPE = EnvironmentType.MODAL
 MAXIMUM_NAME_LENGTH = 50
 
 

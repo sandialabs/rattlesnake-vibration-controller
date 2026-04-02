@@ -11,7 +11,7 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationUICommands,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     environment_definition_ui_paths,
@@ -46,7 +46,7 @@ import numpy as np
 import openpyxl
 import netCDF4 as nc4
 
-CONTROL_TYPE = ControlTypes.RANDOM
+CONTROL_TYPE = EnvironmentType.RANDOM
 MAXIMUM_NAME_LENGTH = 50
 
 

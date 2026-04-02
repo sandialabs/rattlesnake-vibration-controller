@@ -2086,213 +2086,213 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
 # region Deteriorated
 
-# Define paths to the User Interface UI Files
-this_path = os.path.split(__file__)[0]
-environment_definition_ui_paths = {}
-environment_prediction_ui_paths = {}
-environment_run_ui_paths = {}
-# This is true if running from an executable and the UI is embedded in the executable
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    directory = sys._MEIPASS  # pylint: disable=protected-access
-else:
-    directory = this_path
+# # Define paths to the User Interface UI Files
+# this_path = os.path.split(__file__)[0]
+# environment_definition_ui_paths = {}
+# environment_prediction_ui_paths = {}
+# environment_run_ui_paths = {}
+# # This is true if running from an executable and the UI is embedded in the executable
+# if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+#     directory = sys._MEIPASS  # pylint: disable=protected-access
+# else:
+#     directory = this_path
 
-# Base Controller UI
-directory = os.path.join(directory, "ui_files")
-ui_path = os.path.join(directory, "combined_environments_controller.ui")
-environment_select_ui_path = os.path.join(directory, "environment_selector.ui")
-control_select_ui_path = os.path.join(directory, "control_select.ui")
-# Random Vibration Environment
-environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(
-    directory, "random_vibration_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(
-    directory, "random_vibration_prediction.ui"
-)
-environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(
-    directory, "random_vibration_run.ui"
-)
-system_identification_ui_path = os.path.join(directory, "system_identification.ui")
-transformation_matrices_ui_path = os.path.join(directory, "transformation_matrices.ui")
-# Time Environment
-environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(
-    directory, "time_definition.ui"
-)
-environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_run.ui")
-# Transient Environment
-environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-    directory, "transient_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-    directory, "transient_prediction.ui"
-)
-environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-    directory, "transient_run.ui"
-)
-# Sine Environment
-environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(
-    directory, "sine_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(
-    directory, "sine_prediction.ui"
-)
-environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.ui")
-sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
-filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
-# Modal Environments
-environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(
-    directory, "modal_definition.ui"
-)
-environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_run.ui")
-modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
-
-
-def get_table_bools(tablewidget: QtWidgets.QTableWidget):
-    """Collect a table of booleans from a QTableWidget full of QCheckBoxes
-
-    Parameters
-    ----------
-    tablewidget : QtWidgets.QTableWidget
-        A table widget to pull the strings from
-
-    Returns
-    -------
-    bool_array : list[list[bool]]
-        A nested list of booleans from the table widgets
-
-    """
-    bool_array = []
-    for row_idx in range(tablewidget.rowCount()):
-        bool_array.append([])
-        for col_idx in range(tablewidget.columnCount()):
-            value = tablewidget.cellWidget(row_idx, col_idx).isChecked()
-            bool_array[-1].append(value)
-    return bool_array
+# # Base Controller UI
+# directory = os.path.join(directory, "ui_files")
+# ui_path = os.path.join(directory, "combined_environments_controller.ui")
+# environment_select_ui_path = os.path.join(directory, "environment_selector.ui")
+# control_select_ui_path = os.path.join(directory, "control_select.ui")
+# # Random Vibration Environment
+# environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(
+#     directory, "random_vibration_definition.ui"
+# )
+# environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(
+#     directory, "random_vibration_prediction.ui"
+# )
+# environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(
+#     directory, "random_vibration_run.ui"
+# )
+# system_identification_ui_path = os.path.join(directory, "system_identification.ui")
+# transformation_matrices_ui_path = os.path.join(directory, "transformation_matrices.ui")
+# # Time Environment
+# environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(
+#     directory, "time_definition.ui"
+# )
+# environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_run.ui")
+# # Transient Environment
+# environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
+#     directory, "transient_definition.ui"
+# )
+# environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
+#     directory, "transient_prediction.ui"
+# )
+# environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
+#     directory, "transient_run.ui"
+# )
+# # Sine Environment
+# environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(
+#     directory, "sine_definition.ui"
+# )
+# environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(
+#     directory, "sine_prediction.ui"
+# )
+# environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.ui")
+# sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
+# filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
+# # Modal Environments
+# environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(
+#     directory, "modal_definition.ui"
+# )
+# environment_run_ui_paths[EnvironmentType.MODAL] = os.path.join(directory, "modal_run.ui")
+# modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
 
 
-def load_time_history(signal_path, sample_rate):
-    """Loads a time history from a given file
+# def get_table_bools(tablewidget: QtWidgets.QTableWidget):
+#     """Collect a table of booleans from a QTableWidget full of QCheckBoxes
 
-    The signal can be loaded from numpy files (.npz, .npy) or matlab files (.mat).
-    For .mat and .npz files, the time data can be included in the file in the
-    't' field, or it can be excluded and the sample_rate input argument will
-    be used.  If time data is specified, it will be linearly interpolated to the
-    sample rate of the controller.
-    For these file types, the signal should be stored in the 'signal'
-    field.  For .npy files, only one array is stored, so it is treated as the
-    signal, and the sample_rate input argument is used to construct the time
-    data.
+#     Parameters
+#     ----------
+#     tablewidget : QtWidgets.QTableWidget
+#         A table widget to pull the strings from
 
-    Parameters
-    ----------
-    signal_path : str:
-        Path to the file from which to load the time history
+#     Returns
+#     -------
+#     bool_array : list[list[bool]]
+#         A nested list of booleans from the table widgets
 
-    sample_rate : str:
-        The sample rate of the loaded signal.
-
-    Returns
-    -------
-    signal : np.ndarray:
-        A signal loaded from the file
-
-    """
-    _, extension = os.path.splitext(signal_path)
-    if extension.lower() == ".npy":
-        signal = np.load(signal_path)
-    elif extension.lower() == ".npz":
-        data = np.load(signal_path)
-        signal = data["signal"]
-        try:
-            times = data["t"].squeeze()
-            fn = interp1d(times, signal)
-            abscissa = np.arange(
-                0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
-            )
-            abscissa = abscissa[abscissa <= max(times)]
-            signal = fn(abscissa)
-        except KeyError:
-            pass
-    elif extension.lower() == ".mat":
-        data = loadmat(signal_path)
-        signal = data["signal"]
-        try:
-            times = data["t"].squeeze()
-            fn = interp1d(times, signal)
-            abscissa = np.arange(
-                0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
-            )
-            abscissa = abscissa[abscissa <= max(times)]
-            signal = fn(abscissa)
-        except KeyError:
-            pass
-    else:
-        raise ValueError(
-            f"Could Not Determine the file type from the filename {signal_path}: {extension}"
-        )
-    if signal.shape[-1] % 2 == 1:
-        signal = signal[..., :-1]
-    return signal
+#     """
+#     bool_array = []
+#     for row_idx in range(tablewidget.rowCount()):
+#         bool_array.append([])
+#         for col_idx in range(tablewidget.columnCount()):
+#             value = tablewidget.cellWidget(row_idx, col_idx).isChecked()
+#             bool_array[-1].append(value)
+#     return bool_array
 
 
-class ControlSelect(QtWidgets.QDialog):
-    """Environment selector dialog box to select the control type for the test"""
+# def load_time_history(signal_path, sample_rate):
+#     """Loads a time history from a given file
 
-    def __init__(self, parent=None):
-        """
-        Selects the environment type that gets used for the test.
+#     The signal can be loaded from numpy files (.npz, .npy) or matlab files (.mat).
+#     For .mat and .npz files, the time data can be included in the file in the
+#     't' field, or it can be excluded and the sample_rate input argument will
+#     be used.  If time data is specified, it will be linearly interpolated to the
+#     sample rate of the controller.
+#     For these file types, the signal should be stored in the 'signal'
+#     field.  For .npy files, only one array is stored, so it is treated as the
+#     signal, and the sample_rate input argument is used to construct the time
+#     data.
 
-        This function reads from the environment control types to populate the
-        radiobuttons on the dialog.
+#     Parameters
+#     ----------
+#     signal_path : str:
+#         Path to the file from which to load the time history
 
-        Parameters
-        ----------
-        parent : QWidget, optional
-            Parent of the dialog box. The default is None.
+#     sample_rate : str:
+#         The sample rate of the loaded signal.
 
-        """
-        super(QtWidgets.QDialog, self).__init__(parent)
-        uic.loadUi(control_select_ui_path, self)
-        self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
+#     Returns
+#     -------
+#     signal : np.ndarray:
+#         A signal loaded from the file
 
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        self.control_select_buttongroup = QtWidgets.QButtonGroup()
+#     """
+#     _, extension = os.path.splitext(signal_path)
+#     if extension.lower() == ".npy":
+#         signal = np.load(signal_path)
+#     elif extension.lower() == ".npz":
+#         data = np.load(signal_path)
+#         signal = data["signal"]
+#         try:
+#             times = data["t"].squeeze()
+#             fn = interp1d(times, signal)
+#             abscissa = np.arange(
+#                 0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
+#             )
+#             abscissa = abscissa[abscissa <= max(times)]
+#             signal = fn(abscissa)
+#         except KeyError:
+#             pass
+#     elif extension.lower() == ".mat":
+#         data = loadmat(signal_path)
+#         signal = data["signal"]
+#         try:
+#             times = data["t"].squeeze()
+#             fn = interp1d(times, signal)
+#             abscissa = np.arange(
+#                 0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
+#             )
+#             abscissa = abscissa[abscissa <= max(times)]
+#             signal = fn(abscissa)
+#         except KeyError:
+#             pass
+#     else:
+#         raise ValueError(
+#             f"Could Not Determine the file type from the filename {signal_path}: {extension}"
+#         )
+#     if signal.shape[-1] % 2 == 1:
+#         signal = signal[..., :-1]
+#     return signal
 
-        # Go through and create radiobuttons for each control type
-        control_types_sorted = sorted(
-            [(control_type.value, control_type) for control_type in ControlTypes]
-        )
 
-        for value, control_type in control_types_sorted[1:] + control_types_sorted[:1]:
-            radiobutton = QtWidgets.QRadioButton(environment_long_names[control_type])
-            self.control_select_buttongroup.addButton(radiobutton, value)
-            if value == ControlTypes.RANDOM.value:
-                radiobutton.setChecked(True)
-            self.environment_radiobutton_layout.addWidget(radiobutton)
+# class ControlSelect(QtWidgets.QDialog):
+#     """Environment selector dialog box to select the control type for the test"""
 
-    @staticmethod
-    def select_control(parent=None):
-        """Create the dialog box and parse the output
+#     def __init__(self, parent=None):
+#         """
+#         Selects the environment type that gets used for the test.
 
-        Parameters
-        ----------
-        parent : QWidget
-            Parent of the dialog box (Default value = None)
+#         This function reads from the environment control types to populate the
+#         radiobuttons on the dialog.
 
-        Returns
-        -------
-        button_id : int
-            The index of the button that was pressed
-        result : bool
-            True if dialog was accepted, otherwise false if cancelled.
-        """
-        dialog = ControlSelect(parent)
-        result = dialog.exec_() == QtWidgets.QDialog.Accepted
-        index = dialog.control_select_buttongroup.checkedId()
-        button_id = ControlTypes(index)
-        # print(button_id)
-        return (button_id, result)
+#         Parameters
+#         ----------
+#         parent : QWidget, optional
+#             Parent of the dialog box. The default is None.
+
+#         """
+#         super(QtWidgets.QDialog, self).__init__(parent)
+#         uic.loadUi(control_select_ui_path, self)
+#         self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
+
+#         self.buttonBox.accepted.connect(self.accept)
+#         self.buttonBox.rejected.connect(self.reject)
+#         self.control_select_buttongroup = QtWidgets.QButtonGroup()
+
+#         # Go through and create radiobuttons for each control type
+#         control_types_sorted = sorted(
+#             [(control_type.value, control_type) for control_type in ControlTypes]
+#         )
+
+#         for value, control_type in control_types_sorted[1:] + control_types_sorted[:1]:
+#             radiobutton = QtWidgets.QRadioButton(environment_long_names[control_type])
+#             self.control_select_buttongroup.addButton(radiobutton, value)
+#             if value == ControlTypes.RANDOM.value:
+#                 radiobutton.setChecked(True)
+#             self.environment_radiobutton_layout.addWidget(radiobutton)
+
+#     @staticmethod
+#     def select_control(parent=None):
+#         """Create the dialog box and parse the output
+
+#         Parameters
+#         ----------
+#         parent : QWidget
+#             Parent of the dialog box (Default value = None)
+
+#         Returns
+#         -------
+#         button_id : int
+#             The index of the button that was pressed
+#         result : bool
+#             True if dialog was accepted, otherwise false if cancelled.
+#         """
+#         dialog = ControlSelect(parent)
+#         result = dialog.exec_() == QtWidgets.QDialog.Accepted
+#         index = dialog.control_select_buttongroup.checkedId()
+#         button_id = ControlTypes(index)
+#         # print(button_id)
+#         return (button_id, result)
 
 
 # endregion
