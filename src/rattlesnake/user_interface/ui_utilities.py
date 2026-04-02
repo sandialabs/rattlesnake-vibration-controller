@@ -33,18 +33,14 @@ from scipy.interpolate import interp1d
 from scipy.io import loadmat
 from enum import Enum
 
-from rattlesnake.utilities import DIRECTORY
-from rattlesnake.environment.environment_utilities import (
-    ControlTypes,
-    environment_long_names,
-)
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
+    DIRECTORY,
     coherence,
     error_message_qt,
     load_csv_matrix,
     save_csv_matrix,
     trac,
+    DataAcquisitionParameters,
 )
 
 
@@ -928,6 +924,29 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
+
+
+def get_table_strings(tablewidget: QtWidgets.QTableWidget):
+    """Collect a table of strings from a QTableWidget
+
+    Parameters
+    ----------
+    tablewidget : QtWidgets.QTableWidget
+        A table widget to pull the strings from
+
+    Returns
+    -------
+    string_array : list[list[str]]
+        A nested list of strings from the table items
+
+    """
+    string_array = []
+    for row_idx in range(tablewidget.rowCount()):
+        string_array.append([])
+        for col_idx in range(tablewidget.columnCount()):
+            value = tablewidget.item(row_idx, col_idx).text()
+            string_array[-1].append(value)
+    return string_array
 
 
 class ChannelMonitor(QtWidgets.QDialog):
@@ -2104,29 +2123,6 @@ environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(
 )
 environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_run.ui")
 modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
-
-
-def get_table_strings(tablewidget: QtWidgets.QTableWidget):
-    """Collect a table of strings from a QTableWidget
-
-    Parameters
-    ----------
-    tablewidget : QtWidgets.QTableWidget
-        A table widget to pull the strings from
-
-    Returns
-    -------
-    string_array : list[list[str]]
-        A nested list of strings from the table items
-
-    """
-    string_array = []
-    for row_idx in range(tablewidget.rowCount()):
-        string_array.append([])
-        for col_idx in range(tablewidget.columnCount()):
-            value = tablewidget.item(row_idx, col_idx).text()
-            string_array[-1].append(value)
-    return string_array
 
 
 def get_table_bools(tablewidget: QtWidgets.QTableWidget):
