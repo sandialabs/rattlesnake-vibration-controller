@@ -169,7 +169,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.complete_ui()
 
         # Store any presets to the UI
-        self.load_rattlesnake_controller_to_ui()
+        # self.load_rattlesnake_controller_to_ui()
 
         # Show UI
         self.show()
@@ -318,7 +318,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
             "select_file": [self.select_file_button],
         }
-        self.update_hardware_widget_visibility()
+        # self.update_hardware_widget_visibility()
 
         # Environment
         for control in EnvironmentType:
