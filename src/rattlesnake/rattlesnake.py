@@ -9,7 +9,7 @@ from typing import Dict, List
 
 from rattlesnake.utilities import (
     EventContainer,
-    FlushQueue,
+    flush_queue,
     GlobalCommands,
     QueueContainer,
     RattlesnakeError,
@@ -18,7 +18,10 @@ from rattlesnake.utilities import (
 )
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
-from rattlesnake.process.streaming import StreamMetadata, StreamType, streaming_process
+
+from rattlesnake.process.streaming import (
+    streaming_process,
+)  # , StreamMetadata, StreamType
 
 # from rattlesnake.process.controller import controller_process
 # from rattlesnake.process.sysid_data_analysis import SysIdMetadata
