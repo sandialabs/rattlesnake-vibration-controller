@@ -31,6 +31,8 @@ import os
 import re
 import time
 import traceback
+import ctypes
+import sys
 
 import netCDF4
 import numpy as np
@@ -76,6 +78,7 @@ pyqtgraph.setConfigOption("foreground", "k")
 QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
 
 TASK_NAME = "UI"
+VERSION = "3.1.1"
 RATTLESNAKE_UI_PATH = os.path.join(
     DIRECTORY, "ui_files", "combined_environments_controller.ui"
 )
@@ -147,7 +150,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         The rattlesnake object is created outside the UI so that the window can
         close without having to wait for the full rattlesnake.shutdown event to
-        occur
+        occur.
 
         Parameters
         ----------
@@ -187,123 +190,179 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Show UI
         self.show()
 
-    def complete_ui(self):
-        """Helper function to complete setting up of the User Interface"""
-        self.ip_lookup_button.hide()
-        self.lanxi_sample_rate_selector.hide()
-        self.lanxi_maximum_acquisition_processes_label.hide()
-        self.lanxi_maximum_acquisition_processes_selector.hide()
-        self.integration_oversample_selector.hide()
-        self.integration_oversample_label.hide()
-
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-        # Fill in the channel table with empty strings
-        for row_idx in range(self.channel_table.rowCount()):
-            for col_idx in range(self.channel_table.columnCount()):
-                item = QtWidgets.QTableWidgetItem("")
-                self.channel_table.setItem(row_idx, col_idx, item)
-
-        # Disable all tabs except the first
-        for i in range(1, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
-
-        # Reindex button groups
-        self.streaming_button_group.setId(self.immediate_streaming_radiobutton, 0)
-        self.streaming_button_group.setId(self.test_level_streaming_radiobutton, 1)
-        self.streaming_button_group.setId(self.no_streaming_radiobutton, 2)
-        self.streaming_button_group.setId(self.profile_streaming_radiobutton, 3)
-
-        # Put values into the environment channel table
-        self.environment_channels_table.setColumnCount(len(self.environments))
-        self.environment_channels_table.setHorizontalHeaderLabels(self.environments)
-        for row in range(self.environment_channels_table.rowCount()):
-            for col in range(self.environment_channels_table.columnCount()):
-                checkbox = QtWidgets.QCheckBox()
-                if len(self.environments) == 1:
-                    checkbox.setChecked(True)
-                self.environment_channels_table.setCellWidget(row, col, checkbox)
-        if len(self.environments) == 1:
-            self.environment_channels_table.hide()
-        max_cpus = mp.cpu_count()
-        self.lanxi_maximum_acquisition_processes_selector.setMaximum(max_cpus)
-        self.lanxi_maximum_acquisition_processes_selector.setValue(
-            max_cpus - len(self.environments)
-            if max_cpus > len(self.environments)
-            else 1
-        )
-
     def connect_callbacks(self):
-        """Helper function to connect callbacks to widgets in the user interface"""
-        # Stop program
-        self.stop_program_button.clicked.connect(self.stop_program)
-        # Channel Monitor
-        self.channel_monitor_button.clicked.connect(self.show_channel_monitor)
+        """
+        Helper function to connect callbacks to widgets in the user interface.
+        """
+        # Universal
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
-        # Channel Table Tab
-        self.ip_lookup_button.clicked.connect(self.ip_lookup)
-        self.load_channel_table_button.clicked.connect(self.load_channel_table)
-        self.save_channel_table_button.clicked.connect(self.save_channel_table)
-        self.initialize_data_acquisition_button.clicked.connect(
-            self.initialize_data_acquisition
-        )
         self.load_test_file_button.clicked.connect(self.load_test_file)
-        self.hardware_selector.currentIndexChanged.connect(self.hardware_update)
-        self.task_trigger_selector.currentIndexChanged.connect(self.task_trigger_update)
-        self.sample_rate_selector.valueChanged.connect(self.sample_rate_update)
+        self.save_template_button.clicked.connect(self.save_template)
+
+        # Channel Table
+        self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        environment_table_scroll = self.environment_channels_table.verticalScrollBar()
-        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+        self.load_channel_table_button.clicked.connect(self.load_channel_table)
+        self.save_channel_table_button.clicked.connect(self.save_channel_table)
+        self.assist_channel_table_checkbox.stateChanged.connect(
+            self.assist_channel_table_init
+        )
         # Copy
         self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
         self.channel_table_action_copy.setShortcut("Ctrl+C")
-        self.channel_table_action_copy.triggered.connect(self.channel_table_copy)
+        self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
         self.channel_table.addAction(self.channel_table_action_copy)
         # Paste
         self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
         self.channel_table_action_paste.setShortcut("Ctrl+V")
-        self.channel_table_action_paste.triggered.connect(self.channel_table_paste)
+        self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
         self.channel_table.addAction(self.channel_table_action_paste)
         # Delete
         self.channel_table_action_delete = QtWidgets.QAction(
             "Delete", self.channel_table
         )
         self.channel_table_action_delete.setShortcut("Del")
-        self.channel_table_action_delete.triggered.connect(self.channel_table_delete)
+        self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
         self.channel_table.addAction(self.channel_table_action_delete)
+        # Insert Row
+        self.channel_table_action_insert_row = QtWidgets.QAction(
+            "Insert Row", self.channel_table
+        )
+        self.channel_table_action_insert_row.triggered.connect(
+            self.channel_table_insert_row
+        )
+        self.channel_table.addAction(self.channel_table_action_insert_row)
+        # Delete Row
+        self.channel_table_action_delete_row = QtWidgets.QAction(
+            "Delete Row", self.channel_table
+        )
+        self.channel_table_action_delete_row.triggered.connect(
+            self.channel_table_delete_row
+        )
+        self.channel_table.addAction(self.channel_table_action_delete_row)
 
-        # Control Definition Tab
+        # Hardware
+        self.hardware_selector.currentTextChanged.connect(self.update_hardware)
+        self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+        self.select_file_button.clicked.connect(self.select_hardware_file)
+
+        # Environments
+        environment_table_scroll = self.environment_channel_table.verticalScrollBar()
+        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+        self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
+        self.remove_environment_button.clicked.connect(self.remove_environment)
+        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
+            self.rename_environment
+        )
         self.initialize_environments_button.clicked.connect(
-            self.initialize_environment_parameters
+            self.initialize_environments
         )
 
-        # Profile Callbacks
-        self.initialize_profile_button.clicked.connect(self.initialize_profile)
-        self.save_profile_button.clicked.connect(self.save_profile)
-        self.load_profile_button.clicked.connect(self.load_profile)
-        self.add_profile_event_button.clicked.connect(self.add_profile_event)
-        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
-
-        # Run Test Tab
-        self.select_streaming_file_button.clicked.connect(
-            self.select_control_streaming_file
-        )
-        self.arm_test_button.clicked.connect(self.arm_test)
-        self.disarm_test_button.clicked.connect(self.disarm_test)
-        self.start_profile_button.clicked.connect(self.start_profile)
-        self.stop_profile_button.clicked.connect(self.stop_profile)
+        # Acquisition
+        self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
+        self.arm_test_button.clicked.connect(self.start_acquisition)
+        self.disarm_test_button.clicked.connect(self.stop_acquisition)
         self.manual_streaming_radiobutton.toggled.connect(
             self.show_hide_manual_streaming
         )
         self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
 
-        # GUI Updater Signals
-        self.gui_updater.signals.update.connect(self.update_gui)
-        self.controller_instructions_collector.signals.update.connect(
-            self.handle_controller_instructions
+        # Profiles
+        self.add_profile_event_button.clicked.connect(self.add_profile_event)
+        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
+        self.save_profile_button.clicked.connect(self.save_profile_list)
+        self.load_profile_button.clicked.connect(self.load_profile_list)
+        self.initialize_profile_button.clicked.connect(self.initialize_profile)
+        self.start_profile_button.clicked.connect(self.start_profile)
+        self.stop_profile_button.clicked.connect(self.stop_profile)
+
+    def complete_ui(self):
+        """
+        Helper function to set up the default format of the user interface.
+        """
+        # Universal
+        self.setMinimumWidth(500)
+        # Disable all tabs except the first
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.channel_monitor_button.setVisible(False)
+        # Set icons and window
+        icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
+        self.tray_icon = QtWidgets.QSystemTrayIcon(self)
+        self.tray_icon.setIcon(icon)
+        self.tray_icon.show()
+        if sys.platform.startswith(
+            "win"
+        ):  # This fixes windows treating taskbar icon as python.exe
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                f"sandia.rattlesnake.{VERSION}"
+            )
+        self.setWindowIcon(icon)
+        self.setWindowTitle("Rattlesnake Vibration Controller")
+        self.change_color_theme(self.theme)
+
+        # Channel Table
+        self.table_layout.setStretch(0, 5)  # Channel table
+        self.table_layout.setStretch(1, 1)  # Environments table
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
         )
+
+        # Hardware
+        self.hardware_widgets = {
+            "hardware_selector": [self.hardware_selector_label, self.hardware_selector],
+            "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
+            "lanxi_ip": [self.lanxi_ip_address_button],
+            "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
+            "buffer_size": [self.buffer_size_label, self.buffer_size_selector],
+            "lanxi_processes": [
+                self.lanxi_maximum_acquisition_processes_label,
+                self.lanxi_maximum_acquisition_processes_selector,
+            ],
+            "integration_oversample": [
+                self.integration_oversample_label,
+                self.integration_oversample_selector,
+            ],
+            "damping_ratio": [self.damping_ratio_label, self.damping_ratio_selector],
+            "task_trigger": [self.task_trigger_label, self.task_trigger_selector],
+            "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
+            "select_file": [self.select_file_button],
+        }
+        self.update_hardware_widget_visibility()
+
+        # Environment
+        for control in ControlTypes:
+            self.add_environment_combobox.addItem(control.name)
+        self.environment_channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.environment_channel_table.horizontalHeader().setVisible(True)
+        self.environment_channel_table.verticalHeader().setVisible(True)
+        self.environment_channel_table.setColumnCount(0)
+        self.environment_channel_table.hide()
+
+        # Acquisition
+        self.streaming_widgets = [
+            self.no_streaming_radiobutton,
+            self.profile_streaming_radiobutton,
+            self.test_level_streaming_radiobutton,
+            self.streaming_environment_select_combobox,
+            self.immediate_streaming_radiobutton,
+            self.select_streaming_file_button,
+            self.manual_streaming_radiobutton,
+            self.manual_streaming_trigger_button,
+        ]
+        self.manual_streaming_trigger_button.hide()
+
+        # Profile
+        self.profile_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.run_profile_widget.setEnabled(False)
 
     def log(self, string):
         """Pass a message to the log_file_queue along with date/time and task name
@@ -408,10 +467,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if text == "Light":
             self.setStyleSheet("")
         elif text == "Dark":
-            dark_theme_path = os.path.join(directory, "themes", "dark_theme.txt")
+            dark_theme_path = os.path.join(DIRECTORY, "themes", "dark_theme.txt")
             with open(dark_theme_path, encoding="utf-8") as file:
                 stylesheet = file.read()
-            images_path = os.path.join(directory, "themes", "images").replace("\\", "/")
+            images_path = os.path.join(DIRECTORY, "themes", "images").replace("\\", "/")
             print(f"Images Path: {images_path}")
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
