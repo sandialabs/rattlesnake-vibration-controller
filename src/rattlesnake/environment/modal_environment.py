@@ -30,7 +30,10 @@ from glob import glob
 from multiprocessing.queues import Queue
 import netCDF4 as nc4
 import numpy as np
-from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
+from rattlesnake.environment.abstract_environment import (
+    AbstractEnvironment,
+    AbstractMetadata,
+)
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
@@ -186,7 +189,9 @@ class ModalMetadata(AbstractMetadata):
         self.reference_channel_indices = reference_channel_indices
         self.response_channel_indices = response_channel_indices
         self.output_channel_indices = output_channel_indices
-        self.exponential_window_value_at_frame_end = exponential_window_value_at_frame_end
+        self.exponential_window_value_at_frame_end = (
+            exponential_window_value_at_frame_end
+        )
         # Set up signal generator
         self.output_oversample = data_acquisition_parameters.output_oversample
         self.signal_generator = self.get_signal_generator()
@@ -362,7 +367,8 @@ class ModalMetadata(AbstractMetadata):
             i
             for i, index in enumerate(self.output_channel_indices)
             if not (
-                index in self.response_channel_indices or index in self.reference_channel_indices
+                index in self.response_channel_indices
+                or index in self.reference_channel_indices
             )
         ]
 
@@ -373,7 +379,8 @@ class ModalMetadata(AbstractMetadata):
         return int(self.hysteresis_length * self.samples_per_frame)
 
     def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
         """Store parameters to a group in a netCDF streaming file.
 
@@ -406,15 +413,23 @@ class ModalMetadata(AbstractMetadata):
         netcdf_group_handle.wait_for_steady_state = self.wait_for_steady_state
         netcdf_group_handle.trigger_channel = self.trigger_channel
         netcdf_group_handle.pretrigger = self.pretrigger
-        netcdf_group_handle.trigger_slope_positive = 1 if self.trigger_slope_positive else 0
+        netcdf_group_handle.trigger_slope_positive = (
+            1 if self.trigger_slope_positive else 0
+        )
         netcdf_group_handle.trigger_level = self.trigger_level
         netcdf_group_handle.hysteresis_level = self.hysteresis_level
         netcdf_group_handle.hysteresis_length = self.hysteresis_length
         netcdf_group_handle.signal_generator_type = self.signal_generator_type
         netcdf_group_handle.signal_generator_level = self.signal_generator_level
-        netcdf_group_handle.signal_generator_min_frequency = self.signal_generator_min_frequency
-        netcdf_group_handle.signal_generator_max_frequency = self.signal_generator_max_frequency
-        netcdf_group_handle.signal_generator_on_fraction = self.signal_generator_on_fraction
+        netcdf_group_handle.signal_generator_min_frequency = (
+            self.signal_generator_min_frequency
+        )
+        netcdf_group_handle.signal_generator_max_frequency = (
+            self.signal_generator_max_frequency
+        )
+        netcdf_group_handle.signal_generator_on_fraction = (
+            self.signal_generator_on_fraction
+        )
         netcdf_group_handle.exponential_window_value_at_frame_end = (
             self.exponential_window_value_at_frame_end
         )
@@ -432,7 +447,9 @@ class ModalMetadata(AbstractMetadata):
         )
         var[...] = self.reference_channel_indices
         # Response channels
-        netcdf_group_handle.createDimension("response_channels", len(self.response_channel_indices))
+        netcdf_group_handle.createDimension(
+            "response_channels", len(self.response_channel_indices)
+        )
         var = netcdf_group_handle.createVariable(
             "response_channel_indices", "i4", ("response_channels")
         )
@@ -460,7 +477,9 @@ class ModalMetadata(AbstractMetadata):
         signal_generator_on_percent = 0
         if ui.definition_widget.signal_generator_selector.currentIndex() == 0:  # None
             signal_generator_type = "none"
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 1:  # Random
+        elif (
+            ui.definition_widget.signal_generator_selector.currentIndex() == 1
+        ):  # Random
             signal_generator_type = "random"
             signal_generator_level = ui.definition_widget.random_rms_selector.value()
             signal_generator_min_frequency = (
@@ -469,7 +488,9 @@ class ModalMetadata(AbstractMetadata):
             signal_generator_max_frequency = (
                 ui.definition_widget.random_max_frequency_selector.value()
             )
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 2:  # Burst Random
+        elif (
+            ui.definition_widget.signal_generator_selector.currentIndex() == 2
+        ):  # Burst Random
             signal_generator_type = "burst"
             signal_generator_level = ui.definition_widget.burst_rms_selector.value()
             signal_generator_min_frequency = (
@@ -478,17 +499,25 @@ class ModalMetadata(AbstractMetadata):
             signal_generator_max_frequency = (
                 ui.definition_widget.burst_max_frequency_selector.value()
             )
-            signal_generator_on_percent = ui.definition_widget.burst_on_percentage_selector.value()
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 3:  # Pseudorandom
+            signal_generator_on_percent = (
+                ui.definition_widget.burst_on_percentage_selector.value()
+            )
+        elif (
+            ui.definition_widget.signal_generator_selector.currentIndex() == 3
+        ):  # Pseudorandom
             signal_generator_type = "pseudorandom"
-            signal_generator_level = ui.definition_widget.pseudorandom_rms_selector.value()
+            signal_generator_level = (
+                ui.definition_widget.pseudorandom_rms_selector.value()
+            )
             signal_generator_min_frequency = (
                 ui.definition_widget.pseudorandom_min_frequency_selector.value()
             )
             signal_generator_max_frequency = (
                 ui.definition_widget.pseudorandom_max_frequency_selector.value()
             )
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 4:  # Chirp
+        elif (
+            ui.definition_widget.signal_generator_selector.currentIndex() == 4
+        ):  # Chirp
             signal_generator_type = "chirp"
             signal_generator_level = ui.definition_widget.chirp_level_selector.value()
             signal_generator_min_frequency = (
@@ -497,18 +526,28 @@ class ModalMetadata(AbstractMetadata):
             signal_generator_max_frequency = (
                 ui.definition_widget.chirp_max_frequency_selector.value()
             )
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 5:  # Square
+        elif (
+            ui.definition_widget.signal_generator_selector.currentIndex() == 5
+        ):  # Square
             signal_generator_type = "square"
             signal_generator_level = ui.definition_widget.square_level_selector.value()
-            signal_generator_min_frequency = ui.definition_widget.square_frequency_selector.value()
-            signal_generator_on_percent = ui.definition_widget.square_percent_on_selector.value()
+            signal_generator_min_frequency = (
+                ui.definition_widget.square_frequency_selector.value()
+            )
+            signal_generator_on_percent = (
+                ui.definition_widget.square_percent_on_selector.value()
+            )
         elif ui.definition_widget.signal_generator_selector.currentIndex() == 6:  # Sine
             signal_generator_type = "sine"
             signal_generator_level = ui.definition_widget.sine_level_selector.value()
-            signal_generator_min_frequency = ui.definition_widget.sine_frequency_selector.value()
+            signal_generator_min_frequency = (
+                ui.definition_widget.sine_frequency_selector.value()
+            )
         else:
             index = ui.definition_widget.signal_generator_selector.currentIndex()
-            raise ValueError(f"Invalid Signal Generator {index} (How did you get here?)")
+            raise ValueError(
+                f"Invalid Signal Generator {index} (How did you get here?)"
+            )
         return cls(
             ui.definition_widget.sample_rate_display.value(),
             ui.definition_widget.samples_per_frame_selector.value(),
@@ -621,7 +660,9 @@ class ModalEnvironment(AbstractEnvironment):
         self.map_command(ModalCommands.START_CONTROL, self.start_environment)
         self.map_command(ModalCommands.RUN_CONTROL, self.run_control)
         self.map_command(ModalCommands.STOP_CONTROL, self.stop_environment)
-        self.map_command(ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown)
+        self.map_command(
+            ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown
+        )
         self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
@@ -649,7 +690,9 @@ class ModalEnvironment(AbstractEnvironment):
         """
         self.data_acquisition_parameters = data_acquisition_parameters
 
-    def initialize_environment_test_parameters(self, environment_parameters: ModalMetadata):
+    def initialize_environment_test_parameters(
+        self, environment_parameters: ModalMetadata
+    ):
         """
         Initialize the environment parameters specific to this environment
 
@@ -692,7 +735,9 @@ class ModalEnvironment(AbstractEnvironment):
     def get_data_collector_metadata(self) -> CollectorMetadata:
         """Collects metadata used to define the data collector"""
         num_channels = len(self.data_acquisition_parameters.channel_list)
-        reference_channel_indices = self.environment_parameters.reference_channel_indices
+        reference_channel_indices = (
+            self.environment_parameters.reference_channel_indices
+        )
         response_channel_indices = self.environment_parameters.response_channel_indices
         if self.environment_parameters.trigger_type == "Free Run":
             acquisition_type = AcquisitionType.FREE_RUN
@@ -714,7 +759,9 @@ class ModalEnvironment(AbstractEnvironment):
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = self.environment_parameters.acceptance_function
         else:
-            raise ValueError(f"Invalid Acceptance Type: {self.environment_parameters.accept_type}")
+            raise ValueError(
+                f"Invalid Acceptance Type: {self.environment_parameters.accept_type}"
+            )
         overlap_fraction = self.environment_parameters.overlap
         trigger_channel_index = self.environment_parameters.trigger_channel
         trigger_slope = (
@@ -722,8 +769,10 @@ class ModalEnvironment(AbstractEnvironment):
             if self.environment_parameters.trigger_slope_positive
             else TriggerSlope.NEGATIVE
         )
-        (_, trigger_level, _, trigger_hysteresis) = self.environment_parameters.get_trigger_levels(
-            self.data_acquisition_parameters.channel_list
+        (_, trigger_level, _, trigger_hysteresis) = (
+            self.environment_parameters.get_trigger_levels(
+                self.data_acquisition_parameters.channel_list
+            )
         )
         trigger_hysteresis_samples = self.environment_parameters.hysteresis_samples
         pretrigger_fraction = self.environment_parameters.pretrigger
@@ -735,7 +784,9 @@ class ModalEnvironment(AbstractEnvironment):
         elif self.environment_parameters.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            raise ValueError(f"Invalid Window Type: {self.environment_parameters.frf_window}")
+            raise ValueError(
+                f"Invalid Window Type: {self.environment_parameters.frf_window}"
+            )
         window_parameter = -(frame_size) / np.log(
             self.environment_parameters.exponential_window_value_at_frame_end
         )
@@ -768,7 +819,9 @@ class ModalEnvironment(AbstractEnvironment):
             else AveragingTypes.EXPONENTIAL
         )
         averages = self.environment_parameters.num_averages
-        exponential_averaging_coefficient = self.environment_parameters.averaging_coefficient
+        exponential_averaging_coefficient = (
+            self.environment_parameters.averaging_coefficient
+        )
         if self.environment_parameters.frf_technique == "H1":
             frf_estimator = Estimator.H1
         elif self.environment_parameters.frf_technique == "H2":
@@ -782,8 +835,12 @@ class ModalEnvironment(AbstractEnvironment):
                 f"Invalid FRF Estimator {self.environment_parameters.frf_technique}. "
                 "How did you get here?"
             )
-        num_response_channels = len(self.environment_parameters.response_channel_indices)
-        num_reference_channels = len(self.environment_parameters.reference_channel_indices)
+        num_response_channels = len(
+            self.environment_parameters.response_channel_indices
+        )
+        num_reference_channels = len(
+            self.environment_parameters.reference_channel_indices
+        )
         frequency_spacing = self.environment_parameters.frequency_spacing
         sample_rate = self.environment_parameters.sample_rate
         num_frequency_lines = self.environment_parameters.fft_lines
@@ -1001,7 +1058,9 @@ class ModalEnvironment(AbstractEnvironment):
             and self.spectral_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
-            self.gui_update_queue.put((self.environment_name, (ModalUICommands.FINISHED, None)))
+            self.gui_update_queue.put(
+                (self.environment_name, (ModalUICommands.FINISHED, None))
+            )
         else:
             # Recheck some time later
             time.sleep(1)

@@ -133,28 +133,13 @@ class Updater(QRunnable):
 # endregion
 
 
-class Ui(QtWidgets.QMainWindow):
+class RattlesnakeUI(QtWidgets.QMainWindow):
     """Main user interface from which the controller will be controlled."""
 
     # region Global
     def __init__(
         self, environments, queue_container: QueueContainer, profile_file=None
     ):
-        """
-        Create the user interface with the specified parameters and queues
-
-        Parameters
-        ----------
-        environments : iterable
-            Iterable of control_type,control_name values to use to set up the
-            environments.
-        queue_container : QueueContainer
-            Namespace containing the queues that are used by the controller.
-        profile_file : str, optional
-            File path to an optional profile file that will be loaded to set
-            up the controller. The default is None.
-
-        """
         try:
             # Store input data
             self._updated_size = False
