@@ -23,7 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import importlib.util
 import multiprocessing as mp
-import multiprocessing.queues as mp_queues
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 import os
 import random
 import string
@@ -45,20 +46,18 @@ else:
     DIRECTORY = this_path
 
 
-def log_file_task(queue: mp.queues.Queue):
+def log_file_task(queue: mp.Queue, shutdown_event):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters
     ----------
     queue : mp.queues.Queue
         The multiprocessing queue to collect logging messages from
-
-
     """
-    with open("Rattlesnake.log", "w", encoding="utf-8") as f:
-        while True:
+    with open("Rattlesnake.log", "w") as f:
+        while not shutdown_event.is_set():
             output = queue.get()
-            if output == "quit":
+            if output == GlobalCommands.QUIT:
                 f.write("Program quitting, logging terminated.")
                 break
             num_newlines = output.count("\n")
@@ -73,32 +72,45 @@ class RattlesnakeError(Exception):
 
 
 class GlobalCommands(Enum):
-    """An enumeration that lists the commands that the controller can accept"""
+    QUIT = 0  # Stop individual processes
+    INITIALIZE_HARDWARE = 1  # Store hardware metadata to processes
+    RUN_HARDWARE = 2  # Start running acquisition/output process
+    STOP_HARDWARE = 3  # Stops running acquisition/output process
+    INITIALIZE_ENVIRONMENT = 4  # Stores metadata to processes
+    START_ENVIRONMENT = 5  # Tells output to start that environment
+    STOP_ENVIRONMENT = 6  # Tells output to stop that environment
+    INITIALIZE_SYSTEM_ID = (
+        7  # Stores system id metadata to environment and system id process
+    )
+    START_SYSTEM_ID_NOISE = 8  # Start up system identification noise
+    START_SYSTEM_ID_TRANSFER = 9  # Start up system identification transfer function
+    STOP_SYSTEM_ID = 10  # Stop system identification process
+    INITIALIZE_STREAMING = 11  # Creates stream file to store to
+    CREATE_NEW_STREAM = 12  # Create new stream of data in file
+    START_STREAMING = 13  # Acquisition sends data to stream process
+    STREAMING_DATA = 14  # Continue storing data
+    STOP_STREAMING = 15  # Acquisition stops sending data to stream process
+    FINALIZE_STREAMING = 16  # Close out of stream file
+    INITIALIZE_PROFILE = 17  # Send profile metadata to controller
+    START_PROFILE = 18  # Start test from profile
+    STOP_PROFILE = 19  # Stop test from profile
+    PROFILE_CLOSEOUT = 20  # Tells controller the profile events are over
+    STREAM_AT_TARGET_LEVEL = (
+        21  # Notifies controller that environment has hit its target level
+    )
+    STREAM_MANUAL = 22  # Notifies controller that manual streaming has been enabled
+    SEND_ENVIRONMENT_COMMAND = 23  # Sends environment specific command to environment
 
-    QUIT = -1
-    INITIALIZE_DATA_ACQUISITION = -2
-    INITIALIZE_ENVIRONMENT_PARAMETERS = -3
-    RUN_HARDWARE = -4
-    STOP_HARDWARE = -5
-    INITIALIZE_STREAMING = -6
-    STREAMING_DATA = -7
-    FINALIZE_STREAMING = -8
-    START_ENVIRONMENT = -9
-    STOP_ENVIRONMENT = -10
-    START_STREAMING = -11
-    STOP_STREAMING = -12
-    CREATE_NEW_STREAM = -13
-    COMPLETED_SYSTEM_ID = -14
-    AT_TARGET_LEVEL = -15
-    UPDATE_METADATA = -16
-    UPDATE_INTERACTIVE_CONTROL_PARAMETERS = -17
-    SEND_INTERACTIVE_COMMAND = -18
+    @property
+    def label(self):
+        """Used by UI as names for"""
+        return self.name.replace("_", " ").title()
 
 
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
-    def __init__(self, log_queue, queue_name):
+    def __init__(self, log_queue, base_queue, base_name: str = "", name_manager=None):
         """
         A queue class that contains automatic logging information
 
@@ -111,13 +123,30 @@ class VerboseMessageQueue:
             The name of the queue that will be included in the logging information
 
         """
-        self.queue = mp.Queue()
+        self.base_queue = base_queue
         self.log_queue = log_queue
-        self.queue_name = queue_name
+        self.base_name = base_name
+        if name_manager:
+            self.environment_name = name_manager.Value(str, "")
+        else:
+            self.environment_name = None
         self.last_put_message = None
         self.last_put_time = -float("inf")
+        self.last_get_message = None
+        self.last_get_time = -float("inf")
         self.last_flush = -float("inf")
         self.time_threshold = 1.0
+
+    @property
+    def log_name(self):
+        if self.environment_name:
+            env = self.environment_name.value
+            return f"{self.base_name} | {env}" if env else self.base_name
+        else:
+            return {self.base_name}
+
+    def assign_environment(self, env_name: str):
+        self.environment_name.value = env_name
 
     def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
         """Generates a random identifier for log file messages"""
@@ -149,13 +178,13 @@ class VerboseMessageQueue:
             message_id = self.generate_message_id(8)
             self.log_queue.put(
                 f"{datetime.now()}: {task_name} put "
-                f"{message_data_tuple[0].name} ({message_id}) to {self.queue_name}\n"
+                f"{message_data_tuple[0].name} ({message_id}) to {self.log_name}\n"
             )
             self.last_put_message = message_data_tuple[0]
             self.last_put_time = put_time
         else:
             message_id = ""
-        self.queue.put((message_id, message_data_tuple), *args, **kwargs)
+        self.base_queue.put((message_id, message_data_tuple), *args, **kwargs)
 
     def get(self, task_name, *args, **kwargs):
         """Gets data from a verbose queue
@@ -178,12 +207,11 @@ class VerboseMessageQueue:
             A (message,data) tuple
 
         """
-        (message_id, message_data_tuple) = self.queue.get(*args, **kwargs)
-        get_time = datetime.now()
+        (message_id, message_data_tuple) = self.base_queue.get(*args, **kwargs)
         if message_id != "":
             self.log_queue.put(
-                f"{get_time}: {task_name} got "
-                f"{message_data_tuple[0].name} ({message_id}) from {self.queue_name}\n"
+                f"{datetime.now()}: {task_name} got "
+                f"{message_data_tuple[0].name} ({message_id}) from {self.log_name}\n"
             )
         return message_data_tuple
 
@@ -207,60 +235,36 @@ class VerboseMessageQueue:
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
             self.log_queue.put(
-                f"{datetime.now()}: {task_name} flushed {self.queue_name}\n"
+                f"{datetime.now()}: {task_name} flushed {self.log_name}\n"
             )
             self.last_flush = flush_time
         data = []
         while True:
             try:
-                message_id, this_data = self.queue.get(False)
+                message_id, this_data = self.base_queue.get(False)
                 data.append(this_data)
                 if message_id != "":
                     self.log_queue.put(
                         f"{datetime.now()}: {task_name} got {data[-1][0].name} ("
                         f"{message_id if message_id != '' else 'put not logged'})"
-                        f" from {self.queue_name} during flush\n"
+                        f" from {self.log_name} during flush\n"
                     )
             except mp.queues.Empty:
                 return data
 
     def empty(self):
         """Return true if the queue is empty."""
-        return self.queue.empty()
+        return self.base_queue.empty()
 
+    def close(self):
+        """Closes queue"""
+        if hasattr(self.base_queue, "close"):
+            self.base_queue.close()
 
-def flush_queue(queue, timeout=None):
-    """Flushes a queue by getting all the data currently in it.
-
-    Parameters
-    ----------
-    queue : mp.queues.Queue or VerboseMessageQueue:
-        The queue to flush
-
-
-    Returns
-    -------
-    data : iterable
-        A list of all data that were in the queue at flush
-
-    """
-    data = []
-    while True:
-        try:
-            if isinstance(queue, VerboseMessageQueue):
-                data.append(
-                    queue.get(
-                        "Flush",
-                        block=False if timeout is None else True,
-                        timeout=timeout,
-                    )
-                )
-            else:
-                data.append(
-                    queue.get(block=False if timeout is None else True, timeout=timeout)
-                )
-        except mp.queues.Empty:
-            return data
+    def join_thread(self):
+        """Joins thread"""
+        if hasattr(self.base_queue, "join_thread"):
+            self.base_queue.join_thread()
 
 
 class QueueContainer:
@@ -268,17 +272,17 @@ class QueueContainer:
 
     def __init__(
         self,
-        controller_communication_queue: VerboseMessageQueue,
+        controller_command_queue: VerboseMessageQueue,
         acquisition_command_queue: VerboseMessageQueue,
         output_command_queue: VerboseMessageQueue,
         streaming_command_queue: VerboseMessageQueue,
-        log_file_queue: mp_queues.Queue,
-        input_output_sync_queue: mp_queues.Queue,
-        single_process_hardware_queue: mp_queues.Queue,
-        gui_update_queue: mp_queues.Queue,
+        log_file_queue: mp.Queue,
+        input_output_sync_queue: mp.Queue,
+        single_process_hardware_queue: mp.Queue,
+        gui_update_queue: mp.Queue,
         environment_command_queues: Dict[str, VerboseMessageQueue],
-        environment_data_in_queues: Dict[str, mp_queues.Queue],
-        environment_data_out_queues: Dict[str, mp_queues.Queue],
+        environment_data_in_queues: Dict[str, mp.Queue],
+        environment_data_out_queues: Dict[str, mp.Queue],
     ):
         """A container class for the queues that the controller will manage.
 
@@ -287,7 +291,7 @@ class QueueContainer:
 
         Parameters
         ----------
-        controller_communication_queue : VerboseMessageQueue
+        controller_command_queue : VerboseMessageQueue
             Queue that is read by the controller for global controller commands
         acquisition_command_queue : VerboseMessageQueue
             Queue that is read by the acquisition subtask for acquisition commands
@@ -323,7 +327,7 @@ class QueueContainer:
             the controller to generate in this queue.
 
         """
-        self.controller_communication_queue = controller_communication_queue
+        self.controller_command_queue = controller_command_queue
         self.acquisition_command_queue = acquisition_command_queue
         self.output_command_queue = output_command_queue
         self.streaming_command_queue = streaming_command_queue
@@ -334,6 +338,81 @@ class QueueContainer:
         self.environment_command_queues = environment_command_queues
         self.environment_data_in_queues = environment_data_in_queues
         self.environment_data_out_queues = environment_data_out_queues
+
+
+class EventContainer:
+    def __init__(
+        self,
+        controller_ready_event: mp.synchronize.Event,
+        acquisition_ready_event: mp.synchronize.Event,
+        output_ready_event: mp.synchronize.Event,
+        streaming_ready_event: mp.synchronize.Event,
+        environment_ready_events: Dict[str, mp.synchronize.Event],
+        log_close_event: mp.synchronize.Event,
+        controller_close_event: mp.synchronize.Event,
+        acquisition_close_event: mp.synchronize.Event,
+        output_close_event: mp.synchronize.Event,
+        streaming_close_event: mp.synchronize.Event,
+        environment_close_events: Dict[str, mp.synchronize.Event],
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        streaming_active_event: mp.synchronize.Event,
+        environment_active_events: Dict[str, mp.synchronize.Event],
+        environment_sysid_events: Dict[str, mp.synchronize.Event],
+    ):
+        # Ready Events
+        self.controller_ready_event = controller_ready_event
+        self.acquisition_ready_event = acquisition_ready_event
+        self.output_ready_event = output_ready_event
+        self.streaming_ready_event = streaming_ready_event
+        self.environment_ready_events = environment_ready_events
+        # Close Events
+        self.log_close_event = log_close_event
+        self.controller_close_event = controller_close_event
+        self.acquisition_close_event = acquisition_close_event
+        self.output_close_event = output_close_event
+        self.streaming_close_event = streaming_close_event
+        self.environment_close_events = environment_close_events
+        # Active Events
+        self.acquisition_active_event = acquisition_active_event
+        self.output_active_event = output_active_event
+        self.streaming_active_event = streaming_active_event
+        self.environment_active_events = environment_active_events
+        self.environment_sysid_events = environment_sysid_events
+
+
+def flush_queue(queue, timeout=None):
+    """Flushes a queue by getting all the data currently in it.
+
+    Parameters
+    ----------
+    queue : mp.queues.Queue or VerboseMessageQueue:
+        The queue to flush
+
+
+    Returns
+    -------
+    data : iterable
+        A list of all data that were in the queue at flush
+
+    """
+    data = []
+    while True:
+        try:
+            if isinstance(queue, VerboseMessageQueue):
+                data.append(
+                    queue.get(
+                        "Flush",
+                        block=False if timeout is None else True,
+                        timeout=timeout,
+                    )
+                )
+            else:
+                data.append(
+                    queue.get(block=False if timeout is None else True, timeout=timeout)
+                )
+        except (thqueue.Empty, mpqueue.Empty):
+            return data
 
 
 # endregion

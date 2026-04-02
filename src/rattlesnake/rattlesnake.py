@@ -1,37 +1,41 @@
+from datetime import datetime
+from enum import Enum
+import multiprocessing as mp
+import os
+import queue as thqueue
+import threading
+import time
+from typing import Dict, List
+
 from rattlesnake.utilities import (
-    RattlesnakeError,
-    GlobalCommands,
-    VerboseMessageQueue,
-    QueueContainer,
     EventContainer,
+    FlushQueue,
+    GlobalCommands,
+    QueueContainer,
+    RattlesnakeError,
+    VerboseMessageQueue,
     log_file_task,
-    flush_queue,
 )
-from rattlesnake.process.controller import controller_process
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
-from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamMetadata, StreamType, streaming_process
-from rattlesnake.profile_manager import ProfileManager, ProfileEvent
+
+# from rattlesnake.process.controller import controller_process
+# from rattlesnake.process.sysid_data_analysis import SysIdMetadata
+# from rattlesnake.environment.abstract_environment import (
+#     EnvironmentInstructions,
+#     EnvironmentMetadata,
+# )
+# from rattlesnake.environment_manager import EnvironmentManager
+# from rattlesnake.profile_manager import ProfileEvent, ProfileManager
+# from rattlesnake.load_utilities import (
+#     load_metadata_from_netcdf,
+#     load_metadata_from_worksheet,
+#     save_rattlesnake_template,
+# )
+
+# Rattlesnake hardware modules
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.abstract_environment import (
-    EnvironmentMetadata,
-    EnvironmentInstructions,
-)
-from rattlesnake.environment_manager import EnvironmentManager
-from rattlesnake.load_utilities import (
-    load_metadata_from_netcdf,
-    load_metadata_from_worksheet,
-    save_rattlesnake_template,
-)
-import os
-import time
-import multiprocessing as mp
-import threading
-import queue as thqueue
-from enum import Enum
-from datetime import datetime
-from typing import Dict, List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
