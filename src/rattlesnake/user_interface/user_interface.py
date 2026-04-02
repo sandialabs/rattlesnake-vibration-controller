@@ -40,7 +40,7 @@ import pyqtgraph
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from rattlesnake.rattlesnake import RattlesnakeController
-from rattlesnake.utilities import DIRECTORY
+from rattlesnake.utilities import DIRECTORY, RattlesnakeError
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import error_message_qt, UICommands
 
@@ -377,6 +377,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.queue_container.log_file_queue.put(
             f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
         )
+
+    def display_error(self, error):
+        tb = traceback.format_exc()
+        self.log(f"ERROR\n\n {tb}")
+        if isinstance(error, RattlesnakeError):
+            self.gui_update_queue.put(
+                (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
+            )
+        else:
+            self.gui_update_queue.put(
+                (UICommands.ERROR, ("Unknown Error", f"ERROR:\n\n{tb}"))
+            )
 
     def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller

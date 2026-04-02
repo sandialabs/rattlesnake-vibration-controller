@@ -35,7 +35,6 @@ import sys
 
 import numpy as np
 import scipy.signal as sig
-from qtpy import QtWidgets
 
 # region Global
 # Define base directory
@@ -67,6 +66,10 @@ def log_file_task(queue: mp.queues.Queue):
                 output = output.replace("\n", "////", num_newlines - 1)
             f.write(output)
             f.flush()
+
+
+class RattlesnakeError(Exception):
+    pass
 
 
 class GlobalCommands(Enum):
