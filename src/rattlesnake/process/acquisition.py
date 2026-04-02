@@ -20,13 +20,20 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import multiprocessing.queues as mpqueue
+import multiprocessing.synchronize  # pylint: disable=unused-import
+import queue as thqueue
 from time import sleep, time
+from typing import Dict
 
 import numpy as np
 
+# from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_registry import HARDWARE_ACQUISITION
+from rattlesnake.hardware.hardware_utilities import HardwareType
+
+# from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import (
     GlobalCommands,
@@ -44,6 +51,16 @@ if DEBUG:
     FILE_OUTPUT = "debug_data/acquisition_{:}.npz"
 
 
+TASK_NAME = "Acquisition"
+
+DEBUG = False
+if DEBUG:
+    from glob import glob
+
+    FILE_OUTPUT = "debug_data/acquisition_{:}.npz"
+
+
+# region: AcquisitionProcess
 class AcquisitionProcess(AbstractMessageProcess):
     """Class defining the acquisition behavior of the controller
 
@@ -57,8 +74,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        environments: list,
-        acquisition_active: mp.sharedctypes.Synchronized,
+        acquisition_active_event: mp.synchronize.Event,
+        streaming_active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
     ):
         """
         Constructor for the AcquisitionProcess class
@@ -83,12 +101,14 @@ class AcquisitionProcess(AbstractMessageProcess):
             queue_container.log_file_queue,
             queue_container.acquisition_command_queue,
             queue_container.gui_update_queue,
+            ready_event,
         )
-        self.map_command(
-            GlobalCommands.INITIALIZE_DATA_ACQUISITION, self.initialize_data_acquisition
-        )
+        self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.acquire_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_acquisition)
+        self.map_command(
+            GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
+        )
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
@@ -102,20 +122,16 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.sample_rate = None
         self.read_size = None
         # Environment Data
-        self.environment_list = [environment[1] for environment in environments]
-        self.environment_acquisition_channels = None
-        self.environment_active_flags = {
-            environment: False for environment in self.environment_list
-        }
-        self.environment_last_data = {environment: False for environment in self.environment_list}
-        self.environment_samples_remaining_to_read = {
-            environment: 0 for environment in self.environment_list
-        }
-        self.environment_first_data = {environment: None for environment in self.environment_list}
+        self.environment_list = []
+        self.environment_acquisition_channels = {}
+        self.environment_active_flags = {}
+        self.environment_last_data = {}
+        self.environment_samples_remaining_to_read = {}
+        self.environment_first_data = {}
         # Hardware data
         self.hardware = None
+        self.hardware_metadata = None
         # Streaming Information
-        self.streaming = False
         self.has_streamed = False
         # Persistent data
         self.read_data = None
@@ -123,138 +139,171 @@ class AcquisitionProcess(AbstractMessageProcess):
         # Abort and Warning Limits
         self.abort_limits = None
         self.warning_limits = None
-        self._acquisition_active = acquisition_active
+        self._acquisition_active_event = acquisition_active_event
+        self._streaming_active_event = streaming_active_event
         # print('acquisition setup')
 
     @property
     def acquisition_active(self):
-        """Returns True if the acquisition is currently running"""
-        return bool(self._acquisition_active.value)
+        return self._acquisition_active_event.is_set()
 
-    @acquisition_active.setter
-    def acquisition_active(self, val):
-        # print('output currently active: {:}'.format(self.acquisition_active))
-        # print('setting acquisition active')
-        if val:
-            self._acquisition_active.value = 1
-        else:
-            self._acquisition_active.value = 0
-        # print('set acquisition active')
+    @property
+    def streaming(self):
+        return self._streaming_active_event.is_set()
 
-    def initialize_data_acquisition(self, data):
-        """Sets up the acquisition according to the specified parameters
+    def set_active(self):
+        self._acquisition_active_event.set()
 
-        Parameters
-        ----------
-        data : tuple
-            A tuple consisting of data acquisition parameters and the channels
-            used by each environment.
+    def clear_active(self):
+        self._acquisition_active_event.clear()
 
-        """
-        self.log("Initializing Data Acquisition")
-        # Pull out information from the queue
-        data_acquisition_parameters, self.environment_acquisition_channels = data
-        # Store pertinent data
-        self.sample_rate = data_acquisition_parameters.sample_rate
-        self.read_size = data_acquisition_parameters.samples_per_read
-        # Check which type of hardware we have
-        if self.hardware is not None:
-            self.hardware.close()
-        if data_acquisition_parameters.hardware == 0:
-            from ..hardware.nidaqmx_hardware_multitask import NIDAQmxAcquisition
+    def set_streaming(self):
+        self._streaming_active_event.set()
 
-            self.hardware = NIDAQmxAcquisition(
-                data_acquisition_parameters.extra_parameters["task_trigger"],
-                data_acquisition_parameters.extra_parameters["task_trigger_output_channel"],
-            )
-        elif data_acquisition_parameters.hardware == 1:
-            from ..hardware.lanxi_hardware_multiprocessing import LanXIAcquisition
+    def clear_streaming(self):
+        self._streaming_active_event.clear()
 
-            self.hardware = LanXIAcquisition(
-                data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"]
-            )
-        elif data_acquisition_parameters.hardware == 2:
-            from ..hardware.data_physics_hardware import DataPhysicsAcquisition
+    # def initialize_hardware(self, metadata: HardwareMetadata):
+    #     """Sets up the acquisition according to the specified parameters
 
-            self.hardware = DataPhysicsAcquisition(
-                data_acquisition_parameters.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        elif data_acquisition_parameters.hardware == 3:
-            from ..hardware.data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+    #     Parameters
+    #     ----------
+    #     data : tuple
+    #         A tuple consisting of data acquisition parameters and the channels
+    #         used by each environment.
 
-            self.hardware = DataPhysicsDP900Acquisition(
-                data_acquisition_parameters.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        elif data_acquisition_parameters.hardware == 4:
-            from ..hardware.exodus_modal_solution_hardware import ExodusAcquisition
+    #     """
+    #     self.log("Initializing Hardware")
+    #     # Store pertinent data
+    #     self.sample_rate = metadata.sample_rate
+    #     self.read_size = metadata.samples_per_read
+    #     # Check which type of hardware we have
+    #     if self.hardware is not None:
+    #         self.hardware.close()
 
-            self.hardware = ExodusAcquisition(
-                data_acquisition_parameters.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        elif data_acquisition_parameters.hardware == 5:
-            from ..hardware.state_space_virtual_hardware import StateSpaceAcquisition
+    #     hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
+    #     match metadata.hardware_type:
+    #         case HardwareType.NI_DAQMX:
+    #             self.hardware = hardware_acquisition_class(
+    #                 metadata.task_trigger, metadata.output_trigger_generator
+    #             )
 
-            self.hardware = StateSpaceAcquisition(
-                data_acquisition_parameters.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        elif data_acquisition_parameters.hardware == 6:
-            from ..hardware.sdynpy_system_virtual_hardware import SDynPySystemAcquisition
+    #         case HardwareType.LAN_XI:
+    #             # from .lanxi_hardware_multiprocessing import LanXIAcquisition
 
-            self.hardware = SDynPySystemAcquisition(
-                data_acquisition_parameters.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        elif data_acquisition_parameters.hardware == 7:
-            from ..hardware.sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+    #             # self.hardware = LanXIAcquisition(
+    #             #     data_acquisition_parameters.extra_parameters[
+    #             #         "maximum_acquisition_processes"
+    #             #     ]
+    #             # )
+    #             pass
+    #         case HardwareType.DP_QUATTRO:
+    #             # from .data_physics_hardware import DataPhysicsAcquisition
 
-            self.hardware = SDynPyFRFAcquisition(
-                data_acquisition_parameters.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        else:
-            raise ValueError("Invalid Hardware or Hardware Not Implemented!")
-        # Initialize hardware and create channels
-        self.hardware.set_up_data_acquisition_parameters_and_channels(
-            data_acquisition_parameters, data_acquisition_parameters.channel_list
-        )
-        # Set up warning and abort limits
-        self.abort_limits = []
-        self.warning_limits = []
-        for channel in data_acquisition_parameters.channel_list:
-            try:
-                warning_limit = float(channel.warning_level)
-            except (ValueError, TypeError):
-                warning_limit = float("inf")  # Never warn on this channel
-            try:
-                abort_limit = float(channel.abort_level)
-            except (ValueError, TypeError):
-                abort_limit = float("inf")  # Never abort on this channel if not specified
-            self.warning_limits.append(warning_limit)
-            self.abort_limits.append(abort_limit)
-        self.abort_limits = np.array(self.abort_limits)
-        self.warning_limits = np.array(self.warning_limits)
-        self.output_indices = [
-            index
-            for index, channel in enumerate(data_acquisition_parameters.channel_list)
-            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
-        ]
-        self.read_data = np.zeros(
-            (
-                len(data_acquisition_parameters.channel_list),
-                4
-                * np.max(
-                    [
-                        data_acquisition_parameters.samples_per_read,
-                        data_acquisition_parameters.samples_per_write
-                        // data_acquisition_parameters.output_oversample,
-                    ]
-                ),
-            )
-        )
+    #             # self.hardware = DataPhysicsAcquisition(
+    #             #     data_acquisition_parameters.hardware_file,
+    #             #     self.queue_container.single_process_hardware_queue,
+    #             # )
+    #             pass
+    #         case HardwareType.DP_900:
+    #             # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+
+    #             # self.hardware = DataPhysicsDP900Acquisition(
+    #             #     data_acquisition_parameters.hardware_file,
+    #             #     self.queue_container.single_process_hardware_queue,
+    #             # )
+    #             pass
+    #         case HardwareType.EXODUS:
+    #             # from .exodus_modal_solution_hardware import ExodusAcquisition
+
+    #             # self.hardware = ExodusAcquisition(
+    #             #     data_acquisition_parameters.hardware_file,
+    #             #     self.queue_container.single_process_hardware_queue,
+    #             # )
+    #             pass
+    #         case HardwareType.STATE_SPACE:
+    #             # from .state_space_virtual_hardware import StateSpaceAcquisition
+
+    #             # self.hardware = StateSpaceAcquisition(
+    #             #     data_acquisition_parameters.hardware_file,
+    #             #     self.queue_container.single_process_hardware_queue,
+    #             # )
+    #             pass
+    #         case HardwareType.SDYNPY_SYSTEM:
+    #             self.hardware = hardware_acquisition_class(
+    #                 metadata.hardware_file,
+    #                 self.queue_container.single_process_hardware_queue,
+    #             )
+    #         case HardwareType.SDYNPY_FRF:
+    #             # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+
+    #             # self.hardware = SDynPyFRFAcquisition(
+    #             #     data_acquisition_parameters.hardware_file,
+    #             #     self.queue_container.single_process_hardware_queue,
+    #             # )
+    #             pass
+    #         case _:
+    #             raise TypeError(f"{metadata.hardware_type} has not been implemented")
+    #     # Initialize hardware and create channels
+    #     self.hardware.initialize_hardware(metadata)
+    #     # Set up warning and abort limits
+    #     self.abort_limits = []
+    #     self.warning_limits = []
+    #     for channel in metadata.channel_list:
+    #         try:
+    #             warning_limit = float(channel.warning_level)
+    #         except (ValueError, TypeError):
+    #             warning_limit = float("inf")  # Never warn on this channel
+    #         try:
+    #             abort_limit = float(channel.abort_level)
+    #         except (ValueError, TypeError):
+    #             abort_limit = float(
+    #                 "inf"
+    #             )  # Never abort on this channel if not specified
+    #         self.warning_limits.append(warning_limit)
+    #         self.abort_limits.append(abort_limit)
+    #     self.abort_limits = np.array(self.abort_limits)
+    #     self.warning_limits = np.array(self.warning_limits)
+    #     self.output_indices = [
+    #         index
+    #         for index, channel in enumerate(metadata.channel_list)
+    #         if (channel.feedback_device is not None)
+    #         and not (channel.feedback_device.strip() == "")
+    #     ]
+    #     self.read_data = np.zeros(
+    #         (
+    #             len(metadata.channel_list),
+    #             4
+    #             * np.max(
+    #                 [
+    #                     metadata.samples_per_read,
+    #                     metadata.samples_per_write // metadata.output_oversample,
+    #                 ]
+    #             ),
+    #         )
+    #     )
+
+    #     self.hardware_metadata = metadata
+    #     self.set_ready()
+    #
+    # def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
+    #     self.log("Initializing Environment")
+    #     self.environment_list = []
+    #     self.environment_acquisition_channels = {}
+    #     self.environment_active_flags = {}
+    #     self.environment_last_data = {}
+    #     self.environment_samples_remaining_to_read = {}
+    #     self.environment_first_data = {}
+    #     for queue_name, metadata in metadata_dict.items():
+    #         self.environment_list.append(queue_name)
+    #         self.environment_acquisition_channels[queue_name] = (
+    #             metadata.map_channel_indices()
+    #         )
+    #         self.environment_active_flags[queue_name] = False
+    #         self.environment_last_data[queue_name] = False
+    #         self.environment_samples_remaining_to_read[queue_name] = 0
+    #         self.environment_first_data[queue_name] = None
+    #     self.set_ready()
 
     def stop_environment(self, data):
         """Sets flags stating that the specified environment will be ending.
@@ -268,7 +317,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.log(f"Deactivating Environment {data}")
         self.environment_active_flags[data] = False
         self.environment_last_data[data] = True
-        self.environment_samples_remaining_to_read[data] = self.hardware.get_acquisition_delay()
+        self.environment_samples_remaining_to_read[data] = (
+            self.hardware.get_acquisition_delay()
+        )
 
     def start_streaming(self, data):  # pylint: disable=unused-argument
         """Sets the flag to tell the acquisition to write data to disk
@@ -281,7 +332,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             ``command_map``
 
         """
-        self.streaming = True
+        self.set_streaming()
         if self.has_streamed:
             self.queue_container.streaming_command_queue.put(
                 self.process_name, (GlobalCommands.CREATE_NEW_STREAM, None)
@@ -300,7 +351,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             ``command_map``
 
         """
-        self.streaming = False
+        self.clear_streaming()
 
     def acquire_signal(self, data):
         """The main acquisition loop of the controller.
@@ -330,8 +381,10 @@ class AcquisitionProcess(AbstractMessageProcess):
             while True:
                 # Try to get data from the measurement if we can
                 try:
-                    environment, data = self.queue_container.input_output_sync_queue.get_nowait()
-                except mp.queues.Empty:
+                    environment, data = (
+                        self.queue_container.input_output_sync_queue.get_nowait()
+                    )
+                except (thqueue.Empty, mpqueue.Empty):
                     if time() - start_wait_time > 30:
                         self.queue_container.gui_update_queue.put(
                             (
@@ -356,16 +409,23 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.log("Starting Hardware Acquisition")
             self.hardware.start()
             self.startup = False
-            self.acquisition_active = True
+            self.set_active()
+            self.gui_update_queue.put((UICommands.HARDWARE_STARTED, None))
             # print('started acquisition')
         self.get_first_output_data()
         if (
             self.shutdown_flag  # We're shutting down
             and all(
-                [not flag for environment, flag in self.environment_active_flags.items()]
+                [
+                    not flag
+                    for environment, flag in self.environment_active_flags.items()
+                ]
             )  # All the environments are inactive
             and all(
-                [flag is None for environment, flag in self.environment_first_data.items()]
+                [
+                    flag is None
+                    for environment, flag in self.environment_first_data.items()
+                ]
             )  # All the environments are not starting
             and all(
                 [not flag for environment, flag in self.environment_last_data.items()]
@@ -379,12 +439,16 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.gui_update_queue.put((UICommands.MONITOR, max_vals))
                 warn_channels = max_vals > self.warning_limits
                 if np.any(warn_channels):
-                    warning_numbers = [i + 1 for i in range(len(warn_channels)) if warn_channels[i]]
+                    warning_numbers = [
+                        i + 1 for i in range(len(warn_channels)) if warn_channels[i]
+                    ]
                     print(f"Channels {warning_numbers} Reached Warning Limit")
                     self.log(f"Channels {warning_numbers} Reached Warning Limit")
                 abort_channels = max_vals > self.abort_limits
                 if np.any(abort_channels):
-                    abort_numbers = [i + 1 for i in range(len(abort_channels)) if abort_channels[i]]
+                    abort_numbers = [
+                        i + 1 for i in range(len(abort_channels)) if abort_channels[i]
+                    ]
                     print(f"Channels {abort_numbers} Reached Abort Limit")
                     self.log(f"Channels {abort_numbers} Reached Abort Limit")
                     # Don't stop because we're already shutting down.
@@ -396,13 +460,12 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.queue_container.streaming_command_queue.put(
                     self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy())
                 )
-                self.streaming = False
+                self.clear_streaming()
             if self.has_streamed and self.any_environments_started:
-                self.queue_container.streaming_command_queue.put(
-                    self.process_name, (GlobalCommands.FINALIZE_STREAMING, None)
-                )
+                # self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
                 self.has_streamed = False
-            self.acquisition_active = False
+            self.clear_active()
+            self.gui_update_queue.put((UICommands.HARDWARE_ENDED, None))
             self.log("Acquisition Shut Down")
         else:
             aquiring_environments = [
@@ -416,12 +479,16 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.gui_update_queue.put((UICommands.MONITOR, max_vals))
                 warn_channels = max_vals > self.warning_limits
                 if np.any(warn_channels):
-                    warning_numbers = [i + 1 for i in range(len(warn_channels)) if warn_channels[i]]
+                    warning_numbers = [
+                        i + 1 for i in range(len(warn_channels)) if warn_channels[i]
+                    ]
                     print(f"Channels {warning_numbers} Reached Warning Limit")
                     self.log(f"Channels {warning_numbers} Reached Warning Limit")
                 abort_channels = max_vals > self.abort_limits
                 if np.any(abort_channels):
-                    abort_numbers = [i + 1 for i in range(len(abort_channels)) if abort_channels[i]]
+                    abort_numbers = [
+                        i + 1 for i in range(len(abort_channels)) if abort_channels[i]
+                    ]
                     print(f"Channels {abort_numbers} Reached Abort Limit")
                     self.log(f"Channels {abort_numbers} Reached Abort Limit")
                     self.gui_update_queue.put((UICommands.STOP, None))
@@ -493,7 +560,9 @@ class AcquisitionProcess(AbstractMessageProcess):
                 else:
                     continue
                 if self.environment_last_data[environment]:
-                    self.environment_samples_remaining_to_read[environment] -= self.read_size
+                    self.environment_samples_remaining_to_read[
+                        environment
+                    ] -= self.read_size
                     self.log(
                         f"Reading last data for {environment}, "
                         f"{self.environment_samples_remaining_to_read[environment]} samples "
@@ -503,7 +572,9 @@ class AcquisitionProcess(AbstractMessageProcess):
                     self.environment_last_data[environment]
                     and self.environment_samples_remaining_to_read[environment] <= 0
                 )
-                self.log(f"Sending {environment_data.shape} data to {environment} environment")
+                self.log(
+                    f"Sending {environment_data.shape} data to {environment} environment"
+                )
                 self.queue_container.environment_data_in_queues[environment].put(
                     (environment_data, environment_finished)
                 )
@@ -570,9 +641,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         """
         # Pull any data off the queues that have been put to
         queue_flush_sum = 0
-        for queue in [q for name, q in self.queue_container.environment_data_in_queues.items()] + [
-            self.queue_container.acquisition_command_queue
-        ]:
+        for queue in [
+            q for name, q in self.queue_container.environment_data_in_queues.items()
+        ] + [self.queue_container.acquisition_command_queue]:
             queue_flush_sum += len(flush_queue(queue))
         self.log(f"Flushed {queue_flush_sum} items out of queues")
         if self.hardware is not None:
@@ -580,10 +651,13 @@ class AcquisitionProcess(AbstractMessageProcess):
         return True
 
 
+# region: acquisition_process
 def acquisition_process(
     queue_container: QueueContainer,
-    environments: list,
-    acquisition_active: mp.sharedctypes.Synchronized,
+    acquisition_active_event: mp.synchronize.Event,
+    streaming_active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
 ):
     """Function passed to multiprocessing as the acquisition process
 
@@ -595,14 +669,15 @@ def acquisition_process(
     queue_container : QueueContainer
         A container containing the queues used to communicate between
         controller processes
-    environments : list
-        A list of ``(ControlType,environment_name)`` pairs that define the
-        environments in the controller.
 
     """
 
     acquisition_instance = AcquisitionProcess(
-        "Acquisition", queue_container, environments, acquisition_active
+        TASK_NAME,
+        queue_container,
+        acquisition_active_event,
+        streaming_active_event,
+        ready_event,
     )
 
-    acquisition_instance.run()
+    acquisition_instance.run(shutdown_event)
