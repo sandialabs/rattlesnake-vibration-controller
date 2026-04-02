@@ -67,8 +67,6 @@ class UICommands(Enum):
         return self.name.replace("_", " ").title()
 
 
-ACQUISITION_FRAMES_TO_DISPLAY = 4
-
 colororder = [
     "#1f77b4",
     "#ff7f0e",

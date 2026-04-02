@@ -37,36 +37,13 @@ import numpy as np
 import scipy.signal as sig
 from qtpy import QtWidgets
 
+# region Global
 # Define base directory
 this_path = os.path.split(__file__)[0]
 if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
     DIRECTORY = sys._MEIPASS  # pylint: disable=protected-access
 else:
     DIRECTORY = this_path
-
-
-# region: GlobalCommands
-class GlobalCommands(Enum):
-    """An enumeration that lists the commands that the controller can accept"""
-
-    QUIT = -1
-    INITIALIZE_DATA_ACQUISITION = -2
-    INITIALIZE_ENVIRONMENT_PARAMETERS = -3
-    RUN_HARDWARE = -4
-    STOP_HARDWARE = -5
-    INITIALIZE_STREAMING = -6
-    STREAMING_DATA = -7
-    FINALIZE_STREAMING = -8
-    START_ENVIRONMENT = -9
-    STOP_ENVIRONMENT = -10
-    START_STREAMING = -11
-    STOP_STREAMING = -12
-    CREATE_NEW_STREAM = -13
-    COMPLETED_SYSTEM_ID = -14
-    AT_TARGET_LEVEL = -15
-    UPDATE_METADATA = -16
-    UPDATE_INTERACTIVE_CONTROL_PARAMETERS = -17
-    SEND_INTERACTIVE_COMMAND = -18
 
 
 def log_file_task(queue: mp.queues.Queue):
@@ -92,7 +69,29 @@ def log_file_task(queue: mp.queues.Queue):
             f.flush()
 
 
-# region: VerboseMessageQueue
+class GlobalCommands(Enum):
+    """An enumeration that lists the commands that the controller can accept"""
+
+    QUIT = -1
+    INITIALIZE_DATA_ACQUISITION = -2
+    INITIALIZE_ENVIRONMENT_PARAMETERS = -3
+    RUN_HARDWARE = -4
+    STOP_HARDWARE = -5
+    INITIALIZE_STREAMING = -6
+    STREAMING_DATA = -7
+    FINALIZE_STREAMING = -8
+    START_ENVIRONMENT = -9
+    STOP_ENVIRONMENT = -10
+    START_STREAMING = -11
+    STOP_STREAMING = -12
+    CREATE_NEW_STREAM = -13
+    COMPLETED_SYSTEM_ID = -14
+    AT_TARGET_LEVEL = -15
+    UPDATE_METADATA = -16
+    UPDATE_INTERACTIVE_CONTROL_PARAMETERS = -17
+    SEND_INTERACTIVE_COMMAND = -18
+
+
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
@@ -261,7 +260,6 @@ def flush_queue(queue, timeout=None):
             return data
 
 
-# region: QueueContainer
 class QueueContainer:
     """A container class for the queues that the controller will manage"""
 
@@ -335,7 +333,10 @@ class QueueContainer:
         self.environment_data_out_queues = environment_data_out_queues
 
 
-# region: Hardware Utilities
+# endregion
+
+
+# region Hardware
 class Channel:
     """Property container for a single channel in the controller."""
 
@@ -579,7 +580,10 @@ class DataAcquisitionParameters:
         return self.sample_rate * self.output_oversample
 
 
-# region: UI Utilities
+# endregion
+
+
+# region User Interface
 def error_message_qt(title, message):
     """Helper class to create an error dialog.
 
@@ -594,7 +598,10 @@ def error_message_qt(title, message):
     QtWidgets.QMessageBox.critical(None, title, message)
 
 
-# region: Loading
+# endregion
+
+
+# region Loading
 def load_csv_matrix(file):
     """Loads a matrix from a CSV file
 
@@ -657,7 +664,10 @@ def load_python_module(module_path):
     return module
 
 
-# region: Math Operations
+# endregion
+
+
+# region Math Operations
 def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     """Compute coherence from a CPSD matrix
 
@@ -1301,3 +1311,6 @@ class OverlapBuffer:
     def shape(self):
         """Gets the shape of the buffer"""
         return self.buffer_data.shape
+
+
+# endregion

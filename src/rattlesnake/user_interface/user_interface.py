@@ -378,12 +378,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
         )
 
-    def update_gui(self, queue_data: tuple[str, Any]):
+    def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller
 
         Parameters
         ----------
-        queue_data : tuple[str, Any]
+        queue_data : tuple[UICommands, Any]
             A 2-tuple consisting of ``(message, data)`` pairs where the message
             denotes what to change and the data contains the information needed
             to be displayed.
