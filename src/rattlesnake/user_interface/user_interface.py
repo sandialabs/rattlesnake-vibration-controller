@@ -156,7 +156,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         Parameters
         ----------
         rattlesnake : Rattlesnake
-            The rattlesnake object that the UI is going to represent
+            The rattlesnake object that the UI is going to represent.
         """
         super(RattlesnakeUI, self).__init__()
 
@@ -364,6 +364,29 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             QtWidgets.QHeaderView.ResizeToContents
         )
         self.run_profile_widget.setEnabled(False)
+
+    def load_test_file_to_ui(self, filepath=None):
+        """
+        Callback to select file path, verify existance and load that file to
+        the user interface.
+        """
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Rattlesnake Template File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        try:
+            self.rattlesnake.load_data_from_file(filepath)
+        except Exception:  # pylint: disable=broad-exception-caught
+            tb = traceback.format_exc()
+            self.display_error(tb)
+            return
+
+        self.load_from_rattlesnake_state()
 
     def load_rattlesnake_to_ui(self):
         """
@@ -582,34 +605,59 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.initialize_profile()
 
-    def load_test_file_to_ui(self, filepath=None):
+    def save_template_from_ui(self):
         """
-        Callback to select file path, verify existance and load that file to
-        the user interface.
+        Saves an excel template from the current rattlesnake object state. Inputs
+        current saved values into the template.
         """
-        if not filepath:
-            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self,
-                "Load Rattlesnake Template File",
-                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
-            )
-            if filepath == "":
-                return
+        filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Combined Environments Template",
+            filter="Excel File (*.xlsx)",
+        )
+        if filepath == "":
+            return
 
         try:
-            self.rattlesnake.load_data_from_file(filepath)
+            # Hardware
+            hardware_metadata = self.get_hardware_metadata_no_channels()
+            channel_list = self.get_channel_list()
+            hardware_metadata.channel_list = channel_list
+
+            # Environments
+            environment_metadata_list = []
+            for environment_ui in self.environment_uis.values():
+                metadata = environment_ui.get_environment_metadata(channel_list)
+                environment_metadata_list.append(metadata)
+
+            # Profiles
+            profile_event_list = []
+            num_rows = self.profile_table.rowCount()
+            for row in range(num_rows):
+                timestamp = self.profile_table.cellWidget(row, 0).value()
+                environment_name = self.profile_table.cellWidget(row, 1).currentText()
+                command = self.profile_table.cellWidget(row, 2).currentData()
+                data_item = self.profile_table.item(row, 3)
+                data_text = data_item.text() if data_item is not None else ""
+
+                # Skip environment instructions
+                if command == "Set Environment Instructions":
+                    continue
+
+                event = ProfileEvent(timestamp, environment_name, command, data_text)
+
+                profile_event_list.append(event)
+
+            save_rattlesnake_template(
+                filepath,
+                hardware_metadata,
+                environment_metadata_list,
+                profile_event_list,
+            )
         except Exception:  # pylint: disable=broad-exception-caught
             tb = traceback.format_exc()
             self.display_error(tb)
             return
-
-        self.load_from_rattlesnake_state()
-
-    def stop_program(self):
-        """
-        Callback to stop the entire program.
-        """
-        self.close()
 
     def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
         """
@@ -617,7 +665,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         Parameters
         ----------
-        event :
+        event : QtGui.QCloseEvent
             The close event, which is accepted.
         """
         for (
@@ -686,10 +734,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         Parameters
         ----------
         queue_data :
-            A 2-tuple consisting of ``(message,data)`` pairs where the message
+            A 2-tuple consisting of ``(message, data)`` pairs where the message
             denotes what to change and the data contains the information needed
             to be displayed.
-
         """
         message, data = queue_data
         #        self.log('Updating GUI {:}'.format(message))
@@ -2163,5 +2210,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 == environment_name
             ):
                 self.start_streaming()
+
+    def stop_program(self):
+        """
+        Callback to stop the entire program.
+        """
+        self.close()
 
     # endregion
