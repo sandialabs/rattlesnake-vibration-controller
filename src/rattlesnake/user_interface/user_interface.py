@@ -42,6 +42,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 from rattlesnake.rattlesnake import RattlesnakeController
 from rattlesnake.utilities import DIRECTORY
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.user_interface.ui_utilities import error_message_qt, UICommands
 
 # pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
@@ -387,46 +388,57 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             denotes what to change and the data contains the information needed
             to be displayed.
         """
-        message, data = queue_data
-        #        self.log('Updating GUI {:}'.format(message))
-        if message == UICommands.ERROR:
-            error_message_qt(data[0], data[1])
+        command, data = queue_data
+        if command in self.environment_uis.keys():
+            self.environment_uis[command].update_gui(data)
             return
-        elif message in self.environments:
-            self.environment_uis[message].update_gui(data)
-        elif message == UICommands.MONITOR:
-            if self.channel_monitor_window is not None:
-                if not self.channel_monitor_window.isVisible():
-                    self.channel_monitor_window = None
-                else:
-                    self.channel_monitor_window.update(data)
-        elif message == UICommands.UPDATE_METADATA:
-            environment_name, metadata = data
-            self.environment_metadata[environment_name] = metadata
-        elif message == UICommands.STOP:
-            self.disarm_test()
-        elif message == UICommands.ENABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(True)
-        elif message == UICommands.DISABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(False)
-        elif message == UICommands.ENABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, True)
-            self.rattlesnake_tabs.setCurrentIndex(data)
-        elif message == UICommands.DISABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, False)
-        else:
-            widget = getattr(self, message)
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
+
+        match command:
+            case UICommands.ERROR:
+                dialog_title, error_message = data
+                error_message_qt(dialog_title, error_message)
+            case UICommands.HARDWARE_STARTED:
+                self.display_acquisition_started()
+            case UICommands.HARDWARE_ENDED:
+                self.display_acquisition_ended()
+            case UICommands.COMPLETED_SYSTEM_ID:
+                environment, _ = data
+                print(f"System Id Completed for {environment}")
+                self.rattlesnake_tabs.setTabEnabled(3, True)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
+            case UICommands.MONITOR:
+                if self.channel_monitor_window is not None:
+                    if not self.channel_monitor_window.isVisible():
+                        self.channel_monitor_window = None
+                    else:
+                        self.channel_monitor_window.update(data)
+            case UICommands.UPDATE_METADATA:
+                environment_name, metadata = data
+                self.environment_metadata[environment_name] = metadata
+            case UICommands.STOP:
+                self.disarm_test()
+            case UICommands.ENABLE:
+                widget = getattr(self, data)
+                widget.setEnabled(True)
+            case UICommands.DISABLE:
+                widget = getattr(self, data)
+                widget.setEnabled(False)
+            case UICommands.ENABLE_TAB:
+                self.rattlesnake_tabs.setTabEnabled(data, True)
+                self.rattlesnake_tabs.setCurrentIndex(data)
+            case UICommands.DISABLE_TAB:
+                self.rattlesnake_tabs.setTabEnabled(data, False)
+            case _:
+                widget = getattr(self, command)
+                if isinstance(widget, QtWidgets.QDoubleSpinBox):
+                    widget.setValue(data)
+                elif isinstance(widget, QtWidgets.QSpinBox):
+                    widget.setValue(data)
+                elif isinstance(widget, QtWidgets.QLineEdit):
+                    widget.setText(data)
+                elif isinstance(widget, QtWidgets.QListWidget):
+                    widget.clear()
+                    widget.addItems([f"{d:.3f}" for d in data])
 
     # endregion
 
