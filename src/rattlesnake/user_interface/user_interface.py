@@ -143,21 +143,21 @@ class Updater(QRunnable):
 
 # region User Interface
 class RattlesnakeUI(QtWidgets.QMainWindow):
-    """Main user interface from which the Rattlesnake object is controlled."""
+    """Main user interface from which the rattlesnake controller object is controlled."""
 
     # region Global
-    def __init__(self, rattlesnake: Rattlesnake):
+    def __init__(self, rattlesnake: RattlesnakeController):
         """
-        Initializes user interface from an existing Rattlesnake object.
+        Initializes user interface from an existing rattlesnake controller object.
 
-        The rattlesnake object is created outside the UI so that the window can
-        close without having to wait for the full rattlesnake.shutdown event to
+        The rattlesnake controller object is created outside the UI so that the
+        window can close without having to wait for the full rattlesnake.shutdown event to
         occur.
 
         Parameters
         ----------
-        rattlesnake : Rattlesnake
-            The rattlesnake object that the UI is going to represent.
+        rattlesnake : RattlesnakeController
+            The rattlesnake controller object that the UI is going to represent.
         """
         super(RattlesnakeUI, self).__init__()
 

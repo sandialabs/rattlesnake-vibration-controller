@@ -35,7 +35,7 @@ from typing import Dict, List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
-THREADING = True
+THREADING = False
 
 
 # region State
@@ -50,15 +50,15 @@ class RattlesnakeState(Enum):
 
 
 # region Rattlesnake
-class Rattlesnake:
+class RattlesnakeController:
     """Object responsible for setting up, sending data to, and running processes that
     make up the rattlesnake vibration controller."""
 
     # region Global
     def __init__(self, *, threaded: bool = THREADING, timeout: float = 30):
         """
-        Initializes a blank rattlesnake object and spins up multiple processes required
-        to run a vibration test.
+        Initializes a blank rattlesnake controller object and spins up multiple processes
+        required to run a vibration test.
 
         Running in the threaded mode results in much quicker data transfer rates as commands
         do not have to be copied in the RAM. This mode allows the control laws to respond quicker
@@ -287,24 +287,6 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-    # endregion
-
-    @property
-    def hardware_metadata(self):
-        return self._hardware_metadata
-
-    @hardware_metadata.setter
-    def hardware_metadata(self, value: HardwareMetadata):
-        self._hardware_metadata = value
-
-    @property
-    def environment_metadata(self):
-        return self.environment_manager.environment_metadata
-
-    @environment_metadata.setter
-    def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
-        self.environment_manager.environment_metadata = value
-
     @property
     def state(self) -> RattlesnakeState:
         hardware_store = self.hardware_metadata is not None
@@ -355,10 +337,6 @@ class Rattlesnake:
         return RattlesnakeState.INIT
 
     @property
-    def streaming(self):
-        return self.event_container.streaming_active_event.is_set()
-
-    @property
     def threaded(self):
         return self._threaded
 
@@ -369,18 +347,6 @@ class Rattlesnake:
     @property
     def timeout(self):
         return self._timeout
-
-    @property
-    def has_streamed(self):
-        if self.last_stream_metadata:
-            return True
-        return False
-
-    @property
-    def has_profile(self):
-        if self.last_profile_event_list:
-            return True
-        return False
 
     def set_blocking(self):
         """
@@ -399,7 +365,7 @@ class Rattlesnake:
         ready_event_list: List[mp.synchronize.Event],
         active_event_list: List[mp.synchronize.Event],
         *,
-        active_event_check: bool = None,
+        active_event_check: bool | None = None,
     ):
         """
         Checks for response from processes after rattlesnake has sent a command.
@@ -419,7 +385,7 @@ class Rattlesnake:
         active_event_check: bool
             This determines whether to check if the active_event_list processes are
             active or not active. True correspondes to active, False corresponds to not
-            active.
+            active. This is a required input when using active_event_list.
         """
         start_time = time.time()
 
@@ -437,7 +403,6 @@ class Rattlesnake:
                     event.set()
                 raise RattlesnakeError("Timeout waiting for all events to be ready")
 
-    # region Loading
     def load_data_from_file(self, filepath: str):
         filename, filetype = os.path.splitext(filepath)
 
@@ -484,11 +449,18 @@ class Rattlesnake:
             self.last_profile_event_list,
         )
 
-    def load_sys_id_to_environment(self, filepath, environment_name):
-        pass
+    # endregion
 
     # region: Hardware
-    def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+    @property
+    def hardware_metadata(self):
+        return self._hardware_metadata
+
+    @hardware_metadata.setter
+    def hardware_metadata(self, value: HardwareMetadata):
+        self._hardware_metadata = value
+
+    def initialize_hardware_metadata(self, hardware_metadata: HardwareMetadata) -> None:
         """Validates hardware_metadata and sends data to relevant processes"""
         # Validate Rattlesnake State
         if self.state not in (
@@ -530,7 +502,17 @@ class Rattlesnake:
             # Update state
             self.hardware_metadata = hardware_metadata
 
-    # region: Environments
+    # endregion
+
+    # region Environments
+    @property
+    def environment_metadata(self):
+        return self.environment_manager.environment_metadata
+
+    @environment_metadata.setter
+    def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
+        self.environment_manager.environment_metadata = value
+
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         """Validates environment_metadata, starts up environment processes, assigns queues,
         and sends data to relevant processes"""
@@ -572,7 +554,9 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-    # region: Acquisition
+    # endregion
+
+    # region Acquisition
     def set_stream_metadata(self, stream_metadata: StreamMetadata):
         """
         This is only used to load a stream_metadata to the controller for UI purposes. Start_acquisition
@@ -669,7 +653,9 @@ class Rattlesnake:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    # region: System Identification
+    # endregion
+
+    # region System Identification
     def initialize_system_id(self, sysid_metadata, environment_name):
         if self.state not in (
             RattlesnakeState.ENVIRONMENT_STORE,
@@ -767,7 +753,9 @@ class Rattlesnake:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    # region: SysId Headless
+    def load_sys_id_to_environment(self, filepath, environment_name):
+        pass
+
     def preview_sys_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
@@ -855,7 +843,9 @@ class Rattlesnake:
         self.stop_system_id(environment_name)
         self.stop_acquisition()
 
-    # region: Environment Active
+    # endregion
+
+    # region Environment Active
     def start_environment(self, instructions):
         if self.state not in (
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -910,7 +900,9 @@ class Rattlesnake:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    # region: Environment UI
+    # endregion
+
+    # region Controller
     def environment_at_target_level(self, environment_name: str):
         try:
             self.environment_manager.queue_names_dict[environment_name]
@@ -937,7 +929,19 @@ class Rattlesnake:
             TASK_NAME, (command, data)
         )
 
-    # region: Streaming
+    # endregion
+
+    # region Streaming
+    @property
+    def streaming(self):
+        return self.event_container.streaming_active_event.is_set()
+
+    @property
+    def has_streamed(self):
+        if self.last_stream_metadata:
+            return True
+        return False
+
     def start_streaming(self):
         if self.state not in (
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -976,7 +980,15 @@ class Rattlesnake:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    # region: Profile
+    # endregion
+
+    # region Profile
+    @property
+    def has_profile(self):
+        if self.last_profile_event_list:
+            return True
+        return False
+
     def set_profile_event_list(self, profile_event_list: List[ProfileEvent]):
         """
         This is mainly to preload profile event list for UI purposes. You
@@ -1026,7 +1038,9 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-    # region: Shutdown
+    # endregion
+
+    # region Shutdown
     def shutdown(self):
         if self.state in (
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -1122,3 +1136,5 @@ class Rattlesnake:
         self.queue_container.log_file_queue.put(
             f"{datetime.now()}: {TASK_NAME} -- {string}\n"
         )
+
+    # endregion
