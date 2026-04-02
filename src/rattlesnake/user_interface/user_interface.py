@@ -41,6 +41,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from rattlesnake.rattlesnake import RattlesnakeController
 from rattlesnake.utilities import DIRECTORY
+from rattlesnake.environment.environment_utilities import EnvironmentType
 
 # pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
@@ -115,7 +116,7 @@ class Updater(QRunnable):
 class RattlesnakeUI(QtWidgets.QMainWindow):
     """Main user interface from which the rattlesnake controller object is controlled."""
 
-    # region Global
+    # region Startup
     def __init__(self, rattlesnake: RattlesnakeController):
         """
         Initializes user interface from an existing rattlesnake controller object.
@@ -307,7 +308,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.update_hardware_widget_visibility()
 
         # Environment
-        for control in ControlTypes:
+        for control in EnvironmentType:
             self.add_environment_combobox.addItem(control.name)
         self.environment_channel_table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeToContents
@@ -336,6 +337,100 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         )
         self.run_profile_widget.setEnabled(False)
 
+    # endregion
+
+    # region Process
+    @property
+    def gui_update_queue(self):
+        return self.rattlesnake.queue_container.gui_update_queue
+
+    @property
+    def log_file_queue(self):
+        return self.rattlesnake.queue_container.log_file_queue
+
+    @property
+    def timeout(self):
+        return self.rattlesnake.timeout
+
+    @property
+    def has_system_id(self):
+        if self.system_id_environment_tabs.count() != 0:
+            return True
+        return False
+
+    @property
+    def has_test_pred(self):
+        if self.test_prediction_environment_tabs.count() != 0:
+            return True
+        return False
+
+    def log(self, string: str):
+        """
+        Pass a message to the log_file_queue along with date/time and task name.
+
+        Parameters
+        ----------
+        string : str
+            Message that will be written to the queue.
+        """
+        self.queue_container.log_file_queue.put(
+            f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
+        )
+
+    def update_gui(self, queue_data: tuple[str, Any]):
+        """Update the graphical interface for the main controller
+
+        Parameters
+        ----------
+        queue_data :
+            A 2-tuple consisting of ``(message, data)`` pairs where the message
+            denotes what to change and the data contains the information needed
+            to be displayed.
+        """
+        message, data = queue_data
+        #        self.log('Updating GUI {:}'.format(message))
+        if message == UICommands.ERROR:
+            error_message_qt(data[0], data[1])
+            return
+        elif message in self.environments:
+            self.environment_uis[message].update_gui(data)
+        elif message == UICommands.MONITOR:
+            if self.channel_monitor_window is not None:
+                if not self.channel_monitor_window.isVisible():
+                    self.channel_monitor_window = None
+                else:
+                    self.channel_monitor_window.update(data)
+        elif message == UICommands.UPDATE_METADATA:
+            environment_name, metadata = data
+            self.environment_metadata[environment_name] = metadata
+        elif message == UICommands.STOP:
+            self.disarm_test()
+        elif message == UICommands.ENABLE:
+            widget = getattr(self, data)
+            widget.setEnabled(True)
+        elif message == UICommands.DISABLE:
+            widget = getattr(self, data)
+            widget.setEnabled(False)
+        elif message == UICommands.ENABLE_TAB:
+            self.rattlesnake_tabs.setTabEnabled(data, True)
+            self.rattlesnake_tabs.setCurrentIndex(data)
+        elif message == UICommands.DISABLE_TAB:
+            self.rattlesnake_tabs.setTabEnabled(data, False)
+        else:
+            widget = getattr(self, message)
+            if isinstance(widget, QtWidgets.QDoubleSpinBox):
+                widget.setValue(data)
+            elif isinstance(widget, QtWidgets.QSpinBox):
+                widget.setValue(data)
+            elif isinstance(widget, QtWidgets.QLineEdit):
+                widget.setText(data)
+            elif isinstance(widget, QtWidgets.QListWidget):
+                widget.clear()
+                widget.addItems([f"{d:.3f}" for d in data])
+
+    # endregion
+
+    # region Loading
     def load_test_file_to_ui(self, filepath=None):
         """
         Callback to select file path, verify existance and load that file to
@@ -629,126 +724,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             tb = traceback.format_exc()
             self.display_error(tb)
             return
-
-    def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
-        """
-        Event triggered when closing the software to gracefully shut down.
-
-        Parameters
-        ----------
-        event : QtGui.QCloseEvent
-            The close event, which is accepted.
-        """
-        for (
-            _,
-            command_queue,
-        ) in self.queue_container.environment_command_queues.items():
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-
-        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.QUIT, None)
-        )
-
-        for command_queue in [
-            self.queue_container.acquisition_command_queue,
-            self.queue_container.output_command_queue,
-            self.queue_container.streaming_command_queue,
-        ]:
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-
-        event.accept()
-
-    # endregion
-
-    # region Process
-    @property
-    def gui_update_queue(self):
-        return self.rattlesnake.queue_container.gui_update_queue
-
-    @property
-    def log_file_queue(self):
-        return self.rattlesnake.queue_container.log_file_queue
-
-    @property
-    def timeout(self):
-        return self.rattlesnake.timeout
-
-    @property
-    def has_system_id(self):
-        if self.system_id_environment_tabs.count() != 0:
-            return True
-        return False
-
-    @property
-    def has_test_pred(self):
-        if self.test_prediction_environment_tabs.count() != 0:
-            return True
-        return False
-
-    def log(self, string: str):
-        """
-        Pass a message to the log_file_queue along with date/time and task name.
-
-        Parameters
-        ----------
-        string : str
-            Message that will be written to the queue.
-        """
-        self.queue_container.log_file_queue.put(
-            f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
-        )
-
-    def update_gui(self, queue_data: tuple[str, Any]):
-        """Update the graphical interface for the main controller
-
-        Parameters
-        ----------
-        queue_data :
-            A 2-tuple consisting of ``(message, data)`` pairs where the message
-            denotes what to change and the data contains the information needed
-            to be displayed.
-        """
-        message, data = queue_data
-        #        self.log('Updating GUI {:}'.format(message))
-        if message == UICommands.ERROR:
-            error_message_qt(data[0], data[1])
-            return
-        elif message in self.environments:
-            self.environment_uis[message].update_gui(data)
-        elif message == UICommands.MONITOR:
-            if self.channel_monitor_window is not None:
-                if not self.channel_monitor_window.isVisible():
-                    self.channel_monitor_window = None
-                else:
-                    self.channel_monitor_window.update(data)
-        elif message == UICommands.UPDATE_METADATA:
-            environment_name, metadata = data
-            self.environment_metadata[environment_name] = metadata
-        elif message == UICommands.STOP:
-            self.disarm_test()
-        elif message == UICommands.ENABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(True)
-        elif message == UICommands.DISABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(False)
-        elif message == UICommands.ENABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, True)
-            self.rattlesnake_tabs.setCurrentIndex(data)
-        elif message == UICommands.DISABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, False)
-        else:
-            widget = getattr(self, message)
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
 
     # endregion
 
@@ -2056,7 +2031,39 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region: Deteriorated
+    # region Shutdown
+    def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
+        """
+        Event triggered when closing the software to gracefully shut down.
+
+        Parameters
+        ----------
+        event : QtGui.QCloseEvent
+            The close event, which is accepted.
+        """
+        for (
+            _,
+            command_queue,
+        ) in self.queue_container.environment_command_queues.items():
+            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+
+        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.queue_container.controller_communication_queue.put(
+            TASK_NAME, (GlobalCommands.QUIT, None)
+        )
+
+        for command_queue in [
+            self.queue_container.acquisition_command_queue,
+            self.queue_container.output_command_queue,
+            self.queue_container.streaming_command_queue,
+        ]:
+            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+
+        event.accept()
+
+    # endregion
+
+    # region Deteriorated
     def event(self, event):
         """Overload event to capture the initial resizing of the window"""
         was_processed = super().event(event)
