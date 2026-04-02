@@ -40,7 +40,12 @@ import pyqtgraph
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
 from rattlesnake.rattlesnake import RattlesnakeState, RattlesnakeController
-from rattlesnake.utilities import DIRECTORY, RattlesnakeError, GlobalCommands
+from rattlesnake.utilities import (
+    DIRECTORY,
+    RattlesnakeError,
+    GlobalCommands,
+    VerboseMessageQueue,
+)
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
@@ -63,7 +68,7 @@ RATTLESNAKE_UI_PATH = os.path.join(
 
 
 # region Deteriorated
-class UpdaterSignals(QObject):
+class UpdaterSignals(QtCore.QObject):
     """Defines the signals that will be sent from the GUI Updater to the GUI
 
     Supported signals are:
@@ -75,11 +80,11 @@ class UpdaterSignals(QObject):
         `tuple` (widget_id,data)
     """
 
-    finished = Signal()
-    update = Signal(tuple)
+    finished = QtCore.Signal()
+    update = QtCore.Signal(tuple)
 
 
-class Updater(QRunnable):
+class Updater(QtCore.QRunnable):
     """Updater thread to collect results from the subsystems and reflect the
     changes in the GUI
     """
@@ -100,7 +105,7 @@ class Updater(QRunnable):
         self.signals = UpdaterSignals()
         self.verbose_queue = isinstance(self.update_queue, VerboseMessageQueue)
 
-    @Slot()
+    @QtCore.Slot()
     def run(self):
         """Continually capture update events from the queue"""
         while True:

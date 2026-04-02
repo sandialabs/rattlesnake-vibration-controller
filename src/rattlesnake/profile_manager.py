@@ -27,7 +27,7 @@ for control_type, command_type in ENVIRONMENT_COMMANDS.items():
                 GlobalCommands.START_ENVIRONMENT,
                 GlobalCommands.STOP_ENVIRONMENT,
                 UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
-                *command_type.valid_profile_commands(),
+                # *command_type.valid_profile_commands(),
             )
         }
     )
@@ -41,9 +41,9 @@ VALID_DATA = {
     GlobalCommands.STOP_ENVIRONMENT: type(None),
     # UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
 }
-for control_type, command_type in ENVIRONMENT_COMMANDS.items():
-    for command in command_type.valid_profile_commands():
-        VALID_DATA[command] = command_type.valid_data()[command]
+# for control_type, command_type in ENVIRONMENT_COMMANDS.items():
+#     for command in command_type.valid_profile_commands():
+#         VALID_DATA[command] = command_type.valid_data()[command]
 
 
 # region: ProfileEvent

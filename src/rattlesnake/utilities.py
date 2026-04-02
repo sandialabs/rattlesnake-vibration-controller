@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import importlib.util
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 import os
 import random

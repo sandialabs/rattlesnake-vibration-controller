@@ -1,7 +1,8 @@
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.utilities import QueueContainer, GlobalCommands
-from rattlesnake.environment.abstract_environment import EnvironmentInstructions
+
+# from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 
@@ -180,18 +181,18 @@ class ControllerProcess(AbstractMessageProcess):
             TASK_NAME, (GlobalCommands.STOP_SYSTEM_ID, True)
         )
 
-    def start_environment(self, data: tuple[str, EnvironmentInstructions]):
-        queue_name, instruction = data
-        if queue_name in self.environments_active:
-            raise RuntimeError(
-                f"Tried to start {queue_name} environment while it was still running"
-            )
-        self.queue_container.output_command_queue.put(
-            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name)
-        )
-        self.queue_container.environment_command_queues[queue_name].put(
-            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction)
-        )
+    # def start_environment(self, data: tuple[str, EnvironmentInstructions]):
+    #     queue_name, instruction = data
+    #     if queue_name in self.environments_active:
+    #         raise RuntimeError(
+    #             f"Tried to start {queue_name} environment while it was still running"
+    #         )
+    #     self.queue_container.output_command_queue.put(
+    #         TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name)
+    #     )
+    #     self.queue_container.environment_command_queues[queue_name].put(
+    #         TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction)
+    #     )
 
     def stop_environment(self, data: str):
         queue_name = data
