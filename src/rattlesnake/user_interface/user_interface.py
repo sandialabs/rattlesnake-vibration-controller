@@ -48,7 +48,9 @@ from qtpy.QtCore import (  # pylint: disable=no-name-in-module
     Slot,
 )
 
-from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS as all_environment_UIs
+from rattlesnake.user_interface.ui_registry import (
+    ENVIRONMENT_UIS as all_environment_UIs,
+)
 from rattlesnake.user_interface.ui_utilities import ui_path, UICommands
 from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
@@ -75,6 +77,7 @@ QDir.addSearchPath("images", os.path.join(directory, "themes", "images"))
 TASK_NAME = "UI"
 
 
+# region Deteriorated
 class UpdaterSignals(QObject):
     """Defines the signals that will be sent from the GUI Updater to the GUI
 
@@ -127,10 +130,16 @@ class Updater(QRunnable):
         time.sleep(1)
 
 
+# endregion
+
+
 class Ui(QtWidgets.QMainWindow):
     """Main user interface from which the controller will be controlled."""
 
-    def __init__(self, environments, queue_container: QueueContainer, profile_file=None):
+    # region Global
+    def __init__(
+        self, environments, queue_container: QueueContainer, profile_file=None
+    ):
         """
         Create the user interface with the specified parameters and queues
 
@@ -150,7 +159,9 @@ class Ui(QtWidgets.QMainWindow):
             # Store input data
             self._updated_size = False
             self.queue_container = queue_container
-            self.environment_types = {name: control_type for control_type, name in environments}
+            self.environment_types = {
+                name: control_type for control_type, name in environments
+            }
             self.environments = [name for control_type, name in environments]
             self.environment_metadata = {name: None for name in self.environments}
             self.profile_events = None
@@ -180,7 +191,9 @@ class Ui(QtWidgets.QMainWindow):
 
             # Remove the system ID and test prediction tab if not used.
             if self.system_id_environment_tabs.count() == 0:
-                self.rattlesnake_tabs.removeTab(self.rattlesnake_tabs.indexOf(self.system_id_tab))
+                self.rattlesnake_tabs.removeTab(
+                    self.rattlesnake_tabs.indexOf(self.system_id_tab)
+                )
                 self.has_system_id = False
                 self.complete_system_ids = None
             else:
@@ -196,17 +209,6 @@ class Ui(QtWidgets.QMainWindow):
                 self.has_test_predictions = False
             else:
                 self.has_test_predictions = True
-
-            # I might add this back in later, but for now we will just always show
-            # this tab.
-            # # If there is only one environment, remove the test profile tab
-            # if len(self.environments) == 1:
-            #     self.rattlesnake_tabs.removeTab(self.rattlesnake_tabs.indexOf(self.profile_tab))
-            #     # Also remove profile information from the run test page
-            #     self.run_profile_widget.hide()
-            #     self.has_test_profile = False
-            # else:
-            #     self.has_test_profile = True
 
             self.streaming_environment_select_combobox.addItems(self.environments)
 
@@ -289,7 +291,9 @@ class Ui(QtWidgets.QMainWindow):
                         elif name == "task_trigger_output_channel":
                             self.task_trigger_output_selector.setText(str(value))
                         elif name == "maximum_acquisition_processes":
-                            self.lanxi_maximum_acquisition_processes_selector.setValue(int(value))
+                            self.lanxi_maximum_acquisition_processes_selector.setValue(
+                                int(value)
+                            )
                         else:
                             print(f"Hardware sheet entry {row[0].value} not recognized")
                 # print('Initializing Data Acquisition')
@@ -297,7 +301,9 @@ class Ui(QtWidgets.QMainWindow):
                 # Now go through and do the environments
                 for environment_name, environment_ui in self.environment_uis.items():
                     # print('Setting Environment {:}'.format(environment_name))
-                    environment_ui.set_parameters_from_template(workbook[environment_name])
+                    environment_ui.set_parameters_from_template(
+                        workbook[environment_name]
+                    )
                     # TODO: maybe uncomment this later (auto-load FRF matrix to system id
                     # tab if using frf virtual hardware)
                     # NOTE: would need to fix an order of operations bug in the transient module
@@ -364,8 +370,12 @@ class Ui(QtWidgets.QMainWindow):
                     environment_combobox.addItem("Global")
                     for environment_name in self.environments:
                         environment_combobox.addItem(environment_name)
-                    environment_combobox.setCurrentIndex(environment_combobox.findText(environment))
-                    self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
+                    environment_combobox.setCurrentIndex(
+                        environment_combobox.findText(environment)
+                    )
+                    self.profile_table.setCellWidget(
+                        selected_row, 1, environment_combobox
+                    )
                     # create_environment_combobox_time = time.time()
                     # print('Time to Create Environment Combobox: {:}'.format(
                     #     create_environment_combobox_time-create_spinbox_time))
@@ -377,13 +387,18 @@ class Ui(QtWidgets.QMainWindow):
                             environment_combobox.currentIndex() - 1
                         ]
                         operations = [
-                            op for op in self.environment_uis[environment_name].command_map
+                            op
+                            for op in self.environment_uis[environment_name].command_map
                         ]
                     operation_combobox = QtWidgets.QComboBox()
                     for op in operations:
                         operation_combobox.addItem(op)
-                    operation_combobox.setCurrentIndex(operation_combobox.findText(operation))
-                    self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
+                    operation_combobox.setCurrentIndex(
+                        operation_combobox.findText(operation)
+                    )
+                    self.profile_table.setCellWidget(
+                        selected_row, 2, operation_combobox
+                    )
                     # create_operation_combobox_time = time.time()
                     # print('Time to Create Operation Combobox: {:}'.format(
                     #     create_operation_combobox_time-create_environment_combobox_time))
@@ -394,8 +409,12 @@ class Ui(QtWidgets.QMainWindow):
                     # print('Time to Data Entry: {:}'.format(
                     #     create_data_entry_time-create_operation_combobox_time))
                     timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
-                    environment_combobox.currentIndexChanged.connect(self.update_operations)
-                    operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
+                    environment_combobox.currentIndexChanged.connect(
+                        self.update_operations
+                    )
+                    operation_combobox.currentIndexChanged.connect(
+                        self.update_profile_plot
+                    )
                     # connect_callbacks_time = time.time()
                     # print('Time to Connect Callbacks: {:}'.format(
                     #     connect_callbacks_time-create_data_entry_time))
@@ -405,29 +424,6 @@ class Ui(QtWidgets.QMainWindow):
 
         except Exception:  # pylint: disable=broad-exception-caught
             print(traceback.format_exc())
-
-    def event(self, event):
-        """Overload event to capture the initial resizing of the window"""
-        was_processed = super().event(event)
-        if event.type() == QEvent.LayoutRequest:
-            if not self._updated_size:
-                print("Updating Size of Window")
-                self.resize(1500, 667)
-                self._updated_size = True
-        return was_processed
-
-    def log(self, string):
-        """Pass a message to the log_file_queue along with date/time and task name
-
-        Parameters
-        ----------
-        string : str
-            Message that will be written to the queue
-
-        """
-        self.queue_container.log_file_queue.put(
-            f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
-        )
 
     def complete_ui(self):
         """Helper function to complete setting up of the User Interface"""
@@ -471,7 +467,9 @@ class Ui(QtWidgets.QMainWindow):
         max_cpus = mp.cpu_count()
         self.lanxi_maximum_acquisition_processes_selector.setMaximum(max_cpus)
         self.lanxi_maximum_acquisition_processes_selector.setValue(
-            max_cpus - len(self.environments) if max_cpus > len(self.environments) else 1
+            max_cpus - len(self.environments)
+            if max_cpus > len(self.environments)
+            else 1
         )
 
     def connect_callbacks(self):
@@ -485,7 +483,9 @@ class Ui(QtWidgets.QMainWindow):
         self.ip_lookup_button.clicked.connect(self.ip_lookup)
         self.load_channel_table_button.clicked.connect(self.load_channel_table)
         self.save_channel_table_button.clicked.connect(self.save_channel_table)
-        self.initialize_data_acquisition_button.clicked.connect(self.initialize_data_acquisition)
+        self.initialize_data_acquisition_button.clicked.connect(
+            self.initialize_data_acquisition
+        )
         self.load_test_file_button.clicked.connect(self.load_test_file)
         self.hardware_selector.currentIndexChanged.connect(self.hardware_update)
         self.task_trigger_selector.currentIndexChanged.connect(self.task_trigger_update)
@@ -505,13 +505,17 @@ class Ui(QtWidgets.QMainWindow):
         self.channel_table_action_paste.triggered.connect(self.channel_table_paste)
         self.channel_table.addAction(self.channel_table_action_paste)
         # Delete
-        self.channel_table_action_delete = QtWidgets.QAction("Delete", self.channel_table)
+        self.channel_table_action_delete = QtWidgets.QAction(
+            "Delete", self.channel_table
+        )
         self.channel_table_action_delete.setShortcut("Del")
         self.channel_table_action_delete.triggered.connect(self.channel_table_delete)
         self.channel_table.addAction(self.channel_table_action_delete)
 
         # Control Definition Tab
-        self.initialize_environments_button.clicked.connect(self.initialize_environment_parameters)
+        self.initialize_environments_button.clicked.connect(
+            self.initialize_environment_parameters
+        )
 
         # Profile Callbacks
         self.initialize_profile_button.clicked.connect(self.initialize_profile)
@@ -521,12 +525,16 @@ class Ui(QtWidgets.QMainWindow):
         self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
 
         # Run Test Tab
-        self.select_streaming_file_button.clicked.connect(self.select_control_streaming_file)
+        self.select_streaming_file_button.clicked.connect(
+            self.select_control_streaming_file
+        )
         self.arm_test_button.clicked.connect(self.arm_test)
         self.disarm_test_button.clicked.connect(self.disarm_test)
         self.start_profile_button.clicked.connect(self.start_profile)
         self.stop_profile_button.clicked.connect(self.stop_profile)
-        self.manual_streaming_radiobutton.toggled.connect(self.show_hide_manual_streaming)
+        self.manual_streaming_radiobutton.toggled.connect(
+            self.show_hide_manual_streaming
+        )
         self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
 
         # GUI Updater Signals
@@ -535,20 +543,136 @@ class Ui(QtWidgets.QMainWindow):
             self.handle_controller_instructions
         )
 
-    # %% Utility Functions
-    def get_channel_table_strings(self):
-        """Collect the strings in the channel table"""
-        string_array = []
-        for row_idx in range(self.channel_table.rowCount()):
-            string_array.append([])
-            for col_idx in range(self.channel_table.columnCount()):
-                value = self.channel_table.item(row_idx, col_idx).text()
-                string_array[-1].append(value)
-        return string_array
+    def log(self, string):
+        """Pass a message to the log_file_queue along with date/time and task name
 
-    # %% Data Acquisition Callbacks
+        Parameters
+        ----------
+        string : str
+            Message that will be written to the queue
 
-    def load_channel_table(self, clicked, filename=None):  # pylint: disable=unused-argument
+        """
+        self.queue_container.log_file_queue.put(
+            f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
+        )
+
+    def stop_program(self):
+        """Callback to stop the entire program"""
+        self.close()
+
+    def update_gui(self, queue_data):
+        """Update the graphical interface for the main controller
+
+        Parameters
+        ----------
+        queue_data :
+            A 2-tuple consisting of ``(message,data)`` pairs where the message
+            denotes what to change and the data contains the information needed
+            to be displayed.
+
+        """
+        message, data = queue_data
+        #        self.log('Updating GUI {:}'.format(message))
+        if message == UICommands.ERROR:
+            error_message_qt(data[0], data[1])
+            return
+        elif message in self.environments:
+            self.environment_uis[message].update_gui(data)
+        elif message == UICommands.MONITOR:
+            if self.channel_monitor_window is not None:
+                if not self.channel_monitor_window.isVisible():
+                    self.channel_monitor_window = None
+                else:
+                    self.channel_monitor_window.update(data)
+        elif message == UICommands.UPDATE_METADATA:
+            environment_name, metadata = data
+            self.environment_metadata[environment_name] = metadata
+        elif message == UICommands.STOP:
+            self.disarm_test()
+        elif message == UICommands.ENABLE:
+            widget = getattr(self, data)
+            widget.setEnabled(True)
+        elif message == UICommands.DISABLE:
+            widget = getattr(self, data)
+            widget.setEnabled(False)
+        elif message == UICommands.ENABLE_TAB:
+            self.rattlesnake_tabs.setTabEnabled(data, True)
+            self.rattlesnake_tabs.setCurrentIndex(data)
+        elif message == UICommands.DISABLE_TAB:
+            self.rattlesnake_tabs.setTabEnabled(data, False)
+        else:
+            widget = getattr(self, message)
+            if isinstance(widget, QtWidgets.QDoubleSpinBox):
+                widget.setValue(data)
+            elif isinstance(widget, QtWidgets.QSpinBox):
+                widget.setValue(data)
+            elif isinstance(widget, QtWidgets.QLineEdit):
+                widget.setText(data)
+            elif isinstance(widget, QtWidgets.QListWidget):
+                widget.clear()
+                widget.addItems([f"{d:.3f}" for d in data])
+
+    def closeEvent(self, event):  # pylint: disable=invalid-name
+        """Event triggered when closing the software to gracefully shut down.
+
+        Parameters
+        ----------
+        event :
+            The close event, which is accepted.
+
+        """
+        for (
+            _,
+            command_queue,
+        ) in self.queue_container.environment_command_queues.items():
+            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+
+        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.queue_container.controller_communication_queue.put(
+            TASK_NAME, (GlobalCommands.QUIT, None)
+        )
+
+        for command_queue in [
+            self.queue_container.acquisition_command_queue,
+            self.queue_container.output_command_queue,
+            self.queue_container.streaming_command_queue,
+        ]:
+            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+
+        event.accept()
+
+    def change_color_theme(self, text: str):
+        """Updates the color scheme of the UI"""
+        if text == "Light":
+            self.setStyleSheet("")
+        elif text == "Dark":
+            dark_theme_path = os.path.join(directory, "themes", "dark_theme.txt")
+            with open(dark_theme_path, encoding="utf-8") as file:
+                stylesheet = file.read()
+            images_path = os.path.join(directory, "themes", "images").replace("\\", "/")
+            print(f"Images Path: {images_path}")
+            stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
+            self.setStyleSheet(stylesheet)
+
+    def show_channel_monitor(self):
+        """
+        Shows the channel monitor window
+        """
+        if (self.channel_monitor_window is None) or (
+            not self.channel_monitor_window.isVisible()
+        ):
+            self.channel_monitor_window = ChannelMonitor(
+                None, self.global_daq_parameters
+            )
+        else:
+            pass  # TODO Need to raise the window to the front, or close and reopen
+
+    # endregion
+
+    # region Hardware Tab
+    def load_channel_table(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         """Loads a channel table using a file dialog or the specified filename
 
         Parameters
@@ -560,7 +684,9 @@ class Ui(QtWidgets.QMainWindow):
             loading from a file (Default value = None).
 
         """
-        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
         num_environments = len(self.environments)
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -584,7 +710,9 @@ class Ui(QtWidgets.QMainWindow):
                 return
             worksheet = workbook[sheets[0]]
             data_array = []
-            environment_names = [worksheet.cell(2, 24 + i).value for i in range(num_environments)]
+            environment_names = [
+                worksheet.cell(2, 24 + i).value for i in range(num_environments)
+            ]
             for row in worksheet.iter_rows(min_row=3, max_col=23 + num_environments):
                 data_array.append([])
                 for col_idx, cell in enumerate(row):
@@ -600,7 +728,9 @@ class Ui(QtWidgets.QMainWindow):
                     if row_idx < 1:
                         continue
                     elif row_idx == 1:
-                        environment_names = [val.strip() for val in line.split(",")][23:]
+                        environment_names = [val.strip() for val in line.split(",")][
+                            23:
+                        ]
                         continue
                     data_array.append([val.strip() for val in line.split(",")])
             # Now split the data array off into the environment table
@@ -664,11 +794,17 @@ class Ui(QtWidgets.QMainWindow):
             worksheet.cell(row=1, column=5, value="Instrument Definition")
             worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
             worksheet.cell(row=1, column=12, value="Channel Definition")
-            worksheet.merge_cells(start_row=1, start_column=12, end_row=1, end_column=19)
+            worksheet.merge_cells(
+                start_row=1, start_column=12, end_row=1, end_column=19
+            )
             worksheet.cell(row=1, column=20, value="Output Feedback")
-            worksheet.merge_cells(start_row=1, start_column=20, end_row=1, end_column=21)
+            worksheet.merge_cells(
+                start_row=1, start_column=20, end_row=1, end_column=21
+            )
             worksheet.cell(row=1, column=22, value="Limits")
-            worksheet.merge_cells(start_row=1, start_column=22, end_row=1, end_column=23)
+            worksheet.merge_cells(
+                start_row=1, start_column=22, end_row=1, end_column=23
+            )
             for col_idx, val in enumerate(
                 [
                     "Channel Index",
@@ -712,7 +848,9 @@ class Ui(QtWidgets.QMainWindow):
                 for row_idx, row in enumerate(bool_array):
                     for col_idx, col in enumerate(row):
                         if col:
-                            worksheet.cell(row=row_idx + 3, column=col_idx + 24, value="X")
+                            worksheet.cell(
+                                row=row_idx + 3, column=col_idx + 24, value="X"
+                            )
             workbook.save(filename)
         elif file_type == ".csv" or file_type == ".txt":
             error_message_qt("Not Implemented!", "Output to CSV Not Implemented Yet!")
@@ -832,7 +970,9 @@ class Ui(QtWidgets.QMainWindow):
                         f"current environment ({self.environments[environment_index]})"
                     )
             for channel_index, bool_row in enumerate(
-                dataset.variables["environment_active_channels"][:, saved_environment_index]
+                dataset.variables["environment_active_channels"][
+                    :, saved_environment_index
+                ]
             ):
                 boolean = bool(bool_row)
                 widget = self.environment_channels_table.cellWidget(
@@ -854,7 +994,9 @@ class Ui(QtWidgets.QMainWindow):
             # Show the right widgets
             self.hardware_update(select_file=False)
         if self.hardware_selector.currentIndex() == 1:
-            self.lanxi_sample_rate_selector.setCurrentIndex(np.log2(dataset.sample_rate // 4096))
+            self.lanxi_sample_rate_selector.setCurrentIndex(
+                np.log2(dataset.sample_rate // 4096)
+            )
             self.lanxi_maximum_acquisition_processes_selector.setValue(
                 dataset.maximum_acquisition_processes
             )
@@ -869,73 +1011,6 @@ class Ui(QtWidgets.QMainWindow):
         for environment in self.environments:
             self.environment_uis[environment].retrieve_metadata(dataset)
         self.initialize_environment_parameters()
-
-    def channel_table_paste(self):
-        """Function to paste clipboard starting from top left cell"""
-        selection_range = self.channel_table.selectedRanges()
-        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        if selection_range:
-            # Get top left cell
-            top_left_row = selection_range[0].topRow()
-            top_left_column = selection_range[0].leftColumn()
-            # Get clipboard text
-            clipboard = QtWidgets.QApplication.clipboard()
-            if clipboard.mimeData().hasText():
-                clipboard_text = clipboard.text()
-                # Split clipboard text with newlines between rows
-                rows = clipboard_text.splitlines()
-                # Split clipboard text with tabs between columns
-                array_text = [row.split("\t") for row in rows]
-                # Paste the text into the table
-                for i, row in enumerate(array_text):
-                    for j, cell_text in enumerate(row):
-                        cell_text = cell_text if cell_text is not None else ""
-                        item = QtWidgets.QTableWidgetItem(cell_text)
-                        self.channel_table.setItem(top_left_row + i, top_left_column + j, item)
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-
-    def channel_table_copy(self):
-        """Function to copy text from channel table in a format that Excel recognizes"""
-        clipboard = QtWidgets.QApplication.clipboard()
-        selected_ranges = self.channel_table.selectedRanges()
-        if selected_ranges:
-            # Get selected range
-            selected_range = selected_ranges[0]
-            copied_text = ""
-            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
-            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
-            # Put tabs inbetween columns, newlines inbetween rows
-            copied_text = []
-            for row in rows:
-                row_data = []
-                for column in columns:
-                    item = self.channel_table.item(row, column)
-                    row_data.append(
-                        item.text() if item else ""
-                    )  # Empty cells should be "" not None
-                copied_text.append("\t".join(row_data))  # Tab betewen columns
-            copied_text = "\n".join(copied_text)  # Newline between rows
-            clipboard.setText(copied_text)
-
-    def channel_table_delete(self):
-        """Function to delete text from a channel table when delete is pressed"""
-        selection_range = self.channel_table.selectedRanges()
-        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        if selection_range:
-            # Get the selected range
-            selected_range = selection_range[0]
-            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
-            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
-            # Clear the selected cells
-            for row in rows:
-                for column in columns:
-                    clear_item = QtWidgets.QTableWidgetItem("")
-                    self.channel_table.setItem(row, column, clear_item)
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
 
     def hardware_update(self, current_index=None, select_file=True):
         """Callback to provide options when hardware is selected"""
@@ -1094,6 +1169,83 @@ class Ui(QtWidgets.QMainWindow):
                 "You have selected an invalid hardware type.  How did you do this?!",
             )
         self.task_trigger_update()
+
+    def channel_table_paste(self):
+        """Function to paste clipboard starting from top left cell"""
+        selection_range = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
+        if selection_range:
+            # Get top left cell
+            top_left_row = selection_range[0].topRow()
+            top_left_column = selection_range[0].leftColumn()
+            # Get clipboard text
+            clipboard = QtWidgets.QApplication.clipboard()
+            if clipboard.mimeData().hasText():
+                clipboard_text = clipboard.text()
+                # Split clipboard text with newlines between rows
+                rows = clipboard_text.splitlines()
+                # Split clipboard text with tabs between columns
+                array_text = [row.split("\t") for row in rows]
+                # Paste the text into the table
+                for i, row in enumerate(array_text):
+                    for j, cell_text in enumerate(row):
+                        cell_text = cell_text if cell_text is not None else ""
+                        item = QtWidgets.QTableWidgetItem(cell_text)
+                        self.channel_table.setItem(
+                            top_left_row + i, top_left_column + j, item
+                        )
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+
+    def channel_table_copy(self):
+        """Function to copy text from channel table in a format that Excel recognizes"""
+        clipboard = QtWidgets.QApplication.clipboard()
+        selected_ranges = self.channel_table.selectedRanges()
+        if selected_ranges:
+            # Get selected range
+            selected_range = selected_ranges[0]
+            copied_text = ""
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
+            # Put tabs inbetween columns, newlines inbetween rows
+            copied_text = []
+            for row in rows:
+                row_data = []
+                for column in columns:
+                    item = self.channel_table.item(row, column)
+                    row_data.append(
+                        item.text() if item else ""
+                    )  # Empty cells should be "" not None
+                copied_text.append("\t".join(row_data))  # Tab betewen columns
+            copied_text = "\n".join(copied_text)  # Newline between rows
+            clipboard.setText(copied_text)
+
+    def channel_table_delete(self):
+        """Function to delete text from a channel table when delete is pressed"""
+        selection_range = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
+        if selection_range:
+            # Get the selected range
+            selected_range = selection_range[0]
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
+            # Clear the selected cells
+            for row in rows:
+                for column in columns:
+                    clear_item = QtWidgets.QTableWidgetItem("")
+                    self.channel_table.setItem(row, column, clear_item)
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
 
     def ip_lookup(self):
         """Creates an IP Lookup window"""
@@ -1275,7 +1427,11 @@ class Ui(QtWidgets.QMainWindow):
                 environment_channel_list,
                 sample_rate,
                 round(sample_rate * self.time_per_read_selector.value()),
-                round(sample_rate * self.time_per_write_selector.value() * output_oversample),
+                round(
+                    sample_rate
+                    * self.time_per_write_selector.value()
+                    * output_oversample
+                ),
                 self.hardware_selector.currentIndex(),
                 self.hardware_file,
                 self.environments,
@@ -1297,7 +1453,9 @@ class Ui(QtWidgets.QMainWindow):
             channels,
             sample_rate,
             round(sample_rate * self.time_per_read_selector.value()),
-            round(sample_rate * self.time_per_write_selector.value() * output_oversample),
+            round(
+                sample_rate * self.time_per_write_selector.value() * output_oversample
+            ),
             self.hardware_selector.currentIndex(),
             self.hardware_file,
             self.environments,
@@ -1327,8 +1485,21 @@ class Ui(QtWidgets.QMainWindow):
         self.rattlesnake_tabs.setTabEnabled(1, True)
         self.rattlesnake_tabs.setCurrentIndex(1)
 
-    # %% Test Parameters Callbacks
+    def sync_environment_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.environment_channels_table.verticalScrollBar().setValue(
+            self.channel_table.verticalScrollBar().value()
+        )
 
+    def sync_channel_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.channel_table.verticalScrollBar().setValue(
+            self.environment_channels_table.verticalScrollBar().value()
+        )
+
+    # endregion
+
+    # region Environment Tab
     def initialize_environment_parameters(self):
         """Initializes the environment parameters
 
@@ -1336,7 +1507,9 @@ class Ui(QtWidgets.QMainWindow):
         environment by calling the initialize_environment function of each
         environment-specific user interface."""
         for environment in self.environments:
-            environment_parameters = self.environment_uis[environment].initialize_environment()
+            environment_parameters = self.environment_uis[
+                environment
+            ].initialize_environment()
             self.environment_metadata[environment] = environment_parameters
             self.queue_container.environment_command_queues[environment].put(
                 TASK_NAME,
@@ -1354,7 +1527,256 @@ class Ui(QtWidgets.QMainWindow):
         if self.has_test_predictions:
             self.rattlesnake_tabs.setTabEnabled(3, True)
 
-    # %% Run test callbacks
+    # endregion
+
+    # region Profile Tab
+    def initialize_profile(self):
+        """Initializes the profile list in the controller"""
+        self.profile_events = []
+        for row in range(self.profile_table.rowCount()):
+            self.profile_events.append(
+                [
+                    float(self.profile_table.cellWidget(row, 0).value()),
+                    self.profile_table.cellWidget(row, 1).currentText(),
+                    self.profile_table.cellWidget(row, 2).currentText(),
+                    self.profile_table.item(row, 3).text(),
+                ]
+            )
+        if len(self.profile_events) == 0:
+            self.run_profile_widget.hide()
+        else:
+            self.run_profile_widget.show()
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(
+            [
+                "{:0.2f} {:} {:} {:}".format(  # pylint: disable=consider-using-f-string
+                    *profile_event
+                )
+                for profile_event in sorted(self.profile_events)
+            ]
+        )
+        for i in range(self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, True)
+
+        self.rattlesnake_tabs.setCurrentIndex(self.rattlesnake_tabs.count() - 2)
+
+    def save_profile(self):
+        """Save the profile to a spreadsheet file"""
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save Test Profile", filter="Excel File (*.xlsx)"
+        )
+        if filename == "":
+            return
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Test Profile"
+        worksheet.cell(1, 1, "Time (s)")
+        worksheet.cell(1, 2, "Environment")
+        worksheet.cell(1, 3, "Operation")
+        worksheet.cell(1, 4, "Data")
+        for row in range(self.profile_table.rowCount()):
+            worksheet.cell(
+                row + 2, 1, float(self.profile_table.cellWidget(row, 0).value())
+            )
+            worksheet.cell(
+                row + 2, 2, self.profile_table.cellWidget(row, 1).currentText()
+            )
+            worksheet.cell(
+                row + 2, 3, self.profile_table.cellWidget(row, 2).currentText()
+            )
+            worksheet.cell(row + 2, 4, self.profile_table.item(row, 3).text())
+        workbook.save(filename)
+
+    def load_profile(self):
+        """Load a profile from a spreadsheet file"""
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Load Test Profile", filter="Excel File (*.xlsx)"
+        )
+        if filename == "":
+            return
+        workbook = openpyxl.load_workbook(filename)
+        profile_sheet = workbook["Test Profile"]
+        index = 2
+        while True:
+            timestamp = profile_sheet.cell(index, 1).value
+            environment = profile_sheet.cell(index, 2).value
+            operation = profile_sheet.cell(index, 3).value
+            data = profile_sheet.cell(index, 4).value
+            if timestamp is None or (
+                isinstance(timestamp, str) and timestamp.strip() == ""
+            ):
+                break
+            self.add_profile_event(None, timestamp, environment, operation, data)
+            index += 1
+
+    def add_profile_event(
+        self,
+        clicked=None,  # pylint: disable=unused-argument
+        timestamp=None,
+        environment=None,
+        operation=None,
+        data=None,
+    ):
+        """Adds an event to the profile either by clicking a button or by specifying it
+
+        Parameters
+        ----------
+        clicked :
+            The clicked event. (Default value = None)
+        timestamp :
+            Optional timestamp to give to the controller (Default value = None)
+        environment :
+            Optional environment the profile instruction corresponds to
+            (Default value = None)
+        operation :
+            Optional operation specified by the profile instruction
+            (Default value = None)
+        data :
+            Optional data needed by the operation (Default value = None)
+
+        """
+        # start_time = time.time()
+        # Create the row in the profile table
+        selected_row = self.profile_table.rowCount()
+        self.profile_table.insertRow(selected_row)
+        # insert_row_time = time.time()
+        # print('Time to Insert Row: {:}'.format(insert_row_time-start_time))
+        # First entry is a spinbox
+        timestamp_spinbox = QtWidgets.QDoubleSpinBox()
+        timestamp_spinbox.setMaximum(1e6)
+        self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
+        # create_spinbox_time = time.time()
+        # print('Time to Create Spinbox: {:}'.format(create_spinbox_time-insert_row_time))
+        # Next a combobox sets the environment
+        environment_combobox = QtWidgets.QComboBox()
+        environment_combobox.addItem("Global")
+        for environment_name in self.environments:
+            environment_combobox.addItem(environment_name)
+        self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
+        # create_environment_combobox_time = time.time()
+        # print('Time to Create Environment Combobox: {:}'.format(
+        #    create_environment_combobox_time-create_spinbox_time))
+        # Next a combobox sets the operation
+        operation_combobox = QtWidgets.QComboBox()
+        for op in self.command_map:
+            operation_combobox.addItem(op)
+        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
+        # create_operation_combobox_time = time.time()
+        # print('Time to Create Operation Combobox: {:}'.format(
+        #     create_operation_combobox_time-create_environment_combobox_time))
+        data_item = QtWidgets.QTableWidgetItem()
+        self.profile_table.setItem(selected_row, 3, data_item)
+        # create_data_entry_time = time.time()
+        # print('Time to Data Entry: {:}'.format(
+        #    create_data_entry_time-create_operation_combobox_time))
+        # Connect the callbacks
+        timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
+        environment_combobox.currentIndexChanged.connect(self.update_operations)
+        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
+        # connect_callbacks_time = time.time()
+        # print('Time to Connect Callbacks: {:}'.format(
+        #    connect_callbacks_time-create_data_entry_time))
+        # Initialize parameters if necessary
+        if timestamp is not None:
+            timestamp_spinbox.setValue(float(timestamp))
+        # initialize_time_time = time.time()
+        # print('Time to Initialize Timestamp: {:}'.format(
+        #     initialize_time_time-connect_callbacks_time))
+        if environment is not None:
+            environment_combobox.setCurrentIndex(
+                environment_combobox.findText(environment)
+            )
+        # initialize_environment_time = time.time()
+        # print('Time to Initialize Timestamp: {:}'.format(
+        #     initialize_environment_time-initialize_time_time))
+        if operation is not None:
+            operation_combobox.setCurrentIndex(operation_combobox.findText(operation))
+        # initialize_operation_time = time.time()
+        # print('Time to Initialize Timestamp: {:}'.format(
+        #     initialize_operation_time-initialize_environment_time))
+        if data is not None:
+            data_item.setText(str(data))
+        # initialize_data_time = time.time()
+        # print('Time to Initialize Data: {:}'.format(
+        #     initialize_data_time-initialize_operation_time))
+        # Update the plot
+        self.update_profile_plot()
+        # update_plot_time = time.time()
+        # print('Time to Update Plot: {:}'.format(update_plot_time-initialize_data_time))
+
+    def update_operations(self):
+        """Update profile operations given a selected environment"""
+        widget = self.sender()
+        if widget.currentIndex() == 0:
+            operations = [operation for operation in self.command_map]
+        else:
+            environment_name = self.environments[widget.currentIndex() - 1]
+            operations = [
+                operation
+                for operation in self.environment_uis[environment_name].command_map
+            ]
+        for row in range(self.profile_table.rowCount()):
+            if widget is self.profile_table.cellWidget(row, 1):
+                print(f"Found Widget at {row}")
+                break
+        operation_combobox = self.profile_table.cellWidget(row, 2)
+        operation_combobox.blockSignals(True)
+        operation_combobox.clear()
+        for operation in operations:
+            operation_combobox.addItem(operation)
+        operation_combobox.blockSignals(False)
+        self.update_profile_plot()
+
+    def update_profile_plot(self):
+        """Updates the plot of profile events"""
+        plot_item = self.profile_timeline_plot.getPlotItem()
+        plot_item.clear()
+        plot_item.showGrid(True, True, 0.25)
+        plot_item.disableAutoRange()
+        max_time = 0
+        for row in range(self.profile_table.rowCount()):
+            time_val = self.profile_table.cellWidget(row, 0).value()
+            if time_val > max_time:
+                max_time = time_val
+            plot_item.plot(
+                [time_val],
+                [self.profile_table.cellWidget(row, 1).currentIndex()],
+                pen=None,
+                symbol="o",
+                pxMode=True,
+            )
+            text_item = pyqtgraph.TextItem(
+                f"{row + 1}: "
+                + self.profile_table.cellWidget(row, 2).currentText()
+                + (
+                    ": " + self.profile_table.item(row, 3).text()
+                    if self.profile_table.item(row, 3).text().strip() != ""
+                    else ""
+                ),
+                color=(0, 0, 0),
+                angle=-15,
+            )
+            plot_item.addItem(text_item)
+            text_item.setPos(
+                time_val, self.profile_table.cellWidget(row, 1).currentIndex()
+            )
+        axis = plot_item.getAxis("left")
+        axis.setTicks(
+            [[(i, name) for i, name in enumerate(["Global"] + self.environments)], []]
+        )
+        plot_item.setXRange(0, max_time * 1.1)
+        plot_item.setYRange(-1, len(self.environments))
+
+    def remove_profile_event(self):
+        """Removes a profile event from the list of events"""
+        selected_row = self.profile_table.currentRow()
+        if selected_row >= 0:
+            self.profile_table.removeRow(selected_row)
+        self.update_profile_plot()
+
+    # endregion
+
+    # region Acquisition Tab
     def select_control_streaming_file(self):
         """Selects a file to stream data to disk"""
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -1463,28 +1885,6 @@ class Ui(QtWidgets.QMainWindow):
         self.profile_list_update_timer.timeout.connect(self.update_profile_list)
         self.profile_list_update_timer.start(250)
 
-    def fire_profile_event(self):
-        """Activates a given profile event"""
-        widget = self.sender()
-        environment_name = widget.environment
-        operation = widget.operation
-        data = widget.data
-        self.log(f"Profile Firing Event {environment_name} {operation} {data}")
-        if self.show_profile_change_checkbox.isChecked():
-            if not environment_name == "Global":
-                environment_index = self.environments.index(environment_name)
-                self.run_environment_tabs.setCurrentIndex(environment_index)
-        if environment_name == "Global":
-            if operation == "Start Streaming" and (
-                not self.profile_streaming_radiobutton.isChecked()
-            ):
-                return
-            self.command_map[operation]()
-        elif operation in ["Start Control", "Stop Control"]:
-            self.environment_uis[environment_name].command_map[operation]()
-        else:
-            self.environment_uis[environment_name].command_map[operation](data)
-
     def update_profile_list(self):
         """Updates the list of upcoming profile events."""
         profile_representation = []
@@ -1509,235 +1909,6 @@ class Ui(QtWidgets.QMainWindow):
         for timer in self.profile_timers:
             timer.stop()
         self.profile_list_update_timer.stop()
-
-    def initialize_profile(self):
-        """Initializes the profile list in the controller"""
-        self.profile_events = []
-        for row in range(self.profile_table.rowCount()):
-            self.profile_events.append(
-                [
-                    float(self.profile_table.cellWidget(row, 0).value()),
-                    self.profile_table.cellWidget(row, 1).currentText(),
-                    self.profile_table.cellWidget(row, 2).currentText(),
-                    self.profile_table.item(row, 3).text(),
-                ]
-            )
-        if len(self.profile_events) == 0:
-            self.run_profile_widget.hide()
-        else:
-            self.run_profile_widget.show()
-        self.upcoming_instructions_list.clear()
-        self.upcoming_instructions_list.addItems(
-            [
-                "{:0.2f} {:} {:} {:}".format(  # pylint: disable=consider-using-f-string
-                    *profile_event
-                )
-                for profile_event in sorted(self.profile_events)
-            ]
-        )
-        for i in range(self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, True)
-
-        self.rattlesnake_tabs.setCurrentIndex(self.rattlesnake_tabs.count() - 2)
-
-    def save_profile(self):
-        """Save the profile to a spreadsheet file"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Test Profile", filter="Excel File (*.xlsx)"
-        )
-        if filename == "":
-            return
-        workbook = openpyxl.Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Test Profile"
-        worksheet.cell(1, 1, "Time (s)")
-        worksheet.cell(1, 2, "Environment")
-        worksheet.cell(1, 3, "Operation")
-        worksheet.cell(1, 4, "Data")
-        for row in range(self.profile_table.rowCount()):
-            worksheet.cell(row + 2, 1, float(self.profile_table.cellWidget(row, 0).value()))
-            worksheet.cell(row + 2, 2, self.profile_table.cellWidget(row, 1).currentText())
-            worksheet.cell(row + 2, 3, self.profile_table.cellWidget(row, 2).currentText())
-            worksheet.cell(row + 2, 4, self.profile_table.item(row, 3).text())
-        workbook.save(filename)
-
-    def load_profile(self):
-        """Load a profile from a spreadsheet file"""
-        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Load Test Profile", filter="Excel File (*.xlsx)"
-        )
-        if filename == "":
-            return
-        workbook = openpyxl.load_workbook(filename)
-        profile_sheet = workbook["Test Profile"]
-        index = 2
-        while True:
-            timestamp = profile_sheet.cell(index, 1).value
-            environment = profile_sheet.cell(index, 2).value
-            operation = profile_sheet.cell(index, 3).value
-            data = profile_sheet.cell(index, 4).value
-            if timestamp is None or (isinstance(timestamp, str) and timestamp.strip() == ""):
-                break
-            self.add_profile_event(None, timestamp, environment, operation, data)
-            index += 1
-
-    def add_profile_event(
-        self,
-        clicked=None,  # pylint: disable=unused-argument
-        timestamp=None,
-        environment=None,
-        operation=None,
-        data=None,
-    ):
-        """Adds an event to the profile either by clicking a button or by specifying it
-
-        Parameters
-        ----------
-        clicked :
-            The clicked event. (Default value = None)
-        timestamp :
-            Optional timestamp to give to the controller (Default value = None)
-        environment :
-            Optional environment the profile instruction corresponds to
-            (Default value = None)
-        operation :
-            Optional operation specified by the profile instruction
-            (Default value = None)
-        data :
-            Optional data needed by the operation (Default value = None)
-
-        """
-        # start_time = time.time()
-        # Create the row in the profile table
-        selected_row = self.profile_table.rowCount()
-        self.profile_table.insertRow(selected_row)
-        # insert_row_time = time.time()
-        # print('Time to Insert Row: {:}'.format(insert_row_time-start_time))
-        # First entry is a spinbox
-        timestamp_spinbox = QtWidgets.QDoubleSpinBox()
-        timestamp_spinbox.setMaximum(1e6)
-        self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
-        # create_spinbox_time = time.time()
-        # print('Time to Create Spinbox: {:}'.format(create_spinbox_time-insert_row_time))
-        # Next a combobox sets the environment
-        environment_combobox = QtWidgets.QComboBox()
-        environment_combobox.addItem("Global")
-        for environment_name in self.environments:
-            environment_combobox.addItem(environment_name)
-        self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
-        # create_environment_combobox_time = time.time()
-        # print('Time to Create Environment Combobox: {:}'.format(
-        #    create_environment_combobox_time-create_spinbox_time))
-        # Next a combobox sets the operation
-        operation_combobox = QtWidgets.QComboBox()
-        for op in self.command_map:
-            operation_combobox.addItem(op)
-        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
-        # create_operation_combobox_time = time.time()
-        # print('Time to Create Operation Combobox: {:}'.format(
-        #     create_operation_combobox_time-create_environment_combobox_time))
-        data_item = QtWidgets.QTableWidgetItem()
-        self.profile_table.setItem(selected_row, 3, data_item)
-        # create_data_entry_time = time.time()
-        # print('Time to Data Entry: {:}'.format(
-        #    create_data_entry_time-create_operation_combobox_time))
-        # Connect the callbacks
-        timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
-        environment_combobox.currentIndexChanged.connect(self.update_operations)
-        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
-        # connect_callbacks_time = time.time()
-        # print('Time to Connect Callbacks: {:}'.format(
-        #    connect_callbacks_time-create_data_entry_time))
-        # Initialize parameters if necessary
-        if timestamp is not None:
-            timestamp_spinbox.setValue(float(timestamp))
-        # initialize_time_time = time.time()
-        # print('Time to Initialize Timestamp: {:}'.format(
-        #     initialize_time_time-connect_callbacks_time))
-        if environment is not None:
-            environment_combobox.setCurrentIndex(environment_combobox.findText(environment))
-        # initialize_environment_time = time.time()
-        # print('Time to Initialize Timestamp: {:}'.format(
-        #     initialize_environment_time-initialize_time_time))
-        if operation is not None:
-            operation_combobox.setCurrentIndex(operation_combobox.findText(operation))
-        # initialize_operation_time = time.time()
-        # print('Time to Initialize Timestamp: {:}'.format(
-        #     initialize_operation_time-initialize_environment_time))
-        if data is not None:
-            data_item.setText(str(data))
-        # initialize_data_time = time.time()
-        # print('Time to Initialize Data: {:}'.format(
-        #     initialize_data_time-initialize_operation_time))
-        # Update the plot
-        self.update_profile_plot()
-        # update_plot_time = time.time()
-        # print('Time to Update Plot: {:}'.format(update_plot_time-initialize_data_time))
-
-    def update_operations(self):
-        """Update profile operations given a selected environment"""
-        widget = self.sender()
-        if widget.currentIndex() == 0:
-            operations = [operation for operation in self.command_map]
-        else:
-            environment_name = self.environments[widget.currentIndex() - 1]
-            operations = [
-                operation for operation in self.environment_uis[environment_name].command_map
-            ]
-        for row in range(self.profile_table.rowCount()):
-            if widget is self.profile_table.cellWidget(row, 1):
-                print(f"Found Widget at {row}")
-                break
-        operation_combobox = self.profile_table.cellWidget(row, 2)
-        operation_combobox.blockSignals(True)
-        operation_combobox.clear()
-        for operation in operations:
-            operation_combobox.addItem(operation)
-        operation_combobox.blockSignals(False)
-        self.update_profile_plot()
-
-    def update_profile_plot(self):
-        """Updates the plot of profile events"""
-        plot_item = self.profile_timeline_plot.getPlotItem()
-        plot_item.clear()
-        plot_item.showGrid(True, True, 0.25)
-        plot_item.disableAutoRange()
-        max_time = 0
-        for row in range(self.profile_table.rowCount()):
-            time_val = self.profile_table.cellWidget(row, 0).value()
-            if time_val > max_time:
-                max_time = time_val
-            plot_item.plot(
-                [time_val],
-                [self.profile_table.cellWidget(row, 1).currentIndex()],
-                pen=None,
-                symbol="o",
-                pxMode=True,
-            )
-            text_item = pyqtgraph.TextItem(
-                f"{row + 1}: "
-                + self.profile_table.cellWidget(row, 2).currentText()
-                + (
-                    ": " + self.profile_table.item(row, 3).text()
-                    if self.profile_table.item(row, 3).text().strip() != ""
-                    else ""
-                ),
-                color=(0, 0, 0),
-                angle=-15,
-            )
-            plot_item.addItem(text_item)
-            text_item.setPos(time_val, self.profile_table.cellWidget(row, 1).currentIndex())
-        axis = plot_item.getAxis("left")
-        axis.setTicks([[(i, name) for i, name in enumerate(["Global"] + self.environments)], []])
-        plot_item.setXRange(0, max_time * 1.1)
-        plot_item.setYRange(-1, len(self.environments))
-
-    def remove_profile_event(self):
-        """Removes a profile event from the list of events"""
-        selected_row = self.profile_table.currentRow()
-        if selected_row >= 0:
-            self.profile_table.removeRow(selected_row)
-        self.update_profile_plot()
 
     def start_streaming(self):
         """Tells acquisition to start sending data to streaming"""
@@ -1771,76 +1942,50 @@ class Ui(QtWidgets.QMainWindow):
                 TASK_NAME, (GlobalCommands.START_STREAMING, None)
             )
 
-    # %% Other Callbacks
-    def sync_environment_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.environment_channels_table.verticalScrollBar().setValue(
-            self.channel_table.verticalScrollBar().value()
-        )
+    # endregion
 
-    def sync_channel_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.channel_table.verticalScrollBar().setValue(
-            self.environment_channels_table.verticalScrollBar().value()
-        )
+    # region: Deteriorated
+    def event(self, event):
+        """Overload event to capture the initial resizing of the window"""
+        was_processed = super().event(event)
+        if event.type() == QEvent.LayoutRequest:
+            if not self._updated_size:
+                print("Updating Size of Window")
+                self.resize(1500, 667)
+                self._updated_size = True
+        return was_processed
 
-    def stop_program(self):
-        """Callback to stop the entire program"""
-        self.close()
+    def get_channel_table_strings(self):
+        """Collect the strings in the channel table"""
+        string_array = []
+        for row_idx in range(self.channel_table.rowCount()):
+            string_array.append([])
+            for col_idx in range(self.channel_table.columnCount()):
+                value = self.channel_table.item(row_idx, col_idx).text()
+                string_array[-1].append(value)
+        return string_array
 
-    def update_gui(self, queue_data):
-        """Update the graphical interface for the main controller
-
-        Parameters
-        ----------
-        queue_data :
-            A 2-tuple consisting of ``(message,data)`` pairs where the message
-            denotes what to change and the data contains the information needed
-            to be displayed.
-
-        """
-        message, data = queue_data
-        #        self.log('Updating GUI {:}'.format(message))
-        if message == UICommands.ERROR:
-            error_message_qt(data[0], data[1])
-            return
-        elif message in self.environments:
-            self.environment_uis[message].update_gui(data)
-        elif message == UICommands.MONITOR:
-            if self.channel_monitor_window is not None:
-                if not self.channel_monitor_window.isVisible():
-                    self.channel_monitor_window = None
-                else:
-                    self.channel_monitor_window.update(data)
-        elif message == UICommands.UPDATE_METADATA:
-            environment_name, metadata = data
-            self.environment_metadata[environment_name] = metadata
-        elif message == UICommands.STOP:
-            self.disarm_test()
-        elif message == UICommands.ENABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(True)
-        elif message == UICommands.DISABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(False)
-        elif message == UICommands.ENABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, True)
-            self.rattlesnake_tabs.setCurrentIndex(data)
-        elif message == UICommands.DISABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, False)
+    def fire_profile_event(self):
+        """Activates a given profile event"""
+        widget = self.sender()
+        environment_name = widget.environment
+        operation = widget.operation
+        data = widget.data
+        self.log(f"Profile Firing Event {environment_name} {operation} {data}")
+        if self.show_profile_change_checkbox.isChecked():
+            if not environment_name == "Global":
+                environment_index = self.environments.index(environment_name)
+                self.run_environment_tabs.setCurrentIndex(environment_index)
+        if environment_name == "Global":
+            if operation == "Start Streaming" and (
+                not self.profile_streaming_radiobutton.isChecked()
+            ):
+                return
+            self.command_map[operation]()
+        elif operation in ["Start Control", "Stop Control"]:
+            self.environment_uis[environment_name].command_map[operation]()
         else:
-            widget = getattr(self, message)
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
-
-    #        self.log('Update took {:} seconds'.format(time.time()-start_time))
+            self.environment_uis[environment_name].command_map[operation](data)
 
     def handle_controller_instructions(self, queue_data):
         """Handler function for global controller instructions
@@ -1920,57 +2065,9 @@ class Ui(QtWidgets.QMainWindow):
             environment_name = data
             if (
                 self.test_level_streaming_radiobutton.isChecked()
-                and self.streaming_environment_select_combobox.currentText() == environment_name
+                and self.streaming_environment_select_combobox.currentText()
+                == environment_name
             ):
                 self.start_streaming()
 
-    def closeEvent(self, event):  # pylint: disable=invalid-name
-        """Event triggered when closing the software to gracefully shut down.
-
-        Parameters
-        ----------
-        event :
-            The close event, which is accepted.
-
-        """
-        for (
-            _,
-            command_queue,
-        ) in self.queue_container.environment_command_queues.items():
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-
-        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.QUIT, None)
-        )
-
-        for command_queue in [
-            self.queue_container.acquisition_command_queue,
-            self.queue_container.output_command_queue,
-            self.queue_container.streaming_command_queue,
-        ]:
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-
-        event.accept()
-
-    def change_color_theme(self, text: str):
-        """Updates the color scheme of the UI"""
-        if text == "Light":
-            self.setStyleSheet("")
-        elif text == "Dark":
-            dark_theme_path = os.path.join(directory, "themes", "dark_theme.txt")
-            with open(dark_theme_path, encoding="utf-8") as file:
-                stylesheet = file.read()
-            images_path = os.path.join(directory, "themes", "images").replace("\\", "/")
-            print(f"Images Path: {images_path}")
-            stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
-            self.setStyleSheet(stylesheet)
-
-    def show_channel_monitor(self):
-        """
-        Shows the channel monitor window
-        """
-        if (self.channel_monitor_window is None) or (not self.channel_monitor_window.isVisible()):
-            self.channel_monitor_window = ChannelMonitor(None, self.global_daq_parameters)
-        else:
-            pass  # TODO Need to raise the window to the front, or close and reopen
+    # endregion

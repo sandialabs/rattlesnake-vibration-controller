@@ -75,9 +75,13 @@ def main():
     log_file_process.start()
 
     # Set up the other command queues
-    acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
+    acquisition_command_queue = VerboseMessageQueue(
+        log_file_queue, "Acquisition Command Queue"
+    )
     output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
-    streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
+    streaming_command_queue = VerboseMessageQueue(
+        log_file_queue, "Streaming Command Queue"
+    )
 
     # Set up synchronization queues
     input_output_sync_queue = mp.Queue()
@@ -169,7 +173,9 @@ def main():
     log_file_queue.put(f"{datetime.datetime.now()}: Joining Acquisition Process\n")
     acquisition_proc.join(timeout=5)
     if acquisition_proc.is_alive():
-        log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Acquisition Process\n")
+        log_file_queue.put(
+            f"{datetime.datetime.now()}: Force Closing Acquisition Process\n"
+        )
         acquisition_proc.terminate()
         acquisition_proc.join()
     log_file_queue.put(f"{datetime.datetime.now()}: Joining Output Process\n")
@@ -181,11 +187,15 @@ def main():
     log_file_queue.put(f"{datetime.datetime.now()}: Joining Streaming Process\n")
     streaming_proc.join(timeout=5)
     if streaming_proc.is_alive():
-        log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Streaming Process\n")
+        log_file_queue.put(
+            f"{datetime.datetime.now()}: Force Closing Streaming Process\n"
+        )
         streaming_proc.terminate()
         streaming_proc.join()
     for environment_name, environment_process in environment_processes.items():
-        log_file_queue.put(f"{datetime.datetime.now()}: Joining {environment_name} Process\n")
+        log_file_queue.put(
+            f"{datetime.datetime.now()}: Joining {environment_name} Process\n"
+        )
         environment_process.join(timeout=5)
         if environment_process.is_alive():
             log_file_queue.put(
