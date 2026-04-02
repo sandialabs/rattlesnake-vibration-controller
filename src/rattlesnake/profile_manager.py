@@ -1,17 +1,25 @@
-from rattlesnake.utilities import RattlesnakeError, QueueContainer, GlobalCommands
-from rattlesnake.environment.abstract_environment import EnvironmentInstructions
-from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
-from rattlesnake.environment.time_environment import TimeCommands
-from rattlesnake.environment.sine_environment import SineCommands
-from rattlesnake.user_interface.ui_utilities import UICommands
-import threading
-from typing import List
 from datetime import datetime
+from typing import List
+import threading
+
+# from rattlesnake.environment.abstract_environment import EnvironmentInstructions
+from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
+
+# from rattlesnake.environment.environment_utilities import ControlTypes
+# from rattlesnake.environment.sine_environment import SineCommands
+# from rattlesnake.environment.time_environment import TimeCommands
+from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
 
 EXTRA_CLOSEOUT_TIME = 0.1  # Adds seconds to let the last profile event happen
 TASK_NAME = "Profile Manager"
-VALID_COMMANDS = {"Global": (GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING)}
+VALID_COMMANDS = {
+    "Global": (
+        GlobalCommands.STOP_HARDWARE,
+        GlobalCommands.START_STREAMING,
+        GlobalCommands.STOP_STREAMING,
+    )
+}
 for control_type, command_type in ENVIRONMENT_COMMANDS.items():
     VALID_COMMANDS.update(
         {
@@ -29,9 +37,9 @@ VALID_DATA = {
     GlobalCommands.STOP_HARDWARE: type(None),
     GlobalCommands.START_STREAMING: type(None),
     GlobalCommands.STOP_STREAMING: type(None),
-    GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions,
+    # GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions,
     GlobalCommands.STOP_ENVIRONMENT: type(None),
-    UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
+    # UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
 }
 for control_type, command_type in ENVIRONMENT_COMMANDS.items():
     for command in command_type.valid_profile_commands():
@@ -59,30 +67,46 @@ class ProfileEvent:
     def validate(self):
         # Check if environment_name is a string
         if not isinstance(self.environment_name, str):
-            raise RattlesnakeError(f"{self.environment_name} is not a valid environment_name for a profile event")
+            raise RattlesnakeError(
+                f"{self.environment_name} is not a valid environment_name for a profile event"
+            )
         # Check if timestamp is a number
         if not isinstance(self.timestamp, (int, float)) or self.timestamp < 0:
-            raise RattlesnakeError(f"{self.environment_name} profile event was not given a valid timestamp")
+            raise RattlesnakeError(
+                f"{self.environment_name} profile event was not given a valid timestamp"
+            )
         # Check if a valid environment_type was given
         if self.environment_type not in VALID_COMMANDS.keys():
-            raise RattlesnakeError(f"{self.environment_name} not given a valid environment type: {self.environment_type}")
+            raise RattlesnakeError(
+                f"{self.environment_name} not given a valid environment type: {self.environment_type}"
+            )
         # Check if the environment_type has logic for that given command
         if self.command not in VALID_COMMANDS[self.environment_type]:
-            raise RattlesnakeError(f"{self.command} is not a valid command for {self.environment_name}")
+            raise RattlesnakeError(
+                f"{self.command} is not a valid command for {self.environment_name}"
+            )
         # Check if the environment_manager assigned a queue_name to the event yet
         if not self.queue_name:
-            raise RattlesnakeError(f"{self.environment_name} was not given a valid queue_name before assignment")
+            raise RattlesnakeError(
+                f"{self.environment_name} was not given a valid queue_name before assignment"
+            )
         # Validate data type going into command
         if self.command in VALID_DATA.keys():
             valid_data_type = VALID_DATA[self.command]
             if not isinstance(self.data, valid_data_type):
-                raise RattlesnakeError(f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}.")
+                raise RattlesnakeError(
+                    f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}."
+                )
 
-            if valid_data_type is EnvironmentInstructions:
-                if not self.data.environment_name == self.environment_name:
-                    raise RattlesnakeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
-                if not self.data.environment_type == self.environment_type:
-                    raise RattlesnakeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
+            # if valid_data_type is EnvironmentInstructions:
+            #     if not self.data.environment_name == self.environment_name:
+            #         raise RattlesnakeError(
+            #             f"Invalid environment instruction assigned to {self.environment_name} profile event"
+            #         )
+            #     if not self.data.environment_type == self.environment_type:
+            #         raise RattlesnakeError(
+            #             f"Invalid environment instruction assigned to {self.environment_name} profile event"
+            #         )
 
         return True
 
@@ -103,7 +127,9 @@ class ProfileManager:
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
         self.command_map[GlobalCommands.STOP_ENVIRONMENT] = self.stop_environment
         for command_type in ENVIRONMENT_COMMANDS.values():
-            self.command_map.update({command: self.send_environment_command for command in command_type})
+            self.command_map.update(
+                {command: self.send_environment_command for command in command_type}
+            )
 
     @property
     def log_file_queue(self):
@@ -121,12 +147,16 @@ class ProfileManager:
             # Validate profile event
             valid_profile = profile_event.validate()
             if not valid_profile:
-                raise RattlesnakeError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
+                raise RattlesnakeError(
+                    "Rattlesnake.set_profile requires a valid list of ProfileEvents"
+                )
 
             # Validate command has been implemented in profile_manager
             command = profile_event.command
             if command not in self.command_map.keys():
-                raise RattlesnakeError(f"No profile event has been implemented for {profile_event.command}")
+                raise RattlesnakeError(
+                    f"No profile event has been implemented for {profile_event.command}"
+                )
 
         # Sort profile_event_list by timestamp
         profile_event_list.sort(key=lambda event: event.timestamp)
@@ -145,7 +175,9 @@ class ProfileManager:
             data = profile_event.data
 
             # Fire event
-            timer = threading.Timer(timestamp, self.fire_profile_event, args=(queue_name, command, data))
+            timer = threading.Timer(
+                timestamp, self.fire_profile_event, args=(queue_name, command, data)
+            )
             timer.start()
             self.profile_timers.append(timer)
 
@@ -153,7 +185,9 @@ class ProfileManager:
                 max_timestamp = timestamp
 
         # Fire a last profile event to tell Rattlesnake it is good to stop_acquisition
-        timer = threading.Timer(max_timestamp + EXTRA_CLOSEOUT_TIME, self.fire_closeout_event)
+        timer = threading.Timer(
+            max_timestamp + EXTRA_CLOSEOUT_TIME, self.fire_closeout_event
+        )
         timer.start()
         self.profile_timers.append(timer)
 
@@ -172,26 +206,43 @@ class ProfileManager:
         self.profile_timers.append(timer)
 
     def stop_hardware(self, queue_name: str, command: GlobalCommands, data: None):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
+        self.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
+        )
 
     def start_streaming(self, queue_name: str, command: GlobalCommands, data: None):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, False))
+        self.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.START_STREAMING, False)
+        )
 
     def stop_streaming(self, queue_name: str, command: GlobalCommands, data: None):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
+        self.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
+        )
 
-    def start_environment(self, queue_name: str, command: GlobalCommands, data: EnvironmentInstructions):
-        instructions = data
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions)))
+    # def start_environment(
+    #     self, queue_name: str, command: GlobalCommands, data: EnvironmentInstructions
+    # ):
+    #     instructions = data
+    #     self.controller_command_queue.put(
+    #         TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions))
+    #     )
 
     def stop_environment(self, queue_name: str, command: GlobalCommands, data: None):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
+        self.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name)
+        )
 
     def send_environment_command(self, queue_name: str, command: GlobalCommands, data):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.SEND_ENVIRONMENT_COMMAND, (queue_name, command, data)))
+        self.controller_command_queue.put(
+            TASK_NAME,
+            (GlobalCommands.SEND_ENVIRONMENT_COMMAND, (queue_name, command, data)),
+        )
 
     def fire_closeout_event(self):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.PROFILE_CLOSEOUT, None))
+        self.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.PROFILE_CLOSEOUT, None)
+        )
 
     def log(self, message):
         """Write a message to the log file

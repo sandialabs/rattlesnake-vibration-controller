@@ -30,8 +30,9 @@ from rattlesnake.process.controller import controller_process
 #     EnvironmentInstructions,
 #     EnvironmentMetadata,
 # )
-# from rattlesnake.environment_manager import EnvironmentManager
-# from rattlesnake.profile_manager import ProfileEvent, ProfileManager
+from rattlesnake.environment_manager import EnvironmentManager
+from rattlesnake.profile_manager import ProfileEvent, ProfileManager
+
 # from rattlesnake.load_utilities import (
 #     load_metadata_from_netcdf,
 #     load_metadata_from_worksheet,
