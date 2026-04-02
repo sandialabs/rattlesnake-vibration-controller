@@ -28,7 +28,7 @@ import numpy as np
 import pyqtgraph
 import requests
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
+from qtpy.QtCore import Qt, QTimer
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 from enum import Enum
@@ -47,13 +47,24 @@ from rattlesnake.utilities import (
 # region Global
 class UICommands(Enum):
     ERROR = -1
-    MONITOR = 0
-    UPDATE_METADATA = 1
-    STOP = 2
-    ENABLE = 3
-    DISABLE = 4
-    ENABLE_TAB = 5
-    DISABLE_TAB = 6
+    ENABLE = 0
+    DISABLE = 1
+    MONITOR = 2
+    ENABLE_TAB = 3
+    DISABLE_TAB = 4
+    SET_ATTR = 5
+    STOP = 6
+    HARDWARE_STARTED = 7
+    HARDWARE_ENDED = 8
+    SET_ENVIRONMENT_INSTRUCTIONS = 9
+    COMPLETED_SYSTEM_ID = 10
+    ENVIRONMENT_STARTED = 11
+    ENVIRONMENT_ENDED = 12
+
+    @property
+    def label(self):
+        """Used by UI as names for"""
+        return self.name.replace("_", " ").title()
 
 
 ACQUISITION_FRAMES_TO_DISPLAY = 4
