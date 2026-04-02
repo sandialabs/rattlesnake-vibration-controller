@@ -36,7 +36,7 @@ import netCDF4
 import numpy as np
 import openpyxl
 import pyqtgraph
-from qtpy import QtGui, QtWidgets, uic
+from qtpy import QtGui, QtWidgets, uic, QtCore
 from qtpy.QtCore import (  # pylint: disable=no-name-in-module
     QDir,
     QEvent,
@@ -60,6 +60,7 @@ from rattlesnake.user_interface.ui_utilities import (
     get_table_bools,
 )
 from rattlesnake.utilities import (
+    DIRECTORY,
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,
@@ -67,14 +68,17 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
     error_message_qt,
 )
+from rattlesnake.rattlesnake import Rattlesnake
 
 pyqtgraph.setConfigOption("background", "w")
 pyqtgraph.setConfigOption("foreground", "k")
 
-directory = os.path.split(__file__)[0]
-QDir.addSearchPath("images", os.path.join(directory, "themes", "images"))
+QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
 
 TASK_NAME = "UI"
+RATTLESNAKE_UI_PATH = os.path.join(
+    DIRECTORY, "ui_files", "combined_environments_controller.ui"
+)
 
 
 # region Deteriorated
@@ -134,281 +138,54 @@ class Updater(QRunnable):
 
 
 class RattlesnakeUI(QtWidgets.QMainWindow):
-    """Main user interface from which the controller will be controlled."""
+    """Main user interface from which the Rattlesnake object is controlled."""
 
     # region Global
-    def __init__(
-        self, environments, queue_container: QueueContainer, profile_file=None
-    ):
-        try:
-            # Store input data
-            self._updated_size = False
-            self.queue_container = queue_container
-            self.environment_types = {
-                name: control_type for control_type, name in environments
-            }
-            self.environments = [name for control_type, name in environments]
-            self.environment_metadata = {name: None for name in self.environments}
-            self.profile_events = None
-            self.profile_timers = None
-            self.profile_list_update_timer = None
-            self.channel_monitor_window = None
-            self.lanxi_ip_addresses = []
+    def __init__(self, rattlesnake: Rattlesnake):
+        """
+        Initializes user interface from an existing Rattlesnake object.
 
-            # Create the user interface
-            super(Ui, self).__init__()
-            uic.loadUi(ui_path, self)
+        The rattlesnake object is created outside the UI so that the window can
+        close without having to wait for the full rattlesnake.shutdown event to
+        occur
 
-            # Add tabs to the empty widgets based on the environments
-            self.environment_uis = {}
-            for environment_name, environment_type in self.environment_types.items():
-                environment_ui = all_environment_UIs[environment_type]
-                self.environment_uis[environment_name] = environment_ui(
-                    environment_name,
-                    self.environment_definition_environment_tabs,
-                    self.system_id_environment_tabs,
-                    self.test_prediction_environment_tabs,
-                    self.run_environment_tabs,
-                    self.queue_container.environment_command_queues[environment_name],
-                    self.queue_container.controller_communication_queue,
-                    self.queue_container.log_file_queue,
-                )
+        Parameters
+        ----------
+        rattlesnake : Rattlesnake
+            The rattlesnake object that the UI is going to represent
+        """
+        super(RattlesnakeUI, self).__init__()
 
-            # Remove the system ID and test prediction tab if not used.
-            if self.system_id_environment_tabs.count() == 0:
-                self.rattlesnake_tabs.removeTab(
-                    self.rattlesnake_tabs.indexOf(self.system_id_tab)
-                )
-                self.has_system_id = False
-                self.complete_system_ids = None
-            else:
-                self.has_system_id = True
-                self.complete_system_ids = {
-                    self.system_id_environment_tabs.tabText(i): False
-                    for i in range(self.system_id_environment_tabs.count())
-                }
-            if self.test_prediction_environment_tabs.count() == 0:
-                self.rattlesnake_tabs.removeTab(
-                    self.rattlesnake_tabs.indexOf(self.test_prediction_tab)
-                )
-                self.has_test_predictions = False
-            else:
-                self.has_test_predictions = True
+        uic.loadUi(RATTLESNAKE_UI_PATH, self)
 
-            self.streaming_environment_select_combobox.addItems(self.environments)
+        # Communication objects
+        self.rattlesnake = rattlesnake
+        self.rattlesnake.clear_blocking()
+        self.environment_uis = {}
+        self.profile_table_list = []
+        self.profile_timer_list = []
+        self.theme = "Light"
 
-            self.manual_streaming_trigger_button.setVisible(False)
+        # Updater process
+        self.event_thread = None
+        self.event_watcher = None
+        self.threadpool = QtCore.QThreadPool()
+        self.gui_updater = Updater(self.gui_update_queue)
+        self.threadpool.start(self.gui_updater)
+        self.gui_updater.signals.update.connect(self.update_gui)
 
-            for i in range(self.run_environment_tabs.count()):
-                self.run_environment_tabs.widget(i).setEnabled(False)
+        # Storage properties
+        self.hardware_file = None
 
-            self.threadpool = QThreadPool()
-            self.gui_updater = Updater(self.queue_container.gui_update_queue)
-            # Create a side thread to collect global messages
-            self.controller_instructions_collector = Updater(
-                self.queue_container.controller_communication_queue
-            )
+        # Complete UI layout
+        self.connect_callbacks()
+        self.complete_ui()
 
-            # Start Workers
-            self.threadpool.start(self.gui_updater)
-            self.threadpool.start(self.controller_instructions_collector)
+        # Store any presets to the UI
+        self.load_from_rattlesnake_state()
 
-            # Complete the remaining user interface
-            self.complete_ui()
-            self.connect_callbacks()
-
-            # Create the command map for profile instructions
-            self.command_map = {
-                "Start Streaming": self.start_streaming,
-                "Stop Streaming": self.stop_streaming,
-                "Disarm DAQ": self.disarm_test,
-            }
-
-            # Create a field to hold the loaded hardware file
-            self.hardware_file = None
-            self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
-            self.setWindowTitle("Rattlesnake Vibration Controller")
-            self.show()
-
-            # Hide the task trigger fields if necessary
-            self.task_trigger_update()
-
-            # If there is a loaded profile file, we need to handle it
-            # print('Loading Profile')
-            if profile_file is not None:
-                # Channel Table
-                # print('Loading Channel Table')
-                self.load_channel_table(None, profile_file)
-                # print('Loading Workbook')
-                workbook = openpyxl.load_workbook(profile_file, data_only=True)
-                # Hardware
-                # print('Setting Hardware')
-                hardware_sheet = workbook["Hardware"]
-                for i, row in enumerate(hardware_sheet.rows):
-                    if i == 0:
-                        hardware_index = int(row[1].value)
-                        self.hardware_selector.blockSignals(True)
-                        self.hardware_selector.setCurrentIndex(hardware_index)
-                        self.hardware_selector.blockSignals(False)
-                        self.hardware_update(select_file=False)
-                    elif i == 1:
-                        self.hardware_file = row[1].value
-                    elif i == 2:
-                        sample_rate = int(row[1].value)
-                        self.lanxi_sample_rate_selector.setCurrentIndex(
-                            round(np.log2(sample_rate / 4096))
-                        )
-                        self.sample_rate_selector.setValue(sample_rate)
-                    elif i == 3:
-                        self.time_per_read_selector.setValue(row[1].value)
-                    elif i == 4:
-                        self.time_per_write_selector.setValue(row[1].value)
-                    # The rest of these are named variables
-                    else:
-                        name = str(row[0].value).lower().strip().replace(" ", "_")
-                        if name == "":
-                            continue
-                        value = row[1].value
-                        if name == "integration_oversampling":
-                            self.integration_oversample_selector.setValue(int(value))
-                        elif name == "task_trigger":
-                            self.task_trigger_selector.setCurrentIndex(int(value))
-                        elif name == "task_trigger_output_channel":
-                            self.task_trigger_output_selector.setText(str(value))
-                        elif name == "maximum_acquisition_processes":
-                            self.lanxi_maximum_acquisition_processes_selector.setValue(
-                                int(value)
-                            )
-                        else:
-                            print(f"Hardware sheet entry {row[0].value} not recognized")
-                # print('Initializing Data Acquisition')
-                self.initialize_data_acquisition()
-                # Now go through and do the environments
-                for environment_name, environment_ui in self.environment_uis.items():
-                    # print('Setting Environment {:}'.format(environment_name))
-                    environment_ui.set_parameters_from_template(
-                        workbook[environment_name]
-                    )
-                    # TODO: maybe uncomment this later (auto-load FRF matrix to system id
-                    # tab if using frf virtual hardware)
-                    # NOTE: would need to fix an order of operations bug in the transient module
-                    # if hardware_index == 7 and isinstance(environment_ui, AbstractSysIdUI):
-                    #     try:
-                    #         environment_ui.load_sysid_matrix_file(self.hardware_file, popup=False)
-                    #     except KeyError:
-                    #         pass
-                # print('Initializing Environments')
-                self.initialize_environment_parameters()
-                # Now the profile
-                # print('Setting Test Profile')
-                profile_sheet = workbook["Test Profile"]
-                index = 2
-                profile_timestamps = []
-                profile_environment_names = []
-                profile_operation_names = []
-                profile_data_names = []
-                while True:
-                    timestamp = profile_sheet.cell(index, 1).value
-                    environment = profile_sheet.cell(index, 2).value
-                    operation = profile_sheet.cell(index, 3).value
-                    data = profile_sheet.cell(index, 4).value
-                    if timestamp is None or (
-                        isinstance(timestamp, str) and timestamp.strip() == ""
-                    ):
-                        break
-                    # print('Adding Profile Event {:}, {:}, {:}, {:}'.format(
-                    #     timestamp,environment,operation,data))
-                    # self.add_profile_event(None,timestamp,environment,operation,data)
-                    profile_timestamps.append(timestamp)
-                    profile_environment_names.append(environment)
-                    profile_operation_names.append(operation)
-                    profile_data_names.append(data)
-                    index += 1
-                # print('Closing Workbook')
-                workbook.close()
-                # start_time = time.time()
-                self.profile_table.setRowCount(len(profile_timestamps))
-                # insert_row_time = time.time()
-                # print('Time to Insert Row: {:}'.format(insert_row_time-start_time))
-                for selected_row, (
-                    timestamp,
-                    environment,
-                    operation,
-                    data,
-                ) in enumerate(
-                    zip(
-                        profile_timestamps,
-                        profile_environment_names,
-                        profile_operation_names,
-                        profile_data_names,
-                    )
-                ):
-                    timestamp_spinbox = QtWidgets.QDoubleSpinBox()
-                    timestamp_spinbox.setMaximum(1e6)
-                    timestamp_spinbox.setValue(float(timestamp))
-                    self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
-                    # create_spinbox_time = time.time()
-                    # print('Time to Create Spinbox: {:}'.format(
-                    #     create_spinbox_time-insert_row_time))
-                    # Next a combobox sets the environment
-                    environment_combobox = QtWidgets.QComboBox()
-                    environment_combobox.addItem("Global")
-                    for environment_name in self.environments:
-                        environment_combobox.addItem(environment_name)
-                    environment_combobox.setCurrentIndex(
-                        environment_combobox.findText(environment)
-                    )
-                    self.profile_table.setCellWidget(
-                        selected_row, 1, environment_combobox
-                    )
-                    # create_environment_combobox_time = time.time()
-                    # print('Time to Create Environment Combobox: {:}'.format(
-                    #     create_environment_combobox_time-create_spinbox_time))
-                    # Next a combobox sets the operation
-                    if environment_combobox.currentIndex() == 0:
-                        operations = [operation for operation in self.command_map]
-                    else:
-                        environment_name = self.environments[
-                            environment_combobox.currentIndex() - 1
-                        ]
-                        operations = [
-                            op
-                            for op in self.environment_uis[environment_name].command_map
-                        ]
-                    operation_combobox = QtWidgets.QComboBox()
-                    for op in operations:
-                        operation_combobox.addItem(op)
-                    operation_combobox.setCurrentIndex(
-                        operation_combobox.findText(operation)
-                    )
-                    self.profile_table.setCellWidget(
-                        selected_row, 2, operation_combobox
-                    )
-                    # create_operation_combobox_time = time.time()
-                    # print('Time to Create Operation Combobox: {:}'.format(
-                    #     create_operation_combobox_time-create_environment_combobox_time))
-                    data_item = QtWidgets.QTableWidgetItem()
-                    data_item.setText(str(data))
-                    self.profile_table.setItem(selected_row, 3, data_item)
-                    # create_data_entry_time = time.time()
-                    # print('Time to Data Entry: {:}'.format(
-                    #     create_data_entry_time-create_operation_combobox_time))
-                    timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
-                    environment_combobox.currentIndexChanged.connect(
-                        self.update_operations
-                    )
-                    operation_combobox.currentIndexChanged.connect(
-                        self.update_profile_plot
-                    )
-                    # connect_callbacks_time = time.time()
-                    # print('Time to Connect Callbacks: {:}'.format(
-                    #     connect_callbacks_time-create_data_entry_time))
-                    # insert_row_time = connect_callbacks_time
-                self.update_profile_plot()
-            self.profile_table.itemChanged.connect(self.update_profile_plot)
-
-        except Exception:  # pylint: disable=broad-exception-caught
-            print(traceback.format_exc())
+        # Show UI
+        self.show()
 
     def complete_ui(self):
         """Helper function to complete setting up of the User Interface"""

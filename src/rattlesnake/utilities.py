@@ -31,10 +31,18 @@ import time
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Tuple
+import sys
 
 import numpy as np
 import scipy.signal as sig
 from qtpy import QtWidgets
+
+# Define base directory
+this_path = os.path.split(__file__)[0]
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    DIRECTORY = sys._MEIPASS  # pylint: disable=protected-access
+else:
+    DIRECTORY = this_path
 
 
 # region: GlobalCommands
@@ -196,7 +204,9 @@ class VerboseMessageQueue:
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
-            self.log_queue.put(f"{datetime.now()}: {task_name} flushed {self.queue_name}\n")
+            self.log_queue.put(
+                f"{datetime.now()}: {task_name} flushed {self.queue_name}\n"
+            )
             self.last_flush = flush_time
         data = []
         while True:
@@ -244,7 +254,9 @@ def flush_queue(queue, timeout=None):
                     )
                 )
             else:
-                data.append(queue.get(block=False if timeout is None else True, timeout=timeout))
+                data.append(
+                    queue.get(block=False if timeout is None else True, timeout=timeout)
+                )
         except mp.queues.Empty:
             return data
 
@@ -669,7 +681,9 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     """
     if row_column is None:
         diag = np.einsum("ijj->ij", cpsd_matrix)
-        return np.real(np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :]))
+        return np.real(
+            np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :])
+        )
     else:
         row, column = row_column
         return np.real(
@@ -768,7 +782,9 @@ def reduce_array_by_coordinate(
     # transforming control_coordinate from array of shape (N,) to (N, N, 2)
     # (equivalent to SDynPy outer_product)
     if array.ndim == 3:
-        control_coordinate = np.array(np.meshgrid(control_coordinate, excitation_coordinate)).T
+        control_coordinate = np.array(
+            np.meshgrid(control_coordinate, excitation_coordinate)
+        ).T
     elif array.ndim == 2:
         control_coordinate = np.tile(control_coordinate, (2, 1)).T
     output_shape = control_coordinate.shape[:-1]
@@ -783,9 +799,9 @@ def reduce_array_by_coordinate(
     for index in np.ndindex(output_shape):
         positive_key = positive_control_coordinates[index]
         try:
-            index_array[index] = np.where(np.all(positive_coordinates == positive_key, axis=-1))[0][
-                0
-            ]
+            index_array[index] = np.where(
+                np.all(positive_coordinates == positive_key, axis=-1)
+            )[0][0]
         except IndexError as exc:
             raise ValueError(
                 f"Coordinate {str(control_coordinate[index])} not found in data array"
@@ -941,7 +957,9 @@ def corr_norm_signal_spec(signal, specification):
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
     norm_signal[norm_signal == 0] = 1e14
     return correlation / norm_specification / norm_signal
 
@@ -982,7 +1000,9 @@ def norm_ratio(signal, specification):
         The norm ratio signal
     """
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
     return 1 - np.abs((norm_signal / norm_specification) ** 2 - 1)
 
 
@@ -1003,8 +1023,12 @@ def correlation_norm_spec_ratio(signal, specification):
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
-    return correlation / norm_specification**2 - abs(1 - (norm_signal / norm_specification) ** 2)
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
+    return correlation / norm_specification**2 - abs(
+        1 - (norm_signal / norm_specification) ** 2
+    )
 
 
 def correlation_norm_signal_spec_ratio(signal, specification):
@@ -1024,7 +1048,9 @@ def correlation_norm_signal_spec_ratio(signal, specification):
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
     norm_signal_divide = norm_signal.copy()
     norm_signal_divide[norm_signal_divide == 0] = 1e14
     return correlation / norm_specification / norm_signal_divide - abs(
@@ -1084,7 +1110,9 @@ def align_signals(
     # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
     #          specification = specification,
     #          correlation_threshold = correlation_threshold)
-    specification_portion = measurement_buffer[:, delay : delay + specification.shape[-1]]
+    specification_portion = measurement_buffer[
+        :, delay : delay + specification.shape[-1]
+    ]
 
     if perform_subsample:
         # Compute ffts for subsample alignment
@@ -1093,7 +1121,9 @@ def align_signals(
 
         # Compute phase angle differences for subpixel alignment
         phase_difference = np.angle(spec_portion_fft / spec_fft)
-        phase_slope = phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
+        phase_slope = (
+            phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
+        )
         mean_phase_slope = np.median(
             phase_slope
         )  # Use Median to discard outliers due to potentially noisy phase
@@ -1164,7 +1194,9 @@ class OverlapBuffer:
         """
         self._buffer_data = np.empty(shape, dtype)
         self._buffer_data[:] = starting_value
-        self._buffer_axis = buffer_axis % self.buffer_data.ndim  # Makes a positive index
+        self._buffer_axis = (
+            buffer_axis % self.buffer_data.ndim
+        )  # Makes a positive index
         self._buffer_position = 0
 
     @property
