@@ -54,7 +54,7 @@ class RattlesnakeController:
     """Object responsible for setting up, sending data to, and running processes that
     make up the rattlesnake vibration controller."""
 
-    # region Global
+    # region Startup
     def __init__(self, *, threaded: bool = THREADING, timeout: float = 30):
         """
         Initializes a blank rattlesnake controller object and spins up multiple processes
@@ -403,7 +403,18 @@ class RattlesnakeController:
                     event.set()
                 raise RattlesnakeError("Timeout waiting for all events to be ready")
 
-    def load_data_from_file(self, filepath: str):
+    # endregion
+
+    # region Loading
+    def load_template_from_template(self, filepath: str):
+        """
+        Loads data from worksheet or netcdf4 file to the rattlesnake controller.
+
+        Parameters
+        ----------
+        filepath : string
+            Full path to template file.
+        """
         filename, filetype = os.path.splitext(filepath)
 
         if not os.access(filepath, os.R_OK):
@@ -436,7 +447,19 @@ class RattlesnakeController:
             if not initial_blocking:
                 self.clear_blocking()
 
-    def save_template(self, filepath):
+    def save_template_from_controller(self, filepath: str):
+        """
+        Saves excel template from current controller state.
+
+        This function will fill out the current data from the rattlesnake class.
+        If there is no data stored, it will store a blank template.
+        TODO implement blank template loading
+
+        Parameters
+        ----------
+        filepath : string
+            Full path to template file.
+        """
         filename, filetype = os.path.splitext(filepath)
         if filetype != ".xlsx":
             raise RattlesnakeError("Rattlesnake only saves .xlsx files as templates")
@@ -451,7 +474,7 @@ class RattlesnakeController:
 
     # endregion
 
-    # region: Hardware
+    # region Hardware
     @property
     def hardware_metadata(self):
         return self._hardware_metadata
@@ -504,7 +527,7 @@ class RattlesnakeController:
 
     # endregion
 
-    # region Environments
+    # region Environment
     @property
     def environment_metadata(self):
         return self.environment_manager.environment_metadata
@@ -553,105 +576,6 @@ class RattlesnakeController:
             ]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
-
-    # endregion
-
-    # region Acquisition
-    def set_stream_metadata(self, stream_metadata: StreamMetadata):
-        """
-        This is only used to load a stream_metadata to the controller for UI purposes. Start_acquisition
-        still requirs a stream_metadata object so the metadata stored here will never be used.
-        """
-        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
-            raise RattlesnakeError(
-                f"Invalid state for starting acquisition: {self.state}"
-            )
-        if not isinstance(stream_metadata, StreamMetadata):
-            raise RattlesnakeError(
-                "Rattlesnake.set_stream requires a valid StreamMetadata class"
-            )
-        stream_metadata.validate()
-
-        self.last_stream_metadata = stream_metadata
-
-    def start_acquisition(self, stream_metadata: StreamMetadata):
-        # Validate Rattlesnake State
-        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
-            raise RattlesnakeError(
-                f"Invalid state for starting acquisition: {self.state}"
-            )
-        # Validate stream metadata
-        if not isinstance(stream_metadata, StreamMetadata):
-            raise RattlesnakeError(
-                "Rattlesnake.set_stream requires a valid StreamMetadata class"
-            )
-        stream_metadata.validate()
-
-        # Store streaming metadata to controller (side note: ControllerProcess decides when/why to stream not StreamingProcess)
-        self.log("Setting Stream Metadata")
-        self.event_container.streaming_ready_event.clear()
-        self.queue_container.streaming_command_queue.put(
-            TASK_NAME,
-            (
-                GlobalCommands.INITIALIZE_STREAMING,
-                (stream_metadata, self.hardware_metadata, self.environment_metadata),
-            ),
-        )
-
-        # Tell controller to start up the hardware, controller takes over logic from here
-        self.log("Arming Test Hardware")
-        self.queue_container.controller_command_queue.put(
-            TASK_NAME, (GlobalCommands.RUN_HARDWARE, stream_metadata)
-        )
-
-        if self.blocking:
-            ready_event_list = [
-                self.event_container.streaming_ready_event,
-            ]
-            active_event_list = [
-                self.event_container.acquisition_active_event,
-                self.event_container.output_active_event,
-            ]
-            self.wait_for_events(
-                ready_event_list, active_event_list, active_event_check=True
-            )
-
-        # Update stream_metadata
-        self.last_stream_metadata = stream_metadata
-
-    def stop_acquisition(self):
-        # Validate rattlesnake state (rattlesnake was acquiring data)
-        if self.state not in (
-            RattlesnakeState.HARDWARE_ACTIVE,
-            RattlesnakeState.ENVIRONMENT_ACTIVE,
-            RattlesnakeState.SYS_ID_ACTIVE,
-        ):
-            raise RattlesnakeError(
-                f"Invalid state for stopping acquisition: {self.state}"
-            )
-
-        self.log("Disarming Test Hardware")
-        self.event_container.acquisition_ready_event.clear()
-        self.event_container.output_ready_event.clear()
-        # Stop profile
-        self.profile_manager.stop_profile()
-        # Send stop to contoller -Stop Environment > Stop Streaming > Stop Hardware
-        self.queue_container.controller_command_queue.put(
-            TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
-        )
-
-        if self.blocking:
-            ready_event_list = [
-                self.event_container.controller_ready_event,
-            ]
-            active_event_list = [
-                self.event_container.acquisition_active_event,
-                self.event_container.output_active_event,
-                *self.environment_manager.active_event_list,
-            ]
-            self.wait_for_events(
-                ready_event_list, active_event_list, active_event_check=False
-            )
 
     # endregion
 
@@ -842,6 +766,105 @@ class RattlesnakeController:
             return
         self.stop_system_id(environment_name)
         self.stop_acquisition()
+
+    # endregion
+
+    # region Acquisition
+    def set_stream_metadata(self, stream_metadata: StreamMetadata):
+        """
+        This is only used to load a stream_metadata to the controller for UI purposes. Start_acquisition
+        still requirs a stream_metadata object so the metadata stored here will never be used.
+        """
+        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
+            raise RattlesnakeError(
+                f"Invalid state for starting acquisition: {self.state}"
+            )
+        if not isinstance(stream_metadata, StreamMetadata):
+            raise RattlesnakeError(
+                "Rattlesnake.set_stream requires a valid StreamMetadata class"
+            )
+        stream_metadata.validate()
+
+        self.last_stream_metadata = stream_metadata
+
+    def start_acquisition(self, stream_metadata: StreamMetadata):
+        # Validate Rattlesnake State
+        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
+            raise RattlesnakeError(
+                f"Invalid state for starting acquisition: {self.state}"
+            )
+        # Validate stream metadata
+        if not isinstance(stream_metadata, StreamMetadata):
+            raise RattlesnakeError(
+                "Rattlesnake.set_stream requires a valid StreamMetadata class"
+            )
+        stream_metadata.validate()
+
+        # Store streaming metadata to controller (side note: ControllerProcess decides when/why to stream not StreamingProcess)
+        self.log("Setting Stream Metadata")
+        self.event_container.streaming_ready_event.clear()
+        self.queue_container.streaming_command_queue.put(
+            TASK_NAME,
+            (
+                GlobalCommands.INITIALIZE_STREAMING,
+                (stream_metadata, self.hardware_metadata, self.environment_metadata),
+            ),
+        )
+
+        # Tell controller to start up the hardware, controller takes over logic from here
+        self.log("Arming Test Hardware")
+        self.queue_container.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.RUN_HARDWARE, stream_metadata)
+        )
+
+        if self.blocking:
+            ready_event_list = [
+                self.event_container.streaming_ready_event,
+            ]
+            active_event_list = [
+                self.event_container.acquisition_active_event,
+                self.event_container.output_active_event,
+            ]
+            self.wait_for_events(
+                ready_event_list, active_event_list, active_event_check=True
+            )
+
+        # Update stream_metadata
+        self.last_stream_metadata = stream_metadata
+
+    def stop_acquisition(self):
+        # Validate rattlesnake state (rattlesnake was acquiring data)
+        if self.state not in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+            RattlesnakeState.SYS_ID_ACTIVE,
+        ):
+            raise RattlesnakeError(
+                f"Invalid state for stopping acquisition: {self.state}"
+            )
+
+        self.log("Disarming Test Hardware")
+        self.event_container.acquisition_ready_event.clear()
+        self.event_container.output_ready_event.clear()
+        # Stop profile
+        self.profile_manager.stop_profile()
+        # Send stop to contoller -Stop Environment > Stop Streaming > Stop Hardware
+        self.queue_container.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
+        )
+
+        if self.blocking:
+            ready_event_list = [
+                self.event_container.controller_ready_event,
+            ]
+            active_event_list = [
+                self.event_container.acquisition_active_event,
+                self.event_container.output_active_event,
+                *self.environment_manager.active_event_list,
+            ]
+            self.wait_for_events(
+                ready_event_list, active_event_list, active_event_check=False
+            )
 
     # endregion
 

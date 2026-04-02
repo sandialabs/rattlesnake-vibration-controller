@@ -382,7 +382,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         Parameters
         ----------
-        queue_data :
+        queue_data : tuple[str, Any]
             A 2-tuple consisting of ``(message, data)`` pairs where the message
             denotes what to change and the data contains the information needed
             to be displayed.
@@ -727,7 +727,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region Hardware Tab
+    # region Hardware
     def load_channel_table(
         self, clicked, filename=None
     ):  # pylint: disable=unused-argument
@@ -1557,7 +1557,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region Environment Tab
+    # region Environment
     def initialize_environment_parameters(self):
         """Initializes the environment parameters
 
@@ -1587,7 +1587,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region Profile Tab
+    # region Profile
     def initialize_profile(self):
         """Initializes the profile list in the controller"""
         self.profile_events = []
@@ -1834,7 +1834,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region Acquisition Tab
+    # region Acquisition
     def select_control_streaming_file(self):
         """Selects a file to stream data to disk"""
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
