@@ -63,7 +63,7 @@ QtCore.QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
 TASK_NAME = "UI"
 VERSION = "3.1.1"
 RATTLESNAKE_UI_PATH = os.path.join(
-    DIRECTORY, "ui_files", "combined_environments_controller.ui"
+    DIRECTORY, "user_interface", "ui_files", "combined_environments_controller.ui"
 )
 
 
@@ -175,92 +175,94 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.show()
 
     def connect_callbacks(self):
-        """
-        Helper function to connect callbacks to widgets in the user interface.
-        """
-        # Universal
-        self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
-        self.load_test_file_button.clicked.connect(self.load_test_file)
-        self.save_template_button.clicked.connect(self.save_template)
+        pass
 
-        # Channel Table
-        self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
-        channel_table_scroll = self.channel_table.verticalScrollBar()
-        channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        self.load_channel_table_button.clicked.connect(self.load_channel_table)
-        self.save_channel_table_button.clicked.connect(self.save_channel_table)
-        self.assist_channel_table_checkbox.stateChanged.connect(
-            self.assist_channel_table_init
-        )
-        # Copy
-        self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
-        self.channel_table_action_copy.setShortcut("Ctrl+C")
-        self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
-        self.channel_table.addAction(self.channel_table_action_copy)
-        # Paste
-        self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
-        self.channel_table_action_paste.setShortcut("Ctrl+V")
-        self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
-        self.channel_table.addAction(self.channel_table_action_paste)
-        # Delete
-        self.channel_table_action_delete = QtWidgets.QAction(
-            "Delete", self.channel_table
-        )
-        self.channel_table_action_delete.setShortcut("Del")
-        self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
-        self.channel_table.addAction(self.channel_table_action_delete)
-        # Insert Row
-        self.channel_table_action_insert_row = QtWidgets.QAction(
-            "Insert Row", self.channel_table
-        )
-        self.channel_table_action_insert_row.triggered.connect(
-            self.channel_table_insert_row
-        )
-        self.channel_table.addAction(self.channel_table_action_insert_row)
-        # Delete Row
-        self.channel_table_action_delete_row = QtWidgets.QAction(
-            "Delete Row", self.channel_table
-        )
-        self.channel_table_action_delete_row.triggered.connect(
-            self.channel_table_delete_row
-        )
-        self.channel_table.addAction(self.channel_table_action_delete_row)
+    #     """
+    #     Helper function to connect callbacks to widgets in the user interface.
+    #     """
+    #     # Universal
+    #     self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
+    #     self.load_test_file_button.clicked.connect(self.load_test_file)
+    #     self.save_template_button.clicked.connect(self.save_template)
 
-        # Hardware
-        self.hardware_selector.currentTextChanged.connect(self.update_hardware)
-        self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
-        self.select_file_button.clicked.connect(self.select_hardware_file)
+    #     # Channel Table
+    #     self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+    #     self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
+    #     channel_table_scroll = self.channel_table.verticalScrollBar()
+    #     channel_table_scroll.valueChanged.connect(self.sync_environment_table)
+    #     self.load_channel_table_button.clicked.connect(self.load_channel_table)
+    #     self.save_channel_table_button.clicked.connect(self.save_channel_table)
+    #     self.assist_channel_table_checkbox.stateChanged.connect(
+    #         self.assist_channel_table_init
+    #     )
+    #     # Copy
+    #     self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
+    #     self.channel_table_action_copy.setShortcut("Ctrl+C")
+    #     self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
+    #     self.channel_table.addAction(self.channel_table_action_copy)
+    #     # Paste
+    #     self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
+    #     self.channel_table_action_paste.setShortcut("Ctrl+V")
+    #     self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
+    #     self.channel_table.addAction(self.channel_table_action_paste)
+    #     # Delete
+    #     self.channel_table_action_delete = QtWidgets.QAction(
+    #         "Delete", self.channel_table
+    #     )
+    #     self.channel_table_action_delete.setShortcut("Del")
+    #     self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
+    #     self.channel_table.addAction(self.channel_table_action_delete)
+    #     # Insert Row
+    #     self.channel_table_action_insert_row = QtWidgets.QAction(
+    #         "Insert Row", self.channel_table
+    #     )
+    #     self.channel_table_action_insert_row.triggered.connect(
+    #         self.channel_table_insert_row
+    #     )
+    #     self.channel_table.addAction(self.channel_table_action_insert_row)
+    #     # Delete Row
+    #     self.channel_table_action_delete_row = QtWidgets.QAction(
+    #         "Delete Row", self.channel_table
+    #     )
+    #     self.channel_table_action_delete_row.triggered.connect(
+    #         self.channel_table_delete_row
+    #     )
+    #     self.channel_table.addAction(self.channel_table_action_delete_row)
 
-        # Environments
-        environment_table_scroll = self.environment_channel_table.verticalScrollBar()
-        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
-        self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
-        self.remove_environment_button.clicked.connect(self.remove_environment)
-        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
-            self.rename_environment
-        )
-        self.initialize_environments_button.clicked.connect(
-            self.initialize_environments
-        )
+    #     # Hardware
+    #     self.hardware_selector.currentTextChanged.connect(self.update_hardware)
+    #     self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+    #     self.select_file_button.clicked.connect(self.select_hardware_file)
 
-        # Acquisition
-        self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
-        self.arm_test_button.clicked.connect(self.start_acquisition)
-        self.disarm_test_button.clicked.connect(self.stop_acquisition)
-        self.manual_streaming_radiobutton.toggled.connect(
-            self.show_hide_manual_streaming
-        )
-        self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
+    #     # Environments
+    #     environment_table_scroll = self.environment_channel_table.verticalScrollBar()
+    #     environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+    #     self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
+    #     self.remove_environment_button.clicked.connect(self.remove_environment)
+    #     self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
+    #         self.rename_environment
+    #     )
+    #     self.initialize_environments_button.clicked.connect(
+    #         self.initialize_environments
+    #     )
 
-        # Profiles
-        self.add_profile_event_button.clicked.connect(self.add_profile_event)
-        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
-        self.save_profile_button.clicked.connect(self.save_profile_list)
-        self.load_profile_button.clicked.connect(self.load_profile_list)
-        self.initialize_profile_button.clicked.connect(self.initialize_profile)
-        self.start_profile_button.clicked.connect(self.start_profile)
-        self.stop_profile_button.clicked.connect(self.stop_profile)
+    #     # Acquisition
+    #     self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
+    #     self.arm_test_button.clicked.connect(self.start_acquisition)
+    #     self.disarm_test_button.clicked.connect(self.stop_acquisition)
+    #     self.manual_streaming_radiobutton.toggled.connect(
+    #         self.show_hide_manual_streaming
+    #     )
+    #     self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
+
+    #     # Profiles
+    #     self.add_profile_event_button.clicked.connect(self.add_profile_event)
+    #     self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
+    #     self.save_profile_button.clicked.connect(self.save_profile_list)
+    #     self.load_profile_button.clicked.connect(self.load_profile_list)
+    #     self.initialize_profile_button.clicked.connect(self.initialize_profile)
+    #     self.start_profile_button.clicked.connect(self.start_profile)
+    #     self.stop_profile_button.clicked.connect(self.stop_profile)
 
     def complete_ui(self):
         """

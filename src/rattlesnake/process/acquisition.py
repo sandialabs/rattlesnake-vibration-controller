@@ -96,12 +96,12 @@ class AcquisitionProcess(AbstractMessageProcess):
             queue_container.gui_update_queue,
             ready_event,
         )
-        self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
+        # self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.acquire_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_acquisition)
-        self.map_command(
-            GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
-        )
+        # self.map_command(
+        #     GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
+        # )
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)

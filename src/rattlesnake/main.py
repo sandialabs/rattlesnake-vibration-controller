@@ -41,8 +41,10 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     """
     # Fix to scale font for different size monitors
     font_size = 10  # pt size
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
     QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
         QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )

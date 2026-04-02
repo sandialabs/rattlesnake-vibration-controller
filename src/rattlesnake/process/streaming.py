@@ -116,7 +116,7 @@ class StreamingProcess(AbstractMessageProcess):
             queue_container.gui_update_queue,
             ready_event,
         )
-        self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize)
+        # self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize)
         self.map_command(GlobalCommands.STREAMING_DATA, self.write_data)
         self.map_command(GlobalCommands.FINALIZE_STREAMING, self.finalize)
         self.map_command(GlobalCommands.CREATE_NEW_STREAM, self.create_new_stream)

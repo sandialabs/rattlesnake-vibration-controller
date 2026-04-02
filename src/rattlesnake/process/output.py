@@ -83,12 +83,12 @@ class OutputProcess(AbstractMessageProcess):
             queue_container.gui_update_queue,
             ready_event,
         )
-        self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
+        # self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.output_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_output)
-        self.map_command(
-            GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
-        )
+        # self.map_command(
+        #     GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
+        # )
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         # Communication
         self.queue_container = queue_container
