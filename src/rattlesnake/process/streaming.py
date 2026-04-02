@@ -21,19 +21,62 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+from enum import Enum
+from pathlib import Path
 from typing import Dict
 
 import netCDF4 as nc
 import numpy as np
 
+from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import (
-    GlobalCommands,
-    QueueContainer,
-)
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.utilities import GlobalCommands, QueueContainer
+
+
+class StreamType(Enum):
+    NO_STREAM = 0
+    IMMEDIATELY = 1
+    PROFILE_INSTRUCTION = 2
+    TEST_LEVEL = 3
+    MANUAL = 4
+
+
+class StreamMetadata:
+    def __init__(
+        self,
+        stream_type=StreamType.NO_STREAM,
+        stream_file=None,
+        test_level_environment_name=None,
+    ):
+        self.stream_type = stream_type
+        self.stream_file = stream_file
+        self.test_level_environment_name = test_level_environment_name
+
+    def validate(self):
+        if self.stream_type != StreamType.NO_STREAM:
+            if not self.stream_file or not isinstance(self.stream_file, (str, Path)):
+                raise ValueError(
+                    "Streaming was enabled but no valid stream file path was provided"
+                )
+
+            parent_dir = Path(self.stream_file).parent
+            if not parent_dir.exists():
+                raise ValueError(
+                    f"The directory for the stream file does not exist: {parent_dir}"
+                )
+
+        # Does not check whether the environment_name corresponds to a valid environment. If it isn't,
+        # the stream just wont start which isn't critical enough to warrant a restructure
+        if self.stream_type == StreamType.TEST_LEVEL:
+            if self.test_level_environment_name is None or not isinstance(
+                self.test_level_environment_name, str
+            ):
+                raise ValueError(
+                    "No test level environment was chosen for the stream to start at"
+                )
+
+        return True
 
 
 class StreamingProcess(AbstractMessageProcess):
