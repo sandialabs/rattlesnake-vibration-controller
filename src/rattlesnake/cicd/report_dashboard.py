@@ -59,11 +59,11 @@ def generate_dashboard_html(github_repo: str) -> str:
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             <section class="space-y-6">
-                <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
+                <div class="flex items-center justify-between border-b-2 border-blue-200 pb-2">
                     <h2 class="text-2xl font-bold flex items-center gap-2">
                         🚀 Released
                     </h2>
-                    <a href="https://github.com/{github_repo}/tree/main" class="text-xs font-semibold bg-slate-200 px-2 py-1 rounded hover:bg-slate-300">main branch</a>
+                    <a href="https://github.com/{github_repo}/tree/main" class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-slate-300">main branch</a>
                 </div>
                 
                 <div class="space-y-4">
