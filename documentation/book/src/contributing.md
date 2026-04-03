@@ -5,13 +5,77 @@ numbering:
 (sec:contributing)=
 # Contributing
 
+## Installation
+
+A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is **highly** recommended.
+This ensures project dependencies do not conflict with the system-wide Python installation.
+
+Create a new virtual environment folder within your project directory. It is conventional to name this folder `.venv`.
+
+```bash
+# macOS / Linux / Windows
+python3 -m venv .venv
+```
+
+Activating the environment tells your shell to use the Python interpreter and pip packages located inside the `.venv` folder.
+
+#### macOS / Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+#### Windows (PowerShell):
+
+```sh
+.venv\Scripts\Activate.ps1
+```
+
+#### Windows (Command Prompt), DOS
+
+```sh
+.venv\Scripts\activate.bat
+```
+
+Once activated, your terminal prompt will typically show `(.venv)`. You can now install dependencies safely.
+
+```bash
+# Install specific packages, for example, the "requests" package
+pip install requests
+
+# Or install the entire Rattlesnake development in editable mode
+pip install -e .[dev]
+```
+
+Confirm that your shell is pointing to the correct Python binary.
+
+```sh
+# macOS / Linux
+which python
+
+# Windows
+where python
+```
+
+The output should point to a path inside your project's `.venv` folder.
+
+To exit the virtual environment and return to the global system stack:
+
+```sh
+deactivate
+```
+
+> **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
+
+See [*Install packages in a virutal environment using pip and venv*](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) for more information.
+
+Now that your have a virtual environment, you are read to populate that virtual environment with libraries specific to your virtual environment.
+
 ## Documentation
 
 The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Following are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
 
-### Installation
-
-A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is recommended.  Then, install either with `pip`
+Install documentation dependencies either with `pip`
 
 ```sh
 pip install "jupyter-book>=2.0.0"
