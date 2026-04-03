@@ -27,7 +27,7 @@ def generate_dashboard_html(github_repo: str) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rattlesnake | Project Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {{ font-family: 'Inter', sans-serif; }}
         .text-sandia {{ color: {sandia_blue}; }}
@@ -35,8 +35,8 @@ def generate_dashboard_html(github_repo: str) -> str:
         .border-sandia {{ border-color: {sandia_blue}; }}
         .hover-card:hover {{ transform: translateY(-2px); transition: all 0.2s ease; }}
     </style>
-</head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+    </head>
+    <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -50,7 +50,7 @@ def generate_dashboard_html(github_repo: str) -> str:
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <header class="mb-12 text-center">
-            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Project Dashboard</h1>
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 mb-4"><b>Project Dashboard</b></h1>
             <p class="text-lg text-slate-600 max-w-2xl mx-auto">
                 Access documentation and quality reports for the Rattlesnake Vibration Controller.
             </p>
@@ -59,11 +59,11 @@ def generate_dashboard_html(github_repo: str) -> str:
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             <section class="space-y-6">
-                <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
+                <div class="flex items-center justify-between border-b-2 border-blue-200 pb-2">
                     <h2 class="text-2xl font-bold flex items-center gap-2">
                         🚀 Released
                     </h2>
-                    <a href="https://github.com/{github_repo}/tree/main" class="text-xs font-semibold bg-slate-200 px-2 py-1 rounded hover:bg-slate-300">main branch</a>
+                    <a href="https://github.com/{github_repo}/tree/main" class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-slate-300">main branch</a>
                 </div>
                 
                 <div class="space-y-4">
