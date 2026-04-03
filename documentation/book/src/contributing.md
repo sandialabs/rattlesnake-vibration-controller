@@ -49,7 +49,7 @@ pip install -e .[dev]
 
 Confirm that your shell is pointing to the correct Python binary.
 
-```sh
+```bash
 # macOS / Linux
 which python
 
@@ -61,13 +61,11 @@ The output should point to a path inside your project's `.venv` folder.
 
 To exit the virtual environment and return to the global system stack:
 
-```sh
+```bash
 deactivate
 ```
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
-
-See [*Install packages in a virutal environment using pip and venv*](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) for more information.
 
 Now that your have a virtual environment, you are read to populate that virtual environment with libraries specific to your virtual environment.
 
@@ -185,15 +183,17 @@ jupyter book build
 
 The separate the concerns of test, build, release, and publish are contained in the `.github/workflows/` files.
 
-* Continuous Integration (CI)
+* **Continuous Integration (CI)**
   * **Test (Verification)**
     * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
     * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
-    * **What happens:** Automated tools like [pytest](https://docs.pytest.org/en/stable/) run your unit and integration tests. It often includes "linting" (checking code style) and type-checking.
-      * Linting (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and formatting (e.g., [ruff](https://docs.astral.sh/ruff/)) checks assures code quality
-      * Code coverage (e.g., pytest with a coverage report) assess number of lines of code covered by tests.
+    * **What happens:** Automated tool run unit tests, integration tests, and code quality assessments.
+      * **Testing** (e.g., [pytest](https://docs.pytest.org/en/stable/)) runs your unit and integration tests.
+      * **Code coverage** (e.g., pytest with a coverage report) assess number of lines of code covered by tests.
+      * **Linting** (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and 
+      * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks assure code consistency.
+      *  **Documentation** may also be assembled and compiled.  This is particularly imporant for interactive documentation that has examples that depend on source code functionality.
     * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
-    * **Documentation** may also be built.  This is particularly imporant for interactive documentation that has examples that depend on source code functionality.
   * **Build (Packaging)**
     * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
     * **What happens:** Tools (like `python -m build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
@@ -202,8 +202,8 @@ The separate the concerns of test, build, release, and publish are contained in 
      * **Purpose:** To create an official "point-in-time" snapshot of the project for project management and users. It uses an immutable Git tag and GitHub Release page.
      * **What happens:** A permanent Git tag (like v1.0.0) is assigned to a specific commit. A GitHub Release page is generated with a Changelog (i.e., What's New?) and the build artifacts are attached to it as "Release Assets."
     * **Key Outcome:** Traceability. It provides a clear history of the project's evolution and a stable place for users to download specific versions.
-* Continuous Delivery (CD)
+* **Continuous Delivery (CD)**
   * **Publish (Distribution)**
      * **Purpose:** To make the software easily available to the global ecosystem.
-     * **What happens:** The built artifacts are uploaded to a package registry, such as PyPI (the Python Package Index).
+     * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
      * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
