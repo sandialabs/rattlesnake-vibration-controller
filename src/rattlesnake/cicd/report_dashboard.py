@@ -29,11 +29,11 @@ def generate_dashboard_html(github_repo: str) -> str:
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .text-sandia { color: {sandia_blue}; }
-        .bg-sandia { background-color: {sandia_blue}; }
-        .border-sandia { border-color: {sandia_blue}; }
-        .hover-card:hover { transform: translateY(-2px); transition: all 0.2s ease; }
+        body {{ font-family: 'Inter', sans-serif; }}
+        .text-sandia {{ color: {sandia_blue}; }}
+        .bg-sandia {{ background-color: {sandia_blue}; }}
+        .border-sandia {{ border-color: {sandia_blue}; }}
+        .hover-card:hover {{ transform: translateY(-2px); transition: all 0.2s ease; }}
     </style>
     </head>
     <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
