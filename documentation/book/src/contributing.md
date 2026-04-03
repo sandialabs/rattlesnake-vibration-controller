@@ -180,3 +180,30 @@ Run the `jupyter book build` command from the `documentation` directory. The bui
 cd documentation
 jupyter book build
 ```
+
+## Continuous Integration/Continuous Deployment (CI/CD)
+
+The separate the concerns of test, build, release, and publish are contained in the `.github/workflows/` files.
+
+* Continuous Integration (CI)
+  * **Test (Verification)**
+    * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
+    * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
+    * **What happens:** Automated tools like [pytest](https://docs.pytest.org/en/stable/) run your unit and integration tests. It often includes "linting" (checking code style) and type-checking.
+      * Linting (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and formatting (e.g., [ruff](https://docs.astral.sh/ruff/)) checks assures code quality
+      * Code coverage (e.g., pytest with a coverage report) assess number of lines of code covered by tests.
+    * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
+    * **Documentation** may also be built.  This is particularly imporant for interactive documentation that has examples that depend on source code functionality.
+  * **Build (Packaging)**
+    * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
+    * **What happens:** Tools (like `python -m build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
+     * **Key Outcome:** Portability. You now have a single file (an "artifact") that contains everything needed to install your library on any compatible system.
+  * **Release (Documentation & Tagging)**
+     * **Purpose:** To create an official "point-in-time" snapshot of the project for project management and users. It uses an immutable Git tag and GitHub Release page.
+     * **What happens:** A permanent Git tag (like v1.0.0) is assigned to a specific commit. A GitHub Release page is generated with a Changelog (i.e., What's New?) and the build artifacts are attached to it as "Release Assets."
+    * **Key Outcome:** Traceability. It provides a clear history of the project's evolution and a stable place for users to download specific versions.
+* Continuous Delivery (CD)
+  * **Publish (Distribution)**
+     * **Purpose:** To make the software easily available to the global ecosystem.
+     * **What happens:** The built artifacts are uploaded to a package registry, such as PyPI (the Python Package Index).
+     * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
