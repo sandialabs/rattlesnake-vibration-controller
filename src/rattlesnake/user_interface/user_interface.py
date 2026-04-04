@@ -64,7 +64,9 @@ from rattlesnake.user_interface.ui_utilities import (
 # pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
 pyqtgraph.setConfigOption("foreground", "k")
-QtCore.QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
+QtCore.QDir.addSearchPath(
+    "images", os.path.join(DIRECTORY, "user_interface", "themes", "images")
+)
 TASK_NAME = "UI"
 VERSION = "3.1.1"
 RATTLESNAKE_UI_PATH = os.path.join(
@@ -362,10 +364,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if text == "Light":
             self.setStyleSheet("")
         elif text == "Dark":
-            dark_theme_path = os.path.join(DIRECTORY, "themes", "dark_theme.txt")
+            dark_theme_path = os.path.join(
+                DIRECTORY, "user_interface", "themes", "dark_theme.txt"
+            )
             with open(dark_theme_path, encoding="utf-8") as file:
                 stylesheet = file.read()
-            images_path = os.path.join(DIRECTORY, "themes", "images").replace("\\", "/")
+            images_path = os.path.join(DIRECTORY, "user_interface", "themes", "images").replace("\\", "/")
             print(f"Images Path: {images_path}")
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
