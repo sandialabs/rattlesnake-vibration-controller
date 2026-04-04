@@ -46,7 +46,8 @@ from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
 )
-from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
@@ -188,8 +189,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        # self.load_channel_table_button.clicked.connect(self.load_channel_table)
-        # self.save_channel_table_button.clicked.connect(self.save_channel_table)
+        self.load_channel_table_button.clicked.connect(
+            self.load_channel_table_from_file
+        )
+        self.save_channel_table_button.clicked.connect(self.save_channel_table_to_file)
         # self.assist_channel_table_checkbox.stateChanged.connect(
         #     self.assist_channel_table_init
         # )
@@ -405,6 +408,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         tb = traceback.format_exc()
         self.log(f"ERROR\n\n {tb}")
         if isinstance(error, RattlesnakeError):
+            self.gui_update_queue.put(
+                (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
+            )
+        elif isinstance(error, str):
             self.gui_update_queue.put(
                 (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
             )
@@ -994,190 +1001,61 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.add_empty_channel_table_rows()
 
-    def load_channel_table_from_file(
-        self, clicked, filename=None
-    ):  # pylint: disable=unused-argument
-        """Loads a channel table using a file dialog or the specified filename
-
-        Parameters
-        ----------
-        clicked :
-            The clicked event that triggered the callback.
-        filename :
-            File name defining the channel table for bypassing the callback when
-            loading from a file (Default value = None).
-
+    def load_channel_table_from_file(self):
         """
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Fixed
-        )
-        num_environments = len(self.environments)
-        if filename is None:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self, "Load Channel Table", filter="Spreadsheets (*.xlsx *.csv *.txt)"
-            )
-            if filename == "":
-                return
-        self.log(f"Loading Channel Table {filename}")
-        _, file_type = os.path.splitext(filename)
-        if file_type == ".xlsx":
-            workbook = openpyxl.load_workbook(filename, read_only=True, data_only=True)
-            sheets = workbook.sheetnames
-            if len(sheets) > 1:
-                sheets = [sheet for sheet in sheets if "channel" in sheet.lower()]
-            if len(sheets) > 1:
-                error_dialog = QtWidgets.QErrorMessage()
-                error_dialog.showMessage(
-                    "Could not identify channel table in Excel Spreadsheet\n"
-                    'If multiple sheets exist, only 1 should have the word "channel" in it'
-                )
-                return
-            worksheet = workbook[sheets[0]]
-            data_array = []
-            environment_names = [
-                worksheet.cell(2, 24 + i).value for i in range(num_environments)
-            ]
-            for row in worksheet.iter_rows(min_row=3, max_col=23 + num_environments):
-                data_array.append([])
-                for col_idx, cell in enumerate(row):
-                    data_array[-1].append(cell.value)
-                if data_array[-1][0] is None:
-                    data_array = data_array[:-1]
-                    break
-            workbook.close()
-        elif file_type == ".csv" or file_type == ".txt":
-            with open(filename, "r", encoding="utf-8") as f:
-                data_array = []
-                for row_idx, line in enumerate(f):
-                    if row_idx < 1:
-                        continue
-                    elif row_idx == 1:
-                        environment_names = [val.strip() for val in line.split(",")][
-                            23:
-                        ]
-                        continue
-                    data_array.append([val.strip() for val in line.split(",")])
-            # Now split the data array off into the environment table
-        channel_table_data_array = [row[:23] for row in data_array]
-        environment_data_array = [row[23:] for row in data_array]
-        # Now complete the table
-        for row_idx, row_data in enumerate(channel_table_data_array):
-            for col_idx, cell_data in enumerate(row_data):
-                if col_idx == 0:
-                    continue
-                self.channel_table.item(row_idx, col_idx - 1).setText(
-                    "" if cell_data is None else str(cell_data)
-                )
-        if num_environments > 1:
-            for environment_index, environment_name in enumerate(environment_names):
-                try:
-                    environment_table_column = self.environments.index(environment_name)
-                except ValueError:
-                    error_message_qt(
-                        "Invalid Environment Name",
-                        "Invalid Environment Name {environment_name}, Valid Environments are "
-                        "{self.environments}.\n\nEnvironment channels not defined.",
-                    )
-                    return
-                for row_index, table_row in enumerate(environment_data_array):
-                    try:
-                        value = not (
-                            table_row[environment_index] == ""
-                            or table_row[environment_index] is None
-                        )
-                    except IndexError:
-                        value = False
-                    self.environment_channels_table.cellWidget(
-                        row_index, environment_table_column
-                    ).setChecked(value)
-
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-
-    def save_channel_table_to_workbook(self):
-        """Save the channel table to a file"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+        Loads a channel table using a file dialog or the specified filename
+        """
+        filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            "Save Channel Table",
-            filter="Excel File (*.xlsx);;Comma-separated Values (*.csv)",
+            "Load Rattlesnake Template File",
+            filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
         )
-        if filename == "":
+        if filepath == "":
             return
-        self.log(f"Saving Channel Table {filename}")
-        string_array = self.get_channel_table_strings()
-        _, file_type = os.path.splitext(filename)
-        if file_type == ".xlsx":
-            # Create the header
-            workbook = openpyxl.Workbook()
-            worksheet = workbook.active
-            worksheet.title = "Channel Table"
-            # Create the header
-            worksheet.cell(row=1, column=2, value="Test Article Definition")
-            worksheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
-            worksheet.cell(row=1, column=5, value="Instrument Definition")
-            worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
-            worksheet.cell(row=1, column=12, value="Channel Definition")
-            worksheet.merge_cells(
-                start_row=1, start_column=12, end_row=1, end_column=19
-            )
-            worksheet.cell(row=1, column=20, value="Output Feedback")
-            worksheet.merge_cells(
-                start_row=1, start_column=20, end_row=1, end_column=21
-            )
-            worksheet.cell(row=1, column=22, value="Limits")
-            worksheet.merge_cells(
-                start_row=1, start_column=22, end_row=1, end_column=23
-            )
-            for col_idx, val in enumerate(
-                [
-                    "Channel Index",
-                    "Node Number",
-                    "Node Direction",
-                    "Comment",
-                    "Serial Number",
-                    "Triax DoF",
-                    "Sensitivity  (mV/EU)",
-                    "Engineering Unit",
-                    "Make",
-                    "Model",
-                    "Calibration Exp Date",
-                    "Physical Device",
-                    "Physical Channel",
-                    "Type",
-                    "Minimum Value (V)",
-                    "Maximum Value (V)",
-                    "Coupling",
-                    "Current Excitation Source",
-                    "Current Excitation Value",
-                    "Physical Device",
-                    "Physical Channel",
-                    "Warning Level (EU)",
-                    "Abort Level (EU)",
-                ]
-            ):
-                worksheet.cell(row=2, column=1 + col_idx, value=val)
-            for row_idx, row in enumerate(string_array):
-                worksheet.cell(row=row_idx + 3, column=1, value=row_idx + 1)
-                for col_idx, col in enumerate(row):
-                    if col == "":
-                        continue
-                    worksheet.cell(row=row_idx + 3, column=col_idx + 2, value=col)
-            # Now do the environment
-            if len(self.environments) > 1:
-                bool_array = get_table_bools(self.environment_channels_table)
-                worksheet.cell(row=1, column=24, value="Environments")
-                for index, name in enumerate(self.environments):
-                    worksheet.cell(row=2, column=24 + index, value=name)
-                for row_idx, row in enumerate(bool_array):
-                    for col_idx, col in enumerate(row):
-                        if col:
-                            worksheet.cell(
-                                row=row_idx + 3, column=col_idx + 24, value="X"
-                            )
-            workbook.save(filename)
-        elif file_type == ".csv" or file_type == ".txt":
-            error_message_qt("Not Implemented!", "Output to CSV Not Implemented Yet!")
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        filename, filetype = os.path.splitext(filepath)
+
+        match filetype:
+            case ".nc4":
+                dataset = netCDF4.Dataset(filepath)
+                channel_list = HardwareMetadata.load_channel_table_from_netcdf(dataset)
+            case ".xlsx":
+                workbook = openpyxl.load_workbook(filepath, read_only=True)
+                channel_list = HardwareMetadata.load_channel_table_from_workbook(
+                    workbook
+                )
+
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def save_channel_table_to_file(self):
+        """Save the channel table to a file"""
+        filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Combined Environments Template",
+            filter="Excel File (*.xlsx)",
+        )
+        if filepath == "":
+            return
+
+        channel_list = self.get_channel_list()
+        workbook = openpyxl.Workbook()
+        HardwareMetadata.save_channel_table_to_workbook(channel_list, workbook)
+        workbook.save(filepath)
 
     # endregion
 

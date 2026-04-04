@@ -141,8 +141,9 @@ class HardwareMetadata:
 
         return channel_list
 
+    @classmethod
     def save_channel_table_to_workbook(
-        self, workbook: openpyxl.workbook.workbook.Workbook
+        self, channel_list: List[Channel], workbook: openpyxl.workbook.workbook.Workbook
     ):
         worksheet = workbook.active
         worksheet.title = "Channel Table"
@@ -186,7 +187,7 @@ class HardwareMetadata:
             worksheet.cell(row=2, column=1 + col_idx, value=val)
         # Fill out values
         channel_attr_list = Channel().channel_attr_list
-        for row, channel in enumerate(self.channel_list):
+        for row, channel in enumerate(channel_list):
             row_idx = row + 3
             worksheet.cell(row=row_idx, column=1, value=row)
             for col, attr in enumerate(channel_attr_list):
@@ -195,6 +196,7 @@ class HardwareMetadata:
                 val = str(val) if val is not None else ""
                 worksheet.cell(row=row_idx, column=col_idx, value=val)
 
+    @classmethod
     def load_channel_table_from_workbook(
         cls, workbook: openpyxl.workbook.workbook.Workbook
     ) -> List[Channel]:
@@ -317,7 +319,7 @@ class HardwareMetadata:
 
     @abstractmethod
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
-        self.save_channel_table_to_worksheet(workbook)
+        self.save_channel_table_to_workbook(self.channel_list, workbook)
 
         hardware_worksheet = workbook.create_sheet("Hardware")
 
