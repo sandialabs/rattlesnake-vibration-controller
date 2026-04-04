@@ -1217,163 +1217,163 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.environment_uis[environment].retrieve_metadata(dataset)
     #     self.initialize_environment_parameters()
 
-    # def hardware_update(self, current_index=None, select_file=True):
-    #     """Callback to provide options when hardware is selected"""
-    #     current_index = self.hardware_selector.currentIndex()
-    #     if current_index == 0:  # NIDAQmx
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.hide()
-    #         self.integration_oversample_label.hide()
-    #         self.task_trigger_label.show()
-    #         self.task_trigger_selector.show()
-    #         self.hardware_file = None
-    #     elif current_index == 1:  # LAN-XI
-    #         self.sample_rate_selector.hide()
-    #         self.ip_lookup_button.show()
-    #         self.lanxi_sample_rate_selector.show()
-    #         self.lanxi_maximum_acquisition_processes_label.show()
-    #         self.lanxi_maximum_acquisition_processes_selector.show()
-    #         self.integration_oversample_selector.hide()
-    #         self.integration_oversample_label.hide()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #         self.hardware_file = None
-    #     elif current_index == 2:  # DP Quattro
-    #         # Load in the library file
-    #         if select_file:
-    #             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #                 self, "Data Physics API", filter="Quattro API (DpQuattro.dll)"
-    #             )
-    #             if filename == "":
-    #                 self.hardware_selector.setCurrentIndex(0)
-    #                 return
-    #             else:
-    #                 self.hardware_file = filename
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.hide()
-    #         self.integration_oversample_label.hide()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #         self.sample_rate_update()
-    #     elif current_index == 3:  # DP 900
-    #         # Load in the library file
-    #         if select_file:
-    #             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #                 self, "Data Physics API", filter="DP900 API (Dp900Matlab.dll)"
-    #             )
-    #             if filename == "":
-    #                 self.hardware_selector.setCurrentIndex(0)
-    #                 return
-    #             else:
-    #                 self.hardware_file = filename
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.hide()
-    #         self.integration_oversample_label.hide()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #     elif current_index == 4:  # Exodus
-    #         # Load in an exodus file
-    #         if select_file:
-    #             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #                 self,
-    #                 "Load Exodus File with Eigensolution",
-    #                 filter="Exodus File (*.exo *.e)",
-    #             )
-    #             if filename == "":
-    #                 self.hardware_selector.setCurrentIndex(0)
-    #                 return
-    #             else:
-    #                 self.hardware_file = filename
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.show()
-    #         self.integration_oversample_label.show()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #     elif current_index == 5:  # State Space File
-    #         # Load in a state space file
-    #         if select_file:
-    #             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #                 self,
-    #                 "Load Numpy or Matlab File with State Space Matrices A B C D",
-    #                 filter="Matlab or Numpy File (*.mat *.npz)",
-    #             )
-    #             if filename == "":
-    #                 self.hardware_selector.setCurrentIndex(0)
-    #                 return
-    #             else:
-    #                 self.hardware_file = filename
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.show()
-    #         self.integration_oversample_label.show()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #     elif current_index == 6:
-    #         # Load in an sdynpy system
-    #         if select_file:
-    #             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #                 self, "Load a SDynPy System", filter="Numpy File (*.npz)"
-    #             )
-    #             if filename == "":
-    #                 self.hardware_selector.setCurrentIndex(0)
-    #                 return
-    #             else:
-    #                 self.hardware_file = filename
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.show()
-    #         self.integration_oversample_label.show()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #     elif current_index == 7:
-    #         if select_file:
-    #             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #                 self,
-    #                 "Load a SDynPy TransferFunctionArray",
-    #                 filter="Numpy File (*.npz)",
-    #             )
-    #             if filename == "":
-    #                 self.hardware_selector.setCurrentIndex(0)
-    #                 return
-    #             else:
-    #                 self.hardware_file = filename
-    #         self.sample_rate_selector.show()
-    #         self.ip_lookup_button.hide()
-    #         self.lanxi_sample_rate_selector.hide()
-    #         self.lanxi_maximum_acquisition_processes_label.hide()
-    #         self.lanxi_maximum_acquisition_processes_selector.hide()
-    #         self.integration_oversample_selector.show()
-    #         self.integration_oversample_label.show()
-    #         self.task_trigger_label.hide()
-    #         self.task_trigger_selector.hide()
-    #     else:
-    #         error_message_qt(
-    #             "Invalid Hardware Type!",
-    #             "You have selected an invalid hardware type.  How did you do this?!",
-    #         )
-    #     self.task_trigger_update()
+    def hardware_update(self, current_index=None, select_file=True):
+        """Callback to provide options when hardware is selected"""
+        current_index = self.hardware_selector.currentIndex()
+        if current_index == 0:  # NIDAQmx
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.hide()
+            self.integration_oversample_label.hide()
+            self.task_trigger_label.show()
+            self.task_trigger_selector.show()
+            self.hardware_file = None
+        elif current_index == 1:  # LAN-XI
+            self.sample_rate_selector.hide()
+            self.ip_lookup_button.show()
+            self.lanxi_sample_rate_selector.show()
+            self.lanxi_maximum_acquisition_processes_label.show()
+            self.lanxi_maximum_acquisition_processes_selector.show()
+            self.integration_oversample_selector.hide()
+            self.integration_oversample_label.hide()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+            self.hardware_file = None
+        elif current_index == 2:  # DP Quattro
+            # Load in the library file
+            if select_file:
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self, "Data Physics API", filter="Quattro API (DpQuattro.dll)"
+                )
+                if filename == "":
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.hide()
+            self.integration_oversample_label.hide()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+            self.sample_rate_update()
+        elif current_index == 3:  # DP 900
+            # Load in the library file
+            if select_file:
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self, "Data Physics API", filter="DP900 API (Dp900Matlab.dll)"
+                )
+                if filename == "":
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.hide()
+            self.integration_oversample_label.hide()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+        elif current_index == 4:  # Exodus
+            # Load in an exodus file
+            if select_file:
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self,
+                    "Load Exodus File with Eigensolution",
+                    filter="Exodus File (*.exo *.e)",
+                )
+                if filename == "":
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.show()
+            self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+        elif current_index == 5:  # State Space File
+            # Load in a state space file
+            if select_file:
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self,
+                    "Load Numpy or Matlab File with State Space Matrices A B C D",
+                    filter="Matlab or Numpy File (*.mat *.npz)",
+                )
+                if filename == "":
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.show()
+            self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+        elif current_index == 6:
+            # Load in an sdynpy system
+            if select_file:
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self, "Load a SDynPy System", filter="Numpy File (*.npz)"
+                )
+                if filename == "":
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.show()
+            self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+        elif current_index == 7:
+            if select_file:
+                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self,
+                    "Load a SDynPy TransferFunctionArray",
+                    filter="Numpy File (*.npz)",
+                )
+                if filename == "":
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.show()
+            self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+        else:
+            error_message_qt(
+                "Invalid Hardware Type!",
+                "You have selected an invalid hardware type.  How did you do this?!",
+            )
+        self.task_trigger_update()
 
     # def ip_lookup(self):
     #     """Creates an IP Lookup window"""
