@@ -43,6 +43,12 @@ from rattlesnake.utilities import (
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 
+class HardwareAssistModules(Enum):
+    NONE = 0
+    COMBOBOX = 2
+    SPINBOX = 1
+
+
 # region Global
 class UICommands(Enum):
     ERROR = -1

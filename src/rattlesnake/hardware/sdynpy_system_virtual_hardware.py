@@ -24,14 +24,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import multiprocessing as mp
 import time
 from typing import List
+from collections import defaultdict
 
 import numpy as np
 import scipy.signal as signal
+import netCDF4 as nc4
+import openpyxl
 
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import flush_queue
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.utilities import flush_queue, RattlesnakeError
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareMetadata,
+    HardwareAcquisition,
+    HardwareOutput,
+)
+from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
+from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
 _direction_map = {
     "X+": 1,
@@ -67,13 +74,245 @@ _direction_map = {
     "": 0,
     None: 0,
 }
+_direction_inv_map = {
+    0: "",
+    1: "X+",
+    2: "Y+",
+    3: "Z+",
+    4: "RX+",
+    5: "RY+",
+    6: "RZ+",
+    -1: "X-",
+    -2: "Y-",
+    -3: "Z-",
+    -4: "RX-",
+    -5: "RY-",
+    -6: "RZ-",
+}
 
+HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 DEBUG = False
 
 if DEBUG:
     from glob import glob
 
     FILE_OUTPUT = "debug_data/sdynpy_hardware_{:}.npz"
+
+
+# region Metadata
+class SDynPySystemMetadata(HardwareMetadata):
+    def __init__(
+        self,
+        channel_list: List[Channel],
+        sample_rate: int,
+        time_per_read: float,
+        time_per_write: float,
+        output_oversample: int,
+        hardware_file: str,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample=output_oversample,
+        )
+        self.hardware_file = hardware_file
+        self._node_dict = None  # Dont set this
+
+    # endregion
+
+    # region Validation
+    def validate(self):
+        super().validate()
+        # Validate node number
+        self.detect_devices()
+        has_physical = False
+        for row, channel in enumerate(self.channel_list):
+            if str(channel.node_number) not in self.valid_node_numbers:
+                raise RattlesnakeError(
+                    f"Invalid node number in channel table row {row+1}"
+                )
+            if channel.node_direction not in self.valid_node_directions(
+                str(channel.node_number)
+            ):
+                raise RattlesnakeError(
+                    f"Invalid node direction in channel table row {row+1}"
+                )
+            if channel.physical_device is None:
+                raise RattlesnakeError(
+                    f"Physical device should be 'Virtual' in channel table row {row+1}"
+                )
+            if (
+                str(channel.channel_type).lower() == "force"
+                and channel.feedback_device is None
+            ):
+                raise RattlesnakeError(
+                    f"Force channel types require 'Virtual' feedback device in channel table row {row+1}"
+                )
+            if (
+                str(channel.channel_type).lower()
+                not in self.accepted_channel_type_strings
+            ):
+                raise RattlesnakeError(
+                    f"Invalid channel type in channel table row {row+1}. Valid channel types include 'Displacement', 'Velocity', 'Acceleration', 'Force'"
+                )
+            if channel.physical_device is not None and channel.feedback_device is None:
+                has_physical = True
+
+        if not has_physical:
+            raise RattlesnakeError(
+                "SDynPy channel table requires atleast 1 physical device without an assigned feedback device"
+            )
+
+        return True
+
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+        assist_mode_modules["node_number"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["node_direction"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["channel_type"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        if not self.node_dict:
+            self.detect_devices()
+
+        valid_dict["node_number"] = self.valid_node_numbers
+        valid_dict["node_direction"] = self.valid_node_directions(channel.node_number)
+        valid_dict["physical_device"] = self.valid_physical_device
+        valid_dict["channel_type"] = self.valid_channel_types
+        valid_dict["feedback_device"] = self.valid_feedback_device
+
+        return valid_dict
+
+    def detect_devices(self):
+        try:
+            sdynpy_system_data = {
+                key: val for key, val in np.load(self.hardware_file).items()
+            }
+            channel_indices = {
+                tuple([abs(v) for v in val]) for val in sdynpy_system_data["coordinate"]
+            }
+        except:
+            raise RattlesnakeError("Invalid SDynPy system file")
+
+        # Map node directions to node numbers
+        self._node_dict = defaultdict(set)
+        for node_num, dir_ind in channel_indices:
+            node_dir = _direction_inv_map[dir_ind]
+            neg_node_dir = _direction_inv_map[-dir_ind]
+            self._node_dict[str(node_num)].add(node_dir)
+            self._node_dict[str(node_num)].add(neg_node_dir)
+
+    @property
+    def node_dict(self):
+        return self._node_dict
+
+    @property
+    def valid_node_numbers(self):
+        node_numbers = list(self.node_dict.keys())
+        node_numbers.sort()
+        return node_numbers
+
+    def valid_node_directions(self, node_number: str = ""):
+        if node_number in list(self.node_dict.keys()):
+            node_directions = list(self.node_dict[node_number])
+            node_directions.sort()
+        else:
+            node_directions = []
+        return node_directions
+
+    @property
+    def valid_channel_types(self):
+        channel_types = ["Acceleration", "Velocity", "Displacement", "Force"]
+        return channel_types
+
+    @property
+    def accepted_channel_type_strings(self):
+        channel_types = [
+            "accel",
+            "acceleration",
+            "acc",
+            "force",
+            "vel",
+            "velocity",
+            "disp",
+            "displacement",
+        ]
+        return channel_types
+
+    @property
+    def valid_physical_device(self):
+        return ["Virtual"]
+
+    @property
+    def valid_feedback_device(self):
+        return ["Virtual"]
+
+    # endregion
+
+    # region Loading
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+        super().save_metadata_to_netcdf(netcdf_dataset)
+
+        netcdf_dataset.hardware_file = self.hardware_file
+
+    @classmethod
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+        default_metadata = super().load_metadata_from_netcdf(netcdf_dataset)
+
+        hardware_file = netcdf_dataset.hardware_file
+
+        return cls(
+            default_metadata.channel_list,
+            default_metadata.sample_rate,
+            default_metadata.time_per_read,
+            default_metadata.time_per_write,
+            default_metadata.output_oversample,
+            hardware_file,
+        )
+
+    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+        super().save_metadata_to_workbook(workbook)
+
+        hardware_worksheet = workbook["Hardware"]
+        hardware_worksheet.cell(2, 2, self.hardware_file)
+
+    @classmethod
+    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+        default_metadata = super().load_metadata_from_workbook(workbook)
+
+        hardware_file = None
+
+        hardware_worksheet = workbook["Hardware"]
+        for row in hardware_worksheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            if value is None or value == "":
+                continue
+            match name:
+                case "hardware_file":
+                    hardware_file = value
+                case _:
+                    continue
+
+        return cls(
+            default_metadata.channel_list,
+            default_metadata.sample_rate,
+            default_metadata.time_per_read,
+            default_metadata.time_per_write,
+            default_metadata.output_oversample,
+            hardware_file,
+        )
+
+    # endregion
 
 
 # region: Acuqisition

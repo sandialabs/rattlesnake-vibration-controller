@@ -30,9 +30,10 @@ import openpyxl
 
 from rattlesnake.utilities import RattlesnakeError
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
 
-# region HardwareMetadata
+# region Metadata
 class HardwareMetadata:
     """
     Abstract class that contains values to fully define how the hardware is setup.
@@ -107,6 +108,14 @@ class HardwareMetadata:
         for attr in Channel().channel_attr_list:
             valid_dict[attr] = []
         return valid_dict
+
+    @property
+    @abstractmethod
+    def assist_mode_modules(self):
+        assist_modules = {}
+        for attr in Channel().channel_attr_list:
+            assist_modules[attr] = HardwareAssistModules.NONE
+        return assist_modules
 
     # endregion
 
@@ -243,9 +252,6 @@ class HardwareMetadata:
         netcdf_dataset.time_per_read = self.samples_per_read / self.sample_rate
         netcdf_dataset.hardware = self.hardware_type.value
         netcdf_dataset.output_oversample = self.output_oversample
-        for attr_name in self.extra_attr_list:
-            value = getattr(self, attr_name)
-            setattr(netcdf_dataset, attr_name, value)
         # Create Variables
         netcdf_dataset.createVariable(
             stream_variable, "f8", ("response_channels", stream_dimension)
@@ -435,7 +441,7 @@ class HardwareMetadata:
     # endregion
 
 
-# region: HardwareAcquisition
+# region Acquisition
 class HardwareAcquisition(ABC):
     """
     Abstract class defining the interface between the controller and acquisition.
@@ -494,7 +500,10 @@ class HardwareAcquisition(ABC):
         actually played out from the device."""
 
 
-# region: HardwareOutput
+# endregion
+
+
+# region Output
 class HardwareOutput(ABC):
     """Abstract class defining the interface between the controller and output
 
@@ -550,3 +559,6 @@ class HardwareOutput(ABC):
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal"""
         pass
+
+
+# endregion
