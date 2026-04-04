@@ -39,7 +39,7 @@ import openpyxl
 import pyqtgraph
 from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from rattlesnake.rattlesnake import RattlesnakeState, RattlesnakeController
+from rattlesnake.engine import RattlesnakeState, RattlesnakeController
 from rattlesnake.utilities import (
     DIRECTORY,
     RattlesnakeError,

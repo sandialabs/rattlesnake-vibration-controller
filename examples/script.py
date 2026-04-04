@@ -1,4 +1,4 @@
-from rattlesnake.rattlesnake import RattlesnakeController
+from rattlesnake.engine import RattlesnakeController
 from rattlesnake.main import launch_rattlesnake_ui
 
 # from .metadata import (
