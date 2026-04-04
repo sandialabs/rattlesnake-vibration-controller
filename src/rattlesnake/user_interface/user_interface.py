@@ -369,7 +369,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             )
             with open(dark_theme_path, encoding="utf-8") as file:
                 stylesheet = file.read()
-            images_path = os.path.join(DIRECTORY, "user_interface", "themes", "images").replace("\\", "/")
+            images_path = os.path.join(
+                DIRECTORY, "user_interface", "themes", "images"
+            ).replace("\\", "/")
             print(f"Images Path: {images_path}")
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)

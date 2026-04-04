@@ -21,21 +21,23 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
-from multiprocessing.queues import Queue
+from enum import Enum
+from multiprocessing import queues
+import multiprocessing as mp
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
+
 import netCDF4 as nc4
+
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
 )
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.user_interface.ui_utilities import UICommands
 
 PICKLE_ON_ERROR = False
 
@@ -43,8 +45,49 @@ if PICKLE_ON_ERROR:
     import pickle
 
 
+# region Commands
+class EnvironmentCommands(Enum):
+    """
+    Example class for profile commands the environment can recieve from the
+    controller.
+
+    Enums are weird and dont work well with ABCs so this is just an outline
+    for the command object.
+    """
+
+    EXAMPLE_COMMAND = 0
+    _ignore_ = ("VALID_PROFILE_COMMANDS", "VALID_DATA")
+    VALID_PROFILE_COMMANDS = ()
+    VALID_DATA = {}
+
+    @property
+    def label(self):
+        return self.name.replace("_", " ").title()
+
+    @classmethod
+    def valid_data(cls):
+        valid_data = {
+            cls(command): data for command, data in cls.VALID_DATA.value.items()
+        }
+        return valid_data
+
+    @classmethod
+    def valid_profile_commands(cls):
+        valid_commands = tuple(
+            cls(command) for command in cls.VALID_PROFILE_COMMANDS.value
+        )
+        return valid_commands
+
+
+class EnvironmentUICommands(Enum):
+    """These are extra commands that the UI needs to use"""
+
+
+# endregion
+
+
 # region Metadata
-class AbstractMetadata(ABC):
+class EnvironmentMetadata(ABC):
     """Abstract class for storing metadata for an environment.
 
     This class is used as a storage container for parameters used by an
@@ -87,7 +130,7 @@ class AbstractMetadata(ABC):
 
 
 # region Environment
-class AbstractEnvironment(ABC):
+class Environment(ABC):
     """Abstract Environment class defining the interface with the controller
 
     This class is used to define the operation of an environment within the
@@ -374,8 +417,8 @@ class AbstractEnvironment(ABC):
         return True
 
 
-# region: Process
-def run_process(
+# region Process
+def process(
     environment_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: Queue,
