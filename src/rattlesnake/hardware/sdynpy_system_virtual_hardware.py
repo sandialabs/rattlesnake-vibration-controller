@@ -315,7 +315,7 @@ class SDynPySystemMetadata(HardwareMetadata):
     # endregion
 
 
-# region: Acuqisition
+# region Acquisition
 class SDynPySystemAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -326,7 +326,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, system_file: str, queue: mp.queues.Queue, sleep: bool = True):
+    def __init__(self, system_file: str, queue: mp.Queue, sleep: bool = True):
         """
         Loads in the SDynPy system file and sets initial parameters to null
         values.
@@ -335,7 +335,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         ----------
         system_file : str
             Path to the file containing state space the SDynPy system object
-        queue : mp.queues.Queue
+        queue : mp.Queue
             A queue that passes input data from the SDynPySystemOutput class to
             this class.  Normally, this data transfer would occur through
             the physical test object: the exciters would excite the test object
@@ -375,10 +375,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             for index, val in enumerate(self.sdynpy_system_data["coordinate"])
         }
 
-    # region: Abstract Methods
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: HardwareMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -387,7 +384,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
+        test_data : DataAcquisitionParameters :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -398,7 +395,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.create_response_channels(channel_data)
+        self.create_response_channels(test_data.channel_list)
         self.set_parameters(test_data)
 
     def create_response_channels(self, channel_data: List[Channel]):
@@ -574,7 +571,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
+        test_data : DataAcquisitionParameters :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -692,7 +689,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
-# region: Output
+# region Output
 class SDynPySystemOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -700,23 +697,20 @@ class SDynPySystemOutput(HardwareOutput):
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, queue: mp.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 
         Parameters
         ----------
-        queue : mp.queues.Queue
+        queue : mp.Queue
             Queue used to pass data from output to acquisition for integration.
             See ``StateSpaceAcquisition.__init__``
 
         """
         self.queue = queue
 
-    # region: Abstract Methods
-    def set_up_data_output_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: HardwareMetadata):
         """
         Initialize the hardware and set up sources and sampling properties
 
@@ -724,7 +718,7 @@ class SDynPySystemOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
+        test_data : DataAcquisitionParameters :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
