@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class HardwareType(Enum):
+    NONE = -1
     NI_DAQMX = 0
     LAN_XI = 1
     DP_QUATTRO = 2
