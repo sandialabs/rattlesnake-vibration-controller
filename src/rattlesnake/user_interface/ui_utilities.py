@@ -40,7 +40,6 @@ from rattlesnake.utilities import (
     save_csv_matrix,
     trac,
 )
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 
 class HardwareAssistModules(Enum):
@@ -980,7 +979,7 @@ def get_table_strings(tablewidget: QtWidgets.QTableWidget):
 class ChannelMonitor(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
-    def __init__(self, parent, daq_settings: HardwareMetadata):
+    def __init__(self, parent, daq_settings):
         """
         Creates a window showing CPSD matrix information for a single channel.
 

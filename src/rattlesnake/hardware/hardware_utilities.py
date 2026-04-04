@@ -18,28 +18,28 @@ class Channel:
 
     def __init__(
         self,
-        node_number,
-        node_direction,
-        comment,
-        serial_number,
-        triax_dof,
-        sensitivity,
-        unit,
-        make,
-        model,
-        expiration,
-        physical_device,
-        physical_channel,
-        channel_type,
-        minimum_value,
-        maximum_value,
-        coupling,
-        excitation_source,
-        excitation,
-        feedback_device,
-        feedback_channel,
-        warning_level,
-        abort_level,
+        node_number=None,
+        node_direction=None,
+        comment=None,
+        serial_number=None,
+        triax_dof=None,
+        sensitivity=None,
+        unit=None,
+        make=None,
+        model=None,
+        expiration=None,
+        physical_device=None,
+        physical_channel=None,
+        channel_type=None,
+        minimum_value=None,
+        maximum_value=None,
+        coupling=None,
+        excitation_source=None,
+        excitation=None,
+        feedback_device=None,
+        feedback_channel=None,
+        warning_level=None,
+        abort_level=None,
     ):
         """Property container for a single channel in the controller.
 
@@ -114,69 +114,55 @@ class Channel:
         self.warning_level = warning_level
         self.abort_level = abort_level
 
-    @classmethod
-    def from_channel_table_row(cls, row: tuple[str]):
-        """Creates a Channel object from a row in the channel table
+    @property
+    def channel_attr_list(self):
+        """Returns a list of channel attributes in the orderr of the channel table headers"""
+        channel_attr_list = [
+            "node_number",
+            "node_direction",
+            "comment",
+            "serial_number",
+            "triax_dof",
+            "sensitivity",
+            "unit",
+            "make",
+            "model",
+            "expiration",
+            "physical_device",
+            "physical_channel",
+            "channel_type",
+            "minimum_value",
+            "maximum_value",
+            "coupling",
+            "excitation_source",
+            "excitation",
+            "feedback_device",
+            "feedback_channel",
+            "warning_level",
+            "abort_level",
+        ]
+        return channel_attr_list
 
-        Parameters
-        ----------
-        row : iterable :
-            Iterable of strings from a single row of the channel table
+    @property
+    def is_empty(self):
+        """Returns True if every attribute in channel is equalt to None"""
+        return all(
+            getattr(self, attr_name) is None for attr_name in self.channel_attr_list
+        )
 
+    def is_output_channel(self):
+        return self.feedback_device is not None
 
-        Returns
-        -------
-        channel : Channel
-            A channel object containing the data in the given row of the
-            channel table.
+    def __eq__(self, other):
+        if not isinstance(other, Channel):
+            return NotImplemented
 
-        """
-        new_row = [None if val.strip() == "" else val for val in row]
-        physical_device = new_row[10]
-        if physical_device is None:
-            return None
-        node_number = new_row[0]
-        node_direction = new_row[1]
-        comment = new_row[2]
-        serial_number = new_row[3]
-        triax_dof = new_row[4]
-        sensitivity = new_row[5]
-        unit = new_row[6]
-        make = new_row[7]
-        model = new_row[8]
-        expiration = new_row[9]
-        physical_channel = new_row[11]
-        channel_type = new_row[12]
-        minimum_value = new_row[13]
-        maximum_value = new_row[14]
-        coupling = new_row[15]
-        excitation_source = new_row[16]
-        excitation = new_row[17]
-        feedback_device = new_row[18]
-        feedback_channel = new_row[19]
-        warning_level = new_row[20]
-        abort_level = new_row[21]
-        return cls(
-            node_number,
-            node_direction,
-            comment,
-            serial_number,
-            triax_dof,
-            sensitivity,
-            unit,
-            make,
-            model,
-            expiration,
-            physical_device,
-            physical_channel,
-            channel_type,
-            minimum_value,
-            maximum_value,
-            coupling,
-            excitation_source,
-            excitation,
-            feedback_device,
-            feedback_channel,
-            warning_level,
-            abort_level,
+        return all(
+            getattr(self, attr_name) == getattr(other, attr_name)
+            for attr_name in self.channel_attr_list
+        )
+
+    def __hash__(self):
+        return hash(
+            tuple(getattr(self, attr_name) for attr_name in self.channel_attr_list)
         )

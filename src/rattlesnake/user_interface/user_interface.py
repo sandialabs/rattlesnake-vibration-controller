@@ -54,17 +54,18 @@ from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
 )
 
+# region Defaults
 # pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
 pyqtgraph.setConfigOption("foreground", "k")
-
 QtCore.QDir.addSearchPath("images", os.path.join(DIRECTORY, "themes", "images"))
-
 TASK_NAME = "UI"
 VERSION = "3.1.1"
 RATTLESNAKE_UI_PATH = os.path.join(
     DIRECTORY, "user_interface", "ui_files", "combined_environments_controller.ui"
 )
+BUFFER_ROWS = 10
+MIN_ROWS = 30
 
 
 # region Deteriorated
@@ -123,10 +124,10 @@ class Updater(QtCore.QRunnable):
 # endregion
 
 
+# region User Interface
 class RattlesnakeUI(QtWidgets.QMainWindow):
     """Main user interface from which the rattlesnake controller object is controlled."""
 
-    # region Startup
     def __init__(self, rattlesnake: RattlesnakeController):
         """
         Initializes user interface from an existing rattlesnake controller object.
@@ -174,94 +175,92 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.show()
 
     def connect_callbacks(self):
-        pass
+        """
+        Helper function to connect callbacks to widgets in the user interface.
+        """
+        # Universal
+        self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
+        # self.load_test_file_button.clicked.connect(self.load_test_file)
+        # self.save_template_button.clicked.connect(self.save_template)
 
-    #     """
-    #     Helper function to connect callbacks to widgets in the user interface.
-    #     """
-    #     # Universal
-    #     self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
-    #     self.load_test_file_button.clicked.connect(self.load_test_file)
-    #     self.save_template_button.clicked.connect(self.save_template)
+        # Channel Table
+        self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
+        channel_table_scroll = self.channel_table.verticalScrollBar()
+        channel_table_scroll.valueChanged.connect(self.sync_environment_table)
+        # self.load_channel_table_button.clicked.connect(self.load_channel_table)
+        # self.save_channel_table_button.clicked.connect(self.save_channel_table)
+        # self.assist_channel_table_checkbox.stateChanged.connect(
+        #     self.assist_channel_table_init
+        # )
+        # Copy
+        self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
+        self.channel_table_action_copy.setShortcut("Ctrl+C")
+        self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
+        self.channel_table.addAction(self.channel_table_action_copy)
+        # Paste
+        self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
+        self.channel_table_action_paste.setShortcut("Ctrl+V")
+        self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
+        self.channel_table.addAction(self.channel_table_action_paste)
+        # Delete
+        self.channel_table_action_delete = QtWidgets.QAction(
+            "Delete", self.channel_table
+        )
+        self.channel_table_action_delete.setShortcut("Del")
+        self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
+        self.channel_table.addAction(self.channel_table_action_delete)
+        # Insert Row
+        self.channel_table_action_insert_row = QtWidgets.QAction(
+            "Insert Row", self.channel_table
+        )
+        self.channel_table_action_insert_row.triggered.connect(
+            self.channel_table_insert_row
+        )
+        self.channel_table.addAction(self.channel_table_action_insert_row)
+        # Delete Row
+        self.channel_table_action_delete_row = QtWidgets.QAction(
+            "Delete Row", self.channel_table
+        )
+        self.channel_table_action_delete_row.triggered.connect(
+            self.channel_table_delete_row
+        )
+        self.channel_table.addAction(self.channel_table_action_delete_row)
 
-    #     # Channel Table
-    #     self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-    #     self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
-    #     channel_table_scroll = self.channel_table.verticalScrollBar()
-    #     channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-    #     self.load_channel_table_button.clicked.connect(self.load_channel_table)
-    #     self.save_channel_table_button.clicked.connect(self.save_channel_table)
-    #     self.assist_channel_table_checkbox.stateChanged.connect(
-    #         self.assist_channel_table_init
-    #     )
-    #     # Copy
-    #     self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
-    #     self.channel_table_action_copy.setShortcut("Ctrl+C")
-    #     self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
-    #     self.channel_table.addAction(self.channel_table_action_copy)
-    #     # Paste
-    #     self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
-    #     self.channel_table_action_paste.setShortcut("Ctrl+V")
-    #     self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
-    #     self.channel_table.addAction(self.channel_table_action_paste)
-    #     # Delete
-    #     self.channel_table_action_delete = QtWidgets.QAction(
-    #         "Delete", self.channel_table
-    #     )
-    #     self.channel_table_action_delete.setShortcut("Del")
-    #     self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
-    #     self.channel_table.addAction(self.channel_table_action_delete)
-    #     # Insert Row
-    #     self.channel_table_action_insert_row = QtWidgets.QAction(
-    #         "Insert Row", self.channel_table
-    #     )
-    #     self.channel_table_action_insert_row.triggered.connect(
-    #         self.channel_table_insert_row
-    #     )
-    #     self.channel_table.addAction(self.channel_table_action_insert_row)
-    #     # Delete Row
-    #     self.channel_table_action_delete_row = QtWidgets.QAction(
-    #         "Delete Row", self.channel_table
-    #     )
-    #     self.channel_table_action_delete_row.triggered.connect(
-    #         self.channel_table_delete_row
-    #     )
-    #     self.channel_table.addAction(self.channel_table_action_delete_row)
+        # Hardware
+        # self.hardware_selector.currentTextChanged.connect(self.update_hardware)
+        # self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+        # self.select_file_button.clicked.connect(self.select_hardware_file)
 
-    #     # Hardware
-    #     self.hardware_selector.currentTextChanged.connect(self.update_hardware)
-    #     self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
-    #     self.select_file_button.clicked.connect(self.select_hardware_file)
+        # Environments
+        environment_table_scroll = self.environment_channel_table.verticalScrollBar()
+        # environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+        # self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
+        # self.remove_environment_button.clicked.connect(self.remove_environment)
+        # self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
+        #     self.rename_environment
+        # )
+        # self.initialize_environments_button.clicked.connect(
+        #     self.initialize_environments
+        # )
 
-    #     # Environments
-    #     environment_table_scroll = self.environment_channel_table.verticalScrollBar()
-    #     environment_table_scroll.valueChanged.connect(self.sync_channel_table)
-    #     self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
-    #     self.remove_environment_button.clicked.connect(self.remove_environment)
-    #     self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
-    #         self.rename_environment
-    #     )
-    #     self.initialize_environments_button.clicked.connect(
-    #         self.initialize_environments
-    #     )
+        # Acquisition
+        # self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
+        # self.arm_test_button.clicked.connect(self.start_acquisition)
+        # self.disarm_test_button.clicked.connect(self.stop_acquisition)
+        # self.manual_streaming_radiobutton.toggled.connect(
+        #     self.show_hide_manual_streaming
+        # )
+        # self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
 
-    #     # Acquisition
-    #     self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
-    #     self.arm_test_button.clicked.connect(self.start_acquisition)
-    #     self.disarm_test_button.clicked.connect(self.stop_acquisition)
-    #     self.manual_streaming_radiobutton.toggled.connect(
-    #         self.show_hide_manual_streaming
-    #     )
-    #     self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
-
-    #     # Profiles
-    #     self.add_profile_event_button.clicked.connect(self.add_profile_event)
-    #     self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
-    #     self.save_profile_button.clicked.connect(self.save_profile_list)
-    #     self.load_profile_button.clicked.connect(self.load_profile_list)
-    #     self.initialize_profile_button.clicked.connect(self.initialize_profile)
-    #     self.start_profile_button.clicked.connect(self.start_profile)
-    #     self.stop_profile_button.clicked.connect(self.stop_profile)
+        # Profiles
+        # self.add_profile_event_button.clicked.connect(self.add_profile_event)
+        # self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
+        # self.save_profile_button.clicked.connect(self.save_profile_list)
+        # self.load_profile_button.clicked.connect(self.load_profile_list)
+        # self.initialize_profile_button.clicked.connect(self.initialize_profile)
+        # self.start_profile_button.clicked.connect(self.start_profile)
+        # self.stop_profile_button.clicked.connect(self.stop_profile)
 
     def complete_ui(self):
         """
@@ -772,6 +771,228 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         tb = traceback.format_exc()
     #         self.display_error(tb)
     #         return
+
+    # endregion
+
+    # region Channel Table
+    def get_channel(self, row):
+        channel = Channel()
+        channel_attr_list = channel.channel_attr_list
+        for col in range(self.channel_table.columnCount()):
+            attr = channel_attr_list[col]
+            item = self.channel_table.item(row, col)
+            # Check if item exists and has text
+            if item and item.text().strip():
+                setattr(channel, attr, item.text())
+
+        return channel
+
+    def get_channel_list(self):
+        channel_list = []
+        channel_attr_list = Channel().channel_attr_list
+        for row in range(self.channel_table.rowCount()):
+            channel = Channel()
+            for col in range(self.channel_table.columnCount()):
+                attr = channel_attr_list[col]
+                item = self.channel_table.item(row, col)
+                # Check if item exists and has text
+                if item and item.text().strip():
+                    setattr(channel, attr, item.text())
+
+            if channel.is_empty:
+                break
+
+            channel_list.append(channel)
+
+        return channel_list
+
+    def sync_channel_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.channel_table.verticalScrollBar().setValue(
+            self.environment_channel_table.verticalScrollBar().value()
+        )
+
+    def sync_environment_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.environment_channel_table.verticalScrollBar().setValue(
+            self.channel_table.verticalScrollBar().value()
+        )
+
+    def add_empty_channel_table_rows(self, item=None):
+        self.channel_table.blockSignals(True)
+        num_rows = self.channel_table.rowCount()
+        last_row = -1
+        for row_idx in reversed(range(num_rows)):
+            channel = self.get_channel(row_idx)
+
+            if not channel.is_empty:
+                last_row = row_idx + 1
+                break
+
+        desired_rows = max(last_row + BUFFER_ROWS, MIN_ROWS)
+        if self.channel_table.rowCount() != desired_rows:
+            self.channel_table.setRowCount(desired_rows)
+            self.set_environment_table_row_count(desired_rows)
+
+        if self.assist_channel_table_checkbox.isChecked():
+            widget_range = range(num_rows, desired_rows)
+            self.assist_channel_table_init(True, widget_range)
+
+        self.channel_table.blockSignals(False)
+
+    def set_environment_table_row_count(self, desired_rows):
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        self.environment_channel_table.setRowCount(desired_rows)
+        if desired_rows > num_rows:
+            for row in range(num_rows, desired_rows):
+                for col in range(num_cols):
+                    checkbox = QtWidgets.QCheckBox()
+                    checkbox.setChecked(False)
+                    self.environment_channel_table.setCellWidget(row, col, checkbox)
+
+    def copy_channel_table(self):
+        """Function to copy text from channel table in a format that Excel recognizes"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for copy functionality")
+            return
+
+        clipboard = QtWidgets.QApplication.clipboard()
+        selected_ranges = self.channel_table.selectedRanges()
+        if selected_ranges:
+            # Get selected range
+            selected_range = selected_ranges[0]
+            copied_text = ""
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
+            # Put tabs inbetween columns, newlines inbetween rows
+            copied_text = []
+            for row in rows:
+                row_data = []
+                for column in columns:
+                    item = self.channel_table.item(row, column)
+                    row_data.append(
+                        item.text() if item else ""
+                    )  # Empty cells should be "" not None
+                copied_text.append("\t".join(row_data))  # Tab betewen columns
+            copied_text = "\n".join(copied_text)  # Newline between rows
+            clipboard.setText(copied_text)
+
+    def paste_channel_table(self):
+        """Function to paste clipboard starting from top left cell"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for paste functionality")
+            return
+
+        self.channel_table.blockSignals(True)
+        selection_range = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
+        if selection_range:
+            # Get top left cell
+            top_left_row = selection_range[0].topRow()
+            top_left_column = selection_range[0].leftColumn()
+            # Get clipboard text
+            clipboard = QtWidgets.QApplication.clipboard()
+            if clipboard.mimeData().hasText():
+                clipboard_text = clipboard.text()
+                # Split clipboard text with newlines between rows
+                rows = clipboard_text.splitlines()
+                # Split clipboard text with tabs between columns
+                array_text = [row.split("\t") for row in rows]
+                num_row = len(array_text)
+                bottom_row = top_left_row + num_row
+                if self.channel_table.rowCount() < bottom_row:
+                    self.channel_table.setRowCount(bottom_row)
+                # Paste the text into the table
+                for i, row in enumerate(array_text):
+                    for j, cell_text in enumerate(row):
+                        cell_text = cell_text if cell_text is not None else ""
+                        item = QtWidgets.QTableWidgetItem(cell_text)
+                        self.channel_table.setItem(
+                            top_left_row + i, top_left_column + j, item
+                        )
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def delete_channel_table(self):
+        """Function to delete text from a channel table when delete is pressed"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for delete functionality")
+            return
+
+        self.channel_table.blockSignals(True)
+        selection_range = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
+        if selection_range:
+            # Get the selected range
+            selected_range = selection_range[0]
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
+            # Clear the selected cells
+            for row in rows:
+                for column in columns:
+                    clear_item = QtWidgets.QTableWidgetItem("")
+                    self.channel_table.setItem(row, column, clear_item)
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def channel_table_insert_row(self):
+        """Function to insert row in right click menu on channel table"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for insert functionality")
+            return
+
+        selection_range = self.channel_table.selectedRanges()
+
+        if selection_range:
+            # Find the top row and insert row above it
+            top_row = selection_range[0].topRow()
+            self.channel_table.insertRow(top_row)
+            self.environment_channel_table.insertRow(top_row)
+            num_col = self.environment_channel_table.columnCount()
+            for col in range(num_col):
+                checkbox = QtWidgets.QCheckBox()
+                checkbox.setChecked(False)
+                self.environment_channel_table.setCellWidget(top_row, col, checkbox)
+
+            # Update vertical header for both tables
+            row_count = self.channel_table.rowCount()
+            indices = [str(i + 1) for i in range(row_count)]
+            self.channel_table.setVerticalHeaderLabels(indices)
+            self.environment_channel_table.setVerticalHeaderLabels(indices)
+
+        self.add_empty_channel_table_rows()
+
+    def channel_table_delete_row(self):
+        """Function to delete row in right click menu on channel table"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for delete functionality")
+            return
+
+        selected_ranges = self.channel_table.selectedRanges()
+        # If channel table is clicked delete rows starting from highest index
+        if selected_ranges:
+            selected_range = selected_ranges[0]
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            for row_idx in reversed(rows):
+                self.channel_table.removeRow(row_idx)
+                self.environment_channel_table.removeRow(row_idx)
+
+        self.add_empty_channel_table_rows()
 
     # endregion
 
