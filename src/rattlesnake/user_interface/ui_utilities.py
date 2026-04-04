@@ -42,68 +42,6 @@ from rattlesnake.utilities import (
 )
 
 
-VISIBLE_HARDWARE_WIDGETS = {
-    "Select Hardware": {"hardware_selector"},
-    "NI DAQmx": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "task_trigger",
-        "trigger_output",
-    },
-    "HBK LAN-XI": {
-        "hardware_selector",
-        "lanxi_sample_rate",
-        "buffer_size",
-        "lanxi_processes",
-        "lanxi_ip",
-    },
-    "Data Physics Quattro": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "integration_oversample",
-        "select_file",
-    },
-    "Data Physics 900 Series": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "integration_oversample",
-        "select_file",
-    },
-    "Exodus Modal Solution...": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "integration_oversample",
-        "damping_ratio",
-        "select_file",
-    },
-    "State Space Integration...": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "integration_oversample",
-        "select_file",
-    },
-    "SDynPy System Integration...": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "integration_oversample",
-        "select_file",
-    },
-    "SDynPy FRF Convolution...": {
-        "hardware_selector",
-        "sample_rate",
-        "buffer_size",
-        "integration_oversample",
-        "select_file",
-    },
-}
-
-
 class HardwareAssistModules(Enum):
     NONE = 0
     COMBOBOX = 2

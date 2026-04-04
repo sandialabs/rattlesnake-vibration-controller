@@ -47,14 +47,17 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
 )
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.hardware_registry import UI_HARDWARE_OPTIONS, UI_ASK_FOR_FILE
+from rattlesnake.hardware.hardware_registry import (
+    UI_HARDWARE_OPTIONS,
+    UI_ASK_FOR_FILE,
+    UI_HARDWARE_WIDGETS,
+)
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_registry import UI_ENVIRONMENT_OPTIONS
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
-    VISIBLE_HARDWARE_WIDGETS,
 )
 
 # region Defaults
@@ -213,9 +216,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Hardware
         available_hardware = UI_HARDWARE_OPTIONS.keys()
-        self.hardware_selector.addItems(available_hardware)
         self.hardware_widgets = {
-            "hardware_selector": [self.hardware_selector_label, self.hardware_selector],
             "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
             "lanxi_ip": [self.lanxi_ip_address_button],
             "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
@@ -233,6 +234,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
             "select_file": [self.select_file_button],
         }
+        self.hardware_selector.addItems(available_hardware)
         self.update_hardware_widget_visibility()
 
         # Environment
@@ -1223,8 +1225,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def hardware_update(self, hardware_text):
         """Callback to provide options when hardware is selected"""
-        self.update_hardware_widget_visibility()
-
         hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
         if hardware_type in UI_ASK_FOR_FILE:
             filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
@@ -1243,10 +1243,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if self.assist_channel_table_checkbox.isChecked():
             self.assist_channel_table_init(True)
 
+        self.update_hardware_widget_visibility()
+
     def update_hardware_widget_visibility(self):
         """Helper function to update the visibility of the sampling parameters group box"""
-        current_hardware = self.hardware_selector.currentText()
-        visible_widgets = VISIBLE_HARDWARE_WIDGETS.get(current_hardware, set())
+        hardware_text = self.hardware_selector.currentText()
+        hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
+        visible_widgets = UI_HARDWARE_WIDGETS.get(hardware_type, set())
 
         for name, widgets in self.hardware_widgets.items():
             for widget in widgets:
