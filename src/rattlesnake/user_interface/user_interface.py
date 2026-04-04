@@ -994,7 +994,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.add_empty_channel_table_rows()
 
-    def load_channel_table(
+    def load_channel_table_from_file(
         self, clicked, filename=None
     ):  # pylint: disable=unused-argument
         """Loads a channel table using a file dialog or the specified filename
@@ -1095,7 +1095,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             QtWidgets.QHeaderView.ResizeToContents
         )
 
-    def save_channel_table(self):
+    def save_channel_table_to_workbook(self):
         """Save the channel table to a file"""
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
