@@ -25,72 +25,49 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
+import netCDF4 as nc4
+import openpyxl
 
-from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.utilities import RattlesnakeError
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 
 
-class DataAcquisitionParameters:
-    """Container to hold the global data acquisition parameters of the controller"""
+class HardwareMetadata:
+    """
+    Abstract class that contains values to fully define how the hardware is setup.
+
+    This class contains attributes required to run acquisition, output, and streaming
+    processes. The class should also contain extra attributes required for the
+    HardwareAcquisition and HardwareOutput class specific to that HardwareType.
+    """
 
     def __init__(
         self,
+        hardware_type: HardwareType,
         channel_list: List[Channel],
-        sample_rate,
-        samples_per_read,
-        samples_per_write,
-        hardware,
-        hardware_file,
-        environment_names,
-        environment_bools,
-        output_oversample,
-        **extra_parameters,
+        sample_rate: int,
+        time_per_read: float,
+        time_per_write: float,
+        *,
+        output_oversample: int = 1,
     ):
-        """Container to hold the global data acquisition parameters of the controller
-
-        Parameters
-        ----------
-        channel_list : List[Channel]:
-            An iterable containing Channel objects for each channel in the
-            controller.
-        sample_rate : int :
-            Number of samples per second that the data acquisition runs at
-        samples_per_read : int :
-            Number of samples the data acquisition will acquire with each read.
-            Smaller numbers here will result in finer resolution for starting
-            and stopping environments, but will be more computationally
-            intensive to run.
-        samples_per_write : int :
-            Number of samples the data acquisition will output with each write.
-            Smaller numbers here will result in finer resolution for starting
-            and stopping environments, but will be more computationally
-            intensive to run.
-        hardware : int :
-            Hardware index corresponding to the QCombobox selector on the
-            Channel Table tab of the main controller
-        hardware_file : str :
-            Path to an optional file that completes the hardware specification,
-            for example, a finite element model results.
-        environment_names : List[str]:
-            A list of the names of environments in the controller
-        environment_bools : np.ndarray :
-            A 2D array specifying which channels are active in which environment.
-            If the [i,j] component is True, then the ith channel is active in
-            the jth environment.
-        output_oversample : int
-            Oversample factor of the output generator
-        maximum_acquisition_processes : int
-            Maximum number of processes to spin up to read data off the acquisition
-        """
+        self.hardware_type = hardware_type
         self.channel_list = channel_list
         self.sample_rate = sample_rate
-        self.samples_per_read = samples_per_read
-        self.samples_per_write = samples_per_write
-        self.hardware = hardware
-        self.hardware_file = hardware_file
-        self.environment_names = environment_names
-        self.environment_active_channels = environment_bools
+        self.time_per_read = time_per_read
+        self.time_per_write = time_per_write
+        # Used for virtual hardware but still required for normal hardware
         self.output_oversample = output_oversample
-        self.extra_parameters = extra_parameters
+
+    @property
+    def samples_per_read(self):
+        """Property returning the number of samples per read frame."""
+        return round(self.sample_rate * self.time_per_read)
+
+    @property
+    def samples_per_write(self):
+        """Property returning the number of samples per write frame."""
+        return round(self.sample_rate * self.time_per_write * self.output_oversample)
 
     @property
     def nyquist_frequency(self):
@@ -99,68 +76,116 @@ class DataAcquisitionParameters:
 
     @property
     def output_sample_rate(self):
-        """Property returning the output sample rate"""
+        """Property returning the output sample rate."""
         return self.sample_rate * self.output_oversample
 
+    @property
+    @abstractmethod
+    def extra_attr_list(self) -> List[str]:
+        """
+        Method that returns a list of extra attributes that should be stored to the
+        netcdf4 output file so that the hardware can be defined when loading Rattlesnake
+        from a file.
+        """
+        return []
 
-# region: Acqusition
+    @abstractmethod
+    def validate(self) -> True:
+        """
+        Method to check if the metadata object fully defines the hardware and is valid
+        for that machine
+
+        If possible should check which devices are connected to the machine at a given
+        time and make sure that they are valid inputs to the initialize_hardware function
+        of the HardwareAcquisition and HardwareOutput classes.
+
+        Throw detailed errors while validating, these errors will show up in log files for
+        debugging and will not stop the main process from running.
+        """
+        if len(self.channel_list) != len(set(self.channel_list)):
+            raise RattlesnakeError("Duplicate channels found in channel_list")
+
+        return True
+
+    @abstractmethod
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = {}
+        for attr in Channel().channel_attr_list:
+            valid_dict[attr] = []
+        return valid_dict
+
+    @abstractmethod
+    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_netcdf(cls, netcdf_handle: nc4._netCDF4.Group):
+        pass
+
+    @abstractmethod
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_worksheet(
+        cls, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
+        pass
+
+
+# region: HardwareAcquisition
 class HardwareAcquisition(ABC):
-    """Abstract class defining the interface between the controller and acquisition
+    """
+    Abstract class defining the interface between the controller and acquisition.
 
     This class defines the interfaces between the controller and the
     data acquisition portion of the hardware.  It is run by the Acquisition
     process, and must define how to get data from the test hardware into the
-    controller."""
+    controller.
+    """
 
     @abstractmethod
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, metadata: HardwareMetadata) -> None:
         """
-        Initialize the hardware and set up channels and sampling properties
+        Initialize the hardware and set up channels and sampling properties.
 
         The function must create channels on the hardware corresponding to
         the channels in the test.  It must also set the sampling rates.
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
-
-        Returns
-        -------
-        None.
-
+        metadata : HardwareMetadata
+            Hardware specific metadata class containing the sampling properties
+            and channel list to store to the HardwareAcquisition.
         """
 
     @abstractmethod
-    def start(self):
-        """Method to start acquiring data from the hardware"""
+    def start(self) -> None:
+        """Method to start acquiring data from the hardware."""
 
     @abstractmethod
     def read(self) -> np.ndarray:
         """Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray"""
+        an appropriately sized np.ndarray."""
 
     @abstractmethod
     def read_remaining(self) -> np.ndarray:
         """Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray"""
+        that returns an appropriately sized np.ndarray."""
 
     @abstractmethod
-    def stop(self):
-        """Method to stop the acquisition"""
+    def stop(self) -> None:
+        """Method to stop the acquisition."""
 
     @abstractmethod
-    def close(self):
-        """Method to close down the hardware"""
+    def close(self) -> None:
+        """Method to close down the hardware."""
 
     @abstractmethod
     def get_acquisition_delay(self) -> int:
-        """Get the number of samples between output and acquisition
+        """Get the number of samples between output and acquisition.
 
         This function is designed to handle buffering done in the output
         hardware, ensuring that all data written to the output is read by the
@@ -169,7 +194,7 @@ class HardwareAcquisition(ABC):
         actually played out from the device."""
 
 
-# region: Output
+# region: HardwareOutput
 class HardwareOutput(ABC):
     """Abstract class defining the interface between the controller and output
 
@@ -179,9 +204,7 @@ class HardwareOutput(ABC):
     control system"""
 
     @abstractmethod
-    def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, metadata: HardwareMetadata) -> None:
         """
         Initialize the hardware and set up sources and sampling properties
 
@@ -190,34 +213,40 @@ class HardwareOutput(ABC):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
-
-        Returns
-        -------
-        None.
-
+        metadata : HardwareMetadata :
+            Hardware specific metdata class that defines the sampling properties
+            and channel list for a given hardware.
         """
+        pass
 
     @abstractmethod
-    def start(self):
+    def start(self) -> None:
         """Method to start outputting data to the hardware"""
+        pass
 
     @abstractmethod
-    def write(self, data):
-        """Method to write a np.ndarray with a frame of data to the hardware"""
+    def write(self, data) -> None:
+        """
+        Method to write a np.ndarray with a frame of data to the hardware
+
+        Parameters
+        ----------
+        data : np.ndarray :
+        num_channels x buffer_size array to write to the output hardware
+        """
+        pass
 
     @abstractmethod
-    def stop(self):
+    def stop(self) -> None:
         """Method to stop the output"""
+        pass
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Method to close down the hardware"""
+        pass
 
     @abstractmethod
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal"""
+        pass

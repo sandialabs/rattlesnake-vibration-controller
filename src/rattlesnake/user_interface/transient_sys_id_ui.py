@@ -24,7 +24,7 @@ from rattlesnake.user_interface.ui_utilities import (
     multiline_plotter,
 )
 from rattlesnake.utilities import db2scale, load_python_module, rms_time
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from qtpy import QtCore, QtWidgets, uic
 from qtpy.QtCore import Qt
 from multiprocessing.queues import Queue
@@ -959,7 +959,7 @@ class TransientUI(AbstractSysIdUI):
             ["warning_level", str],
             ["abort_level", str],
         ]
-        global_data_parameters: DataAcquisitionParameters
+        global_data_parameters: HardwareMetadata
         global_data_parameters = self.data_acquisition_parameters
         netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
             filename, "w", format="NETCDF4", clobber=True

@@ -123,7 +123,6 @@ class Updater(QtCore.QRunnable):
 # endregion
 
 
-# region User Interface
 class RattlesnakeUI(QtWidgets.QMainWindow):
     """Main user interface from which the rattlesnake controller object is controlled."""
 

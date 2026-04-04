@@ -32,7 +32,7 @@ import requests
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
 from rattlesnake.hardware.lanxi_stream import OpenapiHeader, OpenapiMessage
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
 
 OUTPUT_RATE = 131072
@@ -442,7 +442,7 @@ class LanXIAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -452,7 +452,7 @@ class LanXIAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -753,7 +753,7 @@ class LanXIOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         # Create a hardware map that will help us do bookkeeping
         create_harware_maps(self.acquisition_map, self.output_map, channel_data)

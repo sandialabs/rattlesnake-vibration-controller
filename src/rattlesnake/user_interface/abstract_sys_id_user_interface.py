@@ -1,7 +1,7 @@
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import error_message_qt
 from rattlesnake.utilities import VerboseMessageQueue
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
@@ -279,7 +279,7 @@ class AbstractSysIdUI(AbstractUI):
 
     @abstractmethod
     def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Update the user interface with data acquisition parameters
 
@@ -289,7 +289,7 @@ class AbstractSysIdUI(AbstractUI):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 

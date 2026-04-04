@@ -5,7 +5,7 @@ from rattlesnake.utilities import (
     db2scale,
     load_python_module,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
     RandomVibrationCommands,
@@ -297,7 +297,7 @@ class RandomVibrationUI(AbstractSysIdUI):
     # %% Initialize Data Aquisition
 
     def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Update the user interface with data acquisition parameters
 
@@ -307,7 +307,7 @@ class RandomVibrationUI(AbstractSysIdUI):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 
@@ -1543,7 +1543,7 @@ class RandomVibrationUI(AbstractSysIdUI):
             ["warning_level", str],
             ["abort_level", str],
         ]
-        global_data_parameters: DataAcquisitionParameters
+        global_data_parameters: HardwareMetadata
         global_data_parameters = self.data_acquisition_parameters
         netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
             filename, "w", format="NETCDF4", clobber=True

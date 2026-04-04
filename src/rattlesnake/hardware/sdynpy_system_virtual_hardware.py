@@ -30,7 +30,7 @@ import scipy.signal as signal
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
 from rattlesnake.utilities import flush_queue
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
 
 _direction_map = {
@@ -138,7 +138,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -148,7 +148,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -327,7 +327,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.state = np.zeros(A_state.shape[0])
         # np.savez('SDynPy_State.npz', A=A_state, B=B_state, C = C_state, D = D_state)
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -335,7 +335,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -476,7 +476,7 @@ class SDynPySystemOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -485,7 +485,7 @@ class SDynPySystemOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

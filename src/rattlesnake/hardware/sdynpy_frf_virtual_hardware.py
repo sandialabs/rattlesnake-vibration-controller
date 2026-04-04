@@ -32,7 +32,7 @@ from rattlesnake.utilities import (
     flush_queue,
     reduce_array_by_coordinate,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
 
 try:
@@ -144,7 +144,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -154,7 +154,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -262,7 +262,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         )
         self.sys_out = np.zeros((len(channel_data), self.times.size), dtype=np.float64)
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -270,7 +270,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -422,7 +422,7 @@ class SDynPyFRFOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -431,7 +431,7 @@ class SDynPyFRFOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

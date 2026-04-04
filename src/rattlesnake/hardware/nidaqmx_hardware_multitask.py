@@ -32,7 +32,7 @@ import nidaqmx.stream_writers as ni_write
 import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3
@@ -66,7 +66,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -76,7 +76,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -156,14 +156,14 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             self._create_channel(channel, task_index)
         print(f"Input Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -511,7 +511,7 @@ class NIDAQmxOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -521,7 +521,7 @@ class NIDAQmxOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -627,14 +627,14 @@ class NIDAQmxOutput(HardwareOutput):
                 self._create_channel(channel, task_index)
         print(f"Output Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         """

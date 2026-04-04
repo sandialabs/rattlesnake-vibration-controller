@@ -34,7 +34,7 @@ from rattlesnake.hardware.data_physics_interface import (
     QuattroCoupling,
     QuattroStatus,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3
@@ -84,7 +84,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -94,7 +94,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -360,7 +360,7 @@ class DataPhysicsOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -370,7 +370,7 @@ class DataPhysicsOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

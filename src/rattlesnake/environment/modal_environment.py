@@ -48,7 +48,7 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
     flush_queue,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 CONTROL_TYPE = EnvironmentType.MODAL
 WAIT_TIME = 0.02
@@ -160,7 +160,7 @@ class ModalMetadata(AbstractMetadata):
         reference_channel_indices,
         response_channel_indices,
         output_channel_indices,
-        data_acquisition_parameters: DataAcquisitionParameters,
+        data_acquisition_parameters: HardwareMetadata,
         exponential_window_value_at_frame_end: float,
     ):
         self.sample_rate = sample_rate
@@ -675,7 +675,7 @@ class ModalEnvironment(AbstractEnvironment):
         )
 
     def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Initialize the data acquisition parameters in the environment.
 
@@ -684,7 +684,7 @@ class ModalEnvironment(AbstractEnvironment):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """

@@ -40,7 +40,7 @@ from rattlesnake.utilities import (
     save_csv_matrix,
     trac,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 
 # region Global
@@ -974,7 +974,7 @@ def get_table_strings(tablewidget: QtWidgets.QTableWidget):
 class ChannelMonitor(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
-    def __init__(self, parent, daq_settings: DataAcquisitionParameters):
+    def __init__(self, parent, daq_settings: HardwareMetadata):
         """
         Creates a window showing CPSD matrix information for a single channel.
 

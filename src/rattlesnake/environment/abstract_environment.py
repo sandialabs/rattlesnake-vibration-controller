@@ -34,7 +34,7 @@ from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.user_interface.ui_utilities import UICommands
 
 PICKLE_ON_ERROR = False
@@ -172,7 +172,7 @@ class AbstractEnvironment(ABC):
 
     @abstractmethod
     def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Initialize the data acquisition parameters in the environment.
 
@@ -181,7 +181,7 @@ class AbstractEnvironment(ABC):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """

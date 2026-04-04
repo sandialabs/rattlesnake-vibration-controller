@@ -63,7 +63,7 @@ from rattlesnake.process.spectral_processing import (
     SpectralProcessingMetadata,
 )
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 
 class SystemIdCommands(Enum):
@@ -346,7 +346,7 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self._sysid_stream_name = None
 
     def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Initialize the data acquisition parameters in the environment.
 
@@ -355,7 +355,7 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """

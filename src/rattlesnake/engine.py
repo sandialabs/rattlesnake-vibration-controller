@@ -38,7 +38,7 @@ from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 #     load_metadata_from_worksheet,
 #     save_rattlesnake_template,
 # )
-# from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
@@ -482,13 +482,13 @@ class RattlesnakeController:
     # endregion
 
     # region Hardware
-    # @property
-    # def hardware_metadata(self):
-    #     return self._hardware_metadata
+    @property
+    def hardware_metadata(self):
+        return self._hardware_metadata
 
-    # @hardware_metadata.setter
-    # def hardware_metadata(self, value: HardwareMetadata):
-    #     self._hardware_metadata = value
+    @hardware_metadata.setter
+    def hardware_metadata(self, value: HardwareMetadata):
+        self._hardware_metadata = value
 
     # def initialize_hardware_metadata(self, hardware_metadata: HardwareMetadata) -> None:
     #     """Validates hardware_metadata and sends data to relevant processes"""

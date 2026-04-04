@@ -1,5 +1,5 @@
 from rattlesnake.utilities import VerboseMessageQueue
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import AbstractMetadata
 from abc import ABC, abstractmethod
 from multiprocessing.queues import Queue
@@ -87,7 +87,7 @@ class AbstractUI(ABC):
 
     @abstractmethod
     def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Update the user interface with data acquisition parameters
 
@@ -97,7 +97,7 @@ class AbstractUI(ABC):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 

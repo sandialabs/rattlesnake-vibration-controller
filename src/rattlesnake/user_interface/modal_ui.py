@@ -10,7 +10,7 @@ from rattlesnake.utilities import (
     GlobalCommands,
     load_python_module,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
@@ -1015,7 +1015,7 @@ class ModalUI(AbstractUI):
         self.run_widget.channel_display_area.channel_names = self.channel_names
 
     def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Update the user interface with data acquisition parameters
 
@@ -1025,7 +1025,7 @@ class ModalUI(AbstractUI):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 

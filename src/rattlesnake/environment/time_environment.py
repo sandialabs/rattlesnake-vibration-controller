@@ -43,7 +43,7 @@ from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
 )
-from rattlesnake.hardware.abstract_hardware import DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 CONTROL_TYPE = EnvironmentType.TIME
 TEST_LEVEL_THRESHOLD = 1.01
@@ -235,7 +235,7 @@ class TimeEnvironment(AbstractEnvironment):
         self.measurement_channels = None
 
     def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: DataAcquisitionParameters
+        self, data_acquisition_parameters: HardwareMetadata
     ):
         """Initialize the data acquisition parameters in the environment.
 
@@ -244,7 +244,7 @@ class TimeEnvironment(AbstractEnvironment):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """
