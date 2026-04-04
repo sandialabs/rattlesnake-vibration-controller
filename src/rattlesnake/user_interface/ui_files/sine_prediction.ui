@@ -24,8 +24,14 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays various quantities of interest related to the excitation signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <property name="backgroundBrush">
+        <brush brushstyle="NoBrush">
+         <color alpha="255">
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
        </property>
       </widget>
      </item>
@@ -50,7 +56,7 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The peak voltages that will be output by the environment based on the open-loop test prediction.  Double-clicking an item will show the time history for that drive channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>Peak voltage for each drive signal</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -65,7 +71,7 @@
        <item>
         <widget class="QPushButton" name="minimum_voltage_button">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Min Drive&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize the signal with the smallest peak drive voltage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Visualize the signal with the smallest drive voltage</string>
          </property>
          <property name="text">
           <string>Min Drive</string>
@@ -75,7 +81,7 @@
        <item>
         <widget class="QPushButton" name="maximum_voltage_button">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Max Drive&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize the drive signal with the largest peak voltage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Visualize the drive signal with the largest voltage</string>
          </property>
          <property name="text">
           <string>Max Drive</string>
@@ -102,7 +108,7 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Display Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the drive channel to visualize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Select the signal to visualize</string>
          </property>
         </widget>
        </item>
@@ -120,9 +126,6 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Display Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the type of data to plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <item>
           <property name="text">
@@ -166,9 +169,6 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Sine Tone&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the sine tone to plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
          <item>
           <property name="text">
            <string>All Tones</string>
@@ -197,7 +197,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Maximum Amplitude Error Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A table showing the maximum amplitude error in decibels for each sine tone (rows) and control channel (columns).  Cells highlighted yellow are predicted to hit warning limits while cells highlighted red are predicted to hit abort limits.  Double-clicking on a cell will show the amplitude vs. frequency plot for that sine tone and control channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>Time Response Assurance Criterion between the predicted response and the desired response</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -212,7 +212,7 @@
        <item>
         <widget class="QPushButton" name="minimum_error_button">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Min Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize the signal with the smallest predicted amplitude error&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Visualize the signal with the smallest predicted error</string>
          </property>
          <property name="text">
           <string>Min Error</string>
@@ -222,7 +222,7 @@
        <item>
         <widget class="QPushButton" name="maximum_error_button">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Max Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize the signal with the largest predicted amplitude error&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Visualize the signal with the largest predicted error</string>
          </property>
          <property name="text">
           <string>Max Error</string>
@@ -239,8 +239,14 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Prediction Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays various quantities of interest related to the response predictions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <property name="backgroundBrush">
+        <brush brushstyle="NoBrush">
+         <color alpha="255">
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
        </property>
       </widget>
      </item>
@@ -262,7 +268,7 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Prediction Display Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the control channel to visualize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Select the signal prediction to visualize</string>
          </property>
         </widget>
        </item>
@@ -280,9 +286,6 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Prediction Display Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the type of data to plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <item>
           <property name="text">
@@ -326,9 +329,6 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Prediction Sine Tone&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the sine tone to plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
          <item>
           <property name="text">
            <string>All Tones</string>
@@ -338,11 +338,8 @@
        </item>
        <item>
         <widget class="QPushButton" name="recompute_predictions_button">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Recompute Predictions&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Recompute predictions by running the control law again.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>Recompute predictions by running the control law again.</string>
          </property>
          <property name="text">
           <string>Recompute Predictions</string>

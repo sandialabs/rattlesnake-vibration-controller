@@ -30,8 +30,14 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Drive Updates&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the updates that the controller is applying to the open-loop drive signal based on error correction. The plot is shown in the complex plane with real part on the horizontal axis and imaginary part on the vertical axis.  The drive updates shown correspond to those applied to the selected drive channel and sine tone in the Drive Signal Selector box.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <property name="backgroundBrush">
+           <brush brushstyle="NoBrush">
+            <color alpha="255">
+             <red>255</red>
+             <green>255</green>
+             <blue>255</blue>
+            </color>
+           </brush>
           </property>
          </widget>
         </item>
@@ -68,7 +74,7 @@
           <item>
            <widget class="QSpinBox" name="test_level_selector">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Runs the control at a modified test level.  Often used to investigate control accuracy at a lower level without potentially damaging the test article.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>Scale factor applied to the test</string>
             </property>
             <property name="keyboardTracking">
              <bool>false</bool>
@@ -90,9 +96,6 @@
          <layout class="QGridLayout" name="gridLayout">
           <item row="0" column="0">
            <widget class="QCheckBox" name="partial_environment_selector">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Partial Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, this will enable the user to select only specific sine tones or specific time ranges over which to run the environment, which can be useful to investigate poor control in specific tones or over specific modes of the structure.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
             <property name="text">
              <string>Partial Environment</string>
             </property>
@@ -104,9 +107,6 @@
              <widget class="QDoubleSpinBox" name="start_time_selector">
               <property name="enabled">
                <bool>false</bool>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Partial Environment Start Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If the Partial Environment checkbox is checked, the environment will start at the time specified inthis box.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="suffix">
                <string> s</string>
@@ -131,9 +131,6 @@
               <property name="enabled">
                <bool>false</bool>
               </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Partial Environment End Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If the Partial Environment checkbox is checked, the environment will end at the time specified inthis box.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
               <property name="suffix">
                <string> s</string>
               </property>
@@ -151,9 +148,6 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Partial Environment Tone Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Only tones selected in this list will be run if the Partial Environment checkbox is checked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -215,7 +209,7 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the environment controlling to the specified sine tones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>Start the environment to control to the desired transient signal</string>
             </property>
             <property name="text">
              <string>Start Environment</string>
@@ -276,7 +270,7 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Stops the environment manually.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>Stop the environment</string>
             </property>
             <property name="text">
              <string>Stop Environment</string>
@@ -288,7 +282,7 @@
         <item>
          <widget class="QPushButton" name="save_control_data_button">
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Control Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves the current control data from the test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>Save current control data from the test</string>
           </property>
           <property name="text">
            <string>Save Control Data</string>
@@ -321,8 +315,14 @@
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
            <widget class="PlotWidget" name="amplitude_plot">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Amplitude Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Plots the response amplitude compared to the specification for the selected control channel and sine tone.  Additionally plots warning and abort limits if specified.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
             </property>
            </widget>
           </item>
@@ -343,8 +343,14 @@
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
            <widget class="PlotWidget" name="phase_plot">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Phase Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Plots the response phase compared to the specification for the selected control channel and sine tone.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
             </property>
            </widget>
           </item>
@@ -368,9 +374,6 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Signal Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the decibel error of each control signal (column) and sine tone (row). Selecting a cell will update the signals plotted in the Response Amplitude and Response Phase plots. Cells will be highlighted in yellow if they hit warning limits and highlighted in red if they hit abort limits.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -396,9 +399,6 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Drive Signal Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the magnitude of the closed-loop updates applied to the drive signals for each drive signal (column) and sine tone (row).  Selecting a cell will display that drive signal and sine tone in the Drive Updates plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -431,7 +431,7 @@
       <item>
        <widget class="QComboBox" name="control_tone_selector">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Tone Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the sine tone that will be displayed in the window that is created when the Create Window button is clicked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Select an individual channel to visualize</string>
         </property>
        </widget>
       </item>
@@ -445,14 +445,14 @@
       <item>
        <widget class="QComboBox" name="control_channel_selector">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channel Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the control channel that will be displayed in the window that is created when the Create Window button is clicked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Select an individual channel to visualize</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="create_window_button">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Create Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Create a window to show the signal specified by the selected Control Channel and Control Tone&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Create a window to show the signal specified by Control Channel</string>
         </property>
         <property name="text">
          <string>Create Window</string>
@@ -469,7 +469,7 @@
       <item>
        <widget class="QPushButton" name="show_all_channels_button">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All Control Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates a display window for each control tone and control channel combination in the test and tiles them on the main monitor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Create a window for each control channel</string>
         </property>
         <property name="text">
          <string>Show All
@@ -494,7 +494,7 @@ Control Channels</string>
       <item>
        <widget class="QPushButton" name="tile_windows_button">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tile All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Tile all open display windows across the main monitor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Tile all windows across the main monitor</string>
         </property>
         <property name="text">
          <string>Tile All
@@ -505,7 +505,7 @@ Windows</string>
       <item>
        <widget class="QPushButton" name="close_windows_button">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Close All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Closes all existing visualization windows&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Closes all existing visualization windows</string>
         </property>
         <property name="text">
          <string>Close All
