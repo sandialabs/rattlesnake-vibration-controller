@@ -47,12 +47,14 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
 )
 from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.hardware_registry import UI_HARDWARE_OPTIONS, UI_ASK_FOR_FILE
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_registry import UI_ENVIRONMENT_OPTIONS
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
-    ChannelMonitor,
+    VISIBLE_HARDWARE_WIDGETS,
 )
 
 # region Defaults
@@ -175,6 +177,94 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Show UI
         self.show()
 
+    def complete_ui(self):
+        """
+        Helper function to set up the default format of the user interface.
+        """
+        # Universal
+        self.setMinimumWidth(500)
+        # Disable all tabs except the first
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.channel_monitor_button.setVisible(False)
+        # Set icons and window
+        icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
+        self.tray_icon = QtWidgets.QSystemTrayIcon(self)
+        self.tray_icon.setIcon(icon)
+        self.tray_icon.show()
+        if sys.platform.startswith(
+            "win"
+        ):  # This fixes windows treating taskbar icon as python.exe
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                f"sandia.rattlesnake.{VERSION}"
+            )
+        self.setWindowIcon(icon)
+        self.setWindowTitle("Rattlesnake Vibration Controller")
+        self.change_color_theme(self.theme)
+
+        # Channel Table
+        self.table_layout.setStretch(0, 5)  # Channel table
+        self.table_layout.setStretch(1, 1)  # Environments table
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+
+        # Hardware
+        available_hardware = UI_HARDWARE_OPTIONS.keys()
+        self.hardware_selector.addItems(available_hardware)
+        self.hardware_widgets = {
+            "hardware_selector": [self.hardware_selector_label, self.hardware_selector],
+            "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
+            "lanxi_ip": [self.lanxi_ip_address_button],
+            "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
+            "buffer_size": [self.buffer_size_label, self.buffer_size_selector],
+            "lanxi_processes": [
+                self.lanxi_maximum_acquisition_processes_label,
+                self.lanxi_maximum_acquisition_processes_selector,
+            ],
+            "integration_oversample": [
+                self.integration_oversample_label,
+                self.integration_oversample_selector,
+            ],
+            "damping_ratio": [self.damping_ratio_label, self.damping_ratio_selector],
+            "task_trigger": [self.task_trigger_label, self.task_trigger_selector],
+            "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
+            "select_file": [self.select_file_button],
+        }
+        self.update_hardware_widget_visibility()
+
+        # Environment
+        available_environments = UI_ENVIRONMENT_OPTIONS.keys()
+        self.add_environment_combobox.addItems(available_environments)
+        self.environment_channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.environment_channel_table.horizontalHeader().setVisible(True)
+        self.environment_channel_table.verticalHeader().setVisible(True)
+        self.environment_channel_table.setColumnCount(0)
+        self.environment_channel_table.hide()
+
+        # Acquisition
+        self.streaming_widgets = [
+            self.no_streaming_radiobutton,
+            self.profile_streaming_radiobutton,
+            self.test_level_streaming_radiobutton,
+            self.streaming_environment_select_combobox,
+            self.immediate_streaming_radiobutton,
+            self.select_streaming_file_button,
+            self.manual_streaming_radiobutton,
+            self.manual_streaming_trigger_button,
+        ]
+        self.manual_streaming_trigger_button.hide()
+
+        # Profile
+        self.profile_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.run_profile_widget.setEnabled(False)
+
     def connect_callbacks(self):
         """
         Helper function to connect callbacks to widgets in the user interface.
@@ -231,7 +321,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table.addAction(self.channel_table_action_delete_row)
 
         # Hardware
-        # self.hardware_selector.currentTextChanged.connect(self.update_hardware)
+        self.hardware_selector.currentTextChanged.connect(self.hardware_update)
         # self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
         # self.select_file_button.clicked.connect(self.select_hardware_file)
 
@@ -264,92 +354,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # self.initialize_profile_button.clicked.connect(self.initialize_profile)
         # self.start_profile_button.clicked.connect(self.start_profile)
         # self.stop_profile_button.clicked.connect(self.stop_profile)
-
-    def complete_ui(self):
-        """
-        Helper function to set up the default format of the user interface.
-        """
-        # Universal
-        self.setMinimumWidth(500)
-        # Disable all tabs except the first
-        for i in range(1, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
-        self.channel_monitor_button.setVisible(False)
-        # Set icons and window
-        icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
-        self.tray_icon = QtWidgets.QSystemTrayIcon(self)
-        self.tray_icon.setIcon(icon)
-        self.tray_icon.show()
-        if sys.platform.startswith(
-            "win"
-        ):  # This fixes windows treating taskbar icon as python.exe
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                f"sandia.rattlesnake.{VERSION}"
-            )
-        self.setWindowIcon(icon)
-        self.setWindowTitle("Rattlesnake Vibration Controller")
-        self.change_color_theme(self.theme)
-
-        # Channel Table
-        self.table_layout.setStretch(0, 5)  # Channel table
-        self.table_layout.setStretch(1, 1)  # Environments table
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-
-        # Hardware
-        self.hardware_widgets = {
-            "hardware_selector": [self.hardware_selector_label, self.hardware_selector],
-            "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
-            "lanxi_ip": [self.lanxi_ip_address_button],
-            "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
-            "buffer_size": [self.buffer_size_label, self.buffer_size_selector],
-            "lanxi_processes": [
-                self.lanxi_maximum_acquisition_processes_label,
-                self.lanxi_maximum_acquisition_processes_selector,
-            ],
-            "integration_oversample": [
-                self.integration_oversample_label,
-                self.integration_oversample_selector,
-            ],
-            "damping_ratio": [self.damping_ratio_label, self.damping_ratio_selector],
-            "task_trigger": [self.task_trigger_label, self.task_trigger_selector],
-            "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
-            "select_file": [self.select_file_button],
-        }
-        # self.update_hardware_widget_visibility()
-
-        # Environment
-        for control in EnvironmentType:
-            self.add_environment_combobox.addItem(control.name)
-        self.environment_channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-        self.environment_channel_table.horizontalHeader().setVisible(True)
-        self.environment_channel_table.verticalHeader().setVisible(True)
-        self.environment_channel_table.setColumnCount(0)
-        self.environment_channel_table.hide()
-
-        # Acquisition
-        self.streaming_widgets = [
-            self.no_streaming_radiobutton,
-            self.profile_streaming_radiobutton,
-            self.test_level_streaming_radiobutton,
-            self.streaming_environment_select_combobox,
-            self.immediate_streaming_radiobutton,
-            self.select_streaming_file_button,
-            self.manual_streaming_radiobutton,
-            self.manual_streaming_trigger_button,
-        ]
-        self.manual_streaming_trigger_button.hide()
-
-        # Profile
-        self.profile_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-        self.run_profile_widget.setEnabled(False)
 
     def change_color_theme(self, text: str):
         """Updates the color scheme of the UI"""
@@ -1217,163 +1221,36 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.environment_uis[environment].retrieve_metadata(dataset)
     #     self.initialize_environment_parameters()
 
-    def hardware_update(self, current_index=None, select_file=True):
+    def hardware_update(self, hardware_text):
         """Callback to provide options when hardware is selected"""
-        current_index = self.hardware_selector.currentIndex()
-        if current_index == 0:  # NIDAQmx
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.show()
-            self.task_trigger_selector.show()
-            self.hardware_file = None
-        elif current_index == 1:  # LAN-XI
-            self.sample_rate_selector.hide()
-            self.ip_lookup_button.show()
-            self.lanxi_sample_rate_selector.show()
-            self.lanxi_maximum_acquisition_processes_label.show()
-            self.lanxi_maximum_acquisition_processes_selector.show()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-            self.hardware_file = None
-        elif current_index == 2:  # DP Quattro
-            # Load in the library file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self, "Data Physics API", filter="Quattro API (DpQuattro.dll)"
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-            self.sample_rate_update()
-        elif current_index == 3:  # DP 900
-            # Load in the library file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self, "Data Physics API", filter="DP900 API (Dp900Matlab.dll)"
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 4:  # Exodus
-            # Load in an exodus file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self,
-                    "Load Exodus File with Eigensolution",
-                    filter="Exodus File (*.exo *.e)",
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 5:  # State Space File
-            # Load in a state space file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self,
-                    "Load Numpy or Matlab File with State Space Matrices A B C D",
-                    filter="Matlab or Numpy File (*.mat *.npz)",
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 6:
-            # Load in an sdynpy system
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self, "Load a SDynPy System", filter="Numpy File (*.npz)"
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 7:
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self,
-                    "Load a SDynPy TransferFunctionArray",
-                    filter="Numpy File (*.npz)",
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        else:
-            error_message_qt(
-                "Invalid Hardware Type!",
-                "You have selected an invalid hardware type.  How did you do this?!",
+        self.update_hardware_widget_visibility()
+
+        hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
+        if hardware_type in UI_ASK_FOR_FILE:
+            filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+                self, "Load a SDynPy System", filter="Numpy File (*.npz)"
             )
-        self.task_trigger_update()
+            # Check for 'cancel' dialog
+            if filename == "" or filename is None:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("Select Hardware")
+                self.hardware_selector.blockSignals(False)
+                return
+            self.hardware_file = filename
+        else:
+            self.hardware_file = None
+
+        if self.assist_channel_table_checkbox.isChecked():
+            self.assist_channel_table_init(True)
+
+    def update_hardware_widget_visibility(self):
+        """Helper function to update the visibility of the sampling parameters group box"""
+        current_hardware = self.hardware_selector.currentText()
+        visible_widgets = VISIBLE_HARDWARE_WIDGETS.get(current_hardware, set())
+
+        for name, widgets in self.hardware_widgets.items():
+            for widget in widgets:
+                widget.setVisible(name in visible_widgets)
 
     # def ip_lookup(self):
     #     """Creates an IP Lookup window"""

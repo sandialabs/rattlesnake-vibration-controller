@@ -32,6 +32,7 @@ class ControlTypes(Enum):
 class EnvironmentType(Enum):
     """Enumeration of the possible control types"""
 
+    NONE = 0
     RANDOM = 1
     TRANSIENT = 2
     SINE = 3

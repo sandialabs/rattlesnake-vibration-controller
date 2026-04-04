@@ -448,11 +448,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                  <height>16</height>
                 </size>
                </property>
-               <item>
-                <property name="text">
-                 <string>Add Environment</string>
-                </property>
-               </item>
               </widget>
              </item>
             </layout>
@@ -492,51 +487,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                <property name="toolTip">
                 <string>Choose which hardware you will be using in the test.</string>
                </property>
-               <item>
-                <property name="text">
-                 <string>Select Hardware</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>NI DAQmx</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>HBK LAN-XI</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Data Physics Quattro</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Data Physics 900 Series</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Exodus Modal Solution...</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>State Space Integration...</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>SDynPy System Integration...</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>SDynPy FRF Convolution...</string>
-                </property>
-               </item>
               </widget>
              </item>
              <item>
