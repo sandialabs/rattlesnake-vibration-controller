@@ -27,14 +27,18 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from multiprocessing import queues
+from typing import List
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 
+import openpyxl
 import netCDF4 as nc4
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
+    RattlesnakeError,
     GlobalCommands,
     VerboseMessageQueue,
 )
@@ -88,24 +92,83 @@ class EnvironmentUICommands(Enum):
 
 # region Metadata
 class EnvironmentMetadata(ABC):
-    """Abstract class for storing metadata for an environment.
+    """
+    Abstract class for storing metadata for an environment.
 
     This class is used as a storage container for parameters used by an
-    environment.  It is returned by the environment UI's
-    ``collect_environment_definition_parameters`` function as well as its
-    ``initialize_environment`` function.  Various parts of the controller and
-    environment will query the class's data members for parameter values.
-
-    Classes inheriting from AbstractMetadata must define:
-      1. store_to_netcdf - A function defining the way the parameters are
-         stored to a netCDF file saved during streaming operations.
+    environment.  It is built by Environment UI's and passed to the main
+    Rattlesnake process. The class is used to initialize environment data
+    for the acquisition, output, and streaming process. Must fully define
+    environment and be able to rebuild full UI based off the data in this
+    class.
     """
 
+    def __init__(
+        self,
+        environment_type: EnvironmentType,
+        environment_name: str,
+        channel_list_bools: list = [],
+        sample_rate: int = None,
+    ):
+        """
+        Initializes the environment metadata class with all attributes
+        required to fully define environment.
+
+        The environment_type should be specified from a EnvironmentType
+        enum in environment_utilities and should not be required as an
+        input to the specified environment instructions. Just force it
+        as an input to super().__init__() when you define the specific
+        EnvironmentMetadata class.
+        """
+        self.environment_type = environment_type
+        self.environment_name = (
+            environment_name  # Name used for logging TASK_NAMES, UI, etc.
+        )
+        self.sample_rate = sample_rate
+        self.channel_list_bools = channel_list_bools
+        self.queue_name = (
+            None  # Unique name used to track specific environment. Used for queues.
+        )
+
+    def map_channel_indices(self):
+        """Method to return the row indices of the hardware_channel_list that
+        contains channels in the environment_channel_list"""
+        channel_bools = self.channel_list_bools
+        channel_indices = [
+            index
+            for index, environment_bool in enumerate(channel_bools)
+            if environment_bool
+        ]
+        return channel_indices
+
     @abstractmethod
-    def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group
-    ):  # pylint: disable=c-extension-no-member
-        """Store parameters to a group in a netCDF streaming file.
+    def validate(self, hardware_metadata) -> True:
+        """
+        Validate whether the metadata will work for that environment. Return True if valid
+
+        Throw errors if metadata is invalid. This should contain checks for
+        things like duplicate channel_list entries, valid control channels,
+        etc.
+        """
+        if self.environment_type not in EnvironmentType:
+            raise RattlesnakeError(
+                f"{self.environment_type} is not a valid ControlType"
+            )
+
+        if not isinstance(self.environment_name, str):
+            raise RattlesnakeError(f"{self.environment_name} must be a string")
+
+        if len(self.channel_list_bools) != len(hardware_metadata.channel_list):
+            raise RattlesnakeError(
+                f"{self.environment_name} channel list bools is not the same length as channel list"
+            )
+
+        return True
+
+    @abstractmethod
+    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
+        """
+        Store parameters to a group in a netCDF streaming file.
 
         This function stores parameters from the environment into the netCDF
         file in a group with the environment's name as its name.  The function
@@ -122,6 +185,96 @@ class EnvironmentMetadata(ABC):
         netcdf_group_handle : nc4._netCDF4.Group
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
+        """
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_netcdf(
+        cls,
+        netcdf_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment's name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment's name.
+
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_blank_worksheet_template(
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+    ):
+        """
+        Create blank worksheet template for environment metadata to store to excel file
+        """
+
+    @abstractmethod
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Store parameters to a worksheet in an netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment's name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment's parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the "write" counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            A reference to the worksheet within the excel file where the
+            environment's metadata is stored.
+        """
+        self.create_blank_worksheet_template(worksheet)
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from an Excel worksheet.
+
+        This function retrieves parameters from an Excel worksheet that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_worksheet
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a worksheet
+        in the worksheet sharing the environment's name, e.g.
 
         """
 
