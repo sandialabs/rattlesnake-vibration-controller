@@ -1368,16 +1368,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.task_trigger_output_selector.hide()
     #         self.task_trigger_output_label.hide()
 
-    def initialize_data_acquisition(self):
-        """Initializes the data acquisition hardware
-
-        This function collects the information from the channel table as well
-        as the hardware information to create a DataAcquisitionParameters object
-        that gets passed to each environment through its command queue.
-
-        It also sends the data acquisition parameters to the acquisition and
-        output subtasks.
-        """
+    def initialize_hardware(self):
         self.log("Initializing Data Acquisition")
         channels = []
         environment_booleans = []
