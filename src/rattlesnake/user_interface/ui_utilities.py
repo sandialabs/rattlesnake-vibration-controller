@@ -23,10 +23,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import socket
-import sys
 import numpy as np
 import pyqtgraph
 import requests
+import time
+import traceback
+
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt, QTimer
 from scipy.interpolate import interp1d
@@ -1273,6 +1275,55 @@ class VaryingNumberOfLinePlot:
         self.plot_item.clear()
 
 
+class EventWatcher(QtCore.QObject):
+    ready = QtCore.Signal()
+    error = QtCore.Signal(str)
+
+    def __init__(
+        self,
+        ready_event_list,
+        active_event_list,
+        *,
+        active_event_check: bool = None,
+        timeout=None,
+    ):
+        super().__init__()
+        self.ready_event_list = ready_event_list
+        self.active_event_list = active_event_list
+        self.active_event_check = active_event_check
+        self.timeout = timeout
+
+    def run(self):
+        start = time.time()
+
+        try:
+            while True:
+
+                ready_ok = all(event.is_set() for event in self.ready_event_list)
+                active_ok = all(
+                    event.is_set() == self.active_event_check
+                    for event in self.active_event_list
+                )
+
+                if ready_ok and active_ok:
+                    self.ready.emit()
+                    return
+
+                if self.timeout and (time.time() - start) > self.timeout:
+                    for event in self.ready_event_list:
+                        event.set()
+
+                    self.error.emit(
+                        "EventWatcher has timed out while waiting for a response"
+                    )
+                    return
+
+                time.sleep(0.05)
+        except Exception:
+            tb = traceback.format_exc()
+            self.error.emit(tb)
+
+
 # endregion
 
 # region Hardware
@@ -2085,6 +2136,55 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             current_index = self.response_coordinate_selector.currentIndex()
             new_index = (current_index + increment) % num_channels
             self.response_coordinate_selector.setCurrentIndex(new_index)
+
+
+class EventWatcher(QtCore.QObject):
+    ready = QtCore.Signal()
+    error = QtCore.Signal(str)
+
+    def __init__(
+        self,
+        ready_event_list,
+        active_event_list,
+        *,
+        active_event_check: bool = None,
+        timeout=None,
+    ):
+        super().__init__()
+        self.ready_event_list = ready_event_list
+        self.active_event_list = active_event_list
+        self.active_event_check = active_event_check
+        self.timeout = timeout
+
+    def run(self):
+        start = time.time()
+
+        try:
+            while True:
+
+                ready_ok = all(event.is_set() for event in self.ready_event_list)
+                active_ok = all(
+                    event.is_set() == self.active_event_check
+                    for event in self.active_event_list
+                )
+
+                if ready_ok and active_ok:
+                    self.ready.emit()
+                    return
+
+                if self.timeout and (time.time() - start) > self.timeout:
+                    for event in self.ready_event_list:
+                        event.set()
+
+                    self.error.emit(
+                        "EventWatcher has timed out while waiting for a response"
+                    )
+                    return
+
+                time.sleep(0.05)
+        except Exception:
+            tb = traceback.format_exc()
+            self.error.emit(tb)
 
 
 # endregion

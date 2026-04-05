@@ -458,6 +458,9 @@ class Environment(ABC):
         """
         self._command_map[key] = function
 
+    # endregion
+
+    # region State Sync
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """Initialize the hardware parameters in the environment.
@@ -488,22 +491,6 @@ class Environment(ABC):
             A container containing the parameters defining the environment.
         """
         self.set_ready()
-
-    @abstractmethod
-    def stop_environment(self, data) -> None:
-        """Stop the environment gracefully.
-
-        This function defines the operations to shut down the environment
-        gracefully so there is no hard stop that might damage test equipment
-        or parts.
-
-        Parameters
-        ----------
-        data : Ignored
-            This parameter is not used by the function but must be present
-            due to the calling signature of functions called through the
-            ``command_map``.
-        """
 
     # endregion
 
@@ -663,6 +650,22 @@ class Environment(ABC):
     # endregion
 
     # region Shutdown
+    @abstractmethod
+    def stop_environment(self, data) -> None:
+        """Stop the environment gracefully.
+
+        This function defines the operations to shut down the environment
+        gracefully so there is no hard stop that might damage test equipment
+        or parts.
+
+        Parameters
+        ----------
+        data : Ignored
+            This parameter is not used by the function but must be present
+            due to the calling signature of functions called through the
+            ``command_map``.
+        """
+
     def quit(self, data):  # pylint: disable=unused-argument
         """Returns True to stop the ``run`` while loop and exit the process.
 
