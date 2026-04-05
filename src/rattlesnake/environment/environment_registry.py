@@ -12,7 +12,6 @@ ENVIRONMENT_COMMANDS = {}
 ENVIRONMENT_METADATA = {}
 ENVIRONMENT_CLASS = {}
 ENVIRONMENT_PROCESS = {}
-UI_ENVIRONMENT_OPTIONS = {"Add Environment": None}
 
 for environment_type in EnvironmentType:
     if environment_type in UNIMPLEMENTED_ENVIRONMENT:

@@ -53,8 +53,11 @@ from rattlesnake.hardware.hardware_registry import (
     UI_HARDWARE_WIDGETS,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.environment_registry import UI_ENVIRONMENT_OPTIONS
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.user_interface.ui_registry import (
+    ENVIRONMENT_UIS,
+    UI_ENVIRONMENT_OPTIONS,
+)
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
@@ -326,20 +329,20 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Hardware
         self.hardware_selector.currentTextChanged.connect(self.hardware_update)
-        # self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
-        # self.select_file_button.clicked.connect(self.select_hardware_file)
+        self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+        self.select_file_button.clicked.connect(self.select_hardware_file)
 
         # Environments
         environment_table_scroll = self.environment_channel_table.verticalScrollBar()
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
-        # self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
-        # self.remove_environment_button.clicked.connect(self.remove_environment)
-        # self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
-        #     self.rename_environment
-        # )
-        # self.initialize_environments_button.clicked.connect(
-        #     self.initialize_environments
-        # )
+        self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
+        self.remove_environment_button.clicked.connect(self.remove_environment)
+        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
+            self.rename_environment
+        )
+        self.initialize_environments_button.clicked.connect(
+            self.initialize_environments
+        )
 
         # Acquisition
         # self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
@@ -791,6 +794,162 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.display_error(tb)
     #         return
 
+    # def load_test_file(self, filename, hardware=True):
+    #     """Loads a test file using a file dialog"""
+    #     if not filename:
+    #         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+    #             self,
+    #             "Load Test NetCDF File",
+    #             filter="NetCDF File (*.nc4);;All Files (*.*)",
+    #         )
+    #         if filename == "":
+    #             return
+    #     dataset = netCDF4.Dataset(filename)  # pylint: disable=no-member
+    #     # Channel Table
+    #     channel_table = dataset["channels"]
+    #     # Node Number
+    #     data = channel_table["node_number"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 0).setText(value)
+    #     # Node Direction
+    #     data = channel_table["node_direction"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 1).setText(value)
+    #     # Comment
+    #     data = channel_table["comment"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 2).setText(value)
+    #     # SN
+    #     data = channel_table["serial_number"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 3).setText(value)
+    #     # Triax Dof
+    #     data = channel_table["triax_dof"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 4).setText(value)
+    #     # Sensitivity
+    #     data = channel_table["sensitivity"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 5).setText(str(value))
+    #     # Units
+    #     data = channel_table["unit"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 6).setText(value)
+    #     # Make
+    #     data = channel_table["make"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 7).setText(value)
+    #     # Model
+    #     data = channel_table["model"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 8).setText(value)
+    #     # Expiration Date
+    #     data = channel_table["expiration"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 9).setText(value)
+    #     # Read Device
+    #     data = channel_table["physical_device"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 10).setText(value)
+    #     # Read Channel
+    #     data = channel_table["physical_channel"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 11).setText(value)
+    #     # Type
+    #     data = channel_table["channel_type"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 12).setText(value)
+    #     # Min Volts
+    #     data = channel_table["minimum_value"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 13).setText(str(value))
+    #     # Max Volts
+    #     data = channel_table["maximum_value"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 14).setText(str(value))
+    #     # Coupling
+    #     data = channel_table["coupling"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 15).setText(value)
+    #     # Excitation Source
+    #     data = channel_table["excitation_source"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 16).setText(value)
+    #     # Excitation
+    #     data = channel_table["excitation"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 17).setText(str(value))
+    #     # Output Device
+    #     data = channel_table["feedback_device"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 18).setText(value)
+    #     # Output Channel
+    #     data = channel_table["feedback_channel"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 19).setText(value)
+    #     # Output Device
+    #     data = channel_table["warning_level"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 20).setText(value)
+    #     # Output Channel
+    #     data = channel_table["abort_level"][...]
+    #     for row_idx, value in enumerate(data):
+    #         self.channel_table.item(row_idx, 21).setText(value)
+    #     # Environment Table
+    #     for saved_environment_index, saved_environment_name in enumerate(
+    #         dataset.variables["environment_names"][...]
+    #     ):
+    #         try:
+    #             environment_index = self.environments.index(saved_environment_name)
+    #         except ValueError:
+    #             if len(dataset.variables["environment_names"][...]) == 1:
+    #                 environment_index = 0
+    #                 print(
+    #                     f"Warning: saved environment ({saved_environment_name}) is different from "
+    #                     f"current environment ({self.environments[environment_index]})"
+    #                 )
+    #         for channel_index, bool_row in enumerate(
+    #             dataset.variables["environment_active_channels"][
+    #                 :, saved_environment_index
+    #             ]
+    #         ):
+    #             boolean = bool(bool_row)
+    #             widget = self.environment_channels_table.cellWidget(
+    #                 channel_index, environment_index
+    #             )
+    #             widget.setChecked(boolean)
+    #     if hardware:
+    #         # Hardware
+    #         self.hardware_selector.blockSignals(True)
+    #         try:
+    #             self.hardware_selector.setCurrentIndex(dataset.hardware)
+    #             self.hardware_file = (
+    #                 None if dataset.hardware_file == "None" else dataset.hardware_file
+    #             )
+    #         except AttributeError:
+    #             self.hardware_selector.setCurrentIndex(0)
+    #             self.hardware_file = None
+    #         self.hardware_selector.blockSignals(False)
+    #         # Show the right widgets
+    #         self.hardware_update(select_file=False)
+    #     if self.hardware_selector.currentIndex() == 1:
+    #         self.lanxi_sample_rate_selector.setCurrentIndex(
+    #             np.log2(dataset.sample_rate // 4096)
+    #         )
+    #         self.lanxi_maximum_acquisition_processes_selector.setValue(
+    #             dataset.maximum_acquisition_processes
+    #         )
+    #     else:
+    #         self.sample_rate_selector.setValue(dataset.sample_rate)
+    #     self.integration_oversample_selector.setValue(dataset.output_oversample)
+    #     self.time_per_read_selector.setValue(dataset.time_per_read)
+    #     self.time_per_write_selector.setValue(dataset.time_per_write)
+    #     # Initialize files
+    #     self.initialize_data_acquisition()
+    #     # Set the test parameters
+    #     for environment in self.environments:
+    #         self.environment_uis[environment].retrieve_metadata(dataset)
+    #     self.initialize_environment_parameters()
     # endregion
 
     # region Channel Table
@@ -1072,162 +1231,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     # endregion
 
     # region Hardware
-    # def load_test_file(self, filename, hardware=True):
-    #     """Loads a test file using a file dialog"""
-    #     if not filename:
-    #         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #             self,
-    #             "Load Test NetCDF File",
-    #             filter="NetCDF File (*.nc4);;All Files (*.*)",
-    #         )
-    #         if filename == "":
-    #             return
-    #     dataset = netCDF4.Dataset(filename)  # pylint: disable=no-member
-    #     # Channel Table
-    #     channel_table = dataset["channels"]
-    #     # Node Number
-    #     data = channel_table["node_number"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 0).setText(value)
-    #     # Node Direction
-    #     data = channel_table["node_direction"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 1).setText(value)
-    #     # Comment
-    #     data = channel_table["comment"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 2).setText(value)
-    #     # SN
-    #     data = channel_table["serial_number"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 3).setText(value)
-    #     # Triax Dof
-    #     data = channel_table["triax_dof"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 4).setText(value)
-    #     # Sensitivity
-    #     data = channel_table["sensitivity"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 5).setText(str(value))
-    #     # Units
-    #     data = channel_table["unit"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 6).setText(value)
-    #     # Make
-    #     data = channel_table["make"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 7).setText(value)
-    #     # Model
-    #     data = channel_table["model"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 8).setText(value)
-    #     # Expiration Date
-    #     data = channel_table["expiration"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 9).setText(value)
-    #     # Read Device
-    #     data = channel_table["physical_device"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 10).setText(value)
-    #     # Read Channel
-    #     data = channel_table["physical_channel"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 11).setText(value)
-    #     # Type
-    #     data = channel_table["channel_type"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 12).setText(value)
-    #     # Min Volts
-    #     data = channel_table["minimum_value"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 13).setText(str(value))
-    #     # Max Volts
-    #     data = channel_table["maximum_value"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 14).setText(str(value))
-    #     # Coupling
-    #     data = channel_table["coupling"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 15).setText(value)
-    #     # Excitation Source
-    #     data = channel_table["excitation_source"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 16).setText(value)
-    #     # Excitation
-    #     data = channel_table["excitation"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 17).setText(str(value))
-    #     # Output Device
-    #     data = channel_table["feedback_device"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 18).setText(value)
-    #     # Output Channel
-    #     data = channel_table["feedback_channel"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 19).setText(value)
-    #     # Output Device
-    #     data = channel_table["warning_level"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 20).setText(value)
-    #     # Output Channel
-    #     data = channel_table["abort_level"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 21).setText(value)
-    #     # Environment Table
-    #     for saved_environment_index, saved_environment_name in enumerate(
-    #         dataset.variables["environment_names"][...]
-    #     ):
-    #         try:
-    #             environment_index = self.environments.index(saved_environment_name)
-    #         except ValueError:
-    #             if len(dataset.variables["environment_names"][...]) == 1:
-    #                 environment_index = 0
-    #                 print(
-    #                     f"Warning: saved environment ({saved_environment_name}) is different from "
-    #                     f"current environment ({self.environments[environment_index]})"
-    #                 )
-    #         for channel_index, bool_row in enumerate(
-    #             dataset.variables["environment_active_channels"][
-    #                 :, saved_environment_index
-    #             ]
-    #         ):
-    #             boolean = bool(bool_row)
-    #             widget = self.environment_channels_table.cellWidget(
-    #                 channel_index, environment_index
-    #             )
-    #             widget.setChecked(boolean)
-    #     if hardware:
-    #         # Hardware
-    #         self.hardware_selector.blockSignals(True)
-    #         try:
-    #             self.hardware_selector.setCurrentIndex(dataset.hardware)
-    #             self.hardware_file = (
-    #                 None if dataset.hardware_file == "None" else dataset.hardware_file
-    #             )
-    #         except AttributeError:
-    #             self.hardware_selector.setCurrentIndex(0)
-    #             self.hardware_file = None
-    #         self.hardware_selector.blockSignals(False)
-    #         # Show the right widgets
-    #         self.hardware_update(select_file=False)
-    #     if self.hardware_selector.currentIndex() == 1:
-    #         self.lanxi_sample_rate_selector.setCurrentIndex(
-    #             np.log2(dataset.sample_rate // 4096)
-    #         )
-    #         self.lanxi_maximum_acquisition_processes_selector.setValue(
-    #             dataset.maximum_acquisition_processes
-    #         )
-    #     else:
-    #         self.sample_rate_selector.setValue(dataset.sample_rate)
-    #     self.integration_oversample_selector.setValue(dataset.output_oversample)
-    #     self.time_per_read_selector.setValue(dataset.time_per_read)
-    #     self.time_per_write_selector.setValue(dataset.time_per_write)
-    #     # Initialize files
-    #     self.initialize_data_acquisition()
-    #     # Set the test parameters
-    #     for environment in self.environments:
-    #         self.environment_uis[environment].retrieve_metadata(dataset)
-    #     self.initialize_environment_parameters()
 
     def hardware_update(self, hardware_text):
         """Callback to provide options when hardware is selected"""
@@ -1368,157 +1371,199 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.task_trigger_output_selector.hide()
     #         self.task_trigger_output_label.hide()
 
+    def select_hardware_file(self):
+        filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Load a SDynPy System", filter="Numpy File (*.npz)"
+        )
+        # Check for 'cancel' dialog
+        if filename == "" or filename is None:
+            return
+        self.hardware_file = filename
+
     def initialize_hardware(self):
-        self.log("Initializing Data Acquisition")
-        channels = []
-        environment_booleans = []
-        channel_table_strings = self.get_channel_table_strings()
-        environment_channels = get_table_bools(self.environment_channels_table)
-        #        print('User Interface {:} Channels'.format(len(channel_table_strings)))
-        for index, (row, environment_bools) in enumerate(
-            zip(channel_table_strings, environment_channels)
-        ):
-            try:
-                channel = Channel.from_channel_table_row(row)
-            except ValueError as e:
-                self.log(f"Bad Entry in Channel {index + 1}, {e}")
-                error_message_qt(
-                    "Channel Table Error",
-                    f"Bad Entry in Channel {index + 1}\n\n{e}",
-                )
-                return
-            if channel is not None:
-                channels.append(channel)
-                environment_booleans.append(environment_bools)
-        # Go through and initialize the channel information for each environment
-        environment_booleans = np.array(environment_booleans)
-        environment_channel_indices = {}
-        extra_parameters = {}
-        if self.hardware_selector.currentIndex() == 0:
-            sample_rate = self.sample_rate_selector.value()
-            extra_parameters["task_trigger"] = self.task_trigger_selector.currentIndex()
-            extra_parameters["task_trigger_output_channel"] = (
-                self.task_trigger_output_selector.text()
-            )
-            output_oversample = 1
-        elif self.hardware_selector.currentIndex() == 1:
-            sample_rate = 2 ** self.lanxi_sample_rate_selector.currentIndex() * 4096
-            output_oversample = 16384 // sample_rate
-            if output_oversample == 0:
-                output_oversample = 1
-            extra_parameters["maximum_acquisition_processes"] = (
-                self.lanxi_maximum_acquisition_processes_selector.value()
-            )
-        elif self.hardware_selector.currentIndex() in [4, 5, 6, 7]:
-            sample_rate = self.sample_rate_selector.value()
-            output_oversample = self.integration_oversample_selector.value()
-        else:
-            sample_rate = self.sample_rate_selector.value()
-            output_oversample = 1
-        for environment_index, environment in enumerate(self.environments):
-            environment_channel_list = copy.deepcopy(
-                [
-                    channel
-                    for channel, environment_bool in zip(channels, environment_booleans)
-                    if environment_bool[environment_index]
+        self.log("Initializing Hardware")
+
+        # Prevent user from initializing multiple times
+        self.initialize_hardware_button.setEnabled(False)
+
+        try:
+            # Build hardware metadata
+            hardware_metadata = self.get_hardware_metadata_no_channels()
+            channel_list = self.get_channel_list()
+            hardware_metadata.channel_list = channel_list
+            if hardware_metadata.hardware_type == "Select":
+                self.initialize_hardware_error("Please select a hardware type.")
+
+            # Send hardware metadata to rattlesnake
+            self.rattlesnake.set_hardware(hardware_metadata)
+
+            environment_channel_list = self.get_environment_channel_list()
+            for environment_name, environment_ui in self.environment_uis.items():
+                hardware_metadata.channel_list = environment_channel_list[
+                    environment_name
                 ]
-            )
-            environment_channel_indices[environment] = [
-                index
-                for index, environment_bool in enumerate(environment_booleans)
-                if environment_bool[environment_index]
-            ]
-            environment_daq_parameters = DataAcquisitionParameters(
-                environment_channel_list,
-                sample_rate,
-                round(sample_rate * self.time_per_read_selector.value()),
-                round(
-                    sample_rate
-                    * self.time_per_write_selector.value()
-                    * output_oversample
-                ),
-                self.hardware_selector.currentIndex(),
-                self.hardware_file,
-                self.environments,
-                environment_booleans,
-                output_oversample,
-                **extra_parameters,
-            )
-            self.queue_container.environment_command_queues[environment].put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-                    environment_daq_parameters,
-                ),
-            )
-            self.environment_uis[environment].initialize_data_acquisition(
-                environment_daq_parameters
-            )
-        self.global_daq_parameters = DataAcquisitionParameters(
-            channels,
-            sample_rate,
-            round(sample_rate * self.time_per_read_selector.value()),
-            round(
-                sample_rate * self.time_per_write_selector.value() * output_oversample
-            ),
-            self.hardware_selector.currentIndex(),
-            self.hardware_file,
-            self.environments,
-            environment_booleans,
-            output_oversample,
-            **extra_parameters,
+                environment_ui.initialize_hardware(hardware_metadata)
+
+        except Exception as e:
+            self.initialize_hardware_error(e)
+            return
+
+        # Block until hardware metadata has been stored
+        ready_event_list = [
+            self.rattlesnake.event_container.acquisition_ready_event,
+            self.rattlesnake.event_container.output_ready_event,
+            *self.rattlesnake.environment_manager.ready_event_list,
+        ]
+        active_event_list = []
+        self.create_event_watcher(ready_event_list, active_event_list)
+        self.event_watcher.ready.connect(
+            lambda metadata=hardware_metadata: self.initialize_hardware_ready(metadata)
         )
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME,
-            (
-                GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-                (self.global_daq_parameters, environment_channel_indices),
-            ),
-        )
-        self.queue_container.output_command_queue.put(
-            TASK_NAME,
-            (
-                GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-                (self.global_daq_parameters, environment_channel_indices),
-            ),
-        )
-        self.channel_monitor_button.setEnabled(True)
-        if self.channel_monitor_window is not None:
-            self.channel_monitor_window.update_channel_list(self.global_daq_parameters)
-        for i in range(2, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.setTabEnabled(1, True)
-        self.rattlesnake_tabs.setCurrentIndex(1)
+        self.event_watcher.error.connect(self.initialize_hardware_error)
+        self.event_thread.start()
 
     # endregion
 
     # region Environment
-    # def initialize_environment_parameters(self):
-    #     """Initializes the environment parameters
+    def add_environment(self, environment_type: str | EnvironmentType):
+        """Function used to add an environment"""
+        # If comming from UI, environment_type will be text in combobox
+        if isinstance(environment_type, str):
+            environment_type = UI_ENVIRONMENT_OPTIONS[environment_type]
 
-    #     This function initializes the environment-specific parameters for each
-    #     environment by calling the initialize_environment function of each
-    #     environment-specific user interface."""
-    #     for environment in self.environments:
-    #         environment_parameters = self.environment_uis[
-    #             environment
-    #         ].initialize_environment()
-    #         self.environment_metadata[environment] = environment_parameters
-    #         self.queue_container.environment_command_queues[environment].put(
-    #             TASK_NAME,
-    #             (
-    #                 GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS,
-    #                 environment_parameters,
-    #             ),
-    #         )
+        if environment_type is None:
+            return
 
-    #     # Enable the next section
-    #     self.rattlesnake_tabs.setTabEnabled(2, True)
-    #     self.rattlesnake_tabs.setCurrentIndex(2)
+        idx = 0
+        environment_name = f"{environment_type.name} {idx}"
+        while environment_name in self.environment_uis.keys():
+            idx += 1
+            environment_name = f"{environment_type.name} {idx}"
 
-    #     # If there are test predictions
-    #     if self.has_test_predictions:
-    #         self.rattlesnake_tabs.setTabEnabled(3, True)
+        environment_ui_class = ENVIRONMENT_UIS[environment_type]
+        environment_ui = environment_ui_class(environment_name, self.rattlesnake)
+
+        # Update environment UIs and channel table
+        self.environment_uis[environment_name] = environment_ui
+        new_col = self.environment_channel_table.columnCount()
+        self.environment_channel_table.insertColumn(new_col)
+        self.environment_channel_table.setHorizontalHeaderItem(
+            new_col, QtWidgets.QTableWidgetItem(environment_name)
+        )
+        self.environment_channel_table.show()
+
+        # Set checkboxes
+        channel_list = self.get_channel_list()
+        num_channels = len(channel_list)
+        num_rows = self.environment_channel_table.rowCount()
+        for row in range(num_rows):
+            checkbox = QtWidgets.QCheckBox()
+            checkbox.setChecked(row < num_channels)
+            self.environment_channel_table.setCellWidget(row, new_col, checkbox)
+
+        # Reset add environment combobox
+        self.add_environment_combobox.setCurrentIndex(0)
+
+    def remove_environment(self, clicked=None, environment_name=None):
+        # Find selected ranges on the environment channel table
+        if environment_name:
+            for col in range(self.environment_channel_table.columnCount()):
+                item = self.environment_channel_table.horizontalHeaderItem(col)
+                if item and item.text() == environment_name:
+                    columns = [col]
+        else:
+            selected_ranges = self.environment_channel_table.selectedRanges()
+            if not selected_ranges:
+                self.display_error(
+                    "Please select an environment in environment channel table to remove"
+                )
+                return
+            # Remove selected columns from environment table and environment_uis
+            selected_range = selected_ranges[0]
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
+
+        for col in sorted(columns, reverse=True):
+            header_item = self.environment_channel_table.horizontalHeaderItem(col)
+            environment_name = header_item.text()
+            self.environment_uis.pop(environment_name)
+            self.environment_channel_table.removeColumn(col)
+
+        # If all environments are removed, hide environment channel table
+        if len(self.environment_uis) == 0:
+            self.environment_channel_table.hide()
+
+    def rename_environment(self, col_idx: int, new_name: str = None):
+        """Function to rename an environment
+
+        Parameters
+        ----------
+        index : int :
+            The index of the environment to rename
+        """
+
+        # Pull header text from environment_channel_table
+        header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
+        current_name = header_item.text()
+
+        # If name not given, ask user for a name
+        if not new_name:
+            # Create dialog box to get a new name
+            new_name, ok_chosen = QtWidgets.QInputDialog.getText(
+                self, "Rename Tab", "Enter new tab name:", text=current_name
+            )
+            if not ok_chosen:
+                return
+            new_name = new_name.strip()
+            if not new_name:
+                return
+
+        # Make sure name does not already exist
+        if new_name in self.environment_uis:
+            self.display_error(
+                "The new name already exists. Please choose a different name."
+            )
+            return
+
+        # Replace old name in dict with new name while keeping order
+        # This is scuffed but is very specific to this case
+        ordered_dict = {}
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_name == current_name:
+                environment_ui.environment_name = new_name
+                ordered_dict[new_name] = environment_ui
+            else:
+                ordered_dict[environment_name] = environment_ui
+        self.environment_uis = ordered_dict
+        header_item.setText(new_name)
+
+    def initialize_environment_parameters(self):
+        """Initializes the environment parameters
+
+        This function initializes the environment-specific parameters for each
+        environment by calling the initialize_environment function of each
+        environment-specific user interface."""
+        for environment in self.environments:
+            environment_parameters = self.environment_uis[
+                environment
+            ].initialize_environment()
+            self.environment_metadata[environment] = environment_parameters
+            self.queue_container.environment_command_queues[environment].put(
+                TASK_NAME,
+                (
+                    GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS,
+                    environment_parameters,
+                ),
+            )
+
+        # Enable the next section
+        self.rattlesnake_tabs.setTabEnabled(2, True)
+        self.rattlesnake_tabs.setCurrentIndex(2)
+
+        # If there are test predictions
+        if self.has_test_predictions:
+            self.rattlesnake_tabs.setTabEnabled(3, True)
 
     # endregion
 
