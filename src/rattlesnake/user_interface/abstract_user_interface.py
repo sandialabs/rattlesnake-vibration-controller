@@ -40,6 +40,18 @@ class EnvironmentUI(ABC):
         self.event_watcher = None
 
     # region State Sync
+    @property
+    def active(self):
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+                self.environment_name
+            ]
+            return self.rattlesnake.environment_manager.event_container.environment_active_events[
+                queue_name
+            ].is_set()
+        except:
+            return False
+
     def get_channel_list_bools(self, global_channel_list):
         channel_set = set(self.hardware_metadata.channel_list)
         channel_list_bools = [channel in channel_set for channel in global_channel_list]
@@ -124,19 +136,7 @@ class EnvironmentUI(ABC):
 
     # endregion
 
-    # region Process
-    @property
-    def active(self):
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
-                self.environment_name
-            ]
-            return self.rattlesnake.environment_manager.event_container.environment_active_events[
-                queue_name
-            ].is_set()
-        except:
-            return False
-
+    # region Callbacks
     @abstractmethod
     def start_environment(self):
         """

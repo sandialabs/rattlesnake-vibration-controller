@@ -1,9 +1,6 @@
-import multiprocessing as mp
-import traceback
+import os
 
-import netCDF4 as nc4
 import numpy as np
-import openpyxl
 from qtpy import QtCore, QtWidgets, uic
 
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -15,25 +12,26 @@ from rattlesnake.environment.time_environment import (
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.engine import RattlesnakeController
-from rattlesnake.user_interface.abstract_user_interface import AbstractUI
-from rattlesnake.user_interface.ui_utilities import (
-    environment_definition_ui_paths,
-    environment_run_ui_paths,
-    multiline_plotter,
-)
+from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
+from rattlesnake.user_interface.ui_utilities import multiline_plotter
 from rattlesnake.utilities import (
-    RattlesnakeError,
+    DIRECTORY,
     load_time_history,
     rms_time,
+    RattlesnakeError,
 )
 
 ENVIRONMENT_TYPE = EnvironmentType.TIME
+TIME_UI_DEFINITION_PATH = os.path.join(
+    DIRECTORY, "user_interface", "ui_files", "time_definition.ui"
+)
+TIME_UI_RUN_PATH = os.path.join(DIRECTORY, "user_interface", "ui_files", "time_run.ui")
 MAX_RESPONSES_TO_PLOT = 20
 MAX_SAMPLES_TO_PLOT = 100000
 
 
-# region: User Interface
-class TimeUI(AbstractUI):
+# region User Interface
+class TimeUI(EnvironmentUI):
     """Class defining the user interface for a Random Vibration environment.
 
     This class will contain two main UIs, the environment definition and run.
@@ -82,12 +80,10 @@ class TimeUI(AbstractUI):
         super().__init__(ENVIRONMENT_TYPE, environment_name, rattlesnake)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_definition_ui_paths[ENVIRONMENT_TYPE], self.definition_widget
-        )
+        uic.loadUi(TIME_UI_DEFINITION_PATH, self.definition_widget)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_run_ui_paths[ENVIRONMENT_TYPE], self.run_widget)
+        uic.loadUi(TIME_UI_RUN_PATH, self.run_widget)
 
         # Set up some persistent data
         self.signal = None
@@ -121,7 +117,9 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
         self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
 
-    # region: Metadata
+    # endregion
+
+    # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
@@ -304,54 +302,9 @@ class TimeUI(AbstractUI):
         self.run_widget.test_level_selector.setValue(instructions.current_test_level)
         self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
 
-    def update_gui(self, queue_data):
-        """Update the graphical interface for the environment
+    # endregion
 
-        Parameters
-        ----------
-        queue_data :
-            A 2-tuple consisting of ``(message,data)`` pairs where the message
-            denotes what to change and the data contains the information needed
-            to be displayed.
-        """
-        if super().update_gui(queue_data):
-            return
-        command, data = queue_data
-        match command:
-            case TimeUICommands.TIME_DATA:
-                self.plot_time_data(data)
-            case TimeCommands.SET_TEST_LEVEL:
-                self.set_test_level(data)
-            case TimeCommands.SET_NO_REPEAT:
-                self.set_no_repeat(data)
-            case TimeCommands.SET_REPEAT:
-                self.set_repeat(data)
-            case _:
-                print(f"Unknown Modal UI Command {command}")
-
-    # region: Commands
-    def display_environment_started(self):
-        self.run_widget.stop_test_button.setEnabled(True)
-        self.run_widget.start_test_button.setEnabled(False)
-        self.run_widget.test_level_selector.setEnabled(False)
-        self.run_widget.repeat_signal_checkbox.setEnabled(False)
-
-    def display_environment_ended(self):
-        self.run_widget.stop_test_button.setEnabled(False)
-        self.run_widget.start_test_button.setEnabled(True)
-        self.run_widget.test_level_selector.setEnabled(True)
-        self.run_widget.repeat_signal_checkbox.setEnabled(True)
-
-    def set_test_level(self, data):
-        test_level = int(data)
-        self.run_widget.test_level_selector.setValue(test_level)
-
-    def set_repeat(self, data):
-        self.run_widget.repeat_signal_checkbox.setChecked(True)
-
-    def set_no_repeat(self, data):
-        self.run_widget.repeat_signal_checkbox.setChecked(False)
-
+    # region Callbacks
     def plot_time_data(self, data):
         response_data, output_data = data
         for curve, this_data in zip(
@@ -368,7 +321,6 @@ class TimeUI(AbstractUI):
             y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
             curve.setData(x, y)
 
-    # region: Callbacks
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename
 
@@ -459,6 +411,18 @@ class TimeUI(AbstractUI):
             else:
                 curve.setData((0, 0), (0, 0))
 
+    def display_environment_started(self):
+        self.run_widget.stop_test_button.setEnabled(True)
+        self.run_widget.start_test_button.setEnabled(False)
+        self.run_widget.test_level_selector.setEnabled(False)
+        self.run_widget.repeat_signal_checkbox.setEnabled(False)
+
+    def display_environment_ended(self):
+        self.run_widget.stop_test_button.setEnabled(False)
+        self.run_widget.start_test_button.setEnabled(True)
+        self.run_widget.test_level_selector.setEnabled(True)
+        self.run_widget.repeat_signal_checkbox.setEnabled(True)
+
     def start_environment(self):
         """Starts running the environment"""
         self.run_widget.start_test_button.setEnabled(False)
@@ -483,3 +447,41 @@ class TimeUI(AbstractUI):
 
     def stop_environment_error(self, error):
         super().stop_environment_error(error)
+
+    # endregion
+
+    # region Commands
+    def set_test_level(self, data):
+        test_level = int(data)
+        self.run_widget.test_level_selector.setValue(test_level)
+
+    def set_repeat(self, data):
+        self.run_widget.repeat_signal_checkbox.setChecked(True)
+
+    def set_no_repeat(self, data):
+        self.run_widget.repeat_signal_checkbox.setChecked(False)
+
+    def update_gui(self, queue_data):
+        """Update the graphical interface for the environment
+
+        Parameters
+        ----------
+        queue_data :
+            A 2-tuple consisting of ``(message,data)`` pairs where the message
+            denotes what to change and the data contains the information needed
+            to be displayed.
+        """
+        if super().update_gui(queue_data):
+            return
+        command, data = queue_data
+        match command:
+            case TimeUICommands.TIME_DATA:
+                self.plot_time_data(data)
+            case TimeCommands.SET_TEST_LEVEL:
+                self.set_test_level(data)
+            case TimeCommands.SET_NO_REPEAT:
+                self.set_no_repeat(data)
+            case TimeCommands.SET_REPEAT:
+                self.set_repeat(data)
+            case _:
+                print(f"Unknown Modal UI Command {command}")
