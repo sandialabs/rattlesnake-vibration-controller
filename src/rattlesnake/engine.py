@@ -26,10 +26,10 @@ from rattlesnake.process.streaming import (
 from rattlesnake.process.controller import controller_process
 
 # from rattlesnake.process.sysid_data_analysis import SysIdMetadata
-# from rattlesnake.environment.abstract_environment import (
-#     EnvironmentInstructions,
-#     EnvironmentMetadata,
-# )
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentInstructions,
+    EnvironmentMetadata,
+)
 from rattlesnake.environment_manager import EnvironmentManager
 from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 
@@ -489,99 +489,101 @@ class RattlesnakeController:
     def hardware_metadata(self, value: HardwareMetadata):
         self._hardware_metadata = value
 
-    # def initialize_hardware_metadata(self, hardware_metadata: HardwareMetadata) -> None:
-    #     """Validates hardware_metadata and sends data to relevant processes"""
-    #     # Validate Rattlesnake State
-    #     if self.state not in (
-    #         RattlesnakeState.INIT,
-    #         RattlesnakeState.HARDWARE_STORE,
-    #         RattlesnakeState.ENVIRONMENT_STORE,
-    #     ):
-    #         raise RattlesnakeError(
-    #             f"Invalid state for this setting hardware: {self.state}"
-    #         )
-    #     # Validate hardware
-    #     if not isinstance(hardware_metadata, HardwareMetadata):
-    #         raise RattlesnakeError(
-    #             "Rattlesnake.set_hardware requires a valid HardwareMetadata class"
-    #         )
-    #     hardware_metadata.validate()
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+        """Validates hardware_metadata and sends data to relevant processes"""
+        # Validate Rattlesnake State
+        if self.state not in (
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            raise RattlesnakeError(
+                f"Invalid state for this setting hardware: {self.state}"
+            )
+        # Validate hardware
+        if not isinstance(hardware_metadata, HardwareMetadata):
+            raise RattlesnakeError(
+                "Rattlesnake.set_hardware requires a valid HardwareMetadata class"
+            )
+        hardware_metadata.validate()
 
-    #     # Send hardware metadata to the correct processes
-    #     self.log("Setting Hardware")
-    #     self.environment_manager.initialize_hardware(hardware_metadata)
-    #     self.event_container.acquisition_ready_event.clear()
-    #     self.queue_container.acquisition_command_queue.put(
-    #         TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
-    #     )
-    #     self.event_container.output_ready_event.clear()
-    #     self.queue_container.output_command_queue.put(
-    #         TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
-    #     )
+        # Send hardware metadata to the correct processes
+        self.log("Setting Hardware")
+        self.environment_manager.initialize_hardware(hardware_metadata)
+        self.event_container.acquisition_ready_event.clear()
+        self.queue_container.acquisition_command_queue.put(
+            TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
+        )
+        self.event_container.output_ready_event.clear()
+        self.queue_container.output_command_queue.put(
+            TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
+        )
 
-    #     if self.blocking:
-    #         ready_event_list = [
-    #             self.event_container.acquisition_ready_event,
-    #             self.event_container.output_ready_event,
-    #             *self.environment_manager.ready_event_list,
-    #         ]
-    #         active_event_list = []
-    #         self.wait_for_events(ready_event_list, active_event_list)
+        if self.blocking:
+            ready_event_list = [
+                self.event_container.acquisition_ready_event,
+                self.event_container.output_ready_event,
+                *self.environment_manager.ready_event_list,
+            ]
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
-    #         # Update state
-    #         self.hardware_metadata = hardware_metadata
+            # Update state
+            self.hardware_metadata = hardware_metadata
 
     # endregion
 
     # region Environment
-    # @property
-    # def environment_metadata(self):
-    #     return self.environment_manager.environment_metadata
+    @property
+    def environment_metadata(self):
+        return self.environment_manager.environment_metadata
 
-    # @environment_metadata.setter
-    # def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
-    #     self.environment_manager.environment_metadata = value
+    @environment_metadata.setter
+    def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
+        self.environment_manager.environment_metadata = value
 
-    # def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
-    #     """Validates environment_metadata, starts up environment processes, assigns queues,
-    #     and sends data to relevant processes"""
-    #     # Validate Rattlesnake State
-    #     if self.state not in (
-    #         RattlesnakeState.HARDWARE_STORE,
-    #         RattlesnakeState.ENVIRONMENT_STORE,
-    #     ):
-    #         raise RattlesnakeError(
-    #             f"Invalid state for setting environment: {self.state}"
-    #         )
-    #     # Validate environment metadata list
-    #     self.environment_manager.validate_environment_metadata(
-    #         environment_metadata_list, self.hardware_metadata
-    #     )
+    def initialize_environments(
+        self, environment_metadata_list: List[EnvironmentMetadata]
+    ):
+        """Validates environment_metadata, starts up environment processes, assigns queues,
+        and sends data to relevant processes"""
+        # Validate Rattlesnake State
+        if self.state not in (
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            raise RattlesnakeError(
+                f"Invalid state for setting environment: {self.state}"
+            )
+        # Validate environment metadata list
+        self.environment_manager.validate_environment_metadata(
+            environment_metadata_list, self.hardware_metadata
+        )
 
-    #     # Send environment meetadata to correct processes
-    #     self.log("Setting Environment")
-    #     self.environment_manager.initialize_environments(
-    #         environment_metadata_list, self.hardware_metadata
-    #     )
-    #     self.event_container.acquisition_ready_event.clear()
-    #     self.queue_container.acquisition_command_queue.put(
-    #         TASK_NAME,
-    #         (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata),
-    #     )
-    #     self.event_container.output_ready_event.clear()
-    #     self.queue_container.output_command_queue.put(
-    #         TASK_NAME,
-    #         (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata),
-    #     )
+        # Send environment meetadata to correct processes
+        self.log("Setting Environment")
+        self.environment_manager.initialize_environments(
+            environment_metadata_list, self.hardware_metadata
+        )
+        self.event_container.acquisition_ready_event.clear()
+        self.queue_container.acquisition_command_queue.put(
+            TASK_NAME,
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata),
+        )
+        self.event_container.output_ready_event.clear()
+        self.queue_container.output_command_queue.put(
+            TASK_NAME,
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata),
+        )
 
-    #     if self.blocking:
-    #         ready_event_list = [
-    #             self.event_container.acquisition_ready_event,
-    #             self.event_container.output_ready_event,
-    #             *self.environment_manager.ready_event_list,
-    #         ]
-    #         active_event_list = []
-    #         self.wait_for_events(ready_event_list, active_event_list)
+        if self.blocking:
+            ready_event_list = [
+                self.event_container.acquisition_ready_event,
+                self.event_container.output_ready_event,
+                *self.environment_manager.ready_event_list,
+            ]
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
     # endregion
 

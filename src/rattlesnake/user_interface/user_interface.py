@@ -1368,136 +1368,136 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.task_trigger_output_selector.hide()
     #         self.task_trigger_output_label.hide()
 
-    # def initialize_data_acquisition(self):
-    #     """Initializes the data acquisition hardware
+    def initialize_data_acquisition(self):
+        """Initializes the data acquisition hardware
 
-    #     This function collects the information from the channel table as well
-    #     as the hardware information to create a DataAcquisitionParameters object
-    #     that gets passed to each environment through its command queue.
+        This function collects the information from the channel table as well
+        as the hardware information to create a DataAcquisitionParameters object
+        that gets passed to each environment through its command queue.
 
-    #     It also sends the data acquisition parameters to the acquisition and
-    #     output subtasks.
-    #     """
-    #     self.log("Initializing Data Acquisition")
-    #     channels = []
-    #     environment_booleans = []
-    #     channel_table_strings = self.get_channel_table_strings()
-    #     environment_channels = get_table_bools(self.environment_channels_table)
-    #     #        print('User Interface {:} Channels'.format(len(channel_table_strings)))
-    #     for index, (row, environment_bools) in enumerate(
-    #         zip(channel_table_strings, environment_channels)
-    #     ):
-    #         try:
-    #             channel = Channel.from_channel_table_row(row)
-    #         except ValueError as e:
-    #             self.log(f"Bad Entry in Channel {index + 1}, {e}")
-    #             error_message_qt(
-    #                 "Channel Table Error",
-    #                 f"Bad Entry in Channel {index + 1}\n\n{e}",
-    #             )
-    #             return
-    #         if channel is not None:
-    #             channels.append(channel)
-    #             environment_booleans.append(environment_bools)
-    #     # Go through and initialize the channel information for each environment
-    #     environment_booleans = np.array(environment_booleans)
-    #     environment_channel_indices = {}
-    #     extra_parameters = {}
-    #     if self.hardware_selector.currentIndex() == 0:
-    #         sample_rate = self.sample_rate_selector.value()
-    #         extra_parameters["task_trigger"] = self.task_trigger_selector.currentIndex()
-    #         extra_parameters["task_trigger_output_channel"] = (
-    #             self.task_trigger_output_selector.text()
-    #         )
-    #         output_oversample = 1
-    #     elif self.hardware_selector.currentIndex() == 1:
-    #         sample_rate = 2 ** self.lanxi_sample_rate_selector.currentIndex() * 4096
-    #         output_oversample = 16384 // sample_rate
-    #         if output_oversample == 0:
-    #             output_oversample = 1
-    #         extra_parameters["maximum_acquisition_processes"] = (
-    #             self.lanxi_maximum_acquisition_processes_selector.value()
-    #         )
-    #     elif self.hardware_selector.currentIndex() in [4, 5, 6, 7]:
-    #         sample_rate = self.sample_rate_selector.value()
-    #         output_oversample = self.integration_oversample_selector.value()
-    #     else:
-    #         sample_rate = self.sample_rate_selector.value()
-    #         output_oversample = 1
-    #     for environment_index, environment in enumerate(self.environments):
-    #         environment_channel_list = copy.deepcopy(
-    #             [
-    #                 channel
-    #                 for channel, environment_bool in zip(channels, environment_booleans)
-    #                 if environment_bool[environment_index]
-    #             ]
-    #         )
-    #         environment_channel_indices[environment] = [
-    #             index
-    #             for index, environment_bool in enumerate(environment_booleans)
-    #             if environment_bool[environment_index]
-    #         ]
-    #         environment_daq_parameters = DataAcquisitionParameters(
-    #             environment_channel_list,
-    #             sample_rate,
-    #             round(sample_rate * self.time_per_read_selector.value()),
-    #             round(
-    #                 sample_rate
-    #                 * self.time_per_write_selector.value()
-    #                 * output_oversample
-    #             ),
-    #             self.hardware_selector.currentIndex(),
-    #             self.hardware_file,
-    #             self.environments,
-    #             environment_booleans,
-    #             output_oversample,
-    #             **extra_parameters,
-    #         )
-    #         self.queue_container.environment_command_queues[environment].put(
-    #             TASK_NAME,
-    #             (
-    #                 GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-    #                 environment_daq_parameters,
-    #             ),
-    #         )
-    #         self.environment_uis[environment].initialize_data_acquisition(
-    #             environment_daq_parameters
-    #         )
-    #     self.global_daq_parameters = DataAcquisitionParameters(
-    #         channels,
-    #         sample_rate,
-    #         round(sample_rate * self.time_per_read_selector.value()),
-    #         round(
-    #             sample_rate * self.time_per_write_selector.value() * output_oversample
-    #         ),
-    #         self.hardware_selector.currentIndex(),
-    #         self.hardware_file,
-    #         self.environments,
-    #         environment_booleans,
-    #         output_oversample,
-    #         **extra_parameters,
-    #     )
-    #     self.queue_container.acquisition_command_queue.put(
-    #         TASK_NAME,
-    #         (
-    #             GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-    #             (self.global_daq_parameters, environment_channel_indices),
-    #         ),
-    #     )
-    #     self.queue_container.output_command_queue.put(
-    #         TASK_NAME,
-    #         (
-    #             GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-    #             (self.global_daq_parameters, environment_channel_indices),
-    #         ),
-    #     )
-    #     self.channel_monitor_button.setEnabled(True)
-    #     if self.channel_monitor_window is not None:
-    #         self.channel_monitor_window.update_channel_list(self.global_daq_parameters)
-    #     for i in range(2, self.rattlesnake_tabs.count() - 1):
-    #         self.rattlesnake_tabs.setTabEnabled(i, False)
-    #     self.rattlesnake_tabs.setTabEnabled(1, True)
-    #     self.rattlesnake_tabs.setCurrentIndex(1)
+        It also sends the data acquisition parameters to the acquisition and
+        output subtasks.
+        """
+        self.log("Initializing Data Acquisition")
+        channels = []
+        environment_booleans = []
+        channel_table_strings = self.get_channel_table_strings()
+        environment_channels = get_table_bools(self.environment_channels_table)
+        #        print('User Interface {:} Channels'.format(len(channel_table_strings)))
+        for index, (row, environment_bools) in enumerate(
+            zip(channel_table_strings, environment_channels)
+        ):
+            try:
+                channel = Channel.from_channel_table_row(row)
+            except ValueError as e:
+                self.log(f"Bad Entry in Channel {index + 1}, {e}")
+                error_message_qt(
+                    "Channel Table Error",
+                    f"Bad Entry in Channel {index + 1}\n\n{e}",
+                )
+                return
+            if channel is not None:
+                channels.append(channel)
+                environment_booleans.append(environment_bools)
+        # Go through and initialize the channel information for each environment
+        environment_booleans = np.array(environment_booleans)
+        environment_channel_indices = {}
+        extra_parameters = {}
+        if self.hardware_selector.currentIndex() == 0:
+            sample_rate = self.sample_rate_selector.value()
+            extra_parameters["task_trigger"] = self.task_trigger_selector.currentIndex()
+            extra_parameters["task_trigger_output_channel"] = (
+                self.task_trigger_output_selector.text()
+            )
+            output_oversample = 1
+        elif self.hardware_selector.currentIndex() == 1:
+            sample_rate = 2 ** self.lanxi_sample_rate_selector.currentIndex() * 4096
+            output_oversample = 16384 // sample_rate
+            if output_oversample == 0:
+                output_oversample = 1
+            extra_parameters["maximum_acquisition_processes"] = (
+                self.lanxi_maximum_acquisition_processes_selector.value()
+            )
+        elif self.hardware_selector.currentIndex() in [4, 5, 6, 7]:
+            sample_rate = self.sample_rate_selector.value()
+            output_oversample = self.integration_oversample_selector.value()
+        else:
+            sample_rate = self.sample_rate_selector.value()
+            output_oversample = 1
+        for environment_index, environment in enumerate(self.environments):
+            environment_channel_list = copy.deepcopy(
+                [
+                    channel
+                    for channel, environment_bool in zip(channels, environment_booleans)
+                    if environment_bool[environment_index]
+                ]
+            )
+            environment_channel_indices[environment] = [
+                index
+                for index, environment_bool in enumerate(environment_booleans)
+                if environment_bool[environment_index]
+            ]
+            environment_daq_parameters = DataAcquisitionParameters(
+                environment_channel_list,
+                sample_rate,
+                round(sample_rate * self.time_per_read_selector.value()),
+                round(
+                    sample_rate
+                    * self.time_per_write_selector.value()
+                    * output_oversample
+                ),
+                self.hardware_selector.currentIndex(),
+                self.hardware_file,
+                self.environments,
+                environment_booleans,
+                output_oversample,
+                **extra_parameters,
+            )
+            self.queue_container.environment_command_queues[environment].put(
+                TASK_NAME,
+                (
+                    GlobalCommands.INITIALIZE_DATA_ACQUISITION,
+                    environment_daq_parameters,
+                ),
+            )
+            self.environment_uis[environment].initialize_data_acquisition(
+                environment_daq_parameters
+            )
+        self.global_daq_parameters = DataAcquisitionParameters(
+            channels,
+            sample_rate,
+            round(sample_rate * self.time_per_read_selector.value()),
+            round(
+                sample_rate * self.time_per_write_selector.value() * output_oversample
+            ),
+            self.hardware_selector.currentIndex(),
+            self.hardware_file,
+            self.environments,
+            environment_booleans,
+            output_oversample,
+            **extra_parameters,
+        )
+        self.queue_container.acquisition_command_queue.put(
+            TASK_NAME,
+            (
+                GlobalCommands.INITIALIZE_DATA_ACQUISITION,
+                (self.global_daq_parameters, environment_channel_indices),
+            ),
+        )
+        self.queue_container.output_command_queue.put(
+            TASK_NAME,
+            (
+                GlobalCommands.INITIALIZE_DATA_ACQUISITION,
+                (self.global_daq_parameters, environment_channel_indices),
+            ),
+        )
+        self.channel_monitor_button.setEnabled(True)
+        if self.channel_monitor_window is not None:
+            self.channel_monitor_window.update_channel_list(self.global_daq_parameters)
+        for i in range(2, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.setTabEnabled(1, True)
+        self.rattlesnake_tabs.setCurrentIndex(1)
 
     # endregion
 
