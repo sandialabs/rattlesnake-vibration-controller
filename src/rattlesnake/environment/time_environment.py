@@ -449,6 +449,9 @@ class TimeEnvironment(Environment):
         self.output_channels = None
         self.measurement_channels = None
 
+    # endregion
+
+    # region Commands
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
 
@@ -646,6 +649,27 @@ class TimeEnvironment(Environment):
             (copy.deepcopy(write_data * test_level), last_signal)
         )
 
+    def set_test_level(self, data):
+        level = db2scale(data)
+        self.adjust_test_level(level)
+        self.queue_container.gui_update_queue.put(
+            (self.environment_name, (TimeCommands.SET_TEST_LEVEL, data))
+        )
+
+    def set_no_repeat(self, data=None):
+        self.repeat = False
+        self.log("Repeat turned off")
+        self.queue_container.gui_update_queue.put(
+            (self.environment_name, (TimeCommands.SET_NO_REPEAT, data))
+        )
+
+    def set_repeat(self, data=None):
+        self.repeat = True
+        self.log("Repeat turned on")
+        self.queue_container.gui_update_queue.put(
+            (self.environment_name, (TimeCommands.SET_REPEAT, data))
+        )
+
     def stop_environment(self, data):
         """Stops the environment by setting the test level to zero.
 
@@ -680,27 +704,9 @@ class TimeEnvironment(Environment):
                 )
             )
 
-    def set_test_level(self, data):
-        level = db2scale(data)
-        self.adjust_test_level(level)
-        self.queue_container.gui_update_queue.put(
-            (self.environment_name, (TimeCommands.SET_TEST_LEVEL, data))
-        )
+    # endregion
 
-    def set_no_repeat(self, data=None):
-        self.repeat = False
-        self.log("Repeat turned off")
-        self.queue_container.gui_update_queue.put(
-            (self.environment_name, (TimeCommands.SET_NO_REPEAT, data))
-        )
-
-    def set_repeat(self, data=None):
-        self.repeat = True
-        self.log("Repeat turned on")
-        self.queue_container.gui_update_queue.put(
-            (self.environment_name, (TimeCommands.SET_REPEAT, data))
-        )
-
+    # region Shutdown
     def shutdown(self):
         """Performs final cleanup operations when the system has shut down
 
@@ -718,6 +724,8 @@ class TimeEnvironment(Environment):
         self.queue_container.gui_update_queue.put(
             (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
         )
+
+    # endregion
 
 
 # region: time_process
