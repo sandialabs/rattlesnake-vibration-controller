@@ -167,7 +167,7 @@ def build_time_environment():
     time_stream_metadata = make_time_environment_stream_metadata()
     time_environment_instructions = make_time_environment_instructions()
 
-    # rattlesnake.initialize_hardware(hardware_metadata)
+    rattlesnake.initialize_hardware(hardware_metadata)
     # rattlesnake.initialize_environments([time_environment_metadata])
     # rattlesnake.initialize_profile_event_list(time_profile_event_list)
     # rattlesnake.set_stream_metadata(time_stream_metadata)

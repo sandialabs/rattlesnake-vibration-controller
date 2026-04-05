@@ -82,7 +82,7 @@ class ModalUI(EnvironmentUI):
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
         modal_ui_run_path = os.path.join(
-            DIRECTORY, "user_interface", "ui_files", "time_run.ui"
+            DIRECTORY, "user_interface", "ui_files", "modal_run.ui"
         )
         uic.loadUi(modal_ui_run_path, self.run_widget)
 

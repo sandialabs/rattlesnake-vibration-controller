@@ -100,7 +100,6 @@ class ModalCommands(EnvironmentCommands):
 
 class ModalUICommands(Enum):
     SPECTRAL_UPDATE = 1
-    FINISHED = 2
 
 
 # endregion
@@ -386,7 +385,7 @@ class ModalMetadata(EnvironmentMetadata):
     # endregion
 
     # region Loading
-    def store_to_netcdf(
+    def save_metadata_to_netcdf(
         self,
         netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
@@ -464,7 +463,7 @@ class ModalMetadata(EnvironmentMetadata):
         var[...] = self.response_channel_indices
 
     @classmethod
-    def retrieve_metadata_from_netcdf(
+    def load_metadata_from_netcdf(
         cls,
         netcdf_group_handle: nc4._netCDF4.Dataset,
         environment_name: str,
@@ -685,7 +684,9 @@ class ModalMetadata(EnvironmentMetadata):
         worksheet.cell(27, 1, "Disabled Channels")
         worksheet.cell(27, 3, "# List of channels, one per cell on this row")
 
-    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """Creates a template worksheet in an Excel workbook defining the
         environment.
 
@@ -706,7 +707,7 @@ class ModalMetadata(EnvironmentMetadata):
             A reference to an ``openpyxl`` workbook.
 
         """
-        super().store_to_worksheet(worksheet)
+        super().save_metadata_to_worksheet(worksheet)
 
         if self.samples_per_frame is not None:
             worksheet.cell(2, 2, self.samples_per_frame)
@@ -771,7 +772,7 @@ class ModalMetadata(EnvironmentMetadata):
                     col_idx += 1
 
     @classmethod
-    def retrieve_metadata_from_worksheet(
+    def load_metadata_from_worksheet(
         cls,
         worksheet: openpyxl.worksheet.worksheet.Worksheet,
         environment_name: str,
@@ -926,11 +927,11 @@ class ModalQueues:
         self,
         environment_name: str,
         environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: mp.queues.Queue,
+        gui_update_queue: mp.Queue,
         controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: mp.queues.Queue,
-        data_out_queue: mp.queues.Queue,
-        log_file_queue: VerboseMessageQueue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
+        log_file_queue: mp.Queue,
     ):
         """
         Creates a namespace to store all the queues used by the Modal Environment
@@ -960,20 +961,26 @@ class ModalQueues:
         self.updated_spectral_quantities_queue = mp.Queue()
         self.signal_generation_update_queue = mp.Queue()
         self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Spectral Computation Command Queue"
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Spectral Computation Command Queue",
         )
         self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Collector Command Queue"
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Data Collector Command Queue",
         )
         self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Signal Generation Command Queue"
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Signal Generation Command Queue",
         )
 
 
 # endregion
 
 
-# region: Environment
+# region Environment
 class ModalEnvironment(Environment):
     """Modal Environment class defining the interface with the controller"""
 
@@ -1026,6 +1033,8 @@ class ModalEnvironment(Environment):
             SpectralProcessingCommands.SHUTDOWN_ACHIEVED,
             self.spectral_shutdown_achieved_fn,
         )
+
+    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -1207,6 +1216,8 @@ class ModalEnvironment(Environment):
     def get_signal_generator(self):
         """Gets the signal generator object used to generate signals for the environment"""
         return self.metadata.get_signal_generator()
+
+    # endregion
 
     # region Commands
     def start_environment(self, data):  # pylint: disable=unused-argument
@@ -1404,9 +1415,11 @@ class ModalEnvironment(Environment):
             and self.spectral_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
-            self.gui_update_queue.put(
-                (self.environment_name, (ModalUICommands.FINISHED, None))
+            self.clear_active()
+            self.queue_container.gui_update_queue.put(
+                (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
             )
+            # self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
         else:
             # Recheck some time later
             time.sleep(1)
@@ -1475,6 +1488,8 @@ class ModalEnvironment(Environment):
         ]:
             queue.put(self.environment_name, (GlobalCommands.QUIT, None))
         return True
+
+    # endregion
 
 
 # region Process
@@ -1595,3 +1610,6 @@ def modal_process(
     siggen_proc.join()
     process_class.log("Joining Data Collection")
     collection_proc.join()
+
+
+# endregion
