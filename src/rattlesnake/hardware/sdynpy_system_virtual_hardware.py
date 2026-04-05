@@ -166,8 +166,6 @@ class SDynPySystemMetadata(HardwareMetadata):
                 "SDynPy channel table requires atleast 1 physical device without an assigned feedback device"
             )
 
-        return True
-
     @property
     def assist_mode_modules(self):
         assist_mode_modules = super().assist_mode_modules

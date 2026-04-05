@@ -85,10 +85,10 @@ class HardwareMetadata:
 
     # region Validation
     @abstractmethod
-    def validate(self) -> True:
+    def validate(self):
         """
         Method to check if the metadata object fully defines the hardware and is valid
-        for that machine
+        for that machine.
 
         If possible should check which devices are connected to the machine at a given
         time and make sure that they are valid inputs to the initialize_hardware function
@@ -99,8 +99,6 @@ class HardwareMetadata:
         """
         if len(self.channel_list) != len(set(self.channel_list)):
             raise RattlesnakeError("Duplicate channels found in channel_list")
-
-        return True
 
     @abstractmethod
     def valid_channel_dict(self, channel: Channel):

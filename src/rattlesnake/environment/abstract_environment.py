@@ -141,10 +141,13 @@ class EnvironmentMetadata(ABC):
         ]
         return channel_indices
 
+    # endregion
+
+    # region Validation
     @abstractmethod
-    def validate(self, hardware_metadata) -> True:
+    def validate(self, hardware_metadata):
         """
-        Validate whether the metadata will work for that environment. Return True if valid
+        Validate whether the metadata will work for that environment.
 
         Throw errors if metadata is invalid. This should contain checks for
         things like duplicate channel_list entries, valid control channels,
@@ -163,8 +166,9 @@ class EnvironmentMetadata(ABC):
                 f"{self.environment_name} channel list bools is not the same length as channel list"
             )
 
-        return True
+    # endregion
 
+    # region Loading
     @abstractmethod
     def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
         """
@@ -276,6 +280,71 @@ class EnvironmentMetadata(ABC):
         should collect parameters pertaining to the environment from a worksheet
         in the worksheet sharing the environment's name, e.g.
 
+        """
+
+    # endregion
+
+
+# region Instructions
+class EnvironmentInstructions(ABC):
+    """Environment Instructions class that defines startup of environment
+
+    This is an class given to the controller as input to the intial
+    start_control function call for that environment. It is used to
+    define aspects such as test_level or repeating_signals that need
+    to be defined quickly without needing to be stored to netcdf4 file.
+
+    If no instructions are given to controller for an environment, the
+    first start_control function call will be given with a None as the
+    datatype.
+
+    If profile events are being used, this will be given to the controller
+    when "Start Profile" button is clicked. If a profile is not being used,
+    you are responsible for sending this to the controller with:
+
+    queue_container.controller_command_queue.put(
+        TASK_NAME,
+        (GlobalCommands.INITIALIZE_INSTRUCTIONS, (EnvironmentInstructions,))
+    )
+
+    when the "Start" button on your run tab is pressed, most likely
+    right before the GlobalCommand.START_ENVIRONMENT for that environment
+    would be called.
+
+    Parameters
+    ---------
+    queue_name : str
+        This is the queue_name which is the key corresponding to all the
+        dicts that store information about the environment. This name is
+        forced to be unique and is used to track the environment. The
+        queue_name is known in the EnvironmentManager, EnvironmentUI, and
+        EnvironmentProcess
+    """
+
+    def __init__(self, environment_type, environment_name):
+        """
+        Initializes the environment instructions class with attributes
+        that will be defined to the run tab of the environment ui. These
+        are attributes that dont need to be stored during
+        initialize_environment and can instead be passed to the
+        EnvironmentProcess.start_control function.
+
+        The environment_type should be specified from a EnvironmentType
+        enum in environment_utilities and should not be required as an
+        input to the specified environment instructions. Just force it
+        as an input to super().__init__() when you define the specific
+        EnvironmentInstructions class. The environment_type is validated
+        so that the instructions class is passed to the correct environment.
+        """
+        self.environment_type = environment_type
+        self.environment_name = environment_name
+
+    @abstractmethod
+    def validate(self):
+        """
+        Validates the instruction to make sure that it will work with a
+        given environment. Should throw errors describing why that
+        instruction is invalid.
         """
 
 
