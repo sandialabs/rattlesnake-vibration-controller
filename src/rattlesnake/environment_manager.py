@@ -11,20 +11,18 @@ from rattlesnake.utilities import (
     QueueContainer,
     RattlesnakeError,
 )
-
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentMetadata,
 )
-
 from rattlesnake.environment.environment_registry import ENVIRONMENT_PROCESS
+from rattlesnake.profile_manager import ProfileEvent
 
 # from rattlesnake.environment.environment_utilities import (
 #     EnvironmentType,
 #     SYS_ID_ENVIRONMENTS,
 # )
-# from rattlesnake.profile_manager import ProfileEvent
 # from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 
 TASK_NAME = "Environment Manager"
@@ -301,30 +299,30 @@ class EnvironmentManager:
 
         return queue_name
 
-    # def validate_profile_events(self, profile_events_list: List[ProfileEvent]):
-    #     """Since the profile events are comming form the UI/Terminal which has
-    #     no idea which queue was assigned to an environment, the validation of
-    #     the environment_names is performed by the environment manager"""
-    #     for profile_event in profile_events_list:
-    #         # Validate class
-    #         if not isinstance(profile_event, ProfileEvent):
-    #             raise RattlesnakeError(
-    #                 "The profile_events_list contains an object that is not a ProfileEvent type"
-    #             )
-    #         # Validate environment_name and assign queue_name and type
-    #         environment_name = profile_event.environment_name
-    #         if environment_name == "Global":
-    #             profile_event._queue_name = "Global"
-    #             profile_event._environment_type = "Global"
-    #         else:
-    #             try:
-    #                 queue_name = self.queue_names_dict[environment_name]
-    #             except KeyError:
-    #                 raise RattlesnakeError(
-    #                     f"No environments exist for {environment_name} when validating instruction"
-    #                 )
-    #             profile_event._queue_name = queue_name
-    #             profile_event._environment_type = self.environment_types[queue_name]
+    def validate_profile_events(self, profile_events_list: List[ProfileEvent]):
+        """Since the profile events are comming form the UI/Terminal which has
+        no idea which queue was assigned to an environment, the validation of
+        the environment_names is performed by the environment manager"""
+        for profile_event in profile_events_list:
+            # Validate class
+            if not isinstance(profile_event, ProfileEvent):
+                raise RattlesnakeError(
+                    "The profile_events_list contains an object that is not a ProfileEvent type"
+                )
+            # Validate environment_name and assign queue_name and type
+            environment_name = profile_event.environment_name
+            if environment_name == "Global":
+                profile_event._queue_name = "Global"
+                profile_event._environment_type = "Global"
+            else:
+                try:
+                    queue_name = self.queue_names_dict[environment_name]
+                except KeyError:
+                    raise RattlesnakeError(
+                        f"No environments exist for {environment_name} when validating instruction"
+                    )
+                profile_event._queue_name = queue_name
+                profile_event._environment_type = self.environment_types[queue_name]
 
     # endregion
 

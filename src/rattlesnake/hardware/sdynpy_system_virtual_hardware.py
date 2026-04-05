@@ -264,16 +264,23 @@ class SDynPySystemMetadata(HardwareMetadata):
 
     @classmethod
     def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
-        default_metadata = super().load_metadata_from_netcdf(netcdf_dataset)
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_netcdf(netcdf_dataset)
 
         hardware_file = netcdf_dataset.hardware_file
 
         return cls(
-            default_metadata.channel_list,
-            default_metadata.sample_rate,
-            default_metadata.time_per_read,
-            default_metadata.time_per_write,
-            default_metadata.output_oversample,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
             hardware_file,
         )
 
@@ -285,7 +292,14 @@ class SDynPySystemMetadata(HardwareMetadata):
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
-        default_metadata = super().load_metadata_from_workbook(workbook)
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_workbook(workbook)
 
         hardware_file = None
 
@@ -302,11 +316,11 @@ class SDynPySystemMetadata(HardwareMetadata):
                     continue
 
         return cls(
-            default_metadata.channel_list,
-            default_metadata.sample_rate,
-            default_metadata.time_per_read,
-            default_metadata.time_per_write,
-            default_metadata.output_oversample,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
             hardware_file,
         )
 

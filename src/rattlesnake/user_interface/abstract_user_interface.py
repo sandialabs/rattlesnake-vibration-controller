@@ -318,6 +318,8 @@ class EnvironmentUI(ABC):
             case _:
                 return False
 
+        return True
+
     def log(self, message: str):
         """Write a message to the log file
 

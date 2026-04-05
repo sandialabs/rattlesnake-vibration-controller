@@ -30,12 +30,11 @@ import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc
 import numpy as np
 
+from rattlesnake.utilities import GlobalCommands, QueueContainer
+from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import GlobalCommands, QueueContainer
-
-# from rattlesnake.load_utilities import save_rattlesnake_netcdf_template
 
 
 # region: StreamType
@@ -157,7 +156,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle = nc.Dataset(
             stream_metadata.stream_file, "w", format="NETCDF4", clobber=True
         )  # pylint: disable=no-member
-        save_rattlesnake_netcdf_template(
+        save_rattlesnake_to_netcdf(
             self.netcdf_handle, hardware_metadata, environment_metadata_dict
         )
 

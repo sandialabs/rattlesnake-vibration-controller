@@ -56,7 +56,7 @@ from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
-from rattlesnake.process.streaming import StreamType
+from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
@@ -64,6 +64,8 @@ from rattlesnake.user_interface.ui_utilities import (
     Updater,
     ProfileTimer,
     ChannelMonitor,
+    IPAddress,
+    IPAddressManager,
 )
 from rattlesnake.user_interface.ui_registry import (
     UI_HARDWARE_OPTIONS,
@@ -109,6 +111,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         super(RattlesnakeUI, self).__init__()
 
         uic.loadUi(RATTLESNAKE_UI_PATH, self)
+        self.channel_monitor_window = None
 
         # Communication objects
         self.rattlesnake = rattlesnake
@@ -134,7 +137,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.complete_ui()
 
         # Store any presets to the UI
-        # self.load_rattlesnake_controller_to_ui()
+        self.load_ui_from_rattlesnake()
 
         # Show UI
         self.show()
@@ -233,10 +236,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Universal
         self.channel_monitor_button.clicked.connect(self.show_channel_monitor)
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
-        # self.load_test_file_button.clicked.connect(self.load_test_file)
-        # self.save_template_button.clicked.connect(self.save_template)
+        self.load_test_file_button.clicked.connect(self.load_ui_from_test_file)
+        self.save_template_button.clicked.connect(self.save_template_from_ui)
 
         # Channel Table
+        # self.sample_rate_selector.valueChanged.connect(self.sample_rate_update)
+        self.lanxi_ip_address_button.clicked.connect(self.ip_lookup)
         self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
@@ -502,13 +507,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 return
 
         try:
-            self.rattlesnake.load_data_from_file(filepath)
+            self.rattlesnake.load_rattlesnake_from_template(filepath)
         except Exception:  # pylint: disable=broad-exception-caught
             tb = traceback.format_exc()
             self.display_error(tb)
             return
 
-        self.load_from_rattlesnake_state()
+        self.load_ui_from_rattlesnake()
 
     def load_ui_from_rattlesnake(self):
         """
@@ -1098,41 +1103,41 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             for widget in widgets:
                 widget.setVisible(name in visible_widgets)
 
-    # def ip_lookup(self):
-    #     """Creates an IP Lookup window"""
-    #     ipv4_pattern = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
-    #     ipv6_pattern = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
-    #     stored_addresses = self.lanxi_ip_addresses
+    def ip_lookup(self):
+        """Creates an IP Lookup window"""
+        ipv4_pattern = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
+        ipv6_pattern = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
+        stored_addresses = self.lanxi_ip_addresses
 
-    #     bknum = []
-    #     ipv4 = []
-    #     ipv6 = []
-    #     for ip_address in stored_addresses:
-    #         bknum.append(ip_address.host_name)
-    #         ipv4.append(ip_address.ipv4_address)
-    #         ipv6.append(ip_address.ipv6_address)
+        bknum = []
+        ipv4 = []
+        ipv6 = []
+        for ip_address in stored_addresses:
+            bknum.append(ip_address.host_name)
+            ipv4.append(ip_address.ipv4_address)
+            ipv6.append(ip_address.ipv6_address)
 
-    #     # Loop through table devices and append unique IP addresses
-    #     for row in range(self.channel_table.rowCount()):
-    #         table_text = self.channel_table.item(row, 10).text()
-    #         if re.search(ipv4_pattern, table_text) is not None:
-    #             if table_text not in ipv4:
-    #                 stored_addresses.append(IPAddress(None, table_text, None))
-    #                 ipv4.append(table_text)
-    #         elif re.search(ipv6_pattern, table_text) is not None:
-    #             if table_text not in ipv6:
-    #                 stored_addresses.append(IPAddress(None, None, table_text))
-    #                 ipv6.append(table_text)
-    #         elif table_text != "":
-    #             if table_text not in bknum:
-    #                 stored_addresses.append(IPAddress(table_text, None, None))
-    #                 bknum.append(table_text)
+        # Loop through table devices and append unique IP addresses
+        for row in range(self.channel_table.rowCount()):
+            table_text = self.channel_table.item(row, 10).text()
+            if re.search(ipv4_pattern, table_text) is not None:
+                if table_text not in ipv4:
+                    stored_addresses.append(IPAddress(None, table_text, None))
+                    ipv4.append(table_text)
+            elif re.search(ipv6_pattern, table_text) is not None:
+                if table_text not in ipv6:
+                    stored_addresses.append(IPAddress(None, None, table_text))
+                    ipv6.append(table_text)
+            elif table_text != "":
+                if table_text not in bknum:
+                    stored_addresses.append(IPAddress(table_text, None, None))
+                    bknum.append(table_text)
 
-    #     ip_manager = IPAddressManager(stored_addresses)
-    #     # TODO: I don't think the check for equality does anything here.  Show isn't blocking, so
-    #     # the dialog wouldn't have been accepted yet.
-    #     # ok_clicked = ip_manager.show() == QtWidgets.QDialog.Accepted
-    #     ip_manager.show()
+        ip_manager = IPAddressManager(stored_addresses)
+        # TODO: I don't think the check for equality does anything here.  Show isn't blocking, so
+        # the dialog wouldn't have been accepted yet.
+        # ok_clicked = ip_manager.show() == QtWidgets.QDialog.Accepted
+        ip_manager.show()
 
     # def sample_rate_update(self):
     #     """Updates the sample rate selector based on valid available rates"""
@@ -1625,151 +1630,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         else:
             pass  # TODO Need to raise the window to the front, or close and reopen
 
-    def select_control_streaming_file(self):
-        """Selects a file to stream data to disk"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            "Select NetCDF File to Save Control Data",
-            filter="NetCDF File (*.nc4)",
-        )
-        if filename == "":
-            return
-        self.streaming_file_display.setText(filename)
-
-    def arm_test(self):
-        """Starts the data acquisition running in preparation for control"""
-        if (
-            not self.no_streaming_radiobutton.isChecked()
-            and len(self.streaming_file_display.text()) == 0
-        ):
-            error_message_qt(
-                "No Streaming File Selected",
-                "Please select a file into which data will be streamed.",
-            )
-            return
-        self.log("Arming Test Hardware")
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.RUN_HARDWARE, None)
-        )
-        self.no_streaming_radiobutton.setEnabled(False)
-        self.profile_streaming_radiobutton.setEnabled(False)
-        self.test_level_streaming_radiobutton.setEnabled(False)
-        self.streaming_environment_select_combobox.setEnabled(False)
-        self.immediate_streaming_radiobutton.setEnabled(False)
-        self.select_streaming_file_button.setEnabled(False)
-        self.manual_streaming_radiobutton.setEnabled(False)
-        self.manual_streaming_trigger_button.setEnabled(True)
-        self.arm_test_button.setEnabled(False)
-        self.disarm_test_button.setEnabled(True)
-        self.start_profile_button.setEnabled(True)
-        self.stop_profile_button.setEnabled(True)
-        for i in range(self.run_environment_tabs.count()):
-            self.run_environment_tabs.widget(i).setEnabled(True)
-        for _, ui in self.environment_uis.items():
-            try:
-                ui.disable_system_id_daq_armed()
-            except AttributeError:
-                pass
-        if (
-            self.profile_streaming_radiobutton.isChecked()
-            or self.test_level_streaming_radiobutton.isChecked()
-            or self.immediate_streaming_radiobutton.isChecked()
-            or self.manual_streaming_radiobutton.isChecked()
-        ):
-            file_path = self.streaming_file_display.text()
-            self.queue_container.streaming_command_queue.put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_STREAMING,
-                    (file_path, self.global_daq_parameters, self.environment_metadata),
-                ),
-            )
-        if self.immediate_streaming_radiobutton.isChecked():
-            self.start_streaming()
-
-    def disarm_test(self):
-        """Stops the data acquisition from running and shuts down all environments"""
-        self.log("Disarming Test Hardware")
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
-        )
-        for _, ui in self.environment_uis.items():
-            ui.stop_control()
-        # for environment,queue in self.queue_container.environment_command_queues.items():
-        #     queue.put(TASK_NAME,(GlobalCommands.STOP_ENVIRONMENT,None))
-        self.no_streaming_radiobutton.setEnabled(True)
-        self.profile_streaming_radiobutton.setEnabled(True)
-        self.test_level_streaming_radiobutton.setEnabled(True)
-        self.streaming_environment_select_combobox.setEnabled(True)
-        self.immediate_streaming_radiobutton.setEnabled(True)
-        self.manual_streaming_radiobutton.setEnabled(True)
-        self.manual_streaming_trigger_button.setEnabled(False)
-        self.manual_streaming_trigger_button.setText("Start\nStreaming")
-        self.select_streaming_file_button.setEnabled(True)
-        self.arm_test_button.setEnabled(True)
-        self.disarm_test_button.setEnabled(False)
-        self.start_profile_button.setEnabled(False)
-        self.stop_profile_button.setEnabled(False)
-        for i in range(self.run_environment_tabs.count()):
-            self.run_environment_tabs.widget(i).setEnabled(False)
-        for _, ui in self.environment_uis.items():
-            try:
-                ui.enable_system_id_daq_disarmed()
-            except AttributeError:
-                pass
-
-    def start_profile(self):
-        """Starts running the test profile"""
-        self.log("Running Profile")
-        # Create the QTimers
-        self.profile_timers = []
-        for timestamp, environment_name, operation, data in self.profile_events:
-            timer = ProfileTimer(environment_name, operation, data)
-            timer.setSingleShot(True)
-            timer.timeout.connect(self.fire_profile_event)
-            timer.start(int(timestamp * 1000))
-            self.profile_timers.append(timer)
-        self.profile_list_update_timer = QTimer()
-        self.profile_list_update_timer.timeout.connect(self.update_profile_list)
-        self.profile_list_update_timer.start(250)
-
-    def update_profile_list(self):
-        """Updates the list of upcoming profile events."""
-        profile_representation = []
-        for timer, profile_event in zip(self.profile_timers, self.profile_events):
-            remaining_time = timer.remainingTime() / 1000
-            if remaining_time > 0:
-                profile_representation.append([remaining_time] + profile_event[1:])
-        self.upcoming_instructions_list.clear()
-        self.upcoming_instructions_list.addItems(
-            [
-                "{:0.2f} {:} {:} {:}".format(  # pylint: disable=consider-using-f-string
-                    *profile_event
-                )
-                for profile_event in sorted(profile_representation)
-            ]
-        )
-        if len(profile_representation) == 0:
-            self.stop_profile()
-
-    def stop_profile(self):
-        """Stops running the profile"""
-        for timer in self.profile_timers:
-            timer.stop()
-        self.profile_list_update_timer.stop()
-
-    def start_streaming(self):
-        """Tells acquisition to start sending data to streaming"""
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME, (GlobalCommands.START_STREAMING, None)
-        )
-
-    def stop_streaming(self):
-        """Tells the acquisition to stop sending data to streaming"""
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
-        )
-
     def show_hide_manual_streaming(self):
         """Shows or hides the manual streaming button depending on which streaming type is chosen"""
         if self.manual_streaming_radiobutton.isChecked():
@@ -1781,14 +1641,170 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Starts or stops streaming manually"""
         if self.manual_streaming_trigger_button.text() == "Stop\nStreaming":
             self.manual_streaming_trigger_button.setText("Start\nStreaming")
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
-            )
+            self.rattlesnake.stop_streaming()
         else:
             self.manual_streaming_trigger_button.setText("Stop\nStreaming")
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.START_STREAMING, None)
+            self.rattlesnake.start_streaming()
+
+    def get_stream_metadata(self):
+        stream_file = self.streaming_file_display.text()
+
+        if self.no_streaming_radiobutton.isChecked():
+            stream_type = StreamType.NO_STREAM
+            stream_metadata = StreamMetadata(stream_type)
+        elif self.profile_streaming_radiobutton.isChecked():
+            stream_type = StreamType.PROFILE_INSTRUCTION
+            stream_metadata = StreamMetadata(stream_type, stream_file)
+        elif self.test_level_streaming_radiobutton.isChecked():
+            stream_type = StreamType.TEST_LEVEL
+            test_level_environment_name = (
+                self.streaming_environment_select_combobox.currentText()
             )
+            stream_metadata = StreamMetadata(
+                stream_type, stream_file, test_level_environment_name
+            )
+        elif self.immediate_streaming_radiobutton.isChecked():
+            stream_type = StreamType.IMMEDIATELY
+            stream_metadata = StreamMetadata(stream_type, stream_file)
+        elif self.manual_streaming_radiobutton.isChecked():
+            stream_type = StreamType.MANUAL
+            stream_metadata = StreamMetadata(stream_type, stream_file)
+        else:
+            stream_metadata = StreamMetadata()  # Default incase of error
+
+        return stream_metadata
+
+    def select_streaming_file(self):
+        """Selects a file to stream data to disk"""
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Select NetCDF File to Save Control Data",
+            filter="NetCDF File (*.nc4)",
+        )
+        if filename == "":
+            return
+        self.streaming_file_display.setText(filename)
+
+    def display_acquisition_started(self):
+        # Acquisition
+        self.arm_test_button.setEnabled(False)
+        self.disarm_test_button.setEnabled(True)
+        # Environment
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(True)
+        # Streaming
+        for widget in self.streaming_widgets:
+            widget.setEnabled(False)
+        self.manual_streaming_trigger_button.setEnabled(True)
+        # Profile
+        self.run_profile_widget.setEnabled(True)
+
+    def display_acquisition_ended(self):
+        # Acquisition
+        self.arm_test_button.setEnabled(True)
+        self.disarm_test_button.setEnabled(False)
+        # Environment
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+        # Streaming
+        for widget in self.streaming_widgets:
+            widget.setEnabled(True)
+        self.manual_streaming_trigger_button.setEnabled(False)
+        # Profile
+        self.run_profile_widget.setEnabled(False)
+
+    def start_acquisition(self):
+        self.log("Starting hardware acquistion")
+        self.arm_test_button.setEnabled(False)
+        for widget in self.streaming_widgets:
+            widget.setEnabled(False)
+
+        try:
+            stream_metadata = self.get_stream_metadata()
+
+            self.rattlesnake.start_acquisition(stream_metadata)
+        except Exception as e:
+            self.start_acquisition_error(e)
+
+        ready_event_list = [
+            self.rattlesnake.event_container.streaming_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+        ]
+        self.create_event_watcher(
+            ready_event_list, active_event_list, active_event_check=True
+        )
+        self.event_watcher.ready.connect(self.start_acqusition_ready)
+        self.event_watcher.error.connect(self.start_acquisition_error)
+        self.event_thread.start()
+
+    def start_acqusition_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.display_acquisition_started()
+
+    def start_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+        else:
+            self.display_acquisition_ended()
+
+    def stop_acquisition(self):
+        # Stop acquisition is a special case where this needs to stop the test no matter what
+        self.stop_profile()
+        self.log("Stopping hardware acquisition")
+        self.disarm_test_button.setEnabled(False)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+        self.manual_streaming_trigger_button.setEnabled(False)
+
+        try:
+            self.rattlesnake.stop_acquisition()
+        except Exception as e:
+            self.stop_acquisition_error(e)
+
+        # Make sure event watcher will work since disarm daq is usually an "oh crap" moment
+        ready_event_list = [
+            self.rattlesnake.event_container.controller_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+            *self.rattlesnake.environment_manager.active_event_list,
+        ]
+        self.create_event_watcher(
+            ready_event_list, active_event_list, active_event_check=False
+        )
+        self.event_watcher.ready.connect(self.stop_acquistion_ready)
+        self.event_watcher.error.connect(self.stop_acquisition_error)
+        self.event_thread.start()
+
+    def stop_acquistion_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.display_acquisition_ended()
+
+    def stop_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+        else:
+            self.display_acquisition_ended()
 
     # endregion
 
@@ -1820,7 +1836,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 profile_event_list = load_profile_from_workbook(
                     workbook, environment_types
                 )
-                self.rattlesnake.set_profile_event_list(profile_event_list)
+                self.rattlesnake.initialize_profile_event_list(profile_event_list)
                 self.load_profile_to_ui()
 
     def save_profile_list(self, filepath=None):
@@ -2215,139 +2231,5 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.threadpool.waitForDone()
 
         event.accept()
-
-    # endregion
-
-    # region Deteriorated
-    # def event(self, event):
-    #     """Overload event to capture the initial resizing of the window"""
-    #     was_processed = super().event(event)
-    #     if event.type() == QEvent.LayoutRequest:
-    #         if not self._updated_size:
-    #             print("Updating Size of Window")
-    #             self.resize(1500, 667)
-    #             self._updated_size = True
-    #     return was_processed
-
-    # def get_channel_table_strings(self):
-    #     """Collect the strings in the channel table"""
-    #     string_array = []
-    #     for row_idx in range(self.channel_table.rowCount()):
-    #         string_array.append([])
-    #         for col_idx in range(self.channel_table.columnCount()):
-    #             value = self.channel_table.item(row_idx, col_idx).text()
-    #             string_array[-1].append(value)
-    #     return string_array
-
-    # def fire_profile_event(self):
-    #     """Activates a given profile event"""
-    #     widget = self.sender()
-    #     environment_name = widget.environment
-    #     operation = widget.operation
-    #     data = widget.data
-    #     self.log(f"Profile Firing Event {environment_name} {operation} {data}")
-    #     if self.show_profile_change_checkbox.isChecked():
-    #         if not environment_name == "Global":
-    #             environment_index = self.environments.index(environment_name)
-    #             self.run_environment_tabs.setCurrentIndex(environment_index)
-    #     if environment_name == "Global":
-    #         if operation == "Start Streaming" and (
-    #             not self.profile_streaming_radiobutton.isChecked()
-    #         ):
-    #             return
-    #         self.command_map[operation]()
-    #     elif operation in ["Start Control", "Stop Control"]:
-    #         self.environment_uis[environment_name].command_map[operation]()
-    #     else:
-    #         self.environment_uis[environment_name].command_map[operation](data)
-
-    # def handle_controller_instructions(self, queue_data):
-    #     """Handler function for global controller instructions
-
-    #     Parameters
-    #     ----------
-    #     queue_data :
-    #         A 2-tuple consisting of ``(message,data)`` pairs where the message
-    #         denotes what to change and the data contains the information needed
-    #         to be displayed.
-
-    #     """
-    #     message, data = queue_data
-    #     self.log(f"Received Global Instruction {message.name}")
-    #     if message == GlobalCommands.QUIT:
-    #         self.stop_program()
-    #     elif message == GlobalCommands.INITIALIZE_DATA_ACQUISITION:
-    #         self.initialize_data_acquisition()
-    #     elif message == GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS:
-    #         self.initialize_environment_parameters()
-    #     elif message == GlobalCommands.UPDATE_METADATA:
-    #         environment, metadata = data
-    #         self.environment_metadata[environment] = metadata
-    #     elif message == GlobalCommands.RUN_HARDWARE:
-    #         self.queue_container.acquisition_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.RUN_HARDWARE, data)
-    #         )
-    #         self.queue_container.output_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.RUN_HARDWARE, data)
-    #         )
-    #     elif message == GlobalCommands.STOP_HARDWARE:
-    #         self.queue_container.acquisition_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.STOP_HARDWARE, data)
-    #         )
-    #         self.queue_container.output_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.STOP_HARDWARE, data)
-    #         )
-    #     elif message == GlobalCommands.INITIALIZE_STREAMING:
-    #         self.queue_container.streaming_command_queue.put(
-    #             TASK_NAME,
-    #             (
-    #                 GlobalCommands.INITIALIZE_STREAMING,
-    #                 (data, self.global_daq_parameters, self.environment_metadata),
-    #             ),
-    #         )
-    #     elif message == GlobalCommands.STREAMING_DATA:
-    #         self.queue_container.streaming_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.STREAMING_DATA, data)
-    #         )
-    #     elif message == GlobalCommands.FINALIZE_STREAMING:
-    #         self.queue_container.streaming_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.FINALIZE_STREAMING, data)
-    #         )
-    #     elif message == GlobalCommands.START_ENVIRONMENT:
-    #         self.queue_container.output_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.START_ENVIRONMENT, data)
-    #         )
-    #     elif message == GlobalCommands.STOP_ENVIRONMENT:
-    #         self.queue_container.acquisition_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, data)
-    #         )
-    #     elif message == GlobalCommands.START_STREAMING:
-    #         self.start_streaming()
-    #     elif message == GlobalCommands.STOP_STREAMING:
-    #         self.queue_container.acquisition_command_queue.put(
-    #             TASK_NAME, (GlobalCommands.STOP_STREAMING, data)
-    #         )
-    #     elif message == GlobalCommands.COMPLETED_SYSTEM_ID:
-    #         environment, _ = data
-    #         self.complete_system_ids[environment] = True
-    #         if all([flag for environment, flag in self.complete_system_ids.items()]):
-    #             if self.has_test_predictions:
-    #                 self.rattlesnake_tabs.setTabEnabled(4, True)
-    #             else:
-    #                 self.rattlesnake_tabs.setTabEnabled(3, True)
-    #     elif message == GlobalCommands.AT_TARGET_LEVEL:
-    #         environment_name = data
-    #         if (
-    #             self.test_level_streaming_radiobutton.isChecked()
-    #             and self.streaming_environment_select_combobox.currentText()
-    #             == environment_name
-    #         ):
-    #             self.start_streaming()
-
-    # def stop_program(self):
-    #     """
-    #     Callback to stop the entire program.
-    #     """
-    #     self.close()
 
     # endregion

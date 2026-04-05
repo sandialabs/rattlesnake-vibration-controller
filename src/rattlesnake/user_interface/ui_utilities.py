@@ -1944,6 +1944,9 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
+        modal_mdi_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "modal_acquisition_window.ui"
+        )
         uic.loadUi(modal_mdi_ui_path, self)
 
         self.parent = parent

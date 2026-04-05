@@ -443,18 +443,18 @@ class RattlesnakeController:
                     hardware_metadata, environment_metadata_list = (
                         load_metadata_from_netcdf(dataset)
                     )
-                    self.set_hardware(hardware_metadata)
-                    self.set_environments(environment_metadata_list)
-                    self.set_profile_event_list([])
+                    self.initialize_hardware(hardware_metadata)
+                    self.initialize_environments(environment_metadata_list)
+                    self.initialize_profile_event_list([])
                     self.last_stream_metadata = None
                 case ".xlsx":
-                    workbook = openpyxl.load_workbook(filepath, read_only=True)
+                    workbook = openpyxl.load_workbook(filepath)
                     hardware_metadata, environment_metadata_list, profile_event_list = (
                         load_metadata_from_workbook(workbook)
                     )
-                    self.set_hardware(hardware_metadata)
-                    self.set_environments(environment_metadata_list)
-                    self.set_profile_event_list(profile_event_list)
+                    self.initialize_hardware(hardware_metadata)
+                    self.initialize_environments(environment_metadata_list)
+                    self.initialize_profile_event_list(profile_event_list)
                     self.last_stream_metadata = None
         finally:
             if not initial_blocking:
@@ -1030,7 +1030,7 @@ class RattlesnakeController:
             return True
         return False
 
-    def set_profile_event_list(self, profile_event_list: List[ProfileEvent]):
+    def initialize_profile_event_list(self, profile_event_list: List[ProfileEvent]):
         """
         This is mainly to preload profile event list for UI purposes. You
         still have to give a profile event list to start_profile so this is

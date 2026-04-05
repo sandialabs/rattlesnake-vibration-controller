@@ -50,12 +50,40 @@ def load_metadata_from_netcdf(dataset):
         )
         environment_metadata_list.append(environment_metadata)
 
+    return (hardware_metadata, environment_metadata_list)
+
 
 def discover_environment_type_in_old_netcdf(environment_group):
     if hasattr(environment_group, "cancel_rampdown_time"):
         return EnvironmentType.TIME
     else:
         raise RattlesnakeError("Invalid netcdf4 file")
+
+
+def save_rattlesnake_to_netcdf(
+    netcdf_dataset,
+    hardware_metadata=None,
+    environment_metadata_dict=None,
+):
+    hardware_metadata.save_metadata_to_netcdf(netcdf_dataset)
+    netcdf_dataset.createDimension("num_environments", len(environment_metadata_dict))
+    var = netcdf_dataset.createVariable("environment_names", str, ("num_environments",))
+    environment_booleans = []
+    for i, metadata in enumerate(environment_metadata_dict.values()):
+        var[i] = metadata.environment_name
+        environment_booleans.append(metadata.channel_list_bools)
+    var = netcdf_dataset.createVariable("environment_types", int, ("num_environments",))
+    for i, metadata in enumerate(environment_metadata_dict.values()):
+        var[i] = metadata.environment_type.value
+    var = netcdf_dataset.createVariable(
+        "environment_active_channels",
+        "i1",
+        ("response_channels", "num_environments"),
+    )
+    var[...] = np.array(environment_booleans, dtype="int8").T
+    for environment_metadata in environment_metadata_dict.values():
+        group_handle = netcdf_dataset.createGroup(environment_metadata.environment_name)
+        environment_metadata.save_metadata_to_netcdf(group_handle)
 
 
 def load_metadata_from_workbook(workbook):
@@ -122,6 +150,8 @@ def load_metadata_from_workbook(workbook):
         environment_metadata_list.append(environment_metadata)
 
     profile_event_list = load_profile_from_workbook(workbook, environment_types)
+
+    workbook.close()
 
     return (hardware_metadata, environment_metadata_list, profile_event_list)
 

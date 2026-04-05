@@ -484,4 +484,4 @@ class TimeUI(EnvironmentUI):
             case TimeCommands.SET_REPEAT:
                 self.set_repeat(data)
             case _:
-                print(f"Unknown Modal UI Command {command}")
+                print(f"Unknown Time UI Command {command}")

@@ -378,7 +378,7 @@ class HardwareMetadata:
         time_per_write = float(netcdf_dataset.time_per_write)
         output_oversample = int(netcdf_dataset.output_oversample)
 
-        return cls(
+        return (
             hardware_type,
             channel_list,
             sample_rate,
@@ -426,17 +426,17 @@ class HardwareMetadata:
                     hardware_type_int = int(value)
                     hardware_type = HardwareType(hardware_type_int)
                 case "sample_rate":
-                    sample_rate = value
+                    sample_rate = int(value)
                 case "time_per_read":
-                    time_per_read = value
+                    time_per_read = float(value)
                 case "time_per_write":
-                    time_per_write = value
+                    time_per_write = float(value)
                 case "integration_oversampling":
                     output_oversample = int(value)
                 case _:
                     continue
 
-        return cls(
+        return (
             hardware_type,
             channel_list,
             sample_rate,
