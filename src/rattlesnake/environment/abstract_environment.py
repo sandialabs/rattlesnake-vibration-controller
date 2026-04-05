@@ -29,7 +29,8 @@ from enum import Enum
 from multiprocessing import queues
 from typing import List
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 
 import openpyxl
 import netCDF4 as nc4
@@ -52,14 +53,10 @@ if PICKLE_ON_ERROR:
 # region Commands
 class EnvironmentCommands(Enum):
     """
-    Example class for profile commands the environment can recieve from the
-    controller.
-
-    Enums are weird and dont work well with ABCs so this is just an outline
-    for the command object.
+    Treat this as an ABC for the commands. Initialize it as
+    CommandClass(EnvironmentCommands).
     """
 
-    EXAMPLE_COMMAND = 0
     _ignore_ = ("VALID_PROFILE_COMMANDS", "VALID_DATA")
     VALID_PROFILE_COMMANDS = ()
     VALID_DATA = {}
@@ -170,7 +167,7 @@ class EnvironmentMetadata(ABC):
 
     # region Loading
     @abstractmethod
-    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
+    def save_metadata_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
         """
         Store parameters to a group in a netCDF streaming file.
 
@@ -193,7 +190,7 @@ class EnvironmentMetadata(ABC):
 
     @classmethod
     @abstractmethod
-    def retrieve_metadata_from_netcdf(
+    def load_metadata_from_netcdf(
         cls,
         netcdf_handle: nc4._netCDF4.Group,
         environment_name: str,
@@ -235,7 +232,9 @@ class EnvironmentMetadata(ABC):
         """
 
     @abstractmethod
-    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """
         Store parameters to a worksheet in an netCDF streaming file.
 
@@ -259,7 +258,7 @@ class EnvironmentMetadata(ABC):
 
     @classmethod
     @abstractmethod
-    def retrieve_metadata_from_worksheet(
+    def load_metadata_from_worksheet(
         cls,
         worksheet: openpyxl.worksheet.worksheet.Worksheet,
         environment_name: str,
@@ -398,63 +397,85 @@ class Environment(ABC):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         command_queue: VerboseMessageQueue,
-        gui_update_queue: Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
-        data_in_queue: Queue,
-        data_out_queue: Queue,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        gui_update_queue: mp.Queue,
+        controller_command_queue: VerboseMessageQueue,
+        log_file_queue: mp.Queue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
     ):
-        self._environment_name = environment_name
+        """
+        Initializes the environment process and maps the global commands to functions.
+
+        You can set more commands to the command_map with self.map_command(). These commands
+        are recieved from the environment_command_queue and will mostly recieve None types as
+        the data package. It is recommended to have a START_ENVIRONMENT command.
+        """
+        self.environment_name = environment_name  # Used for UI/Metadata/Instructions. Must be unique, can change adaptively. Converted to queue_name in Rattlesnake()
+        self._queue_name = (
+            queue_name  # Internal ID mapping initialized queues to this environment.
+        )
         self._command_queue = command_queue
         self._gui_update_queue = gui_update_queue
-        self._controller_communication_queue = controller_communication_queue
+        self._controller_command_queue = controller_command_queue
         self._log_file_queue = log_file_queue
         self._data_in_queue = data_in_queue
         self._data_out_queue = data_out_queue
+        self._ready_event = ready_event
+        self._active_event = active_event
         self._command_map = {
             GlobalCommands.QUIT: self.quit,
-            GlobalCommands.INITIALIZE_DATA_ACQUISITION: self.initialize_data_acquisition_parameters,
-            GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS: self.initialize_environment_test_parameters,
+            GlobalCommands.INITIALIZE_HARDWARE: self.initialize_hardware,
+            GlobalCommands.INITIALIZE_ENVIRONMENT: self.initialize_environment,
             GlobalCommands.STOP_ENVIRONMENT: self.stop_environment,
         }
-        self._acquisition_active = acquisition_active
-        self._output_active = output_active
+        self._acquisition_active_event = acquisition_active_event
+        self._output_active_event = output_active_event
+        self.set_ready()
 
+    # region Commands
     @property
-    def acquisition_active(self):
-        """Flag to check if acquisition is active"""
-        # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
-        return bool(self._acquisition_active.value)
+    def command_map(self) -> dict:
+        """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
+        return self._command_map
 
-    @property
-    def output_active(self):
-        """Flag to check if output is active"""
-        # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
-        return bool(self._output_active.value)
+    def map_command(self, key, function):
+        """A function that maps an instruction to a function in the ``command_map``.
+
+        Parameters
+        ----------
+        key :
+            The instruction that will be pulled from the ``command_queue``.
+
+        function :
+            A reference to the function that will be called when the ``key``
+            message is received.
+        """
+        self._command_map[key] = function
 
     @abstractmethod
-    def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: HardwareMetadata
-    ):
-        """Initialize the data acquisition parameters in the environment.
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+        """Initialize the hardware parameters in the environment.
 
-        The environment will receive the global data acquisition parameters from
+        The environment will receive the hardware parameters from
         the controller, and must set itself up accordingly.
 
         Parameters
         ----------
-        data_acquisition_parameters : HardwareMetadata :
-            A container containing data acquisition parameters, including
-            channels active in the environment as well as sampling parameters.
+        hardware_metadata : HardwareMetadata :
+            A specific metadata class containing information about
+            specific hardware metadata. Assume you are only getting
+            the attributes in the base HardwareMetadata class.
         """
+        self.set_ready()
 
     @abstractmethod
-    def initialize_environment_test_parameters(
-        self, environment_parameters: AbstractMetadata
-    ):
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata) -> None:
         """
         Initialize the environment parameters specific to this environment
 
@@ -463,14 +484,14 @@ class Environment(ABC):
 
         Parameters
         ----------
-        environment_parameters : AbstractMetadata
-            A container containing the parameters defining the environment
-
+        environment_metadata : EnvironmentMetadata
+            A container containing the parameters defining the environment.
         """
+        self.set_ready()
 
     @abstractmethod
-    def stop_environment(self, data):
-        """Stop the environment gracefully
+    def stop_environment(self, data) -> None:
+        """Stop the environment gracefully.
 
         This function defines the operations to shut down the environment
         gracefully so there is no hard stop that might damage test equipment
@@ -481,9 +502,51 @@ class Environment(ABC):
         data : Ignored
             This parameter is not used by the function but must be present
             due to the calling signature of functions called through the
-            ``command_map``
-
+            ``command_map``.
         """
+
+    # endregion
+
+    # region Events
+    def set_ready(self):
+        self._ready_event.set()
+
+    def clear_ready(self):
+        self._ready_event.clear()
+
+    @property
+    def ready(self):
+        return self._ready_event.is_set()
+
+    def set_active(self):
+        self._active_event.set()
+
+    def clear_active(self):
+        self._active_event.clear()
+
+    @property
+    def active(self):
+        return self._active_event.is_set()
+
+    @property
+    def acquisition_active(self):
+        """Flag to check if acquisition is active."""
+        # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
+        return self._acquisition_active_event.is_set()
+
+    @property
+    def output_active(self):
+        """Flag to check if output is active."""
+        # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
+        return self._output_active_event.is_set()
+
+    # endregion
+
+    # region Process
+    @property
+    def queue_name(self) -> str:
+        """A string defining the queue name asigned to the environment."""
+        return self._queue_name
 
     @property
     def environment_command_queue(self) -> VerboseMessageQueue:
@@ -491,32 +554,32 @@ class Environment(ABC):
         return self._command_queue
 
     @property
-    def data_in_queue(self) -> Queue:
-        """The queue from which data is delivered to the environment"""
+    def data_in_queue(self) -> mp.Queue:
+        """The queue from which data is delivered to the environment."""
         return self._data_in_queue
 
     @property
-    def data_out_queue(self) -> Queue:
-        """The queue to which data is written that will be output to exciters"""
+    def data_out_queue(self) -> mp.Queue:
+        """The queue to which data is written that will be output to exciters."""
         return self._data_out_queue
 
     @property
-    def gui_update_queue(self) -> Queue:
-        """The queue that GUI update instructions are written to"""
+    def gui_update_queue(self) -> mp.Queue:
+        """The queue that GUI update instructions are written to."""
         return self._gui_update_queue
 
     @property
-    def controller_communication_queue(self) -> Queue:
-        """The queue that global controller updates are written to"""
-        return self._controller_communication_queue
+    def controller_command_queue(self) -> mp.Queue:
+        """The queue that global controller updates are written to."""
+        return self._controller_command_queue
 
     @property
-    def log_file_queue(self) -> Queue:
-        """The queue that log file messages are written to"""
+    def log_file_queue(self) -> mp.Queue:
+        """The queue that log file messages are written to."""
         return self._log_file_queue
 
     def log(self, message: str):
-        """Write a message to the log file
+        """Write a message to the log file.
 
         This function puts a message onto the ``log_file_queue`` so it will
         eventually be written to the log file.
@@ -534,33 +597,8 @@ class Environment(ABC):
             f"{datetime.now()}: {self.environment_name} -- {message}\n"
         )
 
-    @property
-    def environment_name(self) -> str:
-        """A string defining the name of the environment"""
-        return self._environment_name
-
-    @property
-    def command_map(self) -> dict:
-        """A dictionary that maps commands received by the ``command_queue`` to functions in the class"""
-        return self._command_map
-
-    def map_command(self, key, function):
-        """A function that maps an instruction to a function in the ``command_map``
-
-        Parameters
-        ----------
-        key :
-            The instruction that will be pulled from the ``command_queue``
-
-        function :
-            A reference to the function that will be called when the ``key``
-            message is received.
-
-        """
-        self._command_map[key] = function
-
-    def run(self):
-        """The main function that is run by the environment's process
+    def run(self, shutdown_event: mp.synchronize.Event):
+        """The main function that is run by the environment's process.
 
         A function that is called by the environment's process function that
         sits in a while loop waiting for instructions on the command queue.
@@ -571,13 +609,16 @@ class Environment(ABC):
         the ``data`` is passed to that function as the argument.  If the
         function returns a truthy value, it signals to the ``run`` function
         that it is time to stop the loop and exit.
-
-
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while True:
+        while not shutdown_event.is_set():
             # Get the message from the queue
-            message, data = self.environment_command_queue.get(self.environment_name)
+            try:
+                message, data = self.environment_command_queue.get(
+                    self.environment_name
+                )
+            except (thqueue.Empty, mpqueue.Empty):
+                continue
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]
@@ -596,7 +637,7 @@ class Environment(ABC):
                         UICommands.ERROR,
                         (
                             f"{self.environment_name} Error",
-                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
+                            f"ERROR:\n\n{tb}",
                         ),
                     )
                 )
@@ -619,37 +660,47 @@ class Environment(ABC):
                 self.log("Stopping Process")
                 break
 
+    # endregion
+
+    # region Shutdown
     def quit(self, data):  # pylint: disable=unused-argument
-        """Returns True to stop the ``run`` while loop and exit the process
+        """Returns True to stop the ``run`` while loop and exit the process.
 
         Parameters
         ----------
         data : Ignored
             This parameter is not used by the function but must be present
             due to the calling signature of functions called through the
-            ``command_map``
+            ``command_map``.
 
         Returns
         -------
         True :
             This function returns True to signal to the ``run`` while loop
             that it is time to close down the environment.
-
         """
         return True
+
+    # endregion
 
 
 # region Process
 def process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
-    gui_update_queue: Queue,
-    controller_communication_queue: VerboseMessageQueue,
-    log_file_queue: Queue,
-    data_in_queue: Queue,
-    data_out_queue: Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    gui_update_queue: mp.Queue,
+    controller_command_queue: VerboseMessageQueue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+    sysid_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
 
@@ -682,15 +733,18 @@ def process(
         to the excitation devices in the output hardware
 
     """
-    process_class = AbstractEnvironment(  # pylint: disable=abstract-class-instantiated
+    process_class = Environment(
         environment_name,
+        queue_name,
         input_queue,
         gui_update_queue,
-        controller_communication_queue,
+        controller_command_queue,
         log_file_queue,
         data_in_queue,
         data_out_queue,
-        acquisition_active,
-        output_active,
+        acquisition_active_event,
+        output_active_event,
+        active_event,
+        ready_event,
     )
-    process_class.run()
+    process_class.run(shutdown_event)
