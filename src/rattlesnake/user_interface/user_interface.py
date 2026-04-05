@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import copy
 import ctypes
-import datetime
 import multiprocessing as mp
 import os
 import re
@@ -32,6 +31,7 @@ import sys
 import time
 import traceback
 from typing import Any
+from datetime import datetime
 
 import netCDF4
 import numpy as np
@@ -46,21 +46,21 @@ from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
 )
-from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.hardware_registry import (
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.user_interface.ui_registry import (
     UI_HARDWARE_OPTIONS,
     UI_ASK_FOR_FILE,
     UI_HARDWARE_WIDGETS,
-)
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.user_interface.ui_registry import (
     ENVIRONMENT_UIS,
     UI_ENVIRONMENT_OPTIONS,
 )
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
+    EventWatcher,
 )
 
 # region Defaults
@@ -406,18 +406,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             return True
         return False
 
-    def log(self, string: str):
-        """
-        Pass a message to the log_file_queue along with date/time and task name.
+    def log(self, string):
+        """Pass a message to the log_file_queue along with date/time and task name
 
         Parameters
         ----------
         string : str
-            Message that will be written to the queue.
+            Message that will be written to the queue
+
         """
-        self.queue_container.log_file_queue.put(
-            f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
-        )
+        self.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {string}\n")
 
     def display_error(self, error):
         tb = traceback.format_exc()
@@ -434,6 +432,40 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.gui_update_queue.put(
                 (UICommands.ERROR, ("Unknown Error", f"ERROR:\n\n{tb}"))
             )
+
+    def create_event_watcher(
+        self,
+        ready_event_list,
+        active_event_list,
+        *,
+        active_event_check: bool = None,
+        timeout: float = None,
+    ):
+        if timeout is None:
+            timeout = self.timeout
+
+        if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            self.display_error("Event watcher is still active")
+            return
+        self.event_thread = QtCore.QThread()
+        self.event_watcher = EventWatcher(
+            ready_event_list,
+            active_event_list,
+            active_event_check=active_event_check,
+            timeout=timeout,
+        )
+        self.event_watcher.moveToThread(self.event_thread)
+        self.event_thread.started.connect(self.event_watcher.run)
+
+    def cleanup_event_watcher(self):
+        if getattr(self, "event_thread", None):
+            self.event_thread.quit()
+            self.event_thread.wait()
+            self.event_thread.deleteLater()
+            self.event_thread = None
+        if getattr(self, "event_watcher", None):
+            self.event_watcher.deleteLater()
+            self.event_watcher = None
 
     def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller
@@ -500,169 +532,169 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     # endregion
 
     # region Loading
-    # def load_test_file_to_ui(self, filepath=None):
-    #     """
-    #     Callback to select file path, verify existance and load that file to
-    #     the user interface.
-    #     """
-    #     if not filepath:
-    #         filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #             self,
-    #             "Load Rattlesnake Template File",
-    #             filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
-    #         )
-    #         if filepath == "":
-    #             return
+    def load_ui_from_test_file(self, filepath=None):
+        """
+        Callback to select file path, verify existance and load that file to
+        the user interface.
+        """
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Rattlesnake Template File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
 
-    #     try:
-    #         self.rattlesnake.load_data_from_file(filepath)
-    #     except Exception:  # pylint: disable=broad-exception-caught
-    #         tb = traceback.format_exc()
-    #         self.display_error(tb)
-    #         return
+        try:
+            self.rattlesnake.load_data_from_file(filepath)
+        except Exception:  # pylint: disable=broad-exception-caught
+            tb = traceback.format_exc()
+            self.display_error(tb)
+            return
 
-    #     self.load_from_rattlesnake_state()
+        self.load_from_rattlesnake_state()
 
-    # def load_rattlesnake_controller_to_ui(self):
-    #     """
-    #     Gets the current state of the rattlesnake object and formats
-    #     user interface to represent that state.
-    #     """
-    #     # Get rattlesnake state
-    #     state = self.rattlesnake.state
-    #     has_profile = self.rattlesnake.has_profile
-    #     has_streamed = self.rattlesnake.has_streamed
+    def load_ui_from_rattlesnake(self):
+        """
+        Gets the current state of the rattlesnake object and formats
+        user interface to represent that state.
+        """
+        # Get rattlesnake state
+        state = self.rattlesnake.state
+        has_profile = self.rattlesnake.has_profile
+        has_streamed = self.rattlesnake.has_streamed
 
-    #     # Reset UI
-    #     for i in range(1, self.rattlesnake_tabs.count() - 1):
-    #         self.rattlesnake_tabs.setTabEnabled(i, False)
-    #     self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
-    #     self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        # Reset UI
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
 
-    #     environment_names = list(self.environment_uis.keys())
-    #     for environment_name in environment_names:
-    #         self.remove_environment(None, environment_name)
+        environment_names = list(self.environment_uis.keys())
+        for environment_name in environment_names:
+            self.remove_environment(None, environment_name)
 
-    #     for event_idx in reversed(range(self.profile_table.rowCount())):
-    #         self.remove_profile_event(None, event_idx)
+        for event_idx in reversed(range(self.profile_table.rowCount())):
+            self.remove_profile_event(None, event_idx)
 
-    #     # Stores state to UI
-    #     match state:
-    #         case RattlesnakeState.INIT:
-    #             return
-    #         case RattlesnakeState.HARDWARE_STORE:
-    #             self.load_stored_hardware()
-    #         case RattlesnakeState.ENVIRONMENT_STORE:
-    #             self.load_stored_hardware()
-    #             self.load_stored_environments()
-    #             if has_profile:
-    #                 self.load_stored_profile()
-    #             if has_streamed:
-    #                 self.load_stored_stream()
-    #         case RattlesnakeState.HARDWARE_ACTIVE:
-    #             self.load_stored_hardware()
-    #             self.load_stored_environments()
-    #             if has_profile:
-    #                 self.load_stored_profile()
-    #             self.load_stored_stream()
-    #             self.display_acquisition_started()
-    #         case RattlesnakeState.ENVIRONMENT_ACTIVE:
-    #             self.load_stored_hardware()
-    #             self.load_stored_environments()
-    #             if has_profile:
-    #                 self.load_stored_profile()
-    #             self.load_stored_stream()
-    #             self.display_acquisition_started()
-    #             for (
-    #                 queue_name,
-    #                 active_event,
-    #             ) in self.rattlesnake.event_container.environment_active_events.items():
-    #                 if active_event.is_set():
-    #                     environment_name = (
-    #                         self.rattlesnake.environment_manager.environment_names[
-    #                             queue_name
-    #                         ]
-    #                     )
-    #                     self.environment_uis[
-    #                         environment_name
-    #                     ].display_environment_started()
+        # Stores state to UI
+        match state:
+            case RattlesnakeState.INIT:
+                return
+            case RattlesnakeState.HARDWARE_STORE:
+                self.load_ui_from_hardware()
+            case RattlesnakeState.ENVIRONMENT_STORE:
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
+                # if has_profile:
+                #     self.load_stored_profile()
+                # if has_streamed:
+                #     self.load_stored_stream()
+            # case RattlesnakeState.HARDWARE_ACTIVE:
+            #     self.load_stored_hardware()
+            #     self.load_stored_environments()
+            #     if has_profile:
+            #         self.load_stored_profile()
+            #     self.load_stored_stream()
+            #     self.display_acquisition_started()
+            # case RattlesnakeState.ENVIRONMENT_ACTIVE:
+            #     self.load_stored_hardware()
+            #     self.load_stored_environments()
+            #     if has_profile:
+            #         self.load_stored_profile()
+            #     self.load_stored_stream()
+            #     self.display_acquisition_started()
+            #     for (
+            #         queue_name,
+            #         active_event,
+            #     ) in self.rattlesnake.event_container.environment_active_events.items():
+            #         if active_event.is_set():
+            #             environment_name = (
+            #                 self.rattlesnake.environment_manager.environment_names[
+            #                     queue_name
+            #                 ]
+            #             )
+            #             self.environment_uis[
+            #                 environment_name
+            #             ].display_environment_started()
 
-    # def load_hardware_to_ui(self):
-    #     """
-    #     Loads the channel table and hardware setup values from the hardware
-    #     metadata object owned by the rattlesnake object to the user interface.
-    #     """
-    #     hardware_metadata = self.rattlesnake.hardware_metadata
+    def load_ui_from_hardware(self):
+        """
+        Loads the channel table and hardware setup values from the hardware
+        metadata object owned by the rattlesnake object to the user interface.
+        """
+        hardware_metadata = self.rattlesnake.hardware_metadata
 
-    #     # Fill out channel table
-    #     channel_list = hardware_metadata.channel_list
-    #     self.channel_table.blockSignals(True)
-    #     self.channel_table.setRowCount(len(channel_list))
-    #     attr_list = Channel().channel_attr_list
-    #     for row, channel in enumerate(channel_list):
-    #         for col, attr_name in enumerate(attr_list):
-    #             value = getattr(channel, attr_name)
-    #             value = str(value) if value else None
+        # Fill out channel table
+        channel_list = hardware_metadata.channel_list
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
 
-    #             item = QtWidgets.QTableWidgetItem(value)
-    #             self.channel_table.setItem(row, col, item)
-    #     self.channel_table.blockSignals(False)
-    #     self.add_empty_channel_table_rows()
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
 
-    #     match hardware_metadata.hardware_type:
-    #         case HardwareType.SDYNPY_SYSTEM:
-    #             self.hardware_selector.blockSignals(True)
-    #             self.hardware_selector.setCurrentText("SDynPy System Integration...")
-    #             self.hardware_selector.blockSignals(False)
-    #             self.update_hardware_widget_visibility()
-    #             self.hardware_file = hardware_metadata.hardware_file
-    #             self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
-    #             self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-    #             self.integration_oversample_selector.setValue(
-    #                 hardware_metadata.output_oversample
-    #             )
-    #         case _:
-    #             self.display_error(
-    #                 f"{hardware_metadata.hardware_type} is not yet implemented"
-    #             )
+        match hardware_metadata.hardware_type:
+            case HardwareType.SDYNPY_SYSTEM:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("SDynPy System Integration...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.integration_oversample_selector.setValue(
+                    hardware_metadata.output_oversample
+                )
+            case _:
+                self.display_error(
+                    f"Loading from {hardware_metadata.hardware_type} is not yet implemented"
+                )
 
-    # def load_environments_to_ui(self):
-    #     """
-    #     Loads the environment metadata list from the rattlesnake object to
-    #     the user interface.
-    #     """
-    #     hardware_metadata = self.rattlesnake.hardware_metadata
-    #     environment_metadata_dict = self.rattlesnake.environment_metadata
+    def load_ui_from_environments(self):
+        """
+        Loads the environment metadata list from the rattlesnake object to
+        the user interface.
+        """
+        hardware_metadata = self.rattlesnake.hardware_metadata
+        environment_metadata_dict = self.rattlesnake.environment_metadata
 
-    #     for environment_idx, environment_metadata in enumerate(
-    #         environment_metadata_dict.values()
-    #     ):
-    #         # Add environments
-    #         environment_type = environment_metadata.environment_type
-    #         self.add_environment(environment_type)
+        for environment_idx, environment_metadata in enumerate(
+            environment_metadata_dict.values()
+        ):
+            # Add environments
+            environment_type = environment_metadata.environment_type
+            self.add_environment(environment_type)
 
-    #         environment_name = environment_metadata.environment_name
-    #         if (
-    #             environment_name not in self.environment_uis.keys()
-    #         ):  # Dont rename if they were already using default name
-    #             self.rename_environment(environment_idx, environment_name)
+            environment_name = environment_metadata.environment_name
+            if (
+                environment_name not in self.environment_uis.keys()
+            ):  # Dont rename if they were already using default name
+                self.rename_environment(environment_idx, environment_name)
 
-    #         self.environment_uis[environment_name].initialize_hardware(
-    #             hardware_metadata
-    #         )
-    #         self.environment_uis[environment_name].set_environment_metadata(
-    #             environment_metadata
-    #         )
-    #         self.environment_uis[environment_name].initialize_environment(
-    #             environment_metadata
-    #         )
+            self.environment_uis[environment_name].initialize_hardware(
+                hardware_metadata
+            )
+            self.environment_uis[environment_name].set_environment_metadata(
+                environment_metadata
+            )
+            self.environment_uis[environment_name].initialize_environment(
+                environment_metadata
+            )
 
-    #     self.update_environment_tabs()
-    #     streaming_environment_items = [""] + list(self.environment_uis.keys())
-    #     self.streaming_environment_select_combobox.clear()
-    #     self.streaming_environment_select_combobox.addItems(streaming_environment_items)
-    #     self.rattlesnake_tabs.setTabEnabled(1, True)
-    #     self.rattlesnake_tabs.setCurrentIndex(1)
+        self.update_environment_tabs()
+        streaming_environment_items = [""] + list(self.environment_uis.keys())
+        self.streaming_environment_select_combobox.clear()
+        self.streaming_environment_select_combobox.addItems(streaming_environment_items)
+        self.rattlesnake_tabs.setTabEnabled(1, True)
+        self.rattlesnake_tabs.setCurrentIndex(1)
 
     # def load_profile_to_ui(self):
     #     """
@@ -794,162 +826,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     #         self.display_error(tb)
     #         return
 
-    # def load_test_file(self, filename, hardware=True):
-    #     """Loads a test file using a file dialog"""
-    #     if not filename:
-    #         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #             self,
-    #             "Load Test NetCDF File",
-    #             filter="NetCDF File (*.nc4);;All Files (*.*)",
-    #         )
-    #         if filename == "":
-    #             return
-    #     dataset = netCDF4.Dataset(filename)  # pylint: disable=no-member
-    #     # Channel Table
-    #     channel_table = dataset["channels"]
-    #     # Node Number
-    #     data = channel_table["node_number"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 0).setText(value)
-    #     # Node Direction
-    #     data = channel_table["node_direction"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 1).setText(value)
-    #     # Comment
-    #     data = channel_table["comment"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 2).setText(value)
-    #     # SN
-    #     data = channel_table["serial_number"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 3).setText(value)
-    #     # Triax Dof
-    #     data = channel_table["triax_dof"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 4).setText(value)
-    #     # Sensitivity
-    #     data = channel_table["sensitivity"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 5).setText(str(value))
-    #     # Units
-    #     data = channel_table["unit"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 6).setText(value)
-    #     # Make
-    #     data = channel_table["make"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 7).setText(value)
-    #     # Model
-    #     data = channel_table["model"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 8).setText(value)
-    #     # Expiration Date
-    #     data = channel_table["expiration"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 9).setText(value)
-    #     # Read Device
-    #     data = channel_table["physical_device"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 10).setText(value)
-    #     # Read Channel
-    #     data = channel_table["physical_channel"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 11).setText(value)
-    #     # Type
-    #     data = channel_table["channel_type"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 12).setText(value)
-    #     # Min Volts
-    #     data = channel_table["minimum_value"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 13).setText(str(value))
-    #     # Max Volts
-    #     data = channel_table["maximum_value"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 14).setText(str(value))
-    #     # Coupling
-    #     data = channel_table["coupling"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 15).setText(value)
-    #     # Excitation Source
-    #     data = channel_table["excitation_source"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 16).setText(value)
-    #     # Excitation
-    #     data = channel_table["excitation"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 17).setText(str(value))
-    #     # Output Device
-    #     data = channel_table["feedback_device"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 18).setText(value)
-    #     # Output Channel
-    #     data = channel_table["feedback_channel"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 19).setText(value)
-    #     # Output Device
-    #     data = channel_table["warning_level"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 20).setText(value)
-    #     # Output Channel
-    #     data = channel_table["abort_level"][...]
-    #     for row_idx, value in enumerate(data):
-    #         self.channel_table.item(row_idx, 21).setText(value)
-    #     # Environment Table
-    #     for saved_environment_index, saved_environment_name in enumerate(
-    #         dataset.variables["environment_names"][...]
-    #     ):
-    #         try:
-    #             environment_index = self.environments.index(saved_environment_name)
-    #         except ValueError:
-    #             if len(dataset.variables["environment_names"][...]) == 1:
-    #                 environment_index = 0
-    #                 print(
-    #                     f"Warning: saved environment ({saved_environment_name}) is different from "
-    #                     f"current environment ({self.environments[environment_index]})"
-    #                 )
-    #         for channel_index, bool_row in enumerate(
-    #             dataset.variables["environment_active_channels"][
-    #                 :, saved_environment_index
-    #             ]
-    #         ):
-    #             boolean = bool(bool_row)
-    #             widget = self.environment_channels_table.cellWidget(
-    #                 channel_index, environment_index
-    #             )
-    #             widget.setChecked(boolean)
-    #     if hardware:
-    #         # Hardware
-    #         self.hardware_selector.blockSignals(True)
-    #         try:
-    #             self.hardware_selector.setCurrentIndex(dataset.hardware)
-    #             self.hardware_file = (
-    #                 None if dataset.hardware_file == "None" else dataset.hardware_file
-    #             )
-    #         except AttributeError:
-    #             self.hardware_selector.setCurrentIndex(0)
-    #             self.hardware_file = None
-    #         self.hardware_selector.blockSignals(False)
-    #         # Show the right widgets
-    #         self.hardware_update(select_file=False)
-    #     if self.hardware_selector.currentIndex() == 1:
-    #         self.lanxi_sample_rate_selector.setCurrentIndex(
-    #             np.log2(dataset.sample_rate // 4096)
-    #         )
-    #         self.lanxi_maximum_acquisition_processes_selector.setValue(
-    #             dataset.maximum_acquisition_processes
-    #         )
-    #     else:
-    #         self.sample_rate_selector.setValue(dataset.sample_rate)
-    #     self.integration_oversample_selector.setValue(dataset.output_oversample)
-    #     self.time_per_read_selector.setValue(dataset.time_per_read)
-    #     self.time_per_write_selector.setValue(dataset.time_per_write)
-    #     # Initialize files
-    #     self.initialize_data_acquisition()
-    #     # Set the test parameters
-    #     for environment in self.environments:
-    #         self.environment_uis[environment].retrieve_metadata(dataset)
-    #     self.initialize_environment_parameters()
     # endregion
 
     # region Channel Table
@@ -1389,13 +1265,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         try:
             # Build hardware metadata
             hardware_metadata = self.get_hardware_metadata_no_channels()
+            if hardware_metadata is None:
+                return self.initialize_hardware_error("Invalid hardware type chosen.")
+
+            # Get channel list from UI
             channel_list = self.get_channel_list()
             hardware_metadata.channel_list = channel_list
-            if hardware_metadata.hardware_type == "Select":
-                self.initialize_hardware_error("Please select a hardware type.")
 
             # Send hardware metadata to rattlesnake
-            self.rattlesnake.set_hardware(hardware_metadata)
+            self.rattlesnake.initialize_hardware(hardware_metadata)
 
             environment_channel_list = self.get_environment_channel_list()
             for environment_name, environment_ui in self.environment_uis.items():
@@ -1422,9 +1300,162 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.event_watcher.error.connect(self.initialize_hardware_error)
         self.event_thread.start()
 
+    def initialize_hardware_ready(self, metadata):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Update rattlesnake state
+        self.rattlesnake.hardware_metadata = metadata
+
+        # Unlock UI
+        self.initialize_hardware_button.setEnabled(True)
+        self.update_environment_tabs()
+        num_environments = len(self.environment_uis)
+        if num_environments == 0:
+            self.rattlesnake_tabs.setTabEnabled(1, False)
+        else:
+            self.rattlesnake_tabs.setTabEnabled(1, True)
+            self.rattlesnake_tabs.setCurrentIndex(1)
+
+    def initialize_hardware_error(self, error_message):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Lock UI
+        # If not acquiring, disable future tabs
+        if self.rattlesnake.state in (
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            for i in range(1, self.rattlesnake_tabs.count() - 1):
+                self.rattlesnake_tabs.setTabEnabled(i, False)
+
+        # Unlock UI
+        self.initialize_hardware_button.setEnabled(True)
+        self.display_error(error_message)
+
+    def get_hardware_metadata_no_channels(self):
+
+        hardware_text = self.hardware_selector.currentText()
+        hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
+        if hardware_type == "Select":
+            return None
+
+        channel_list = []
+        hardware_metadata_class = HARDWARE_METADATA[hardware_type]
+        match hardware_type:
+            case HardwareType.NI_DAQMX:
+                return
+
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                task_trigger = self.task_trigger_selector.text()
+                output_trigger_generator = self.trigger_output_selector.value()
+                hardware_metadata = hardware_metadata_class()
+
+            case HardwareType.LAN_XI:
+                return
+            case HardwareType.DP_QUATTRO:
+                return
+            case HardwareType.DP_900:
+                return
+            case HardwareType.EXODUS:
+                return
+            case HardwareType.STATE_SPACE:
+                return
+            case HardwareType.SDYNPY_SYSTEM:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
+            case HardwareType.SDYNPY_FRF:
+                return
+            case _:
+                return None
+
     # endregion
 
     # region Environment
+    def get_environment_channel_list(self):
+        channel_list = self.get_channel_list()
+        environment_channel_list = {}
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        for col in range(num_cols):
+            header_item = self.environment_channel_table.horizontalHeaderItem(col)
+            environment_name = header_item.text()
+            selected_channels = []
+
+            for row in range(num_rows):
+                checkbox = self.environment_channel_table.cellWidget(row, col)
+                if checkbox is None:
+                    continue
+                if checkbox.isChecked():
+                    if row < len(channel_list):
+                        selected_channels.append(channel_list[row])
+            environment_channel_list[environment_name] = selected_channels
+
+        return environment_channel_list
+
+    def update_environment_tabs(self):
+
+        # Definition tabs
+        self.environment_definition_environment_tabs.setCurrentIndex(-1)
+        self.environment_definition_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            definition_widget = environment_ui.definition_widget
+            if definition_widget is not None:
+                self.environment_definition_environment_tabs.addTab(
+                    definition_widget, environment_name
+                )
+
+        # System Identification tab
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.system_id_environment_tabs.setCurrentIndex(-1)
+        self.system_id_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            system_id_widget = environment_ui.system_id_widget
+            if system_id_widget is not None:
+                self.system_id_environment_tabs.addTab(
+                    system_id_widget, environment_name
+                )
+                self.rattlesnake_tabs.tabBar().setTabVisible(2, True)
+
+        # Prediction tab
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.test_prediction_environment_tabs.setCurrentIndex(-1)
+        self.test_prediction_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            prediction_widget = environment_ui.prediction_widget
+            if prediction_widget is not None:
+                self.test_prediction_environment_tabs.addTab(
+                    prediction_widget, environment_name
+                )
+                self.rattlesnake_tabs.tabBar().setTabVisible(3, True)
+
+        # Run tab
+        self.run_environment_tabs.setCurrentIndex(-1)
+        self.run_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            run_widget = environment_ui.run_widget
+            if run_widget is not None:
+                self.run_environment_tabs.addTab(run_widget, environment_name)
+
+        # Disable run tabs
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+
     def add_environment(self, environment_type: str | EnvironmentType):
         """Function used to add an environment"""
         # If comming from UI, environment_type will be text in combobox
@@ -1539,31 +1570,86 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         header_item.setText(new_name)
 
     def initialize_environments(self):
-        """Initializes the environment parameters
+        self.log("Initializing Environment")
 
-        This function initializes the environment-specific parameters for each
-        environment by calling the initialize_environment function of each
-        environment-specific user interface."""
-        for environment in self.environments:
-            environment_parameters = self.environment_uis[
-                environment
-            ].initialize_environment()
-            self.environment_metadata[environment] = environment_parameters
-            self.queue_container.environment_command_queues[environment].put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS,
-                    environment_parameters,
-                ),
-            )
+        # Prevent user from initializing multiple times
+        self.initialize_environments_button.setEnabled(False)
 
-        # Enable the next section
-        self.rattlesnake_tabs.setTabEnabled(2, True)
-        self.rattlesnake_tabs.setCurrentIndex(2)
+        try:
+            # Build environment metadata list
+            environment_metadata_list = []
+            for environment_ui in self.environment_uis.values():
+                metadata = environment_ui.get_environment_metadata(
+                    self.rattlesnake.hardware_metadata.channel_list
+                )
+                environment_ui.initialize_environment(metadata)
+                environment_metadata_list.append(metadata)
 
-        # If there are test predictions
-        if self.has_test_predictions:
+            # Send hardware metadata to rattlesnake
+            self.rattlesnake.initialize_environments(environment_metadata_list)
+
+        except Exception as e:
+            self.initialize_environments_error(e)
+            return
+
+        # Block until environment metadata has been stored
+        ready_event_list = [
+            self.rattlesnake.event_container.acquisition_ready_event,
+            self.rattlesnake.event_container.output_ready_event,
+            *self.rattlesnake.environment_manager.ready_event_list,
+        ]
+        active_event_list = []
+        self.create_event_watcher(ready_event_list, active_event_list)
+        self.event_watcher.ready.connect(self.initialize_environments_ready)
+        self.event_watcher.error.connect(self.initialize_environments_error)
+        self.event_thread.start()
+
+    def initialize_environments_ready(self):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Update rattlesnake state
+        self.rattlesnake.environment_metadata = (
+            self.rattlesnake.environment_manager.environment_metadata
+        )
+
+        # Unlock UI
+        streaming_environment_items = [""] + list(self.environment_uis.keys())
+        self.streaming_environment_select_combobox.clear()
+        self.streaming_environment_select_combobox.addItems(streaming_environment_items)
+        self.initialize_environments_button.setEnabled(True)
+
+        if self.has_system_id:
+            self.rattlesnake_tabs.setTabEnabled(2, True)
+            self.rattlesnake_tabs.setCurrentIndex(2)
+        elif self.has_test_pred:
             self.rattlesnake_tabs.setTabEnabled(3, True)
+            self.rattlesnake_tabs.setCurrentIndex(3)
+        else:
+            self.rattlesnake_tabs.setTabEnabled(4, True)
+            self.rattlesnake_tabs.setCurrentIndex(4)
+
+    def initialize_environments_error(self, error_message):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Update rattlesnake state
+        self.rattlesnake.environment_metadata = []
+
+        # Lock future UI
+        self.streaming_environment_select_combobox.clear()
+        # If not acquiring, disable future tabs
+        if self.rattlesnake.state in (
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            for i in range(2, self.rattlesnake_tabs.count() - 1):
+                self.rattlesnake_tabs.setTabEnabled(i, False)
+
+        # Unlock UI
+        self.initialize_environments_button.setEnabled(True)
+        self.display_error(error_message)
 
     # endregion
 

@@ -1,7 +1,6 @@
 from rattlesnake.environment.environment_utilities import EnvironmentType
 
 UNIMPLEMENTED_ENVIRONMENT = [
-    EnvironmentType.TIME,
     EnvironmentType.MODAL,
     EnvironmentType.SINE,
     EnvironmentType.TRANSIENT,
@@ -16,18 +15,20 @@ ENVIRONMENT_PROCESS = {}
 for environment_type in EnvironmentType:
     if environment_type in UNIMPLEMENTED_ENVIRONMENT:
         continue
+
     match environment_type:
         case EnvironmentType.TIME:
             from rattlesnake.environment.time_environment import (
-                TimeParameters,
+                TimeCommands,
+                TimeMetadata,
                 TimeEnvironment,
                 time_process,
             )
 
-            ENVIRONMENT_METADATA[EnvironmentType.TIME] = TimeParameters
+            ENVIRONMENT_COMMANDS[EnvironmentType.TIME] = TimeCommands
+            ENVIRONMENT_METADATA[EnvironmentType.TIME] = TimeMetadata
             ENVIRONMENT_CLASS[EnvironmentType.TIME] = TimeEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.TIME] = time_process
-            UI_ENVIRONMENT_OPTIONS["Time Signal Generation"] = EnvironmentType.TIME
         case EnvironmentType.MODAL:
             from rattlesnake.environment.modal_environment import (
                 ModalCommands,
@@ -40,8 +41,6 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.MODAL] = ModalMetadata
             ENVIRONMENT_CLASS[EnvironmentType.MODAL] = ModalEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.MODAL] = modal_process
-            UI_ENVIRONMENT_OPTIONS["Modal Testing"] = EnvironmentType.MODAL
-
         case EnvironmentType.SINE:
             from rattlesnake.environment.sine_sys_id_environment import (
                 SineCommands,
@@ -54,8 +53,6 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.SINE] = SineMetadata
             ENVIRONMENT_CLASS[EnvironmentType.SINE] = SineEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.SINE] = sine_process
-            UI_ENVIRONMENT_OPTIONS["MIMO Sine Vibration"] = EnvironmentType.SINE
-
         case EnvironmentType.TRANSIENT:
             from rattlesnake.environment.transient_sys_id_environment import (
                 TransientCommands,
@@ -68,8 +65,6 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.TRANSIENT] = TransientMetadata
             ENVIRONMENT_CLASS[EnvironmentType.TRANSIENT] = TransientEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.TRANSIENT] = transient_process
-            UI_ENVIRONMENT_OPTIONS["MIMO Transient"] = EnvironmentType.TRANSIENT
-
         case EnvironmentType.RANDOM:
             from rattlesnake.environment.random_vibration_sys_id_environment import (
                 RandomVibrationCommands,
@@ -82,7 +77,3 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.RANDOM] = RandomVibrationMetadata
             ENVIRONMENT_CLASS[EnvironmentType.RANDOM] = RandomVibrationEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.RANDOM] = random_vibration_process
-            UI_ENVIRONMENT_OPTIONS["MIMO Random Vibration"] = EnvironmentType.RANDOM
-
-        case _:
-            continue

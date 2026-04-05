@@ -29,11 +29,10 @@ from typing import Dict
 
 import numpy as np
 
-# from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_OUTPUT
 from rattlesnake.hardware.hardware_utilities import HardwareType
-
-# from rattlesnake.environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands, QueueContainer, flush_queue, rms_time
 
@@ -47,6 +46,7 @@ if DEBUG:
     ENV_OUTPUT = "debug_data/output_first_data_{:}.npz"
 
 
+# region Output
 class OutputProcess(AbstractMessageProcess):
     """Class defining the output behavior of the controller
 
@@ -83,12 +83,12 @@ class OutputProcess(AbstractMessageProcess):
             queue_container.gui_update_queue,
             ready_event,
         )
-        # self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
+        self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.output_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_output)
-        # self.map_command(
-        #     GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
-        # )
+        self.map_command(
+            GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
+        )
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         # Communication
         self.queue_container = queue_container
@@ -114,6 +114,9 @@ class OutputProcess(AbstractMessageProcess):
         self._output_active_event = output_active_event
         # print('output setup')
 
+    # endregion
+
+    # region State Sync
     @property
     def output_active(self):
         """Returns True if the output is currently active"""
@@ -125,123 +128,126 @@ class OutputProcess(AbstractMessageProcess):
     def clear_active(self):
         self._output_active_event.clear()
 
-    # def initialize_hardware(self, metadata: HardwareMetadata):
-    #     """
-    #     Sets up the output according to the specified parameters
+    def initialize_hardware(self, metadata: HardwareMetadata):
+        """
+        Sets up the output according to the specified parameters
 
-    #     Parameters
-    #     ----------
-    #     data : tuple
-    #         A tuple consisting of data acquisition parameters and the channels
-    #         used by each environment.
+        Parameters
+        ----------
+        data : tuple
+            A tuple consisting of data acquisition parameters and the channels
+            used by each environment.
 
-    #     """
-    #     self.log("Initializing Hardware")
-    #     # Pull out invormation from the queue
-    #     # Store pertinent data
-    #     self.sample_rate = metadata.sample_rate
-    #     self.write_size = metadata.samples_per_write
-    #     self.output_oversample = metadata.output_oversample
-    #     # Check which type of hardware we have
-    #     if self.hardware is not None:
-    #         self.hardware.close()
+        """
+        self.log("Initializing Hardware")
+        # Pull out invormation from the queue
+        # Store pertinent data
+        self.sample_rate = metadata.sample_rate
+        self.write_size = metadata.samples_per_write
+        self.output_oversample = metadata.output_oversample
+        # Check which type of hardware we have
+        if self.hardware is not None:
+            self.hardware.close()
 
-    #     hardware_output_class = HARDWARE_OUTPUT[metadata.hardware_type]
-    #     match metadata.hardware_type:
-    #         case HardwareType.NI_DAQMX:
-    #             self.hardware = hardware_output_class(
-    #                 metadata.task_trigger,
-    #                 metadata.output_trigger_generator,
-    #             )
-    #         case HardwareType.LAN_XI:
-    #             # from .lanxi_hardware_multiprocessing import LanXIOutput
+        hardware_output_class = HARDWARE_OUTPUT[metadata.hardware_type]
+        match metadata.hardware_type:
+            case HardwareType.NI_DAQMX:
+                self.hardware = hardware_output_class(
+                    metadata.task_trigger,
+                    metadata.output_trigger_generator,
+                )
+            case HardwareType.LAN_XI:
+                # from .lanxi_hardware_multiprocessing import LanXIOutput
 
-    #             # self.hardware = LanXIOutput(data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"])
-    #             pass
-    #         case HardwareType.DP_QUATTRO:
-    #             # from .data_physics_hardware import DataPhysicsOutput
+                # self.hardware = LanXIOutput(data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"])
+                pass
+            case HardwareType.DP_QUATTRO:
+                # from .data_physics_hardware import DataPhysicsOutput
 
-    #             # self.hardware = DataPhysicsOutput(self.queue_container.single_process_hardware_queue)
-    #             pass
-    #         case HardwareType.DP_900:
-    #             # from .data_physics_dp900_hardware import DataPhysicsDP900Output
+                # self.hardware = DataPhysicsOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case HardwareType.DP_900:
+                # from .data_physics_dp900_hardware import DataPhysicsDP900Output
 
-    #             # self.hardware = DataPhysicsDP900Output(
-    #             #     self.queue_container.single_process_hardware_queue,
-    #             # )
-    #             pass
-    #         case HardwareType.EXODUS:
-    #             # from .exodus_modal_solution_hardware import ExodusOutput
+                # self.hardware = DataPhysicsDP900Output(
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.EXODUS:
+                # from .exodus_modal_solution_hardware import ExodusOutput
 
-    #             # self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
-    #             pass
-    #         case HardwareType.STATE_SPACE:
-    #             # from .state_space_virtual_hardware import StateSpaceOutput
+                # self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case HardwareType.STATE_SPACE:
+                # from .state_space_virtual_hardware import StateSpaceOutput
 
-    #             # self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
-    #             pass
-    #         case HardwareType.SDYNPY_SYSTEM:
-    #             self.hardware = hardware_output_class(
-    #                 self.queue_container.single_process_hardware_queue
-    #             )
-    #         case HardwareType.SDYNPY_FRF:
-    #             # from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
+                # self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case HardwareType.SDYNPY_SYSTEM:
+                self.hardware = hardware_output_class(
+                    self.queue_container.single_process_hardware_queue
+                )
+            case HardwareType.SDYNPY_FRF:
+                # from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
 
-    #             # self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
-    #             pass
-    #         case _:
-    #             raise TypeError(f"{metadata.hardware_type} has not been implemented")
-    #     # Initialize hardware and create channels
-    #     self.hardware.initialize_hardware(metadata)
-    #     # Get the environment output channels in reference to all the output channels
-    #     output_indices = [
-    #         index
-    #         for index, channel in enumerate(metadata.channel_list)
-    #         if (channel.feedback_device is not None)
-    #         and not (channel.feedback_device.strip() == "")
-    #     ]
-    #     self.num_outputs = len(output_indices)
+                # self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case _:
+                raise TypeError(f"{metadata.hardware_type} has not been implemented")
+        # Initialize hardware and create channels
+        self.hardware.initialize_hardware(metadata)
+        # Get the environment output channels in reference to all the output channels
+        output_indices = [
+            index
+            for index, channel in enumerate(metadata.channel_list)
+            if (channel.feedback_device is not None)
+            and not (channel.feedback_device.strip() == "")
+        ]
+        self.num_outputs = len(output_indices)
 
-    #     self.hardware_metadata = metadata
-    #     self.set_ready()
+        self.hardware_metadata = metadata
+        self.set_ready()
 
-    # def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
-    #     self.log("Initializing Environment")
+    def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
+        self.log("Initializing Environment")
 
-    #     hardware_output_indices = [
-    #         index
-    #         for index, channel in enumerate(self.hardware_metadata.channel_list)
-    #         if (channel.feedback_device is not None)
-    #         and not (channel.feedback_device.strip() == "")
-    #     ]
-    #     self.environment_list = []
-    #     self.environment_output_channels = {}
-    #     self.environment_active_flags = {}
-    #     self.environment_starting_up_flags = {}
-    #     self.environment_shutting_down_flags = {}
-    #     self.environment_data_out_remainders = {}
-    #     self.environment_first_data = {}
-    #     for queue_name, metadata in metadata_dict.items():
-    #         # Initialize environment dicts
-    #         self.environment_list.append(queue_name)
-    #         self.environment_active_flags[queue_name] = False
-    #         self.environment_starting_up_flags[queue_name] = False
-    #         self.environment_shutting_down_flags[queue_name] = False
-    #         self.environment_first_data[queue_name] = False
+        hardware_output_indices = [
+            index
+            for index, channel in enumerate(self.hardware_metadata.channel_list)
+            if (channel.feedback_device is not None)
+            and not (channel.feedback_device.strip() == "")
+        ]
+        self.environment_list = []
+        self.environment_output_channels = {}
+        self.environment_active_flags = {}
+        self.environment_starting_up_flags = {}
+        self.environment_shutting_down_flags = {}
+        self.environment_data_out_remainders = {}
+        self.environment_first_data = {}
+        for queue_name, metadata in metadata_dict.items():
+            # Initialize environment dicts
+            self.environment_list.append(queue_name)
+            self.environment_active_flags[queue_name] = False
+            self.environment_starting_up_flags[queue_name] = False
+            self.environment_shutting_down_flags[queue_name] = False
+            self.environment_first_data[queue_name] = False
 
-    #         # Build output mapping dicts
-    #         environment_channel_indices = metadata.map_channel_indices()
-    #         common_indices, out_inds, _ = np.intersect1d(
-    #             hardware_output_indices,
-    #             environment_channel_indices,
-    #             return_indices=True,
-    #         )
-    #         self.environment_output_channels[queue_name] = out_inds
-    #         self.environment_data_out_remainders[queue_name] = np.zeros(
-    #             (len(common_indices), 0)
-    #         )
-    #     self.set_ready()
+            # Build output mapping dicts
+            environment_channel_indices = metadata.map_channel_indices()
+            common_indices, out_inds, _ = np.intersect1d(
+                hardware_output_indices,
+                environment_channel_indices,
+                return_indices=True,
+            )
+            self.environment_output_channels[queue_name] = out_inds
+            self.environment_data_out_remainders[queue_name] = np.zeros(
+                (len(common_indices), 0)
+            )
+        self.set_ready()
 
+    # endregion
+
+    # region Commands
     def output_signal(self, data):  # pylint: disable=unused-argument
         """The main output loop of the controller.
 
@@ -485,6 +491,9 @@ class OutputProcess(AbstractMessageProcess):
         self.environment_shutting_down_flags[data] = False
         self.environment_active_flags[data] = False
 
+    # endregion
+
+    # region Shutdown
     def quit(self, data):  # pylint: disable=unused-argument
         """Stops the process and shuts down the hardware if necessary.
 
@@ -510,8 +519,10 @@ class OutputProcess(AbstractMessageProcess):
             self.hardware.close()
         return True
 
+    # endregion
 
-# region: output_process
+
+# region Process
 def output_process(
     queue_container: QueueContainer,
     output_active_event: mp.synchronize.Event,
@@ -539,3 +550,6 @@ def output_process(
     )
 
     output_instance.run(shutdown_event)
+
+
+# endregion

@@ -29,11 +29,10 @@ from typing import Dict
 
 import numpy as np
 
-# from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_ACQUISITION
 from rattlesnake.hardware.hardware_utilities import HardwareType
-
-# from rattlesnake.environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import (
     GlobalCommands,
@@ -53,7 +52,7 @@ if DEBUG:
     FILE_OUTPUT = "debug_data/acquisition_{:}.npz"
 
 
-# region: AcquisitionProcess
+# region Acquisition
 class AcquisitionProcess(AbstractMessageProcess):
     """Class defining the acquisition behavior of the controller
 
@@ -96,12 +95,12 @@ class AcquisitionProcess(AbstractMessageProcess):
             queue_container.gui_update_queue,
             ready_event,
         )
-        # self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
+        self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.acquire_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_acquisition)
-        # self.map_command(
-        #     GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
-        # )
+        self.map_command(
+            GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
+        )
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
@@ -136,6 +135,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         self._streaming_active_event = streaming_active_event
         # print('acquisition setup')
 
+    # endregion
+
+    # region State Sync
     @property
     def acquisition_active(self):
         return self._acquisition_active_event.is_set()
@@ -156,148 +158,151 @@ class AcquisitionProcess(AbstractMessageProcess):
     def clear_streaming(self):
         self._streaming_active_event.clear()
 
-    # def initialize_hardware(self, metadata: HardwareMetadata):
-    #     """Sets up the acquisition according to the specified parameters
+    def initialize_hardware(self, metadata: HardwareMetadata):
+        """Sets up the acquisition according to the specified parameters
 
-    #     Parameters
-    #     ----------
-    #     data : tuple
-    #         A tuple consisting of data acquisition parameters and the channels
-    #         used by each environment.
+        Parameters
+        ----------
+        data : tuple
+            A tuple consisting of data acquisition parameters and the channels
+            used by each environment.
 
-    #     """
-    #     self.log("Initializing Hardware")
-    #     # Store pertinent data
-    #     self.sample_rate = metadata.sample_rate
-    #     self.read_size = metadata.samples_per_read
-    #     # Check which type of hardware we have
-    #     if self.hardware is not None:
-    #         self.hardware.close()
+        """
+        self.log("Initializing Hardware")
+        # Store pertinent data
+        self.sample_rate = metadata.sample_rate
+        self.read_size = metadata.samples_per_read
+        # Check which type of hardware we have
+        if self.hardware is not None:
+            self.hardware.close()
 
-    #     hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
-    #     match metadata.hardware_type:
-    #         case HardwareType.NI_DAQMX:
-    #             self.hardware = hardware_acquisition_class(
-    #                 metadata.task_trigger, metadata.output_trigger_generator
-    #             )
+        hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
+        match metadata.hardware_type:
+            case HardwareType.NI_DAQMX:
+                self.hardware = hardware_acquisition_class(
+                    metadata.task_trigger, metadata.output_trigger_generator
+                )
 
-    #         case HardwareType.LAN_XI:
-    #             # from .lanxi_hardware_multiprocessing import LanXIAcquisition
+            case HardwareType.LAN_XI:
+                # from .lanxi_hardware_multiprocessing import LanXIAcquisition
 
-    #             # self.hardware = LanXIAcquisition(
-    #             #     data_acquisition_parameters.extra_parameters[
-    #             #         "maximum_acquisition_processes"
-    #             #     ]
-    #             # )
-    #             pass
-    #         case HardwareType.DP_QUATTRO:
-    #             # from .data_physics_hardware import DataPhysicsAcquisition
+                # self.hardware = LanXIAcquisition(
+                #     data_acquisition_parameters.extra_parameters[
+                #         "maximum_acquisition_processes"
+                #     ]
+                # )
+                pass
+            case HardwareType.DP_QUATTRO:
+                # from .data_physics_hardware import DataPhysicsAcquisition
 
-    #             # self.hardware = DataPhysicsAcquisition(
-    #             #     data_acquisition_parameters.hardware_file,
-    #             #     self.queue_container.single_process_hardware_queue,
-    #             # )
-    #             pass
-    #         case HardwareType.DP_900:
-    #             # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+                # self.hardware = DataPhysicsAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.DP_900:
+                # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
 
-    #             # self.hardware = DataPhysicsDP900Acquisition(
-    #             #     data_acquisition_parameters.hardware_file,
-    #             #     self.queue_container.single_process_hardware_queue,
-    #             # )
-    #             pass
-    #         case HardwareType.EXODUS:
-    #             # from .exodus_modal_solution_hardware import ExodusAcquisition
+                # self.hardware = DataPhysicsDP900Acquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.EXODUS:
+                # from .exodus_modal_solution_hardware import ExodusAcquisition
 
-    #             # self.hardware = ExodusAcquisition(
-    #             #     data_acquisition_parameters.hardware_file,
-    #             #     self.queue_container.single_process_hardware_queue,
-    #             # )
-    #             pass
-    #         case HardwareType.STATE_SPACE:
-    #             # from .state_space_virtual_hardware import StateSpaceAcquisition
+                # self.hardware = ExodusAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.STATE_SPACE:
+                # from .state_space_virtual_hardware import StateSpaceAcquisition
 
-    #             # self.hardware = StateSpaceAcquisition(
-    #             #     data_acquisition_parameters.hardware_file,
-    #             #     self.queue_container.single_process_hardware_queue,
-    #             # )
-    #             pass
-    #         case HardwareType.SDYNPY_SYSTEM:
-    #             self.hardware = hardware_acquisition_class(
-    #                 metadata.hardware_file,
-    #                 self.queue_container.single_process_hardware_queue,
-    #             )
-    #         case HardwareType.SDYNPY_FRF:
-    #             # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+                # self.hardware = StateSpaceAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.SDYNPY_SYSTEM:
+                self.hardware = hardware_acquisition_class(
+                    metadata.hardware_file,
+                    self.queue_container.single_process_hardware_queue,
+                )
+            case HardwareType.SDYNPY_FRF:
+                # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
 
-    #             # self.hardware = SDynPyFRFAcquisition(
-    #             #     data_acquisition_parameters.hardware_file,
-    #             #     self.queue_container.single_process_hardware_queue,
-    #             # )
-    #             pass
-    #         case _:
-    #             raise TypeError(f"{metadata.hardware_type} has not been implemented")
-    #     # Initialize hardware and create channels
-    #     self.hardware.initialize_hardware(metadata)
-    #     # Set up warning and abort limits
-    #     self.abort_limits = []
-    #     self.warning_limits = []
-    #     for channel in metadata.channel_list:
-    #         try:
-    #             warning_limit = float(channel.warning_level)
-    #         except (ValueError, TypeError):
-    #             warning_limit = float("inf")  # Never warn on this channel
-    #         try:
-    #             abort_limit = float(channel.abort_level)
-    #         except (ValueError, TypeError):
-    #             abort_limit = float(
-    #                 "inf"
-    #             )  # Never abort on this channel if not specified
-    #         self.warning_limits.append(warning_limit)
-    #         self.abort_limits.append(abort_limit)
-    #     self.abort_limits = np.array(self.abort_limits)
-    #     self.warning_limits = np.array(self.warning_limits)
-    #     self.output_indices = [
-    #         index
-    #         for index, channel in enumerate(metadata.channel_list)
-    #         if (channel.feedback_device is not None)
-    #         and not (channel.feedback_device.strip() == "")
-    #     ]
-    #     self.read_data = np.zeros(
-    #         (
-    #             len(metadata.channel_list),
-    #             4
-    #             * np.max(
-    #                 [
-    #                     metadata.samples_per_read,
-    #                     metadata.samples_per_write // metadata.output_oversample,
-    #                 ]
-    #             ),
-    #         )
-    #     )
+                # self.hardware = SDynPyFRFAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case _:
+                raise TypeError(f"{metadata.hardware_type} has not been implemented")
+        # Initialize hardware and create channels
+        self.hardware.initialize_hardware(metadata)
+        # Set up warning and abort limits
+        self.abort_limits = []
+        self.warning_limits = []
+        for channel in metadata.channel_list:
+            try:
+                warning_limit = float(channel.warning_level)
+            except (ValueError, TypeError):
+                warning_limit = float("inf")  # Never warn on this channel
+            try:
+                abort_limit = float(channel.abort_level)
+            except (ValueError, TypeError):
+                abort_limit = float(
+                    "inf"
+                )  # Never abort on this channel if not specified
+            self.warning_limits.append(warning_limit)
+            self.abort_limits.append(abort_limit)
+        self.abort_limits = np.array(self.abort_limits)
+        self.warning_limits = np.array(self.warning_limits)
+        self.output_indices = [
+            index
+            for index, channel in enumerate(metadata.channel_list)
+            if (channel.feedback_device is not None)
+            and not (channel.feedback_device.strip() == "")
+        ]
+        self.read_data = np.zeros(
+            (
+                len(metadata.channel_list),
+                4
+                * np.max(
+                    [
+                        metadata.samples_per_read,
+                        metadata.samples_per_write // metadata.output_oversample,
+                    ]
+                ),
+            )
+        )
 
-    #     self.hardware_metadata = metadata
-    #     self.set_ready()
-    #
-    # def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
-    #     self.log("Initializing Environment")
-    #     self.environment_list = []
-    #     self.environment_acquisition_channels = {}
-    #     self.environment_active_flags = {}
-    #     self.environment_last_data = {}
-    #     self.environment_samples_remaining_to_read = {}
-    #     self.environment_first_data = {}
-    #     for queue_name, metadata in metadata_dict.items():
-    #         self.environment_list.append(queue_name)
-    #         self.environment_acquisition_channels[queue_name] = (
-    #             metadata.map_channel_indices()
-    #         )
-    #         self.environment_active_flags[queue_name] = False
-    #         self.environment_last_data[queue_name] = False
-    #         self.environment_samples_remaining_to_read[queue_name] = 0
-    #         self.environment_first_data[queue_name] = None
-    #     self.set_ready()
+        self.hardware_metadata = metadata
+        self.set_ready()
 
+    def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
+        self.log("Initializing Environment")
+        self.environment_list = []
+        self.environment_acquisition_channels = {}
+        self.environment_active_flags = {}
+        self.environment_last_data = {}
+        self.environment_samples_remaining_to_read = {}
+        self.environment_first_data = {}
+        for queue_name, metadata in metadata_dict.items():
+            self.environment_list.append(queue_name)
+            self.environment_acquisition_channels[queue_name] = (
+                metadata.map_channel_indices()
+            )
+            self.environment_active_flags[queue_name] = False
+            self.environment_last_data[queue_name] = False
+            self.environment_samples_remaining_to_read[queue_name] = 0
+            self.environment_first_data[queue_name] = None
+        self.set_ready()
+
+    # endregion
+
+    # region Commands
     def stop_environment(self, data):
         """Sets flags stating that the specified environment will be ending.
 
@@ -622,6 +627,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         """
         self.shutdown_flag = True
 
+    # endregion
+
+    # region Shutdown
     def quit(self, data):
         """Stops the process and shuts down the hardware if necessary.
 
@@ -643,8 +651,10 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.hardware.close()
         return True
 
+    # endregion
 
-# region: acquisition_process
+
+# region Process
 def acquisition_process(
     queue_container: QueueContainer,
     acquisition_active_event: mp.synchronize.Event,
@@ -674,3 +684,6 @@ def acquisition_process(
     )
 
     acquisition_instance.run(shutdown_event)
+
+
+# endregion
