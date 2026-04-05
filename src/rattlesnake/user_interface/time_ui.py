@@ -22,24 +22,12 @@ from rattlesnake.utilities import (
 )
 
 ENVIRONMENT_TYPE = EnvironmentType.TIME
-TIME_UI_DEFINITION_PATH = os.path.join(
-    DIRECTORY, "user_interface", "ui_files", "time_definition.ui"
-)
-TIME_UI_RUN_PATH = os.path.join(DIRECTORY, "user_interface", "ui_files", "time_run.ui")
 MAX_RESPONSES_TO_PLOT = 20
 MAX_SAMPLES_TO_PLOT = 100000
 
 
 # region User Interface
 class TimeUI(EnvironmentUI):
-    """Class defining the user interface for a Random Vibration environment.
-
-    This class will contain two main UIs, the environment definition and run.
-    The widgets corresponding to these interfaces are stored in TabWidgets in
-    the main UI.
-
-    This class defines all the call backs and user interface operations required
-    for the Time environment."""
 
     def __init__(
         self,
@@ -80,10 +68,16 @@ class TimeUI(EnvironmentUI):
         super().__init__(ENVIRONMENT_TYPE, environment_name, rattlesnake)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(TIME_UI_DEFINITION_PATH, self.definition_widget)
+        time_ui_definition_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "time_definition.ui"
+        )
+        uic.loadUi(time_ui_definition_path, self.definition_widget)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(TIME_UI_RUN_PATH, self.run_widget)
+        time_ui_run_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "time_run.ui"
+        )
+        uic.loadUi(time_ui_run_path, self.run_widget)
 
         # Set up some persistent data
         self.signal = None
@@ -304,7 +298,7 @@ class TimeUI(EnvironmentUI):
 
     # endregion
 
-    # region Callbacks
+    # region Definition
     def plot_time_data(self, data):
         response_data, output_data = data
         for curve, this_data in zip(
@@ -411,6 +405,9 @@ class TimeUI(EnvironmentUI):
             else:
                 curve.setData((0, 0), (0, 0))
 
+    # endregion
+
+    # region Run
     def display_environment_started(self):
         self.run_widget.stop_test_button.setEnabled(True)
         self.run_widget.start_test_button.setEnabled(False)
@@ -485,3 +482,5 @@ class TimeUI(EnvironmentUI):
                 self.set_repeat(data)
             case _:
                 print(f"Unknown Time UI Command {command}")
+
+    # endregion

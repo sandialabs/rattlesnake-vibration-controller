@@ -81,7 +81,7 @@ class TimeUICommands(Enum):
 # endregion
 
 
-# region: Metadata
+# region Metadata
 class TimeMetadata(EnvironmentMetadata):
     """Storage container for parameters used by the Time Environment"""
 
@@ -451,7 +451,7 @@ class TimeEnvironment(Environment):
 
     # endregion
 
-    # region Commands
+    # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
 
@@ -495,6 +495,9 @@ class TimeEnvironment(Environment):
         self.metadata = metadata
         self.set_ready()
 
+    # endregion
+
+    # region Commands
     def run_environment(self, data):
         """Runs the time history environment.
 
@@ -728,7 +731,7 @@ class TimeEnvironment(Environment):
     # endregion
 
 
-# region: time_process
+# region Process
 def time_process(
     environment_name: str,
     queue_name: str,
