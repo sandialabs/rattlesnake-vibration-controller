@@ -422,6 +422,12 @@ def flush_queue(queue, timeout=None):
 
 
 # region Loading
+def save_rattlesnake_to_netcdf(
+    netcdf_handle, hardware_metadata, environment_metadata_dict
+):
+    pass
+
+
 def load_time_history(signal_path, sample_rate):
     """Loads a time history from a given file
 

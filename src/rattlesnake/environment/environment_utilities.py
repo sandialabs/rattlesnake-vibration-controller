@@ -40,22 +40,3 @@ class EnvironmentType(Enum):
     # NONLINEAR = 5
     MODAL = 6
     # Add new environment types here
-
-
-# Name for each environment
-environment_long_names = {}
-environment_long_names[EnvironmentType.RANDOM] = "MIMO Random Vibration"
-environment_long_names[EnvironmentType.TRANSIENT] = "MIMO Transient"
-environment_long_names[EnvironmentType.SINE] = "MIMO Sine Vibration"
-environment_long_names[EnvironmentType.TIME] = "Time Signal Generation"
-# environment_long_names[ControlTypes.NONLINEAR] = 'Nonlinear Normal Modes'
-environment_long_names[EnvironmentType.MODAL] = "Modal Testing"
-
-# Add the environment here if it can be used for combined environments
-combined_environments_capable = [
-    EnvironmentType.RANDOM,
-    EnvironmentType.TRANSIENT,
-    EnvironmentType.SINE,
-    EnvironmentType.TIME,
-    EnvironmentType.MODAL,
-]

@@ -30,14 +30,15 @@ import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc
 import numpy as np
 
-# from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-# from rattlesnake.environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-
-# from rattlesnake.load_utilities import save_rattlesnake_netcdf_template
 from rattlesnake.utilities import GlobalCommands, QueueContainer
 
+# from rattlesnake.load_utilities import save_rattlesnake_netcdf_template
 
+
+# region: StreamType
 class StreamType(Enum):
     NO_STREAM = 0
     IMMEDIATELY = 1
@@ -46,6 +47,7 @@ class StreamType(Enum):
     MANUAL = 4
 
 
+# region: StreamMetadata
 class StreamMetadata:
     def __init__(
         self,
@@ -79,8 +81,6 @@ class StreamMetadata:
                 raise ValueError(
                     "No test level environment was chosen for the stream to start at"
                 )
-
-        return True
 
 
 class StreamingProcess(AbstractMessageProcess):
@@ -116,7 +116,7 @@ class StreamingProcess(AbstractMessageProcess):
             queue_container.gui_update_queue,
             ready_event,
         )
-        # self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize)
+        self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize)
         self.map_command(GlobalCommands.STREAMING_DATA, self.write_data)
         self.map_command(GlobalCommands.FINALIZE_STREAMING, self.finalize)
         self.map_command(GlobalCommands.CREATE_NEW_STREAM, self.create_new_stream)
@@ -126,42 +126,42 @@ class StreamingProcess(AbstractMessageProcess):
         self.stream_dimension = "time_samples"
         self.stream_index = 0
 
-    # def initialize(self, data):
-    #     """
-    #     Creates a file with all metadata from the controller
+    def initialize(self, data):
+        """
+        Creates a file with all metadata from the controller
 
-    #     Creates a netCDF4 dataset and stores all the global data acquisition
-    #     parameters as well as the parameters from each environment.
+        Creates a netCDF4 dataset and stores all the global data acquisition
+        parameters as well as the parameters from each environment.
 
-    #     Parameters
-    #     ----------
-    #     data : tuple
-    #         Tuple containing a StreamMetadata, HardwareMetadata, and EnviornmentMetadata
-    #         defining the controller settings, and a dictionary containing the
-    #         environment names as keys and the environment metadata (inheriting
-    #         from AbstractMetadata) as values for each environment.
-    #     """
-    #     stream_metadata: StreamMetadata
-    #     hardware_metadata: HardwareMetadata
-    #     environment_metadata_dict: Dict[str, EnvironmentMetadata]
-    #     stream_metadata, hardware_metadata, environment_metadata_dict = data
+        Parameters
+        ----------
+        data : tuple
+            Tuple containing a StreamMetadata, HardwareMetadata, and EnviornmentMetadata
+            defining the controller settings, and a dictionary containing the
+            environment names as keys and the environment metadata (inheriting
+            from AbstractMetadata) as values for each environment.
+        """
+        stream_metadata: StreamMetadata
+        hardware_metadata: HardwareMetadata
+        environment_metadata_dict: Dict[str, EnvironmentMetadata]
+        stream_metadata, hardware_metadata, environment_metadata_dict = data
 
-    #     # Dont create file/filename is not guaranteed to exist
-    #     if stream_metadata.stream_type == StreamType.NO_STREAM:
-    #         self.set_ready()
-    #         return
+        # Dont create file/filename is not guaranteed to exist
+        if stream_metadata.stream_type == StreamType.NO_STREAM:
+            self.set_ready()
+            return
 
-    #     self.stream_variable = "time_data"
-    #     self.stream_dimension = "time_samples"
-    #     self.stream_index = 0
-    #     self.netcdf_handle = nc.Dataset(
-    #         stream_metadata.stream_file, "w", format="NETCDF4", clobber=True
-    #     )  # pylint: disable=no-member
-    #     save_rattlesnake_netcdf_template(
-    #         self.netcdf_handle, hardware_metadata, environment_metadata_dict
-    #     )
+        self.stream_variable = "time_data"
+        self.stream_dimension = "time_samples"
+        self.stream_index = 0
+        self.netcdf_handle = nc.Dataset(
+            stream_metadata.stream_file, "w", format="NETCDF4", clobber=True
+        )  # pylint: disable=no-member
+        save_rattlesnake_netcdf_template(
+            self.netcdf_handle, hardware_metadata, environment_metadata_dict
+        )
 
-    #     self.set_ready()
+        self.set_ready()
 
     def write_data(self, data):
         """

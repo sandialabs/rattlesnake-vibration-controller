@@ -2,12 +2,10 @@ from datetime import datetime
 from typing import List
 import threading
 
-# from rattlesnake.environment.abstract_environment import EnvironmentInstructions
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
 
-# from rattlesnake.environment.environment_utilities import ControlTypes
-# from rattlesnake.environment.sine_environment import SineCommands
-# from rattlesnake.environment.time_environment import TimeCommands
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
 
@@ -27,7 +25,7 @@ for control_type, command_type in ENVIRONMENT_COMMANDS.items():
                 GlobalCommands.START_ENVIRONMENT,
                 GlobalCommands.STOP_ENVIRONMENT,
                 UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
-                # *command_type.valid_profile_commands(),
+                *command_type.valid_profile_commands(),
             )
         }
     )
@@ -37,16 +35,16 @@ VALID_DATA = {
     GlobalCommands.STOP_HARDWARE: type(None),
     GlobalCommands.START_STREAMING: type(None),
     GlobalCommands.STOP_STREAMING: type(None),
-    # GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions,
+    GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions,
     GlobalCommands.STOP_ENVIRONMENT: type(None),
-    # UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
+    UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
 }
-# for control_type, command_type in ENVIRONMENT_COMMANDS.items():
-#     for command in command_type.valid_profile_commands():
-#         VALID_DATA[command] = command_type.valid_data()[command]
+for control_type, command_type in ENVIRONMENT_COMMANDS.items():
+    for command in command_type.valid_profile_commands():
+        VALID_DATA[command] = command_type.valid_data()[command]
 
 
-# region: ProfileEvent
+# region ProfileEvent
 class ProfileEvent:
     def __init__(self, timestamp: float, environment_name: str, command, data=None):
         self.timestamp = timestamp
@@ -98,20 +96,21 @@ class ProfileEvent:
                     f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}."
                 )
 
-            # if valid_data_type is EnvironmentInstructions:
-            #     if not self.data.environment_name == self.environment_name:
-            #         raise RattlesnakeError(
-            #             f"Invalid environment instruction assigned to {self.environment_name} profile event"
-            #         )
-            #     if not self.data.environment_type == self.environment_type:
-            #         raise RattlesnakeError(
-            #             f"Invalid environment instruction assigned to {self.environment_name} profile event"
-            #         )
-
-        return True
+            if valid_data_type is EnvironmentInstructions:
+                if not self.data.environment_name == self.environment_name:
+                    raise RattlesnakeError(
+                        f"Invalid environment instruction assigned to {self.environment_name} profile event"
+                    )
+                if not self.data.environment_type == self.environment_type:
+                    raise RattlesnakeError(
+                        f"Invalid environment instruction assigned to {self.environment_name} profile event"
+                    )
 
 
-# region: ProfileManager
+# endregion
+
+
+# region Manager
 class ProfileManager:
     def __init__(self, queue_container: QueueContainer):
         self._log_file_queue = queue_container.log_file_queue
@@ -145,11 +144,7 @@ class ProfileManager:
             if not isinstance(profile_event, ProfileEvent):
                 raise RattlesnakeError("Profile event list contains invalid type")
             # Validate profile event
-            valid_profile = profile_event.validate()
-            if not valid_profile:
-                raise RattlesnakeError(
-                    "Rattlesnake.set_profile requires a valid list of ProfileEvents"
-                )
+            profile_event.validate()
 
             # Validate command has been implemented in profile_manager
             command = profile_event.command
@@ -160,8 +155,6 @@ class ProfileManager:
 
         # Sort profile_event_list by timestamp
         profile_event_list.sort(key=lambda event: event.timestamp)
-
-        return True
 
     def start_profile(self, profile_event_list: List[ProfileEvent]):
         self.log("Starting Profile")
@@ -220,13 +213,13 @@ class ProfileManager:
             TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
         )
 
-    # def start_environment(
-    #     self, queue_name: str, command: GlobalCommands, data: EnvironmentInstructions
-    # ):
-    #     instructions = data
-    #     self.controller_command_queue.put(
-    #         TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions))
-    #     )
+    def start_environment(
+        self, queue_name: str, command: GlobalCommands, data: EnvironmentInstructions
+    ):
+        instructions = data
+        self.controller_command_queue.put(
+            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions))
+        )
 
     def stop_environment(self, queue_name: str, command: GlobalCommands, data: None):
         self.controller_command_queue.put(
@@ -261,3 +254,6 @@ class ProfileManager:
 
         """
         self.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {message}\n")
+
+
+# endregion

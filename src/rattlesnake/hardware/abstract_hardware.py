@@ -195,6 +195,78 @@ class HardwareMetadata:
                 worksheet.cell(row=row_idx, column=col_idx, value=val)
 
     @classmethod
+    def save_blank_hardware_to_workbook(
+        cls, workbook: openpyxl.workbook.workbook.Workbook
+    ):
+        hardware_worksheet = workbook.create_sheet("Hardware")
+        hardware_worksheet.cell(1, 1, "Hardware Type")
+        hardware_worksheet.cell(1, 2, "# Enter hardware index here")
+        hardware_worksheet.cell(
+            1,
+            3,
+            "Hardware Indices: 0 - NI DAQmx; 1 - LAN XI; 2 - Data Physics Quattro; "
+            "3 - Data Physics 900 Series; 4 - Exodus Modal Solution; 5 - State Space Integration; "
+            "6 - SDynPy System Integration",
+        )
+        hardware_worksheet.cell(2, 1, "Hardware File")
+        hardware_worksheet.cell(
+            2,
+            3,
+            "# Path to Hardware File (Depending on Hardware Device: 0 - Not Used; 1 - Not Used; "
+            "2 - Path to DpQuattro.dll library file; 3 - Not Used; 4 - Path to Exodus Eigensolution; "
+            "5 - Path to State Space File; 6 - Path to SDynPy system file)",
+        )
+        hardware_worksheet.cell(3, 1, "Sample Rate")
+        hardware_worksheet.cell(3, 3, "# Sample Rate of Data Acquisition System")
+        hardware_worksheet.cell(4, 1, "Time Per Read")
+        hardware_worksheet.cell(
+            4, 3, "# Number of seconds per Read from the Data Acquisition System"
+        )
+        hardware_worksheet.cell(5, 1, "Time Per Write")
+        hardware_worksheet.cell(
+            5, 3, "# Number of seconds per Write to the Data Acquisition System"
+        )
+        hardware_worksheet.cell(6, 1, "Maximum Acquisition Processes")
+        hardware_worksheet.cell(
+            6,
+            3,
+            "# Maximum Number of Acquisition Processes to start to pull data from hardware",
+        )
+        hardware_worksheet.cell(
+            6,
+            4,
+            "Only Used by LAN-XI Hardware.  This row can be deleted if LAN-XI is not used",
+        )
+        hardware_worksheet.cell(7, 1, "Integration Oversampling")
+        hardware_worksheet.cell(
+            7, 3, "# For virtual control, an integration oversampling can be specified"
+        )
+        hardware_worksheet.cell(
+            7,
+            3,
+            "Only used for virtual control (Exodus, State Space, or SDynPy).  "
+            "This row can be deleted if these are not used.",
+        )
+        hardware_worksheet.cell(8, 1, "Task Trigger")
+        hardware_worksheet.cell(8, 3, "# Start trigger type")
+        hardware_worksheet.cell(
+            8,
+            3,
+            "Task Triggers: 0 - Internal, 1 - PFI0 with external trigger, 2 - PFI0 with Analog Output "
+            "trigger.  Only used for NI hardware.  This row can be deleted if NI is not used.",
+        )
+        hardware_worksheet.cell(9, 1, "Task Trigger Output Channel")
+        hardware_worksheet.cell(
+            9, 3, "# Physical device and channel that generates a trigger signal"
+        )
+        hardware_worksheet.cell(
+            9,
+            4,
+            "Only used if Task Triggers is 2.  Only used for NI hardware.  "
+            "This row can be deleted if it is not used.",
+        )
+
+    @classmethod
     def load_channel_table_from_workbook(
         cls, workbook: openpyxl.workbook.workbook.Workbook
     ) -> List[Channel]:
@@ -318,75 +390,10 @@ class HardwareMetadata:
     @abstractmethod
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
         self.save_channel_table_to_workbook(self.channel_list, workbook)
+        self.save_blank_hardware_to_workbook(workbook)
 
-        hardware_worksheet = workbook.create_sheet("Hardware")
+        hardware_worksheet = workbook["Hardware"]
 
-        hardware_worksheet.cell(1, 1, "Hardware Type")
-        hardware_worksheet.cell(1, 2, "# Enter hardware index here")
-        hardware_worksheet.cell(
-            1,
-            3,
-            "Hardware Indices: 0 - NI DAQmx; 1 - LAN XI; 2 - Data Physics Quattro; "
-            "3 - Data Physics 900 Series; 4 - Exodus Modal Solution; 5 - State Space Integration; "
-            "6 - SDynPy System Integration",
-        )
-        hardware_worksheet.cell(2, 1, "Hardware File")
-        hardware_worksheet.cell(
-            2,
-            3,
-            "# Path to Hardware File (Depending on Hardware Device: 0 - Not Used; 1 - Not Used; "
-            "2 - Path to DpQuattro.dll library file; 3 - Not Used; 4 - Path to Exodus Eigensolution; "
-            "5 - Path to State Space File; 6 - Path to SDynPy system file)",
-        )
-        hardware_worksheet.cell(3, 1, "Sample Rate")
-        hardware_worksheet.cell(3, 3, "# Sample Rate of Data Acquisition System")
-        hardware_worksheet.cell(4, 1, "Time Per Read")
-        hardware_worksheet.cell(
-            4, 3, "# Number of seconds per Read from the Data Acquisition System"
-        )
-        hardware_worksheet.cell(5, 1, "Time Per Write")
-        hardware_worksheet.cell(
-            5, 3, "# Number of seconds per Write to the Data Acquisition System"
-        )
-        hardware_worksheet.cell(6, 1, "Maximum Acquisition Processes")
-        hardware_worksheet.cell(
-            6,
-            3,
-            "# Maximum Number of Acquisition Processes to start to pull data from hardware",
-        )
-        hardware_worksheet.cell(
-            6,
-            4,
-            "Only Used by LAN-XI Hardware.  This row can be deleted if LAN-XI is not used",
-        )
-        hardware_worksheet.cell(7, 1, "Integration Oversampling")
-        hardware_worksheet.cell(
-            7, 3, "# For virtual control, an integration oversampling can be specified"
-        )
-        hardware_worksheet.cell(
-            7,
-            3,
-            "Only used for virtual control (Exodus, State Space, or SDynPy).  "
-            "This row can be deleted if these are not used.",
-        )
-        hardware_worksheet.cell(8, 1, "Task Trigger")
-        hardware_worksheet.cell(8, 3, "# Start trigger type")
-        hardware_worksheet.cell(
-            8,
-            3,
-            "Task Triggers: 0 - Internal, 1 - PFI0 with external trigger, 2 - PFI0 with Analog Output "
-            "trigger.  Only used for NI hardware.  This row can be deleted if NI is not used.",
-        )
-        hardware_worksheet.cell(9, 1, "Task Trigger Output Channel")
-        hardware_worksheet.cell(
-            9, 3, "# Physical device and channel that generates a trigger signal"
-        )
-        hardware_worksheet.cell(
-            9,
-            4,
-            "Only used if Task Triggers is 2.  Only used for NI hardware.  "
-            "This row can be deleted if it is not used.",
-        )
         # Fill out values
         hardware_type = self.hardware_type
         hardware_worksheet.cell(1, 2, str(hardware_type.value))

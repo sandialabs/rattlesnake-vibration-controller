@@ -41,7 +41,11 @@ from rattlesnake.utilities import (
     load_csv_matrix,
     save_csv_matrix,
     trac,
+    VerboseMessageQueue,
+    GlobalCommands,
 )
+
+TASK_NAME = "UI"
 
 
 class HardwareAssistModules(Enum):
@@ -189,6 +193,58 @@ def blended_scatter_plot(xy, widget=None, curve_list=None, names=None, symbol="o
         return curve_list
     else:
         raise ValueError("Either Widget or list of curves must be specified")
+
+
+class UpdaterSignals(QtCore.QObject):
+    """Defines the signals that will be sent from the GUI Updater to the GUI
+
+    Supported signals are:
+
+    finished
+        empty
+
+    update
+        `tuple` (widget_id,data)
+    """
+
+    finished = QtCore.Signal()
+    update = QtCore.Signal(tuple)
+
+
+class Updater(QtCore.QRunnable):
+    """Updater thread to collect results from the subsystems and reflect the
+    changes in the GUI
+    """
+
+    def __init__(self, update_queue):
+        """
+        Initializes the updater with the queue and signals that will be emitted
+        when the queue has data in it.
+
+        Parameters
+        ----------
+        update_queue : mp.queues.Queue
+            Queue from which events will be captured.
+
+        """
+        super(Updater, self).__init__()
+        self.update_queue = update_queue
+        self.signals = UpdaterSignals()
+        self.verbose_queue = isinstance(self.update_queue, VerboseMessageQueue)
+
+    @QtCore.Slot()
+    def run(self):
+        """Continually capture update events from the queue"""
+        while True:
+            if self.verbose_queue:
+                queue_data = self.update_queue.get(TASK_NAME)
+            else:
+                queue_data = self.update_queue.get()
+            if queue_data[0] == GlobalCommands.QUIT:
+                break
+            self.signals.update.emit(queue_data)
+        self.signals.finished.emit()
+        time.sleep(1)
 
 
 class PlotWindow(QtWidgets.QDialog):
@@ -449,6 +505,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
 
         """
         super().__init__(parent)
+        transformation_matrices_ui_path = os.path.join(
+            DIRECTORY, "user_interface" "ui_files", "transformation_matrices.ui"
+        )
         uic.loadUi(transformation_matrices_ui_path, self)
         self.setWindowTitle("Transformation Matrix Definition")
 
@@ -981,7 +1040,7 @@ def get_table_strings(tablewidget: QtWidgets.QTableWidget):
 class ChannelMonitor(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
-    def __init__(self, parent, daq_settings):
+    def __init__(self, parent, hardware_metadata):
         """
         Creates a window showing CPSD matrix information for a single channel.
 
@@ -992,7 +1051,7 @@ class ChannelMonitor(QtWidgets.QDialog):
         """
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowFlags(self.windowFlags() & Qt.Tool)
-        self.channels = daq_settings.channel_list
+        self.channels = hardware_metadata.channel_list
         # Set up the window
         self.graphics_layout_widget = pyqtgraph.GraphicsLayoutWidget(self)
         self.push_button = QtWidgets.QPushButton("Clear Alerts", self)
@@ -1020,7 +1079,9 @@ class ChannelMonitor(QtWidgets.QDialog):
         self.level_bars = None
         self.history_last_update = None
         self.history_hold_frames = int(
-            np.ceil(10 * daq_settings.sample_rate / daq_settings.samples_per_read)
+            np.ceil(
+                10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read
+            )
         )
         self.aborted_channels = None
         # Set up defaults for the plot
@@ -1054,11 +1115,13 @@ class ChannelMonitor(QtWidgets.QDialog):
         self.channels_per_row_selector.valueChanged.connect(self.build_plot)
         self.push_button.clicked.connect(self.clear_alerts)
 
-    def update_channel_list(self, daq_settings):
+    def update_channel_list(self, hardware_metadata):
         """Updates the channel list in the test"""
-        self.channels = daq_settings.channel_list
+        self.channels = hardware_metadata.channel_list
         self.history_hold_frames = int(
-            np.ceil(10 * daq_settings.sample_rate / daq_settings.samples_per_read)
+            np.ceil(
+                10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read
+            )
         )
         self.build_plot()
 
@@ -1731,14 +1794,121 @@ class IPAddressManager(QtWidgets.QDialog):
         return self.ip_addresses
 
 
+class EditableCombobox(QtWidgets.QComboBox):
+    def __init__(self, texts=[], value=None, parent=None):
+        super().__init__(parent)
+
+        if "" not in texts:
+            texts.insert(0, "")
+
+        value = str(value) if value is not None else ""
+        if value not in texts:
+            texts.insert(0, value)
+
+        self.setItems(texts)
+        self.setCurrentText(value)
+
+    def setItems(self, texts: list[str]):
+        if "" not in texts:
+            texts.insert(0, "")
+
+        super().clear()
+        super().addItems(texts)
+
+    def setCurrentText(self, value: str):
+        value = str(value) if value is not None else ""
+
+        super().blockSignals(True)
+        super().setCurrentText(value)
+        super().blockSignals(False)
+
+    def blockSignals(self, block: bool):
+        return super().blockSignals(block)
+
+
+class EditableSpinBox(QtWidgets.QSpinBox):
+    stringValueChanged = QtCore.Signal(str)
+
+    def __init__(self, parent=None, text=""):
+        super().__init__(parent)
+
+        # Initialize attributes
+        self.pause_signals = False
+        self.int_value = 0
+        self.str_value = ""
+
+        # If text is number, assign to number
+        text = str(text) if text is not None else ""
+        self.valueFromText(text)
+
+        self.setRange(-1000000, 1000000)
+        self.setValue(self.str_value)
+
+    def valueFromText(self, text):
+        """Convert text to a value."""
+
+        self.str_value = str(text)
+        # Try to convert text to digit, if so check if its in range
+        try:
+            self.int_value = int(self.str_value)
+            min_value = self.minimum()
+            max_value = self.maximum()
+            # If out of range, store the max/min range to int_value
+            if self.int_value > max_value:
+                self.int_value = max_value
+            elif self.int_value < min_value:
+                self.int_value = min_value
+        # If text wasnt an integer, keep previous value
+        except ValueError:
+            pass
+
+        if not self.pause_signals:
+            self.stringValueChanged.emit(self.str_value)
+
+        return self.int_value
+
+    def textFromValue(self, value):
+        """Convert a value to text."""
+        if self.int_value != value:
+            self.int_value = value
+            self.str_value = str(value)
+
+        if not self.pause_signals:
+            self.stringValueChanged.emit(self.str_value)
+
+        return self.str_value
+
+    def setValue(self, text):
+        text = str(text) if text is not None else ""
+        self.str_value = text
+
+        prev_pause_state = self.pause_signals
+        self.blockSignals(True)
+        value = self.valueFromText(text)
+        self.blockSignals(prev_pause_state)
+
+        return super().setValue(value)
+
+    def validate(self, text, pos):
+        """Allow letters and numbers in the input."""
+        return QtGui.QValidator.Acceptable, text, pos
+
+    def blockSignals(self, state: bool):
+        """Blocks or enables signals"""
+        self.pause_signals = state
+        return super().blockSignals(state)
+
+
 # endregion
 
 
 # region Profile
-class ProfileTimer(QTimer):
+class ProfileTimer(QtCore.QTimer):
     """A timer class that allows storage of controller instruction information"""
 
-    def __init__(self, environment: str, operation: str, data: str):
+    def __init__(
+        self, timestamp: float, environment_name: str, command: str, data: str
+    ):
         """
         A timer class that allows storage of controller instruction information
 
@@ -1759,8 +1929,9 @@ class ProfileTimer(QTimer):
 
         """
         super().__init__()
-        self.environment = environment
-        self.operation = operation
+        self.timestamp = timestamp
+        self.environment_name = environment_name
+        self.command = command
         self.data = data
 
 
@@ -2185,219 +2356,6 @@ class EventWatcher(QtCore.QObject):
         except Exception:
             tb = traceback.format_exc()
             self.error.emit(tb)
-
-
-# endregion
-
-# region Deteriorated
-
-# # Define paths to the User Interface UI Files
-# this_path = os.path.split(__file__)[0]
-# environment_definition_ui_paths = {}
-# environment_prediction_ui_paths = {}
-# environment_run_ui_paths = {}
-# # This is true if running from an executable and the UI is embedded in the executable
-# if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-#     directory = sys._MEIPASS  # pylint: disable=protected-access
-# else:
-#     directory = this_path
-
-# # Base Controller UI
-# directory = os.path.join(directory, "ui_files")
-# ui_path = os.path.join(directory, "combined_environments_controller.ui")
-# environment_select_ui_path = os.path.join(directory, "environment_selector.ui")
-# control_select_ui_path = os.path.join(directory, "control_select.ui")
-# # Random Vibration Environment
-# environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(
-#     directory, "random_vibration_definition.ui"
-# )
-# environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(
-#     directory, "random_vibration_prediction.ui"
-# )
-# environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(
-#     directory, "random_vibration_run.ui"
-# )
-# system_identification_ui_path = os.path.join(directory, "system_identification.ui")
-# transformation_matrices_ui_path = os.path.join(directory, "transformation_matrices.ui")
-# # Time Environment
-# environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(
-#     directory, "time_definition.ui"
-# )
-# environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_run.ui")
-# # Transient Environment
-# environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-#     directory, "transient_definition.ui"
-# )
-# environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-#     directory, "transient_prediction.ui"
-# )
-# environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-#     directory, "transient_run.ui"
-# )
-# # Sine Environment
-# environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(
-#     directory, "sine_definition.ui"
-# )
-# environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(
-#     directory, "sine_prediction.ui"
-# )
-# environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.ui")
-# sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
-# filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
-# # Modal Environments
-# environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(
-#     directory, "modal_definition.ui"
-# )
-# environment_run_ui_paths[EnvironmentType.MODAL] = os.path.join(directory, "modal_run.ui")
-# modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
-
-
-# def get_table_bools(tablewidget: QtWidgets.QTableWidget):
-#     """Collect a table of booleans from a QTableWidget full of QCheckBoxes
-
-#     Parameters
-#     ----------
-#     tablewidget : QtWidgets.QTableWidget
-#         A table widget to pull the strings from
-
-#     Returns
-#     -------
-#     bool_array : list[list[bool]]
-#         A nested list of booleans from the table widgets
-
-#     """
-#     bool_array = []
-#     for row_idx in range(tablewidget.rowCount()):
-#         bool_array.append([])
-#         for col_idx in range(tablewidget.columnCount()):
-#             value = tablewidget.cellWidget(row_idx, col_idx).isChecked()
-#             bool_array[-1].append(value)
-#     return bool_array
-
-
-# def load_time_history(signal_path, sample_rate):
-#     """Loads a time history from a given file
-
-#     The signal can be loaded from numpy files (.npz, .npy) or matlab files (.mat).
-#     For .mat and .npz files, the time data can be included in the file in the
-#     't' field, or it can be excluded and the sample_rate input argument will
-#     be used.  If time data is specified, it will be linearly interpolated to the
-#     sample rate of the controller.
-#     For these file types, the signal should be stored in the 'signal'
-#     field.  For .npy files, only one array is stored, so it is treated as the
-#     signal, and the sample_rate input argument is used to construct the time
-#     data.
-
-#     Parameters
-#     ----------
-#     signal_path : str:
-#         Path to the file from which to load the time history
-
-#     sample_rate : str:
-#         The sample rate of the loaded signal.
-
-#     Returns
-#     -------
-#     signal : np.ndarray:
-#         A signal loaded from the file
-
-#     """
-#     _, extension = os.path.splitext(signal_path)
-#     if extension.lower() == ".npy":
-#         signal = np.load(signal_path)
-#     elif extension.lower() == ".npz":
-#         data = np.load(signal_path)
-#         signal = data["signal"]
-#         try:
-#             times = data["t"].squeeze()
-#             fn = interp1d(times, signal)
-#             abscissa = np.arange(
-#                 0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
-#             )
-#             abscissa = abscissa[abscissa <= max(times)]
-#             signal = fn(abscissa)
-#         except KeyError:
-#             pass
-#     elif extension.lower() == ".mat":
-#         data = loadmat(signal_path)
-#         signal = data["signal"]
-#         try:
-#             times = data["t"].squeeze()
-#             fn = interp1d(times, signal)
-#             abscissa = np.arange(
-#                 0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
-#             )
-#             abscissa = abscissa[abscissa <= max(times)]
-#             signal = fn(abscissa)
-#         except KeyError:
-#             pass
-#     else:
-#         raise ValueError(
-#             f"Could Not Determine the file type from the filename {signal_path}: {extension}"
-#         )
-#     if signal.shape[-1] % 2 == 1:
-#         signal = signal[..., :-1]
-#     return signal
-
-
-# class ControlSelect(QtWidgets.QDialog):
-#     """Environment selector dialog box to select the control type for the test"""
-
-#     def __init__(self, parent=None):
-#         """
-#         Selects the environment type that gets used for the test.
-
-#         This function reads from the environment control types to populate the
-#         radiobuttons on the dialog.
-
-#         Parameters
-#         ----------
-#         parent : QWidget, optional
-#             Parent of the dialog box. The default is None.
-
-#         """
-#         super(QtWidgets.QDialog, self).__init__(parent)
-#         uic.loadUi(control_select_ui_path, self)
-#         self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
-
-#         self.buttonBox.accepted.connect(self.accept)
-#         self.buttonBox.rejected.connect(self.reject)
-#         self.control_select_buttongroup = QtWidgets.QButtonGroup()
-
-#         # Go through and create radiobuttons for each control type
-#         control_types_sorted = sorted(
-#             [(control_type.value, control_type) for control_type in ControlTypes]
-#         )
-
-#         for value, control_type in control_types_sorted[1:] + control_types_sorted[:1]:
-#             radiobutton = QtWidgets.QRadioButton(environment_long_names[control_type])
-#             self.control_select_buttongroup.addButton(radiobutton, value)
-#             if value == ControlTypes.RANDOM.value:
-#                 radiobutton.setChecked(True)
-#             self.environment_radiobutton_layout.addWidget(radiobutton)
-
-#     @staticmethod
-#     def select_control(parent=None):
-#         """Create the dialog box and parse the output
-
-#         Parameters
-#         ----------
-#         parent : QWidget
-#             Parent of the dialog box (Default value = None)
-
-#         Returns
-#         -------
-#         button_id : int
-#             The index of the button that was pressed
-#         result : bool
-#             True if dialog was accepted, otherwise false if cancelled.
-#         """
-#         dialog = ControlSelect(parent)
-#         result = dialog.exec_() == QtWidgets.QDialog.Accepted
-#         index = dialog.control_select_buttongroup.checkedId()
-#         button_id = ControlTypes(index)
-#         # print(button_id)
-#         return (button_id, result)
 
 
 # endregion
