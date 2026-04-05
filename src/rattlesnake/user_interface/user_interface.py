@@ -1538,7 +1538,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.environment_uis = ordered_dict
         header_item.setText(new_name)
 
-    def initialize_environment_parameters(self):
+    def initialize_environments(self):
         """Initializes the environment parameters
 
         This function initializes the environment-specific parameters for each
