@@ -34,7 +34,11 @@ import numpy as np
 from typing import List
 import openpyxl
 
-from rattlesnake.process.abstract_sysid_data_analysis import SysIDDataAnalysisCommands
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdDataAnalysisCommands,
+    SysIdDataAnalysisUICommands,
+    SysIdMetadata,
+)
 from rattlesnake.environment.abstract_environment import (
     EnvironmentMetadata,
     Environment,
@@ -66,6 +70,7 @@ from rattlesnake.process.spectral_processing import (
 )
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 
 # region Commands
@@ -157,6 +162,27 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
     def reference_transformation_matrix(self):
         """Gets the excitation transformation matrix"""
 
+    # endregion
+
+    # region Validation
+    @abstractmethod
+    def validate(self, hardware_metadata):
+        return super().validate(hardware_metadata)
+
+    def __eq__(self, other):
+        try:
+            return np.all(
+                [
+                    np.all(value == other.__dict__[field])
+                    for field, value in self.__dict__.items()
+                ]
+            )
+        except (AttributeError, KeyError):
+            return False
+
+    # endregion
+
+    # region Loading
     @abstractmethod
     def store_to_netcdf(
         self, netcdf_group_handle: nc4._netCDF4.Group
@@ -181,17 +207,6 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
 
         """
         self.sysid_metadata.store_to_netcdf(netcdf_group_handle)
-
-    def __eq__(self, other):
-        try:
-            return np.all(
-                [
-                    np.all(value == other.__dict__[field])
-                    for field, value in self.__dict__.items()
-                ]
-            )
-        except (AttributeError, KeyError):
-            return False
 
     @classmethod
     @abstractmethod
@@ -284,8 +299,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
 
         """
 
+    # endregion
 
-# region: Environment
+
+# region Environment
 class SysIdEnvironment(Environment):
     """Abstract Environment class defining the interface with the controller
 
