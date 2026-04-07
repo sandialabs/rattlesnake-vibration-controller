@@ -286,7 +286,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
 
 
 # region: Environment
-class AbstractSysIdEnvironment(Environment):
+class SysIdEnvironment(Environment):
     """Abstract Environment class defining the interface with the controller
 
     This class is used to define the operation of an environment within the
