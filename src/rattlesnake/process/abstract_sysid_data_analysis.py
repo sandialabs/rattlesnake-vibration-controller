@@ -500,10 +500,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.sysid_condition = None
         self.startup = True
 
-    # endregion
-
-    # region State Sync
-    def initialize_sysid_parameters(self, data):
+    def initialize_sysid_parameters(self, data: SysIdMetadata):
         """Stores parameters describing the system identification into the object
 
         Parameters
@@ -513,9 +510,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         """
         self.parameters = data
 
-    # endregion
-
-    # region Commands
     def load_sysid_noise(self, spectral_data):
         """Loads noise data from a previous system identification
 
@@ -611,9 +605,13 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         if auto_shutdown and self.parameters.sysid_noise_averages == self.frames:
             self.environment_command_queue.put(
                 self.process_name,
-                (SysIdDataAnalysisCommands.START_SHUTDOWN_AND_RUN_SYSID, None),
+                (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
             )
             self.stop_sysid(None)
+            self.environment_command_queue.put(
+                self.process_name,
+                (SysIdDataAnalysisCommands.SYSTEM_ID_NOISE_COMPLETE, None),
+            )
         else:
             self.command_queue.put(
                 self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown)
@@ -639,7 +637,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 (
                     self.environment_name,
                     (
-                        SysIdDataAnalysisUICommands.SYS_ID_UPDATE,
+                        SysIdDataAnalysisUICommands.SYSID_UPDATE,
                         (
                             self.frames,
                             self.parameters.sysid_averages,
@@ -656,7 +654,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         if auto_shutdown and self.parameters.sysid_averages == self.frames:
             self.environment_command_queue.put(
                 self.process_name,
-                (SysIdDataAnalysisCommands.START_SHUTDOWN, (False, True)),
+                (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
             )
             self.stop_sysid(None)
             self.environment_command_queue.put(
@@ -706,10 +704,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
-    # endregion
 
-
-# region Process
 def sysid_data_analysis_process(
     environment_name: str,
     command_queue: VerboseMessageQueue,
@@ -758,6 +753,3 @@ def sysid_data_analysis_process(
     )
 
     data_analysis_instance.run()
-
-
-# endregion

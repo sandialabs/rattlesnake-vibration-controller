@@ -273,12 +273,22 @@ def build_modal_environment():
     return rattlesnake
 
 
+def build_sine_environment():
+    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    hardware_metadata = make_sdynpy_system_metadata()
+
+    rattlesnake.initialize_hardware(hardware_metadata)
+
+    return rattlesnake
+
+
 # endregion
 
 # region Startup
 if __name__ == "__main__":
     # rattlesnake = build_time_environment()
-    rattlesnake = build_modal_environment()
+    # rattlesnake = build_modal_environment()
+    rattlesnake = build_sine_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

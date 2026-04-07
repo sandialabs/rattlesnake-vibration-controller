@@ -555,6 +555,34 @@ def load_python_module(module_path):
     return module
 
 
+def read_transformation_matrix_from_worksheet(
+    worksheet, start_row, num_rows, start_col
+):
+    first_cell = worksheet.cell(start_row, start_col).value
+    if first_cell is None or (
+        isinstance(first_cell, str) and first_cell.strip().lower() == "none"
+    ):
+        return None
+
+    matrix = []
+    for i in range(num_rows):
+        # Read the entire row until the first blank cell
+        row = []
+        col_idx = start_col
+        while True:
+            value = worksheet.cell(start_row + i, col_idx).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            row.append(float(value))
+            col_idx += 1
+
+        matrix.append(row)
+
+    if not matrix:
+        return None
+    return np.array(matrix, dtype=float)
+
+
 # endregion
 
 

@@ -1,11 +1,9 @@
+import os
+
 import pyqtgraph as pqtg
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt, QLocale  # pylint: disable=no-name-in-module
 
-from rattlesnake.user_interface.ui_utilities import (
-    sine_sweep_table_ui_path,
-    filter_explorer_ui_path,
-)
 from rattlesnake.user_interface.ui_utilities import VaryingNumberOfLinePlot
 from rattlesnake.environment.sine_sys_id_utilities import (
     load_specification,
@@ -13,7 +11,7 @@ from rattlesnake.environment.sine_sys_id_utilities import (
     digital_tracking_filter_generator,
     vold_kalman_filter_generator,
 )
-from rattlesnake.utilities import wrap
+from rattlesnake.utilities import DIRECTORY, wrap
 import numpy as np
 
 
@@ -83,6 +81,9 @@ class SineSweepTable:
         self.control_names = control_names
         self.data_acquisition_parameters = data_acquisition_parameters
         self.widget = QtWidgets.QWidget()
+        sine_sweep_table_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "sine_sweep_table.ui"
+        )
         uic.loadUi(sine_sweep_table_ui_path, self.widget)
         self.index = self.parent_tabwidget.count() - 1
         self.parent_tabwidget.insertTab(self.index, self.widget, f"Sine {self.index+1}")
@@ -97,7 +98,9 @@ class SineSweepTable:
         self.widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
         self.widget.load_breakpoints_button.clicked.connect(self.load_specification)
         self.widget.name_editor.editingFinished.connect(self.update_name)
-        self.widget.start_time_selector.valueChanged.connect(self.update_specification_function)
+        self.widget.start_time_selector.valueChanged.connect(
+            self.update_specification_function
+        )
         self.widget.remove_tone_button.clicked.connect(self.remove_tone)
 
     def add_breakpoint(self):
@@ -173,12 +176,16 @@ class SineSweepTable:
                     item = self.widget.warning_table.item(selected_row, 1 + k + j * 4)
                     if item is None:
                         item = QtWidgets.QTableWidgetItem()
-                        self.widget.warning_table.setItem(selected_row, 1 + k + j * 4, item)
+                        self.widget.warning_table.setItem(
+                            selected_row, 1 + k + j * 4, item
+                        )
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                     item = self.widget.abort_table.item(selected_row, 1 + k + j * 4)
                     if item is None:
                         item = QtWidgets.QTableWidgetItem()
-                        self.widget.abort_table.setItem(selected_row, 1 + k + j * 4, item)
+                        self.widget.abort_table.setItem(
+                            selected_row, 1 + k + j * 4, item
+                        )
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 spinbox = AdaptiveNoWheelSpinBox()
                 spinbox.setRange(0, 1000000)
@@ -228,15 +235,21 @@ class SineSweepTable:
         if last_row:
             new_last_row_index = self.widget.breakpoint_table.rowCount() - 1
             for column in [1, 2]:
-                widget = self.widget.breakpoint_table.cellWidget(new_last_row_index, column)
+                widget = self.widget.breakpoint_table.cellWidget(
+                    new_last_row_index, column
+                )
                 if widget:
                     # Remove the widget from the cell
-                    self.widget.breakpoint_table.removeCellWidget(new_last_row_index, column)
+                    self.widget.breakpoint_table.removeCellWidget(
+                        new_last_row_index, column
+                    )
                     widget.deleteLater()
                 item = self.widget.breakpoint_table.item(new_last_row_index, column)
                 if item is None:
                     item = QtWidgets.QTableWidgetItem()
-                    self.widget.breakpoint_table.setItem(new_last_row_index, column, item)
+                    self.widget.breakpoint_table.setItem(
+                        new_last_row_index, column, item
+                    )
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             for column in np.arange(2, self.widget.warning_table.columnCount(), 2):
                 for table in [self.widget.warning_table, self.widget.abort_table]:
@@ -265,7 +278,9 @@ class SineSweepTable:
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
         self.update_specification_function()
 
-    def load_specification(self, clicked, filename=None):  # pylint: disable=unused-argument
+    def load_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         """Loads a breakpoint table using a dialog or the specified filename
 
         Parameters
@@ -513,24 +528,32 @@ class SineSweepTable:
                         if warning_amplitudes is None:
                             spinbox.setValue(0)
                         else:
-                            val = warning_amplitudes[np.unravel_index(k, (2, 2)) + (j, row)]
+                            val = warning_amplitudes[
+                                np.unravel_index(k, (2, 2)) + (j, row)
+                            ]
                             spinbox.setValue(0 if np.isnan(val) else val)
                         spinbox.setKeyboardTracking(False)
                         spinbox.setSpecialValueText("Disabled")
                         spinbox.valueChanged.connect(self.update_specification_function)
-                        self.widget.warning_table.setCellWidget(row, 1 + k + j * 4, spinbox)
+                        self.widget.warning_table.setCellWidget(
+                            row, 1 + k + j * 4, spinbox
+                        )
                         spinbox = AdaptiveNoWheelSpinBox()
                         spinbox.setRange(0, 1000000)
                         spinbox.setSingleStep(1)
                         if abort_amplitudes is None:
                             spinbox.setValue(0)
                         else:
-                            val = abort_amplitudes[np.unravel_index(k, (2, 2)) + (j, row)]
+                            val = abort_amplitudes[
+                                np.unravel_index(k, (2, 2)) + (j, row)
+                            ]
                             spinbox.setValue(0 if np.isnan(val) else val)
                         spinbox.setKeyboardTracking(False)
                         spinbox.setSpecialValueText("Disabled")
                         spinbox.valueChanged.connect(self.update_specification_function)
-                        self.widget.abort_table.setCellWidget(row, 1 + k + j * 4, spinbox)
+                        self.widget.abort_table.setCellWidget(
+                            row, 1 + k + j * 4, spinbox
+                        )
         if sine_name is not None:
             self.widget.name_editor.setText(sine_name)
             self.update_name()
@@ -555,18 +578,24 @@ class SineSweepTable:
             self.widget.breakpoint_table.rowCount(),
         )
         for row, spec_row in enumerate(spec.breakpoint_table):
-            spec_row["frequency"] = self.widget.breakpoint_table.cellWidget(row, 0).value()
+            spec_row["frequency"] = self.widget.breakpoint_table.cellWidget(
+                row, 0
+            ).value()
             if row < len(spec.breakpoint_table) - 1:
                 spec_row["sweep_type"] = self.widget.breakpoint_table.cellWidget(
                     row, 1
                 ).currentIndex()
-                spec_row["sweep_rate"] = self.widget.breakpoint_table.cellWidget(row, 2).value()
+                spec_row["sweep_rate"] = self.widget.breakpoint_table.cellWidget(
+                    row, 2
+                ).value()
             for i in range(num_control):
                 spec_row["amplitude"][i] = self.widget.breakpoint_table.cellWidget(
                     row, 3 + 2 * i
                 ).value()
                 spec_row["phase"][i] = (
-                    self.widget.breakpoint_table.cellWidget(row, 4 + 2 * i).value() * np.pi / 180
+                    self.widget.breakpoint_table.cellWidget(row, 4 + 2 * i).value()
+                    * np.pi
+                    / 180
                 )  # Convert degrees to radians for all calculations
                 for k in range(4):
                     ind = np.unravel_index(k, (2, 2))
@@ -576,9 +605,13 @@ class SineSweepTable:
                         spec_row["warning"][ind + (i,)] = np.nan
                         spec_row["abort"][ind + (i,)] = np.nan
                     else:
-                        val = self.widget.warning_table.cellWidget(row, 1 + k + i * 4).value()
+                        val = self.widget.warning_table.cellWidget(
+                            row, 1 + k + i * 4
+                        ).value()
                         spec_row["warning"][ind + (i,)] = np.nan if val == 0 else val
-                        val = self.widget.abort_table.cellWidget(row, 1 + k + i * 4).value()
+                        val = self.widget.abort_table.cellWidget(
+                            row, 1 + k + i * 4
+                        ).value()
                         spec_row["abort"][ind + (i,)] = np.nan if val == 0 else val
         return spec
 
@@ -711,6 +744,9 @@ class FilterExplorer(QtWidgets.QDialog):
         acquire_size,
     ):
         super().__init__(parent)
+        filter_explorer_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "sine_filter_explorer.ui"
+        )
         uic.loadUi(filter_explorer_ui_path, self)
 
         for channel_name in channel_names:
@@ -726,7 +762,9 @@ class FilterExplorer(QtWidgets.QDialog):
         self.order_time_history_plotter = VaryingNumberOfLinePlot(
             self.order_time_history_plot.getPlotItem()
         )
-        self.order_phase_plotter = VaryingNumberOfLinePlot(self.order_phase_plot.getPlotItem())
+        self.order_phase_plotter = VaryingNumberOfLinePlot(
+            self.order_phase_plot.getPlotItem()
+        )
         self.order_amplitude_plotter = VaryingNumberOfLinePlot(
             self.order_amplitude_plot.getPlotItem()
         )
@@ -772,18 +810,32 @@ class FilterExplorer(QtWidgets.QDialog):
         self.reject_button.clicked.connect(self.reject)
         self.order_selector.itemSelectionChanged.connect(self.update_plots)
         self.channel_selector.currentIndexChanged.connect(self.create_and_plot_signals)
-        self.filter_type_selector.currentIndexChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_order_selector.currentIndexChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_bandwidth_selector.valueChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_block_size_selector.valueChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_block_overlap_selector.valueChanged.connect(self.remove_filter_data_and_replot)
+        self.filter_type_selector.currentIndexChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_order_selector.currentIndexChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_bandwidth_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_block_size_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_block_overlap_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
         self.tracking_filter_cutoff_selector.valueChanged.connect(
             self.remove_filter_data_and_replot
         )
-        self.tracking_filter_order_selector.valueChanged.connect(self.remove_filter_data_and_replot)
+        self.tracking_filter_order_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
         self.noise_selector.valueChanged.connect(self.remove_filter_data_and_replot)
         self.compute_button.clicked.connect(self.compute_filter)
-        self.filter_type_selector.currentIndexChanged.connect(self.change_filter_setting_visibility)
+        self.filter_type_selector.currentIndexChanged.connect(
+            self.change_filter_setting_visibility
+        )
 
     @property
     def ramp_samples(self):
@@ -854,7 +906,8 @@ class FilterExplorer(QtWidgets.QDialog):
             generator = [
                 digital_tracking_filter_generator(
                     dt=1 / self.sample_rate,
-                    cutoff_frequency_ratio=self.tracking_filter_cutoff_selector.value() / 100,
+                    cutoff_frequency_ratio=self.tracking_filter_cutoff_selector.value()
+                    / 100,
                     filter_order=self.tracking_filter_order_selector.value(),
                 )
                 for tone in self.order_signals
@@ -890,7 +943,9 @@ class FilterExplorer(QtWidgets.QDialog):
             if self.filter_type_selector.currentIndex() == 0:
                 amps = []
                 phss = []
-                for arg, freq, gen in zip(block_arguments, block_frequencies, generator):
+                for arg, freq, gen in zip(
+                    block_arguments, block_frequencies, generator
+                ):
                     amp, phs = gen.send((block, freq, arg))
                     amps.append(amp)
                     phss.append(phs)
@@ -931,7 +986,8 @@ class FilterExplorer(QtWidgets.QDialog):
 
         try:
             selected_index = [
-                idx.row() for idx in self.order_selector.selectionModel().selectedIndexes()
+                idx.row()
+                for idx in self.order_selector.selectionModel().selectedIndexes()
             ][0]
         except IndexError:
             selected_index = 0
@@ -958,32 +1014,46 @@ class FilterExplorer(QtWidgets.QDialog):
                 ):
                     end_index = start_index + block_signal.shape[-1]
                     block_abscissa = abscissa[start_index:end_index]
-                    block_frequency = self.order_frequencies[selected_index, start_index:end_index]
+                    block_frequency = self.order_frequencies[
+                        selected_index, start_index:end_index
+                    ]
                     abscissa_plot_vals.append(block_abscissa)
                     full_signal_plot_vals.append(block_signal)
                     signal_plot_vals.append(block_order_signal[selected_index])
                     frequency_plot_vals.append(block_frequency)
                     amplitude_plot_vals.append(block_order_amplitude[selected_index])
-                    phase_plot_vals.append(block_order_phase[selected_index] * 180 / np.pi)
+                    phase_plot_vals.append(
+                        block_order_phase[selected_index] * 180 / np.pi
+                    )
                     start_index = end_index
             else:
                 abscissa_plot_vals.append(abscissa)
-                full_signal_plot_vals.append(np.concatenate(self.reconstructed_signal, axis=-1))
+                full_signal_plot_vals.append(
+                    np.concatenate(self.reconstructed_signal, axis=-1)
+                )
                 signal_plot_vals.append(
-                    np.concatenate(self.reconstructed_order_signals, axis=-1)[selected_index]
+                    np.concatenate(self.reconstructed_order_signals, axis=-1)[
+                        selected_index
+                    ]
                 )
                 # print(f"{[v.shape for v in self.reconstructed_order_amplitudes]}")
                 amplitude_plot_vals.append(
-                    np.concatenate(self.reconstructed_order_amplitudes, axis=-1)[selected_index]
+                    np.concatenate(self.reconstructed_order_amplitudes, axis=-1)[
+                        selected_index
+                    ]
                 )
                 phase_plot_vals.append(
-                    np.concatenate(self.reconstructed_order_phases, axis=-1)[selected_index]
+                    np.concatenate(self.reconstructed_order_phases, axis=-1)[
+                        selected_index
+                    ]
                     * 180
                     / np.pi
                 )
                 frequency_plot_vals.append(self.order_frequencies[selected_index])
 
-        self.full_time_history_plotter.set_data(abscissa_plot_vals, full_signal_plot_vals)
+        self.full_time_history_plotter.set_data(
+            abscissa_plot_vals, full_signal_plot_vals
+        )
         self.order_time_history_plotter.set_data(abscissa_plot_vals, signal_plot_vals)
         self.order_amplitude_plotter.set_data(frequency_plot_vals, amplitude_plot_vals)
         self.order_phase_plotter.set_data(frequency_plot_vals, phase_plot_vals)
@@ -1040,7 +1110,9 @@ class PlotSineWindow(QtWidgets.QDialog):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
-        amp_plot_item.plot(spec_frequency, spec_amplitude, pen={"color": "b", "width": 1})
+        amp_plot_item.plot(
+            spec_frequency, spec_amplitude, pen={"color": "b", "width": 1}
+        )
         phs_plot_item.plot(spec_frequency, spec_phase, pen={"color": "b", "width": 1})
         amp_plot_item.plot(
             warn_freq,
@@ -1067,7 +1139,10 @@ class PlotSineWindow(QtWidgets.QDialog):
                 [fh[tone_index] for fh in ui.achieved_excitation_frequencies]
             )
             achieved_amplitude = np.concatenate(
-                [ah[tone_index, channel_index] for ah in ui.achieved_response_amplitudes]
+                [
+                    ah[tone_index, channel_index]
+                    for ah in ui.achieved_response_amplitudes
+                ]
             )
             achieved_phase = np.concatenate(
                 [ph[tone_index, channel_index] for ph in ui.achieved_response_phases]
@@ -1099,7 +1174,10 @@ class PlotSineWindow(QtWidgets.QDialog):
                 ]
             )
             achieved_phase = np.concatenate(
-                [ph[self.tone_index, self.channel_index] for ph in self.ui.achieved_response_phases]
+                [
+                    ph[self.tone_index, self.channel_index]
+                    for ph in self.ui.achieved_response_phases
+                ]
             )
         else:
             achieved_frequency = np.array([0, 1])

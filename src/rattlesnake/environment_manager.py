@@ -16,14 +16,13 @@ from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentMetadata,
 )
-from rattlesnake.environment.environment_registry import ENVIRONMENT_PROCESS
+from rattlesnake.environment.environment_registry import (
+    ENVIRONMENT_PROCESS,
+    SYS_ID_ENVIRONMENTS,
+)
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 
-# from rattlesnake.environment.environment_utilities import (
-#     EnvironmentType,
-#     SYS_ID_ENVIRONMENTS,
-# )
-# from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 
 TASK_NAME = "Environment Manager"
 CLOSE_TIMEOUT = 5
@@ -252,26 +251,26 @@ class EnvironmentManager:
             # Validate metadata
             metadata.validate(hardware_metadata)
 
-    # def validate_system_id_metadata(
-    #     self, sysid_metadata, hardware_metadata, environment_name
-    # ):
-    #     if not isinstance(sysid_metadata, SysIdMetadata):
-    #         raise RattlesnakeError(
-    #             "Rattlesnake.initialize_system_id was not given a SysIdMetadata object"
-    #         )
-    #     try:
-    #         queue_name = self.queue_names_dict[environment_name]
-    #     except KeyError:
-    #         raise RattlesnakeError(
-    #             f"No environments exist for {environment_name} instruction"
-    #         )
-    #     environment_type = self.environment_types[queue_name]
-    #     if environment_type not in SYS_ID_ENVIRONMENTS:
-    #         raise RattlesnakeError(
-    #             f"{environment_name} is a {environment_type} environment which does not require system identification"
-    #         )
+    def validate_system_id_metadata(
+        self, sysid_metadata, hardware_metadata, environment_name
+    ):
+        if not isinstance(sysid_metadata, SysIdMetadata):
+            raise RattlesnakeError(
+                "Rattlesnake.initialize_system_id was not given a SysIdMetadata object"
+            )
+        try:
+            queue_name = self.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(
+                f"No environments exist for {environment_name} instruction"
+            )
+        environment_type = self.environment_types[queue_name]
+        if environment_type not in SYS_ID_ENVIRONMENTS:
+            raise RattlesnakeError(
+                f"{environment_name} is a {environment_type} environment which does not require system identification"
+            )
 
-    #     return queue_name
+        return queue_name
 
     def validate_environment_instructions(self, instructions: EnvironmentInstructions):
         """Validate the instructions"""

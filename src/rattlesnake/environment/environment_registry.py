@@ -1,7 +1,6 @@
 from rattlesnake.environment.environment_utilities import EnvironmentType
 
 UNIMPLEMENTED_ENVIRONMENT = [
-    EnvironmentType.SINE,
     EnvironmentType.TRANSIENT,
     EnvironmentType.RANDOM,
 ]
@@ -10,6 +9,7 @@ ENVIRONMENT_COMMANDS = {}
 ENVIRONMENT_METADATA = {}
 ENVIRONMENT_CLASS = {}
 ENVIRONMENT_PROCESS = {}
+SYS_ID_ENVIRONMENTS = []
 
 for environment_type in EnvironmentType:
     if environment_type in UNIMPLEMENTED_ENVIRONMENT:
@@ -52,6 +52,7 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.SINE] = SineMetadata
             ENVIRONMENT_CLASS[EnvironmentType.SINE] = SineEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.SINE] = sine_process
+            SYS_ID_ENVIRONMENTS.append(EnvironmentType.SINE)
         case EnvironmentType.TRANSIENT:
             from rattlesnake.environment.transient_sys_id_environment import (
                 TransientCommands,
@@ -64,6 +65,7 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.TRANSIENT] = TransientMetadata
             ENVIRONMENT_CLASS[EnvironmentType.TRANSIENT] = TransientEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.TRANSIENT] = transient_process
+            SYS_ID_ENVIRONMENTS.append(EnvironmentType.TRANSIENT)
         case EnvironmentType.RANDOM:
             from rattlesnake.environment.random_vibration_sys_id_environment import (
                 RandomVibrationCommands,
@@ -76,3 +78,4 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_METADATA[EnvironmentType.RANDOM] = RandomVibrationMetadata
             ENVIRONMENT_CLASS[EnvironmentType.RANDOM] = RandomVibrationEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.RANDOM] = random_vibration_process
+            SYS_ID_ENVIRONMENTS.append(EnvironmentType.RANDOM)

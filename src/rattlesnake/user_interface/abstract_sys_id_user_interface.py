@@ -71,7 +71,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         # Add the page to the system id tabwidget
         self.system_id_widget = QtWidgets.QWidget()
         system_identification_ui_path = os.path.join(
-            DIRECTORY, "ui_files", "system_identification.ui"
+            DIRECTORY, "user_interface", "ui_files", "system_identification.ui"
         )
         uic.loadUi(system_identification_ui_path, self.system_id_widget)
         self.connect_sysid_callbacks()
