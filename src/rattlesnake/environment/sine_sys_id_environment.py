@@ -130,82 +130,6 @@ class SineUICommands(Enum):
 # endregion
 
 
-# region Queues
-class SineQueues:
-    """A container class for the queues that this environment will manage."""
-
-    def __init__(
-        self,
-        environment_name: str,
-        environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: mp.Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: mp.Queue,
-        data_out_queue: mp.Queue,
-        log_file_queue: VerboseMessageQueue,
-    ):
-        """A container class for the queues that sine vibration will manage.
-
-        The environment uses many queues to pass data between the various
-        pieces.  This class organizes those queues into one common namespace.
-
-        Parameters
-        ----------
-        environment_name : str
-            Name of the environment
-        environment_command_queue : VerboseMessageQueue
-            Queue that is read by the environment for environment commands
-        gui_update_queue : mp.queues.Queue
-            Queue where various subtasks put instructions for updating the
-            widgets in the user interface
-        controller_communication_queue : VerboseMessageQueue
-            Queue that is read by the controller for global controller commands
-        data_in_queue : mp.queues.Queue
-            Multiprocessing queue that connects the acquisition subtask to the
-            environment subtask.  Each environment will retrieve acquired data
-            from this queue.
-        data_out_queue : mp.queues.Queue
-            Multiprocessing queue that connects the output subtask to the
-            environment subtask.  Each environment will put data that it wants
-            the controller to generate in this queue.
-        log_file_queue : VerboseMessageQueue
-            Queue for putting logging messages that will be read by the logging
-            subtask and written to a file.
-        """
-        self.environment_command_queue = environment_command_queue
-        self.gui_update_queue = gui_update_queue
-        self.data_analysis_command_queue = VerboseMessageQueue(
-            log_file_queue,
-            mp.Queue(),
-            environment_name + " Data Analysis Command Queue",
-        )
-        self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue,
-            mp.Queue(),
-            environment_name + " Signal Generation Command Queue",
-        )
-        self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue,
-            mp.Queue(),
-            environment_name + " Spectral Computation Command Queue",
-        )
-        self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue,
-            mp.Queue(),
-            environment_name + " Data Collector Command Queue",
-        )
-        self.controller_communication_queue = controller_communication_queue
-        self.data_in_queue = data_in_queue
-        self.data_out_queue = data_out_queue
-        self.data_for_spectral_computation_queue = mp.Queue()
-        self.updated_spectral_quantities_queue = mp.Queue()
-        self.time_history_to_generate_queue = mp.Queue()
-        self.log_file_queue = log_file_queue
-
-
-# endregion
-
-
 class SineMetadata(SysIdEnvironmentMetadata):
     """Metadata describing the Sine environment"""
 
@@ -1137,6 +1061,82 @@ class SineInstructions(EnvironmentInstructions):
 
     def validate(self):
         return super().validate()
+
+
+# endregion
+
+
+# region Queues
+class SineQueues:
+    """A container class for the queues that this environment will manage."""
+
+    def __init__(
+        self,
+        environment_name: str,
+        environment_command_queue: VerboseMessageQueue,
+        gui_update_queue: mp.Queue,
+        controller_communication_queue: VerboseMessageQueue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
+        log_file_queue: VerboseMessageQueue,
+    ):
+        """A container class for the queues that sine vibration will manage.
+
+        The environment uses many queues to pass data between the various
+        pieces.  This class organizes those queues into one common namespace.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment
+        environment_command_queue : VerboseMessageQueue
+            Queue that is read by the environment for environment commands
+        gui_update_queue : mp.queues.Queue
+            Queue where various subtasks put instructions for updating the
+            widgets in the user interface
+        controller_communication_queue : VerboseMessageQueue
+            Queue that is read by the controller for global controller commands
+        data_in_queue : mp.queues.Queue
+            Multiprocessing queue that connects the acquisition subtask to the
+            environment subtask.  Each environment will retrieve acquired data
+            from this queue.
+        data_out_queue : mp.queues.Queue
+            Multiprocessing queue that connects the output subtask to the
+            environment subtask.  Each environment will put data that it wants
+            the controller to generate in this queue.
+        log_file_queue : VerboseMessageQueue
+            Queue for putting logging messages that will be read by the logging
+            subtask and written to a file.
+        """
+        self.environment_command_queue = environment_command_queue
+        self.gui_update_queue = gui_update_queue
+        self.data_analysis_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Data Analysis Command Queue",
+        )
+        self.signal_generation_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Signal Generation Command Queue",
+        )
+        self.spectral_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Spectral Computation Command Queue",
+        )
+        self.collector_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Data Collector Command Queue",
+        )
+        self.controller_communication_queue = controller_communication_queue
+        self.data_in_queue = data_in_queue
+        self.data_out_queue = data_out_queue
+        self.data_for_spectral_computation_queue = mp.Queue()
+        self.updated_spectral_quantities_queue = mp.Queue()
+        self.time_history_to_generate_queue = mp.Queue()
+        self.log_file_queue = log_file_queue
 
 
 # endregion
