@@ -31,11 +31,13 @@ from enum import Enum
 from multiprocessing.queues import Queue
 import netCDF4 as nc4
 import numpy as np
+from typing import List
+import openpyxl
 
 from rattlesnake.process.abstract_sysid_data_analysis import SysIDDataAnalysisCommands
 from rattlesnake.environment.abstract_environment import (
-    AbstractEnvironment,
-    AbstractMetadata,
+    EnvironmentMetadata,
+    Environment,
 )
 from rattlesnake.process.data_collector import (
     Acceptance,
@@ -86,26 +88,31 @@ class SysIdUICommands(Enum):
 # endregion
 
 
-# region: Metadata
-class SysIdEnvironmentMetadata(AbstractMetadata):
-
-    def __init__(self):
-        self.sysid_frame_size = None
-        self.sysid_averaging_type = None
-        self.sysid_noise_averages = None
-        self.sysid_averages = None
-        self.sysid_exponential_averaging_coefficient = None
-        self.sysid_estimator = None
-        self.sysid_level = None
-        self.sysid_level_ramp_time = None
-        self.sysid_signal_type = None
-        self.sysid_window = None
-        self.sysid_overlap = None
-        self.sysid_burst_on = None
-        self.sysid_pretrigger = None
-        self.sysid_burst_ramp_fraction = None
-        self.sysid_low_frequency_cutoff = None
-        self.sysid_high_frequency_cutoff = None
+# region Metadata
+class SysIdEnvironmentMetadata(EnvironmentMetadata):
+    def __init__(
+        self,
+        environment_type,
+        environment_name,
+        channel_list_bools,
+        sample_rate,
+        sysid_metadata=None,
+    ):
+        super().__init__(
+            environment_type,
+            environment_name,
+            channel_list_bools,
+            sample_rate,
+        )
+        # I default initialize this because a lot of sysid environments use it to
+        # check the validity of the control class during initialize_environment.
+        # (ex. SineEnvironment needs self.environment_metadata.sysid_metadata.sysid_frequency_spacing)
+        # It is always overwritten with initialize_sysid after sysid
+        # is made so it is never used for actual calculations.
+        if isinstance(sysid_metadata, SysIdMetadata):
+            self.sysid_metadata = sysid_metadata
+        else:
+            self.sysid_metadata = SysIdMetadata.default_metadata(sample_rate)
 
     @property
     @abstractmethod
@@ -150,37 +157,10 @@ class SysIdEnvironmentMetadata(AbstractMetadata):
     def reference_transformation_matrix(self):
         """Gets the excitation transformation matrix"""
 
-    @property
-    def sysid_frequency_spacing(self):
-        """Frequency spacing in spectral quantities computed by system identification"""
-        return self.sample_rate / self.sysid_frame_size
-
-    @property
-    @abstractmethod
-    def sample_rate(self):
-        """Sample rate (not oversampled) of the data acquisition system"""
-
-    @property
-    def sysid_fft_lines(self):
-        """Number of frequency lines in the FFT"""
-        return self.sysid_frame_size // 2 + 1
-
-    @property
-    def sysid_skip_frames(self):
-        """Number of frames to skip in the time stream due to ramp time"""
-        return int(
-            np.ceil(
-                self.sysid_level_ramp_time
-                * self.sample_rate
-                / (self.sysid_frame_size * (1 - self.sysid_overlap))
-            )
-        )
-
     @abstractmethod
     def store_to_netcdf(
-        self,
-        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
-    ):
+        self, netcdf_group_handle: nc4._netCDF4.Group
+    ):  # pylint: disable=c-extension-no-member
         """Store parameters to a group in a netCDF streaming file.
 
         This function stores parameters from the environment into the netCDF
@@ -200,26 +180,7 @@ class SysIdEnvironmentMetadata(AbstractMetadata):
             environment's metadata is stored.
 
         """
-        netcdf_group_handle.sysid_frame_size = self.sysid_frame_size
-        netcdf_group_handle.sysid_averaging_type = self.sysid_averaging_type
-        netcdf_group_handle.sysid_noise_averages = self.sysid_noise_averages
-        netcdf_group_handle.sysid_averages = self.sysid_averages
-        netcdf_group_handle.sysid_exponential_averaging_coefficient = (
-            self.sysid_exponential_averaging_coefficient
-        )
-        netcdf_group_handle.sysid_estimator = self.sysid_estimator
-        netcdf_group_handle.sysid_level = self.sysid_level
-        netcdf_group_handle.sysid_level_ramp_time = self.sysid_level_ramp_time
-        netcdf_group_handle.sysid_signal_type = self.sysid_signal_type
-        netcdf_group_handle.sysid_window = self.sysid_window
-        netcdf_group_handle.sysid_overlap = self.sysid_overlap
-        netcdf_group_handle.sysid_burst_on = self.sysid_burst_on
-        netcdf_group_handle.sysid_pretrigger = self.sysid_pretrigger
-        netcdf_group_handle.sysid_burst_ramp_fraction = self.sysid_burst_ramp_fraction
-        netcdf_group_handle.sysid_low_frequency_cutoff = self.sysid_low_frequency_cutoff
-        netcdf_group_handle.sysid_high_frequency_cutoff = (
-            self.sysid_high_frequency_cutoff
-        )
+        self.sysid_metadata.store_to_netcdf(netcdf_group_handle)
 
     def __eq__(self, other):
         try:
@@ -232,9 +193,100 @@ class SysIdEnvironmentMetadata(AbstractMetadata):
         except (AttributeError, KeyError):
             return False
 
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment's name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment's name.
+        """
+        return SysIdMetadata.retrieve_metadata_from_netcdf(
+            netcdf_group_handle, hardware_metadata
+        )
+
+    @staticmethod
+    @abstractmethod
+    def create_blank_worksheet_template(worksheet):
+        """
+        Creates blank worksheet template for an excel worksheet
+        """
+
+    @abstractmethod
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Store parameters to a worksheet in an netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment's name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment's parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the "write" counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        netcdf_group_handle : nc4._netCDF4.Group
+            A reference to the Group within the netCDF dataset where the
+            environment's metadata is stored.
+        """
+        super().store_to_worksheet(worksheet)
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from an Excel worksheet.
+
+        This function retrieves parameters from an Excel worksheet that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_worksheet
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a worksheet
+        in the worksheet sharing the environment's name, e.g.
+
+        """
+
 
 # region: Environment
-class AbstractSysIdEnvironment(AbstractEnvironment):
+class AbstractSysIdEnvironment(Environment):
     """Abstract Environment class defining the interface with the controller
 
     This class is used to define the operation of an environment within the
