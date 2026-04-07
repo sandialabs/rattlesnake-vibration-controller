@@ -36,6 +36,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
 )
+from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.utilities import (
     GlobalCommands,
@@ -69,14 +70,13 @@ CONTROL_TYPE = EnvironmentType.TRANSIENT
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
 
-# %% Commands
+# region Commands
 class TransientCommands(Enum):
     """Valid commands for the transient environment"""
 
     START_CONTROL = 0
     STOP_CONTROL = 1
     PERFORM_CONTROL_PREDICTION = 3
-    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
 
 
 class TransientUICommands(Enum):
@@ -87,73 +87,10 @@ class TransientUICommands(Enum):
     ENABLE_CONTROL = 4
 
 
-# region: Queues
-class TransientQueues:
-    """A container class for the queues that this environment will manage."""
-
-    def __init__(
-        self,
-        environment_name: str,
-        environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: Queue,
-        data_out_queue: Queue,
-        log_file_queue: VerboseMessageQueue,
-    ):
-        """A container class for the queues that transient will manage.
-
-        The environment uses many queues to pass data between the various pieces.
-        This class organizes those queues into one common namespace.
+# endregion
 
 
-        Parameters
-        ----------
-        environment_name : str
-            Name of the environment
-        environment_command_queue : VerboseMessageQueue
-            Queue that is read by the environment for environment commands
-        gui_update_queue : mp.queues.Queue
-            Queue where various subtasks put instructions for updating the
-            widgets in the user interface
-        controller_communication_queue : VerboseMessageQueue
-            Queue that is read by the controller for global controller commands
-        data_in_queue : mp.queues.Queue
-            Multiprocessing queue that connects the acquisition subtask to the
-            environment subtask.  Each environment will retrieve acquired data
-            from this queue.
-        data_out_queue : mp.queues.Queue
-            Multiprocessing queue that connects the output subtask to the
-            environment subtask.  Each environment will put data that it wants
-            the controller to generate in this queue.
-        log_file_queue : VerboseMessageQueue
-            Queue for putting logging messages that will be read by the logging
-            subtask and written to a file.
-        """
-        self.environment_command_queue = environment_command_queue
-        self.gui_update_queue = gui_update_queue
-        self.data_analysis_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Analysis Command Queue"
-        )
-        self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Signal Generation Command Queue"
-        )
-        self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Spectral Computation Command Queue"
-        )
-        self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Collector Command Queue"
-        )
-        self.controller_communication_queue = controller_communication_queue
-        self.data_in_queue = data_in_queue
-        self.data_out_queue = data_out_queue
-        self.data_for_spectral_computation_queue = mp.Queue()
-        self.updated_spectral_quantities_queue = mp.Queue()
-        self.time_history_to_generate_queue = mp.Queue()
-        self.log_file_queue = log_file_queue
-
-
-# region: Metadata
+# region Metadata
 class TransientMetadata(AbstractSysIdMetadata):
     """Metadata required to define a transient control law in rattlesnake."""
 
@@ -317,6 +254,72 @@ class TransientMetadata(AbstractSysIdMetadata):
             var[...] = self.reference_transformation_matrix
 
 
+# region: Queues
+class TransientQueues:
+    """A container class for the queues that this environment will manage."""
+
+    def __init__(
+        self,
+        environment_name: str,
+        environment_command_queue: VerboseMessageQueue,
+        gui_update_queue: Queue,
+        controller_communication_queue: VerboseMessageQueue,
+        data_in_queue: Queue,
+        data_out_queue: Queue,
+        log_file_queue: VerboseMessageQueue,
+    ):
+        """A container class for the queues that transient will manage.
+
+        The environment uses many queues to pass data between the various pieces.
+        This class organizes those queues into one common namespace.
+
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment
+        environment_command_queue : VerboseMessageQueue
+            Queue that is read by the environment for environment commands
+        gui_update_queue : mp.queues.Queue
+            Queue where various subtasks put instructions for updating the
+            widgets in the user interface
+        controller_communication_queue : VerboseMessageQueue
+            Queue that is read by the controller for global controller commands
+        data_in_queue : mp.queues.Queue
+            Multiprocessing queue that connects the acquisition subtask to the
+            environment subtask.  Each environment will retrieve acquired data
+            from this queue.
+        data_out_queue : mp.queues.Queue
+            Multiprocessing queue that connects the output subtask to the
+            environment subtask.  Each environment will put data that it wants
+            the controller to generate in this queue.
+        log_file_queue : VerboseMessageQueue
+            Queue for putting logging messages that will be read by the logging
+            subtask and written to a file.
+        """
+        self.environment_command_queue = environment_command_queue
+        self.gui_update_queue = gui_update_queue
+        self.data_analysis_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Data Analysis Command Queue"
+        )
+        self.signal_generation_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Signal Generation Command Queue"
+        )
+        self.spectral_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Spectral Computation Command Queue"
+        )
+        self.collector_command_queue = VerboseMessageQueue(
+            log_file_queue, environment_name + " Data Collector Command Queue"
+        )
+        self.controller_communication_queue = controller_communication_queue
+        self.data_in_queue = data_in_queue
+        self.data_out_queue = data_out_queue
+        self.data_for_spectral_computation_queue = mp.Queue()
+        self.updated_spectral_quantities_queue = mp.Queue()
+        self.time_history_to_generate_queue = mp.Queue()
+        self.log_file_queue = log_file_queue
+
+
 # region: Environment
 class TransientEnvironment(AbstractSysIdEnvironment):
     """Class defining calculations for the transient environment"""
@@ -350,11 +353,11 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         self.map_command(TransientCommands.START_CONTROL, self.start_control)
         self.map_command(TransientCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(
-            GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+            ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
         )
         self.map_command(
-            GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
+            ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
         )
         # Persistent data
         self.data_acquisition_parameters = None

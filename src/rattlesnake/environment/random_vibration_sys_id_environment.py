@@ -44,6 +44,7 @@ from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
 )
+from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.process.data_collector import (
     Acceptance,
     AcquisitionType,
@@ -326,7 +327,9 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         netcdf_group_handle.samples_per_frame = self.samples_per_frame
         netcdf_group_handle.test_level_ramp_time = self.test_level_ramp_time
         netcdf_group_handle.cpsd_overlap = self.cpsd_overlap
-        netcdf_group_handle.update_tf_during_control = 1 if self.update_tf_during_control else 0
+        netcdf_group_handle.update_tf_during_control = (
+            1 if self.update_tf_during_control else 0
+        )
         netcdf_group_handle.cola_window = self.cola_window
         netcdf_group_handle.cola_overlap = self.cola_overlap
         netcdf_group_handle.cola_window_exponent = self.cola_window_exponent
@@ -334,11 +337,15 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         netcdf_group_handle.cpsd_window = self.cpsd_window
         netcdf_group_handle.control_python_script = self.control_python_script
         netcdf_group_handle.control_python_function = self.control_python_function
-        netcdf_group_handle.control_python_function_type = self.control_python_function_type
+        netcdf_group_handle.control_python_function_type = (
+            self.control_python_function_type
+        )
         netcdf_group_handle.control_python_function_parameters = (
             self.control_python_function_parameters
         )
-        netcdf_group_handle.allow_automatic_aborts = 1 if self.allow_automatic_aborts else 0
+        netcdf_group_handle.allow_automatic_aborts = (
+            1 if self.allow_automatic_aborts else 0
+        )
         # Specifications
         netcdf_group_handle.createDimension("fft_lines", self.fft_lines)
         netcdf_group_handle.createDimension("two", 2)
@@ -405,7 +412,9 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
             )
             var[...] = self.reference_transformation_matrix
         # Control channels
-        netcdf_group_handle.createDimension("control_channels", len(self.control_channel_indices))
+        netcdf_group_handle.createDimension(
+            "control_channels", len(self.control_channel_indices)
+        )
         var = netcdf_group_handle.createVariable(
             "control_channel_indices", "i4", ("control_channels")
         )
@@ -457,17 +466,23 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         )
         self.map_command(RandomVibrationCommands.START_CONTROL, self.start_control)
         self.map_command(RandomVibrationCommands.STOP_CONTROL, self.stop_environment)
-        self.map_command(RandomVibrationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level)
+        self.map_command(
+            RandomVibrationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
+        )
         self.map_command(
             RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN,
             self.check_for_control_shutdown,
         )
-        self.map_command(RandomVibrationCommands.RECOMPUTE_PREDICTION, self.recompute_prediction)
         self.map_command(
-            GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+            RandomVibrationCommands.RECOMPUTE_PREDICTION, self.recompute_prediction
+        )
+        self.map_command(
+            ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
         )
-        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(
+            ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
+        )
         self.queue_container = queue_container
 
     def initialize_environment_test_parameters(
@@ -524,7 +539,7 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         """Sends updated parameters to the interactive control law on the data analysis process"""
         self.queue_container.data_analysis_command_queue.put(
             self.environment_name,
-            (GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS, parameters),
+            (ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS, parameters),
         )
 
     def send_interactive_command(self, command):
@@ -533,7 +548,7 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         if self.environment_parameters.control_python_function_type == 3:  # Interactive
             self.queue_container.data_analysis_command_queue.put(
                 self.environment_name,
-                (GlobalCommands.SEND_INTERACTIVE_COMMAND, command),
+                (ControlLawCommands.SEND_INTERACTIVE_COMMAND, command),
             )
         else:
             raise ValueError(
@@ -553,7 +568,9 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         """Gets relevant metadata for the data collector process"""
         num_channels = self.environment_parameters.number_of_channels
         response_channel_indices = self.environment_parameters.response_channel_indices
-        reference_channel_indices = self.environment_parameters.reference_channel_indices
+        reference_channel_indices = (
+            self.environment_parameters.reference_channel_indices
+        )
         acquisition_type = AcquisitionType.FREE_RUN
         acceptance = Acceptance.AUTOMATIC
         acceptance_function = None
@@ -565,7 +582,9 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         trigger_hysteresis_samples = 0
         pretrigger_fraction = 0
         frame_size = self.environment_parameters.samples_per_frame
-        window = Window.HANN if self.environment_parameters.cpsd_window == "Hann" else None
+        window = (
+            Window.HANN if self.environment_parameters.cpsd_window == "Hann" else None
+        )
         # use number of sysid averages as kurtosis buffer size
         # (could maybe make this match the test duration if user is using the "Time at Level"
         # function, would need to pass info from the RandomVibrationUI object)
@@ -630,7 +649,9 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         elif self.environment_parameters.sysid_estimator == "Hv":
             frf_estimator = Estimator.HV
         else:
-            raise ValueError(f"Invalid FRF Estimator {self.environment_parameters.sysid_estimator}")
+            raise ValueError(
+                f"Invalid FRF Estimator {self.environment_parameters.sysid_estimator}"
+            )
         num_response_channels = self.environment_parameters.num_response_channels
         num_reference_channels = self.environment_parameters.num_reference_channels
         frequency_spacing = self.environment_parameters.frequency_spacing
@@ -800,7 +821,10 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         ):
             self.log("Shutdown Achieved")
             self.gui_update_queue.put(
-                (self.environment_name, (RandomVibrationUICommands.ENABLE_CONTROL, None))
+                (
+                    self.environment_name,
+                    (RandomVibrationUICommands.ENABLE_CONTROL, None),
+                )
             )
         else:
             # Recheck some time later
