@@ -60,6 +60,7 @@ from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
+    EventWatcherError,
     EventWatcher,
     Updater,
     ProfileTimer,
@@ -384,6 +385,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.gui_update_queue.put(
                 (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
             )
+        elif isinstance(error, EventWatcherError):
+            # Just print event watcher errors to console line to avoid double showing errors in UI
+            print(error)
         elif isinstance(error, str):
             self.gui_update_queue.put(
                 (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
@@ -405,8 +409,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             timeout = self.timeout
 
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
-            self.display_error("Event watcher is still active")
-            return
+            self.event_watcher.cancel()
+            self.cleanup_event_watcher()
         self.event_thread = QtCore.QThread()
         self.event_watcher = EventWatcher(
             ready_event_list,
@@ -548,22 +552,22 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 if has_profile:
-                    self.load_profile_to_ui()
+                    self.load_ui_from_profile()
                 if has_streamed:
-                    self.load_stored_stream()
+                    self.load_ui_from_stream_metadata()
             case RattlesnakeState.HARDWARE_ACTIVE:
-                self.load_stored_hardware()
-                self.load_stored_environments()
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
                 if has_profile:
-                    self.load_profile_to_ui()
-                self.load_stored_stream()
+                    self.load_ui_from_profile()
+                self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
             case RattlesnakeState.ENVIRONMENT_ACTIVE:
-                self.load_stored_hardware()
-                self.load_stored_environments()
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
                 if has_profile:
-                    self.load_profile_to_ui()
-                self.load_stored_stream()
+                    self.load_ui_from_profile()
+                self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
                 for (
                     queue_name,
@@ -656,7 +660,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.rattlesnake_tabs.setTabEnabled(1, True)
         self.rattlesnake_tabs.setCurrentIndex(1)
 
-    def load_profile_to_ui(self):
+    def load_ui_from_profile(self):
         """
         Loads the profile event list from the rattlesnake object to the
         user interface.
@@ -706,7 +710,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.rattlesnake_tabs.setTabEnabled(4, True)
         self.rattlesnake_tabs.setCurrentIndex(4)
 
-    def load_stream_metadata_to_ui(self):
+    def load_ui_from_stream_metadata(self):
         """
         Loads the stream metadata object from the rattlesnake object to
         the user interface.
@@ -1837,7 +1841,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     workbook, environment_types
                 )
                 self.rattlesnake.initialize_profile_event_list(profile_event_list)
-                self.load_profile_to_ui()
+                self.load_ui_from_profile()
 
     def save_profile_list(self, filepath=None):
         if not filepath:
@@ -2191,6 +2195,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def start_profile_error(self, error):
         self.cleanup_event_watcher()
+
+        self.reset_profile_ui_timers()
+        self.profile_list_update_timer.stop()
 
         # Show error
         self.display_error(error)

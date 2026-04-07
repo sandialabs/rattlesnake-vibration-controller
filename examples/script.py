@@ -12,6 +12,11 @@ from rattlesnake.environment.time_environment import (
     TimeInstructions,
     TimeCommands,
 )
+from rattlesnake.environment.modal_environment import (
+    ModalMetadata,
+    ModalInstructions,
+    ModalCommands,
+)
 
 BUFFER_SIZE = 0.05
 TIME_ENVIRONMENT_NAME = "My Time"
@@ -71,6 +76,17 @@ def make_sdynpy_system_metadata():
         hardware_file="E:/Rattlesnake/SampleData/sample_system.npz",
     )
     return hardware_metadata
+
+
+def make_stream_metadata(environment_name=TIME_ENVIRONMENT_NAME):
+    stream_type = StreamType.IMMEDIATELY
+    stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
+    test_level_environment_name = environment_name
+    stream_metadata = StreamMetadata(
+        stream_type, stream_file, test_level_environment_name
+    )
+
+    return stream_metadata
 
 
 # endregion
@@ -136,17 +152,6 @@ def make_time_environment_event_list(environment_name=TIME_ENVIRONMENT_NAME):
     return profile_event_list
 
 
-def make_time_environment_stream_metadata(environment_name=TIME_ENVIRONMENT_NAME):
-    stream_type = StreamType.IMMEDIATELY
-    stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
-    test_level_environment_name = environment_name
-    stream_metadata = StreamMetadata(
-        stream_type, stream_file, test_level_environment_name
-    )
-
-    return stream_metadata
-
-
 def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
     current_test_level = 1
     repeat = True
@@ -158,25 +163,117 @@ def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
 # endregion
 
 
-# region Startup
+# region Modal
+def make_modal_environment_metadata(
+    hardware_metadata, environment_name=MODAL_ENVIRONMENT_NAME
+):
+    channel_list_bools = [True, True, True, True, True, True]
+    sample_rate = hardware_metadata.sample_rate
+    samples_per_frame = 1000
+    averaging_type = "Linear"
+    num_averages = 30
+    averaging_coefficient = 0.1
+    frf_technique = "H1"
+    frf_window = "rectangle"
+    overlap_percent = 0
+    trigger_type = "Free Run"
+    accept_type = "Accept All"
+    wait_for_steady_state = 0
+    trigger_channel = 0
+    pretrigger_percent = 0
+    trigger_slope_positive = True
+    trigger_level_percent = 0
+    hysteresis_level_percent = 0
+    hysteresis_frame_percent = 0
+    signal_generator_type = "random"
+    signal_generator_level = 0.01
+    signal_generator_min_frequency = 0
+    signal_generator_max_frequency = 500
+    signal_generator_on_percent = 0
+    acceptance_function = None
+    reference_channel_indices = [3, 4]
+    response_channel_indices = [0, 1, 2, 5]
+    output_channel_indices = [3, 4, 5]
+    output_oversample = hardware_metadata.output_oversample
+    exponential_window_value_at_frame_end = 0.25
+
+    return ModalMetadata(
+        environment_name,
+        channel_list_bools,
+        sample_rate,
+        samples_per_frame,
+        averaging_type,
+        num_averages,
+        averaging_coefficient,
+        frf_technique,
+        frf_window,
+        overlap_percent,
+        trigger_type,
+        accept_type,
+        wait_for_steady_state,
+        trigger_channel,
+        pretrigger_percent,
+        trigger_slope_positive,
+        trigger_level_percent,
+        hysteresis_level_percent,
+        hysteresis_frame_percent,
+        signal_generator_type,
+        signal_generator_level,
+        signal_generator_min_frequency,
+        signal_generator_max_frequency,
+        signal_generator_on_percent,
+        acceptance_function,
+        reference_channel_indices,
+        response_channel_indices,
+        output_channel_indices,
+        output_oversample,
+        exponential_window_value_at_frame_end,
+    )
+
+
+def make_modal_environment_instructions(environment_name=MODAL_ENVIRONMENT_NAME):
+    modal_instructions = ModalInstructions(environment_name)
+    return modal_instructions
+
+
+# endregion
+
+
+# region Environments
 def build_time_environment():
     rattlesnake = RattlesnakeController(threaded=True, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
     time_environment_metadata = make_time_environment_metadata(hardware_metadata)
     time_profile_event_list = make_time_environment_event_list()
-    time_stream_metadata = make_time_environment_stream_metadata()
+    time_stream_metadata = make_stream_metadata(TIME_ENVIRONMENT_NAME)
     time_environment_instructions = make_time_environment_instructions()
 
     rattlesnake.initialize_hardware(hardware_metadata)
-    # rattlesnake.initialize_environments([time_environment_metadata])
-    # rattlesnake.initialize_profile_event_list(time_profile_event_list)
-    # rattlesnake.set_stream_metadata(time_stream_metadata)
-    # rattlesnake.start_acquisition(time_stream_metadata)
-    # rattlesnake.start_environment(time_environment_instructions)
+    rattlesnake.initialize_environments([time_environment_metadata])
+    rattlesnake.initialize_profile_event_list(time_profile_event_list)
+    rattlesnake.set_stream_metadata(time_stream_metadata)
+    rattlesnake.start_acquisition(time_stream_metadata)
+    rattlesnake.start_environment(time_environment_instructions)
 
     return rattlesnake
 
 
+def build_modal_environment():
+    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    hardware_metadata = make_sdynpy_system_metadata()
+    modal_environment_metadata = make_modal_environment_metadata(hardware_metadata)
+    modal_stream_metadata = make_stream_metadata(MODAL_ENVIRONMENT_NAME)
+    modal_environment_instructions = make_time_environment_instructions()
+
+    rattlesnake.initialize_hardware(hardware_metadata)
+    rattlesnake.initialize_environments([modal_environment_metadata])
+    rattlesnake.start_acquisition(modal_stream_metadata)
+    rattlesnake.start_environment(modal_environment_instructions)
+
+
+# endregion
+
+# region Startup
 if __name__ == "__main__":
     rattlesnake = build_time_environment()
 

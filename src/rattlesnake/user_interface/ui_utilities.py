@@ -28,6 +28,7 @@ import pyqtgraph
 import requests
 import time
 import traceback
+import threading
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt, QTimer
@@ -46,12 +47,6 @@ from rattlesnake.utilities import (
 )
 
 TASK_NAME = "UI"
-
-
-class HardwareAssistModules(Enum):
-    NONE = 0
-    COMBOBOX = 2
-    SPINBOX = 1
 
 
 # region Global
@@ -1338,9 +1333,18 @@ class VaryingNumberOfLinePlot:
         self.plot_item.clear()
 
 
+class EventWatcherError(Exception):
+    """
+    The UI prints these errors to console instead of to the
+    user interface.
+    """
+
+    pass
+
+
 class EventWatcher(QtCore.QObject):
     ready = QtCore.Signal()
-    error = QtCore.Signal(str)
+    error = QtCore.Signal(object)
 
     def __init__(
         self,
@@ -1355,6 +1359,10 @@ class EventWatcher(QtCore.QObject):
         self.active_event_list = active_event_list
         self.active_event_check = active_event_check
         self.timeout = timeout
+        self._cancel_event = threading.Event()
+
+    def cancel(self):
+        self._cancel_event.set()
 
     def run(self):
         start = time.time()
@@ -1377,22 +1385,33 @@ class EventWatcher(QtCore.QObject):
                         event.set()
 
                     self.error.emit(
-                        "EventWatcher has timed out while waiting for a response"
+                        EventWatcherError(
+                            "EventWatcher has timed out while waiting for a response"
+                        )
+                    )
+                    return
+
+                if self._cancel_event.is_set():
+                    self.error.emit(
+                        EventWatcherError(
+                            "EventWatcher was overridden by a new watcher"
+                        )
                     )
                     return
 
                 time.sleep(0.05)
-        except Exception:
-            tb = traceback.format_exc()
-            self.error.emit(tb)
+        except Exception as e:
+            self.error.emit(e)
 
 
 # endregion
 
+
 # region Hardware
-ip_manager_ui_path = os.path.join(
-    DIRECTORY, "user_interface", "ui_files", "ip_manager.ui"
-)
+class HardwareAssistModules(Enum):
+    NONE = 0
+    COMBOBOX = 2
+    SPINBOX = 1
 
 
 class IPAddress:
@@ -1415,6 +1434,9 @@ class IPAddressManager(QtWidgets.QDialog):
         if ip_addresses is None:
             ip_addresses = []
         super().__init__(parent)
+        ip_manager_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "ip_manager.ui"
+        )
         uic.loadUi(ip_manager_ui_path, self)
 
         self.ip_address_table.setColumnWidth(0, 200)
@@ -2310,55 +2332,6 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             current_index = self.response_coordinate_selector.currentIndex()
             new_index = (current_index + increment) % num_channels
             self.response_coordinate_selector.setCurrentIndex(new_index)
-
-
-class EventWatcher(QtCore.QObject):
-    ready = QtCore.Signal()
-    error = QtCore.Signal(str)
-
-    def __init__(
-        self,
-        ready_event_list,
-        active_event_list,
-        *,
-        active_event_check: bool = None,
-        timeout=None,
-    ):
-        super().__init__()
-        self.ready_event_list = ready_event_list
-        self.active_event_list = active_event_list
-        self.active_event_check = active_event_check
-        self.timeout = timeout
-
-    def run(self):
-        start = time.time()
-
-        try:
-            while True:
-
-                ready_ok = all(event.is_set() for event in self.ready_event_list)
-                active_ok = all(
-                    event.is_set() == self.active_event_check
-                    for event in self.active_event_list
-                )
-
-                if ready_ok and active_ok:
-                    self.ready.emit()
-                    return
-
-                if self.timeout and (time.time() - start) > self.timeout:
-                    for event in self.ready_event_list:
-                        event.set()
-
-                    self.error.emit(
-                        "EventWatcher has timed out while waiting for a response"
-                    )
-                    return
-
-                time.sleep(0.05)
-        except Exception:
-            tb = traceback.format_exc()
-            self.error.emit(tb)
 
 
 # endregion
