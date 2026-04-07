@@ -160,7 +160,7 @@ class SysIdMetadata:
     # endregion
 
     # region Loading
-    def store_to_netcdf(
+    def save_metadata_to_netcdf(
         self, netcdf_group_handle: nc4._netCDF4.Group
     ):  # pylint: disable=c-extension-no-member
         """Store parameters to a group in a netCDF streaming file.
@@ -203,7 +203,7 @@ class SysIdMetadata:
         )
 
     @classmethod
-    def retrieve_metadata_from_netcdf(
+    def load_metadata_from_netcdf(
         cls,
         netcdf_group_handle: nc4._netCDF4.Group,
         hardware_metadata: HardwareMetadata,
@@ -324,7 +324,7 @@ class SysIdMetadata:
             '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
         )
 
-    def store_to_worksheet(
+    def save_metadata_to_worksheet(
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet, start_row: int
     ):
         if self.sysid_frame_size is not None:
@@ -359,7 +359,7 @@ class SysIdMetadata:
             worksheet.cell(start_row + 13, 2, self.sysid_burst_ramp_fraction * 100)
 
     @classmethod
-    def retrieve_metadata_from_worksheet(
+    def load_metadata_from_worksheet(
         cls,
         worksheet: openpyxl.worksheet.worksheet.Worksheet,
         hardware_metadata: HardwareMetadata,
@@ -403,9 +403,6 @@ class SysIdMetadata:
             stream_file=None,
             auto_shutdown=False,
         )
-
-    def validate(self):
-        return True
 
     @classmethod
     def default_metadata(cls, sample_rate):

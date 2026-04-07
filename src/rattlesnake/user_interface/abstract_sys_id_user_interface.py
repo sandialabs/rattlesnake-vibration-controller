@@ -29,7 +29,7 @@ from rattlesnake.user_interface.ui_utilities import error_message_qt, RotatedAxi
 
 
 # region User Interface
-class AbstractSysIdUI(EnvironmentUI):
+class SysIdEnvironmentUI(EnvironmentUI):
     """Abstract User Interface class defining the interface with the controller
 
     This class is used to define the interface between the User Interface of a
@@ -1203,6 +1203,8 @@ class AbstractSysIdUI(EnvironmentUI):
     def stop_environment_ready(self):
         return super().stop_environment_ready()
 
+    # endregion
+
     # region Commands
     def update_sysid_plots(
         self,
@@ -1571,3 +1573,5 @@ class AbstractSysIdUI(EnvironmentUI):
             case _:
                 return False
         return True
+
+    # endregion

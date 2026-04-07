@@ -95,8 +95,8 @@ class SysIdUICommands(Enum):
 # endregion
 
 
-# region Metadata
 class SysIdEnvironmentMetadata(EnvironmentMetadata):
+    # region Metadata
     def __init__(
         self,
         environment_type,
@@ -186,7 +186,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
 
     # region Loading
     @abstractmethod
-    def store_to_netcdf(
+    def save_metadata_to_netcdf(
         self, netcdf_group_handle: nc4._netCDF4.Group
     ):  # pylint: disable=c-extension-no-member
         """Store parameters to a group in a netCDF streaming file.
@@ -212,7 +212,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
 
     @classmethod
     @abstractmethod
-    def retrieve_metadata_from_netcdf(
+    def load_metadata_from_netcdf(
         cls,
         netcdf_group_handle: nc4._netCDF4.Group,
         environment_name: str,
@@ -254,7 +254,9 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         """
 
     @abstractmethod
-    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """
         Store parameters to a worksheet in an netCDF streaming file.
 
@@ -278,7 +280,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
 
     @classmethod
     @abstractmethod
-    def retrieve_metadata_from_worksheet(
+    def load_metadata_from_worksheet(
         cls,
         worksheet: openpyxl.worksheet.worksheet.Worksheet,
         environment_name: str,
@@ -304,7 +306,6 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
     # endregion
 
 
-# region Environment
 class SysIdEnvironment(Environment):
     """Abstract Environment class defining the interface with the controller
 
@@ -333,6 +334,7 @@ class SysIdEnvironment(Environment):
     instruct the program to quit should not return any value that could be
     interpreted as true."""
 
+    # region Environment
     def __init__(
         self,
         environment_name: str,
