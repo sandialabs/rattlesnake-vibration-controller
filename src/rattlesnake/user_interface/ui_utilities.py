@@ -27,7 +27,6 @@ import numpy as np
 import pyqtgraph
 import requests
 import time
-import traceback
 import threading
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
@@ -2335,3 +2334,62 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
 
 # endregion
+
+
+# region System Id
+class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
+    """Plot axis labels that can be rotated by some value"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_height = self.height()
+        self._angle = None
+
+    def setAngle(self, angle):  # pylint: disable=invalid-name
+        """Sets the angle and ensures it's between -180 and 180"""
+        self._angle = angle
+        self._angle = (self._angle + 180) % 360 - 180
+
+    def drawPicture(self, p, axisSpec, tickSpecs, textSpecs):
+        """UPdated draw picture method that includes the rotation of the text"""
+        profiler = pyqtgraph.debug.Profiler()
+        max_width = 0
+
+        # draw long line along axis
+        pen, p1, p2 = axisSpec
+        p.setPen(pen)
+        p.drawLine(p1, p2)
+        # draw ticks
+        for pen, p1, p2 in tickSpecs:
+            p.setPen(pen)
+            p.drawLine(p1, p2)
+        profiler("draw ticks")
+
+        for rect, flags, text in textSpecs:
+            p.save()  # save the painter state
+
+            p.translate(rect.center())  # move coordinate system to center of text rect
+            p.rotate(self._angle)  # rotate text
+            p.translate(-rect.center())  # revert coordinate system
+
+            x_offset = np.ceil(np.fabs(np.sin(np.radians(self._angle)) * rect.width()))
+            if self._angle < 0:
+                x_offset = -x_offset
+            p.translate(
+                x_offset / 2, 0
+            )  # Move the coordinate system (relatively) downwards
+
+            p.drawText(rect, flags, text)
+            p.restore()  # restore the painter state
+            offset = np.fabs(x_offset)
+            max_width = offset if max_width < offset else max_width
+
+        profiler("draw text")
+        #  Adjust the height
+        self.setHeight(self._original_height + max_width)
+
+    def boundingRect(self):
+        """Sets the bounding rectangle of the item to give more space at the bottom"""
+        rect = super().boundingRect()
+        rect.adjust(0, 0, 0, 20)  # Add 20 pixels to bottom
+        return rect
