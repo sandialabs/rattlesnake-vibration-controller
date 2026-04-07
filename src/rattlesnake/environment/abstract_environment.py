@@ -460,40 +460,6 @@ class Environment(ABC):
 
     # endregion
 
-    # region State Sync
-    @abstractmethod
-    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
-        """Initialize the hardware parameters in the environment.
-
-        The environment will receive the hardware parameters from
-        the controller, and must set itself up accordingly.
-
-        Parameters
-        ----------
-        hardware_metadata : HardwareMetadata :
-            A specific metadata class containing information about
-            specific hardware metadata. Assume you are only getting
-            the attributes in the base HardwareMetadata class.
-        """
-        self.set_ready()
-
-    @abstractmethod
-    def initialize_environment(self, environment_metadata: EnvironmentMetadata) -> None:
-        """
-        Initialize the environment parameters specific to this environment
-
-        The environment will recieve parameters defining itself from the
-        user interface and must set itself up accordingly.
-
-        Parameters
-        ----------
-        environment_metadata : EnvironmentMetadata
-            A container containing the parameters defining the environment.
-        """
-        self.set_ready()
-
-    # endregion
-
     # region Events
     def set_ready(self):
         self._ready_event.set()
@@ -526,6 +492,40 @@ class Environment(ABC):
         """Flag to check if output is active."""
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
         return self._output_active_event.is_set()
+
+    # endregion
+
+    # region State Sync
+    @abstractmethod
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+        """Initialize the hardware parameters in the environment.
+
+        The environment will receive the hardware parameters from
+        the controller, and must set itself up accordingly.
+
+        Parameters
+        ----------
+        hardware_metadata : HardwareMetadata :
+            A specific metadata class containing information about
+            specific hardware metadata. Assume you are only getting
+            the attributes in the base HardwareMetadata class.
+        """
+        self.set_ready()
+
+    @abstractmethod
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata) -> None:
+        """
+        Initialize the environment parameters specific to this environment
+
+        The environment will recieve parameters defining itself from the
+        user interface and must set itself up accordingly.
+
+        Parameters
+        ----------
+        environment_metadata : EnvironmentMetadata
+            A container containing the parameters defining the environment.
+        """
+        self.set_ready()
 
     # endregion
 

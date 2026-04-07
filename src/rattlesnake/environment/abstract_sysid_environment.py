@@ -413,6 +413,9 @@ class SysIdEnvironment(Environment):
         self.siggen_shutdown_achieved = True
         self.analysis_shutdown_achieved = True
 
+    # endregion
+
+    # region Events
     @property
     def sysid_active(self):
         return self._sysid_event.is_set()
@@ -423,7 +426,9 @@ class SysIdEnvironment(Environment):
     def clear_sysid_active(self):
         self._sysid_event.clear()
 
-    # region: Initialize
+    # endregion
+
+    # region State Sync
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
@@ -642,7 +647,6 @@ class SysIdEnvironment(Environment):
                 output_oversample=self.hardware_metadata.output_oversample,
             )
 
-    # region: Loading
     def load_noise(self, data):
         """Sends noise data to the data analysis process"""
         self.data_analysis_command_queue.put(
@@ -656,7 +660,9 @@ class SysIdEnvironment(Environment):
             (SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, data),
         )
 
-    # region: Control Loop
+    # endregion
+
+    # region Process
     def start_noise(self, data):
         """Starts the noise measurement with the provided metadata"""
         self.log("Starting Noise Measurement for System ID")
@@ -870,7 +876,9 @@ class SysIdEnvironment(Environment):
             (self.environment_name, (SysIdUICommands.SYSID_STARTED, None))
         )
 
-    # region: Shutdown
+    # endregion
+
+    # region Shutdown
     def stop_system_id(self, stop_tasks):
         """Starts the shutdown process for the system identification"""
         stop_data_analysis = stop_tasks  # This is so that data analysis class can stop itself then tell environment to stop for quicker responses
@@ -993,3 +1001,5 @@ class SysIdEnvironment(Environment):
             queue.put(self.environment_name, (GlobalCommands.QUIT, None))
         # Return true to stop the task
         return True
+
+    # endregion

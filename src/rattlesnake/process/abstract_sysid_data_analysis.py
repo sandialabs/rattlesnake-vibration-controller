@@ -434,7 +434,7 @@ class SysIdMetadata:
     # endregion
 
 
-# region Process
+# region Data Analysis
 class SysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
     using system id"""
@@ -712,6 +712,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
     # endregion
 
 
+# region Process
 def sysid_data_analysis_process(
     environment_name: str,
     command_queue: VerboseMessageQueue,
@@ -760,3 +761,6 @@ def sysid_data_analysis_process(
     )
 
     data_analysis_instance.run()
+
+
+# endregion
