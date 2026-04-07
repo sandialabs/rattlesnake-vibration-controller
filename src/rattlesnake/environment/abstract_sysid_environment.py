@@ -29,19 +29,23 @@ from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
 from multiprocessing.queues import Queue
+from typing import List
+
 import netCDF4 as nc4
 import numpy as np
-from typing import List
 import openpyxl
+
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentMetadata,
+    Environment,
+)
 
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataAnalysisCommands,
     SysIdDataAnalysisUICommands,
     SysIdMetadata,
-)
-from rattlesnake.environment.abstract_environment import (
-    EnvironmentMetadata,
-    Environment,
 )
 from rattlesnake.process.data_collector import (
     Acceptance,
@@ -68,8 +72,6 @@ from rattlesnake.process.spectral_processing import (
     SpectralProcessingCommands,
     SpectralProcessingMetadata,
 )
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.user_interface.ui_utilities import UICommands
 
 

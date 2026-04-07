@@ -1,34 +1,34 @@
-from rattlesnake.engine import RattlesnakeController
-from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
-from rattlesnake.user_interface.ui_utilities import error_message_qt, RotatedAxisItem
+import os
+from abc import abstractmethod
+
+import netCDF4 as nc4
+import numpy as np
+import pyqtgraph as pg
+from qtpy import QtWidgets, uic
+from scipy.io import loadmat, savemat
+
 from rattlesnake.utilities import DIRECTORY
+from rattlesnake.engine import RattlesnakeController
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironmentMetadata,
-    SystemIdCommands,
     SysIdUICommands,
 )
-from rattlesnake.process.abstract_sysid_data_analysis import (
-    SysIdDataAnalysisCommands,
-    SysIdMetadata,
-)
+
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.process.data_collector import DataCollectorUICommands
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataAnalysisUICommands
-from abc import ABC, abstractmethod
-from multiprocessing.queues import Queue
-import netCDF4 as nc4
-import numpy as np
-import pyqtgraph as pg
-import openpyxl
-from qtpy import QtWidgets, uic
-from scipy.io import loadmat, savemat
-import os
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdMetadata,
+    SysIdDataAnalysisCommands,
+    SysIdDataAnalysisUICommands,
+)
+from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
+from rattlesnake.user_interface.ui_utilities import error_message_qt, RotatedAxisItem
 
 
-# region: User Interface
+# region User Interface
 class AbstractSysIdUI(EnvironmentUI):
     """Abstract User Interface class defining the interface with the controller
 
@@ -222,7 +222,6 @@ class AbstractSysIdUI(EnvironmentUI):
         self.show_hide_transfer_function()
         self.show_hide_kurtosis()
 
-    # region: Properties
     @property
     @abstractmethod
     def initialized_control_names(self):
@@ -245,7 +244,9 @@ class AbstractSysIdUI(EnvironmentUI):
         except:
             return False
 
-    # region: Hardware
+    # endregion
+
+    # region State Sync
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
@@ -289,7 +290,6 @@ class AbstractSysIdUI(EnvironmentUI):
             1, len(self.all_reference_indices) * 2 + len(self.all_response_indices)
         )
 
-    # region: Environment
     @abstractmethod
     def initialize_environment(self, environment_metadata):
         self.system_id_widget.reference_selector.blockSignals(True)
@@ -327,7 +327,6 @@ class AbstractSysIdUI(EnvironmentUI):
         This function should set up the user interface accordingly.
         """
 
-    # region: System Identification
     def get_sysid_metadata(self, hardware_metadata: HardwareMetadata):
         """Updates the provided system identification metadata based on current UI widget values"""
         sysid_frame_size = self.system_id_widget.samplesPerFrameSpinBox.value()
@@ -406,7 +405,17 @@ class AbstractSysIdUI(EnvironmentUI):
         """
         pass
 
-    # region: SysId Display
+    @abstractmethod
+    def get_environment_instructions(self):
+        return
+
+    @abstractmethod
+    def set_environment_instructions(self, instructions):
+        return
+
+    # endregion
+
+    # region Callbacks
     def display_sys_id_started(self):
         for widget in [
             self.system_id_widget.preview_noise_button,
@@ -469,7 +478,6 @@ class AbstractSysIdUI(EnvironmentUI):
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(False)
 
-    # region: Run SysId
     """
     To run the noise, the steps are
     1. Initialize system id metadata
@@ -720,417 +728,6 @@ class AbstractSysIdUI(EnvironmentUI):
             return
         self.system_id_widget.transfer_function_stream_file_display.setText(filename)
         self.system_id_widget.stream_transfer_function_data_checkbox.setChecked(True)
-
-    # region: Updates
-    def update_sysid_plots(
-        self,
-        update_time=True,
-        update_transfer_function=True,
-        update_noise=True,
-        update_kurtosis=True,
-    ):
-        """Updates the plots on the system identification window
-
-        Parameters
-        ----------
-        update_time : bool, optional
-            If True, updates the time hitory plots, by default True
-        update_transfer_function : bool, optional
-            If True, updates the transfer function plots, by default True
-        update_noise : bool, optional
-            If True, updates the noise plots, by default True
-        update_kurtosis : bool, optional
-            If True, updates the kurtosis bar graph, by default True
-        """
-        # Figure out the selected entries
-        response_indices = [
-            i
-            for i in range(self.system_id_widget.response_selector.count())
-            if self.system_id_widget.response_selector.item(i).isSelected()
-        ]
-        reference_indices = [
-            i
-            for i in range(self.system_id_widget.reference_selector.count())
-            if self.system_id_widget.reference_selector.item(i).isSelected()
-        ]
-        # print(response_indices)
-        # print(reference_indices)
-        if update_time:
-            self.time_response_plot.clear()
-            self.time_reference_plot.clear()
-            if self.last_time_response is not None:
-                response_frame_indices = np.array(
-                    self.environment_metadata.response_channel_indices
-                )[response_indices]
-                reference_frame_indices = np.array(
-                    self.environment_metadata.reference_channel_indices
-                )[reference_indices]
-                response_time_data = self.last_time_response[response_frame_indices]
-                reference_time_data = self.last_time_response[reference_frame_indices]
-                times = (
-                    np.arange(response_time_data.shape[-1])
-                    / self.hardware_metadata.sample_rate
-                )
-                for i, time_data in enumerate(response_time_data):
-                    self.time_response_plot.plot(times, time_data, pen=i)
-                for i, time_data in enumerate(reference_time_data):
-                    self.time_reference_plot.plot(times, time_data, pen=i)
-        if update_transfer_function:
-            self.transfer_function_phase_plot.clear()
-            self.transfer_function_magnitude_plot.clear()
-            self.condition_plot.clear()
-            self.coherence_plot.clear()
-            self.impulse_response_plot.clear()
-            if (
-                self.last_transfer_function is not None
-                and len(response_indices) > 0
-                and len(reference_indices) > 0
-            ):
-                # print(self.last_transfer_function)
-                # print(np.array(response_indices)[:,np.newaxis])
-                # print(np.array(reference_indices))
-                frf_section = np.reshape(
-                    self.last_transfer_function[
-                        ...,
-                        np.array(response_indices)[:, np.newaxis],
-                        np.array(reference_indices),
-                    ],
-                    (self.frequencies.size, -1),
-                ).T
-                impulse_response = np.fft.irfft(frf_section, axis=-1)
-                for i, (frf, imp) in enumerate(zip(frf_section, impulse_response)):
-                    self.transfer_function_phase_plot.plot(
-                        self.frequencies, np.angle(frf) * 180 / np.pi, pen=i
-                    )
-                    self.transfer_function_magnitude_plot.plot(
-                        self.frequencies, np.abs(frf), pen=i
-                    )
-                    self.impulse_response_plot.plot(
-                        np.arange(imp.size) / self.environment_metadata.sample_rate,
-                        imp,
-                        pen=i,
-                    )
-                for i, coherence in enumerate(
-                    self.last_coherence[..., response_indices].T
-                ):
-                    self.coherence_plot.plot(self.frequencies, coherence, pen=i)
-            if self.last_condition is not None:
-                self.condition_plot.plot(self.frequencies, self.last_condition, pen=0)
-        if update_noise:
-            reference_noise = (
-                None
-                if self.last_reference_noise is None or len(reference_indices) == 0
-                else self.last_reference_noise[
-                    ..., reference_indices, reference_indices
-                ].real
-            )
-            response_noise = (
-                None
-                if self.last_response_noise is None or len(response_indices) == 0
-                else self.last_response_noise[
-                    ..., response_indices, response_indices
-                ].real
-            )
-            reference_level = (
-                None
-                if self.last_reference_cpsd is None or len(reference_indices) == 0
-                else self.last_reference_cpsd[
-                    ..., reference_indices, reference_indices
-                ].real
-            )
-            response_level = (
-                None
-                if self.last_response_cpsd is None or len(response_indices) == 0
-                else self.last_response_cpsd[
-                    ..., response_indices, response_indices
-                ].real
-            )
-            self.level_reference_plot.clear()
-            self.level_response_plot.clear()
-            for i in range(len(reference_indices)):
-                if reference_noise is not None:
-                    self.level_reference_plot.plot(
-                        self.frequencies, reference_noise[:, i], pen=i
-                    )
-                if reference_level is not None:
-                    try:
-                        self.level_reference_plot.plot(
-                            self.frequencies, reference_level[:, i], pen=i
-                        )
-                    except Exception:
-                        pass
-            for i in range(len(response_indices)):
-                if response_noise is not None:
-                    self.level_response_plot.plot(
-                        self.frequencies, response_noise[:, i], pen=i
-                    )
-                if response_level is not None:
-                    try:
-                        self.level_response_plot.plot(
-                            self.frequencies, response_level[:, i], pen=i
-                        )
-                    except Exception:
-                        pass
-
-        if update_kurtosis:
-            self.kurtosis_response_plot.clear()
-            self.kurtosis_reference_plot.clear()
-            if self.last_kurtosis is not None:
-                response_kurtosis = self.last_kurtosis[self.all_response_indices]
-                reference_kurtosis = self.last_kurtosis[self.all_reference_indices]
-                response_bar = pg.BarGraphItem(
-                    x=range(len(self.response_nodes)),
-                    height=response_kurtosis,
-                    width=0.5,
-                    pen="r",
-                    brush="r",
-                )
-                reference_bar = pg.BarGraphItem(
-                    x=range(len(self.reference_nodes)),
-                    height=reference_kurtosis,
-                    width=0.5,
-                    pen="r",
-                    brush="r",
-                )
-                self.kurtosis_response_plot.addItem(response_bar)
-                self.kurtosis_reference_plot.addItem(reference_bar)
-
-    def show_hide_coherence(self):
-        """Sets the visibility of the coherence plots"""
-        if self.system_id_widget.coherence_checkbox.isChecked():
-            self.system_id_widget.coherence_groupbox.show()
-        else:
-            self.system_id_widget.coherence_groupbox.hide()
-
-    def show_hide_levels(self):
-        """Sets the visibility of the level plots"""
-        if self.system_id_widget.levels_checkbox.isChecked():
-            self.system_id_widget.levels_groupbox.show()
-        else:
-            self.system_id_widget.levels_groupbox.hide()
-
-    def show_hide_time_data(self):
-        """Sets the visibility of the time data plots"""
-        if self.system_id_widget.time_data_checkbox.isChecked():
-            self.system_id_widget.time_data_groupbox.show()
-        else:
-            self.system_id_widget.time_data_groupbox.hide()
-
-    def show_hide_transfer_function(self):
-        """Sets the visibility of the transfer function plots"""
-        if self.system_id_widget.transfer_function_checkbox.isChecked():
-            self.system_id_widget.transfer_function_groupbox.show()
-        else:
-            self.system_id_widget.transfer_function_groupbox.hide()
-
-    def show_hide_impulse(self):
-        """Sets the visibility of the impulse response plots"""
-        if self.system_id_widget.impulse_checkbox.isChecked():
-            self.system_id_widget.impulse_groupbox.show()
-        else:
-            self.system_id_widget.impulse_groupbox.hide()
-
-    def show_hide_kurtosis(self):
-        """Sets the visibility of the kurtosis plots"""
-        if self.system_id_widget.kurtosis_checkbox.isChecked():
-            self.system_id_widget.kurtosis_groupbox.show()
-        else:
-            self.system_id_widget.kurtosis_groupbox.hide()
-
-    def update_signal_type(self):
-        """Updates the UI widgets based on the type of signal that has been selected"""
-        if self.system_id_widget.signalTypeComboBox.currentIndex() == 0:  # Random
-            self.system_id_widget.windowComboBox.setCurrentIndex(0)
-            self.system_id_widget.overlapDoubleSpinBox.show()
-            self.system_id_widget.overlapLabel.show()
-            self.system_id_widget.onFractionLabel.hide()
-            self.system_id_widget.onFractionDoubleSpinBox.hide()
-            self.system_id_widget.pretriggerLabel.hide()
-            self.system_id_widget.pretriggerDoubleSpinBox.hide()
-            self.system_id_widget.rampFractionLabel.hide()
-            self.system_id_widget.rampFractionDoubleSpinBox.hide()
-            self.system_id_widget.bandwidthLabel.show()
-            self.system_id_widget.lowFreqCutoffSpinBox.show()
-            self.system_id_widget.highFreqCutoffSpinBox.show()
-        elif (
-            self.system_id_widget.signalTypeComboBox.currentIndex() == 1
-        ):  # Pseudorandom
-            self.system_id_widget.windowComboBox.setCurrentIndex(1)
-            self.system_id_widget.overlapDoubleSpinBox.hide()
-            self.system_id_widget.overlapLabel.hide()
-            self.system_id_widget.onFractionLabel.hide()
-            self.system_id_widget.onFractionDoubleSpinBox.hide()
-            self.system_id_widget.pretriggerLabel.hide()
-            self.system_id_widget.pretriggerDoubleSpinBox.hide()
-            self.system_id_widget.rampFractionLabel.hide()
-            self.system_id_widget.rampFractionDoubleSpinBox.hide()
-            self.system_id_widget.bandwidthLabel.show()
-            self.system_id_widget.lowFreqCutoffSpinBox.show()
-            self.system_id_widget.highFreqCutoffSpinBox.show()
-        elif self.system_id_widget.signalTypeComboBox.currentIndex() == 2:  # Burst
-            self.system_id_widget.windowComboBox.setCurrentIndex(1)
-            self.system_id_widget.overlapDoubleSpinBox.hide()
-            self.system_id_widget.overlapLabel.hide()
-            self.system_id_widget.onFractionLabel.show()
-            self.system_id_widget.onFractionDoubleSpinBox.show()
-            self.system_id_widget.pretriggerLabel.show()
-            self.system_id_widget.pretriggerDoubleSpinBox.show()
-            self.system_id_widget.rampFractionLabel.show()
-            self.system_id_widget.rampFractionDoubleSpinBox.show()
-            self.system_id_widget.bandwidthLabel.show()
-            self.system_id_widget.lowFreqCutoffSpinBox.show()
-            self.system_id_widget.highFreqCutoffSpinBox.show()
-        elif self.system_id_widget.signalTypeComboBox.currentIndex() == 3:  # Chirp
-            self.system_id_widget.windowComboBox.setCurrentIndex(1)
-            self.system_id_widget.overlapDoubleSpinBox.hide()
-            self.system_id_widget.overlapLabel.hide()
-            self.system_id_widget.onFractionLabel.hide()
-            self.system_id_widget.onFractionDoubleSpinBox.hide()
-            self.system_id_widget.pretriggerLabel.hide()
-            self.system_id_widget.pretriggerDoubleSpinBox.hide()
-            self.system_id_widget.rampFractionLabel.hide()
-            self.system_id_widget.rampFractionDoubleSpinBox.hide()
-            self.system_id_widget.bandwidthLabel.hide()
-            self.system_id_widget.lowFreqCutoffSpinBox.hide()
-            self.system_id_widget.highFreqCutoffSpinBox.hide()
-
-    # region: Acqusition
-    @abstractmethod
-    def get_environment_instructions(self):
-        return
-
-    @abstractmethod
-    def set_environment_instructions(self, instructions):
-        return
-
-    @abstractmethod
-    def display_environment_ended(self):
-        return
-
-    @abstractmethod
-    def display_environment_started(self):
-        return
-
-    @abstractmethod
-    def start_environment(self):
-        return super().start_environment()
-
-    @abstractmethod
-    def start_environment_ready(self):
-        return super().start_environment_ready()
-
-    @abstractmethod
-    def start_environment_error(self, error):
-        return super().start_environment_error(error)
-
-    @abstractmethod
-    def stop_environment(self):
-        return super().stop_environment()
-
-    @abstractmethod
-    def stop_environment_error(self, error):
-        return super().stop_environment_error(error)
-
-    @abstractmethod
-    def stop_environment_ready(self):
-        return super().stop_environment_ready()
-
-    # region: Commands
-    @abstractmethod
-    def update_gui(self, queue_data: tuple):
-        """Update the environment's graphical user interface
-
-        This function will receive data from the gui_update_queue that
-        specifies how the user interface should be updated.  Data will usually
-        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
-        what operation should be taken or which widget should be modified, and
-        the ``data`` notes what data should be used in the update.
-
-        Parameters
-        ----------
-        queue_data : tuple
-            A tuple containing ``(instruction,data)`` pairs where ``instruction``
-            defines and operation or widget to be modified and ``data`` contains
-            the data used to perform the operation.
-        """
-        if super().update_gui(queue_data):
-            return True
-        command, data = queue_data
-        self.log(f"Got GUI Message {command}")
-        # print('Update GUI Got {:}'.format(message))
-        match command:
-            case SysIdUICommands.SYSID_STARTED:
-                self.display_sys_id_started()
-            case SysIdUICommands.SYSID_ENDED:
-                self.display_sys_id_ended()
-            case DataCollectorUICommands.TIME_FRAME:
-                self.last_time_response, accept = data
-                self.update_sysid_plots(
-                    update_time=True,
-                    update_transfer_function=False,
-                    update_noise=False,
-                    update_kurtosis=False,
-                )
-            case DataCollectorUICommands.KURTOSIS:
-                self.last_kurtosis = data
-                self.update_sysid_plots(
-                    update_time=False,
-                    update_transfer_function=False,
-                    update_noise=False,
-                    update_kurtosis=True,
-                )
-            case SysIdDataAnalysisUICommands.NOISE_COMPLETED:
-                self.run_system_id_validate_noise_closeout()
-            case SysIdDataAnalysisUICommands.TRANSFER_COMPLETED:
-                self.run_system_id_validate_transfer_closeout()
-            case SysIdDataAnalysisUICommands.NOISE_UPDATE:
-                (
-                    frames,
-                    total_frames,
-                    self.frequencies,
-                    self.last_response_noise,
-                    self.last_reference_noise,
-                ) = data
-                self.update_sysid_plots(
-                    update_time=False,
-                    update_transfer_function=False,
-                    update_noise=True,
-                    update_kurtosis=False,
-                )
-                self.system_id_widget.current_frames_spinbox.setValue(frames)
-                self.system_id_widget.total_frames_spinbox.setValue(total_frames)
-                self.system_id_widget.progressBar.setValue(
-                    int(frames / total_frames * 100)
-                )
-            case SysIdDataAnalysisUICommands.SYSID_UPDATE:
-                (
-                    frames,
-                    total_frames,
-                    self.frequencies,
-                    self.last_transfer_function,
-                    self.last_coherence,
-                    self.last_response_cpsd,
-                    self.last_reference_cpsd,
-                    self.last_condition,
-                ) = data
-                # print(self.last_transfer_function.shape)
-                # print(self.last_coherence.shape)
-                # print(self.last_response_cpsd.shape)
-                # print(self.last_reference_cpsd.shape)
-                self.update_sysid_plots(
-                    update_time=False,
-                    update_transfer_function=True,
-                    update_noise=True,
-                    update_kurtosis=False,
-                )
-                self.system_id_widget.current_frames_spinbox.setValue(frames)
-                self.system_id_widget.total_frames_spinbox.setValue(total_frames)
-                self.system_id_widget.progressBar.setValue(
-                    int(frames / total_frames * 100)
-                )
-            case _:
-                return False
-        return True
 
     def save_sysid_matrix_file(self):
         """Saves out system identification data to a file"""
@@ -1573,3 +1170,404 @@ class AbstractSysIdUI(EnvironmentUI):
         self.system_id_widget.current_frames_spinbox.setValue(0)
         self.system_id_widget.total_frames_spinbox.setValue(0)
         self.system_id_widget.progressBar.setValue(100)
+
+    @abstractmethod
+    def display_environment_ended(self):
+        return
+
+    @abstractmethod
+    def display_environment_started(self):
+        return
+
+    @abstractmethod
+    def start_environment(self):
+        return super().start_environment()
+
+    @abstractmethod
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    @abstractmethod
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    @abstractmethod
+    def stop_environment(self):
+        return super().stop_environment()
+
+    @abstractmethod
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
+
+    @abstractmethod
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()
+
+    # region Commands
+    def update_sysid_plots(
+        self,
+        update_time=True,
+        update_transfer_function=True,
+        update_noise=True,
+        update_kurtosis=True,
+    ):
+        """Updates the plots on the system identification window
+
+        Parameters
+        ----------
+        update_time : bool, optional
+            If True, updates the time hitory plots, by default True
+        update_transfer_function : bool, optional
+            If True, updates the transfer function plots, by default True
+        update_noise : bool, optional
+            If True, updates the noise plots, by default True
+        update_kurtosis : bool, optional
+            If True, updates the kurtosis bar graph, by default True
+        """
+        # Figure out the selected entries
+        response_indices = [
+            i
+            for i in range(self.system_id_widget.response_selector.count())
+            if self.system_id_widget.response_selector.item(i).isSelected()
+        ]
+        reference_indices = [
+            i
+            for i in range(self.system_id_widget.reference_selector.count())
+            if self.system_id_widget.reference_selector.item(i).isSelected()
+        ]
+        # print(response_indices)
+        # print(reference_indices)
+        if update_time:
+            self.time_response_plot.clear()
+            self.time_reference_plot.clear()
+            if self.last_time_response is not None:
+                response_frame_indices = np.array(
+                    self.environment_metadata.response_channel_indices
+                )[response_indices]
+                reference_frame_indices = np.array(
+                    self.environment_metadata.reference_channel_indices
+                )[reference_indices]
+                response_time_data = self.last_time_response[response_frame_indices]
+                reference_time_data = self.last_time_response[reference_frame_indices]
+                times = (
+                    np.arange(response_time_data.shape[-1])
+                    / self.hardware_metadata.sample_rate
+                )
+                for i, time_data in enumerate(response_time_data):
+                    self.time_response_plot.plot(times, time_data, pen=i)
+                for i, time_data in enumerate(reference_time_data):
+                    self.time_reference_plot.plot(times, time_data, pen=i)
+        if update_transfer_function:
+            self.transfer_function_phase_plot.clear()
+            self.transfer_function_magnitude_plot.clear()
+            self.condition_plot.clear()
+            self.coherence_plot.clear()
+            self.impulse_response_plot.clear()
+            if (
+                self.last_transfer_function is not None
+                and len(response_indices) > 0
+                and len(reference_indices) > 0
+            ):
+                # print(self.last_transfer_function)
+                # print(np.array(response_indices)[:,np.newaxis])
+                # print(np.array(reference_indices))
+                frf_section = np.reshape(
+                    self.last_transfer_function[
+                        ...,
+                        np.array(response_indices)[:, np.newaxis],
+                        np.array(reference_indices),
+                    ],
+                    (self.frequencies.size, -1),
+                ).T
+                impulse_response = np.fft.irfft(frf_section, axis=-1)
+                for i, (frf, imp) in enumerate(zip(frf_section, impulse_response)):
+                    self.transfer_function_phase_plot.plot(
+                        self.frequencies, np.angle(frf) * 180 / np.pi, pen=i
+                    )
+                    self.transfer_function_magnitude_plot.plot(
+                        self.frequencies, np.abs(frf), pen=i
+                    )
+                    self.impulse_response_plot.plot(
+                        np.arange(imp.size) / self.environment_metadata.sample_rate,
+                        imp,
+                        pen=i,
+                    )
+                for i, coherence in enumerate(
+                    self.last_coherence[..., response_indices].T
+                ):
+                    self.coherence_plot.plot(self.frequencies, coherence, pen=i)
+            if self.last_condition is not None:
+                self.condition_plot.plot(self.frequencies, self.last_condition, pen=0)
+        if update_noise:
+            reference_noise = (
+                None
+                if self.last_reference_noise is None or len(reference_indices) == 0
+                else self.last_reference_noise[
+                    ..., reference_indices, reference_indices
+                ].real
+            )
+            response_noise = (
+                None
+                if self.last_response_noise is None or len(response_indices) == 0
+                else self.last_response_noise[
+                    ..., response_indices, response_indices
+                ].real
+            )
+            reference_level = (
+                None
+                if self.last_reference_cpsd is None or len(reference_indices) == 0
+                else self.last_reference_cpsd[
+                    ..., reference_indices, reference_indices
+                ].real
+            )
+            response_level = (
+                None
+                if self.last_response_cpsd is None or len(response_indices) == 0
+                else self.last_response_cpsd[
+                    ..., response_indices, response_indices
+                ].real
+            )
+            self.level_reference_plot.clear()
+            self.level_response_plot.clear()
+            for i in range(len(reference_indices)):
+                if reference_noise is not None:
+                    self.level_reference_plot.plot(
+                        self.frequencies, reference_noise[:, i], pen=i
+                    )
+                if reference_level is not None:
+                    try:
+                        self.level_reference_plot.plot(
+                            self.frequencies, reference_level[:, i], pen=i
+                        )
+                    except Exception:
+                        pass
+            for i in range(len(response_indices)):
+                if response_noise is not None:
+                    self.level_response_plot.plot(
+                        self.frequencies, response_noise[:, i], pen=i
+                    )
+                if response_level is not None:
+                    try:
+                        self.level_response_plot.plot(
+                            self.frequencies, response_level[:, i], pen=i
+                        )
+                    except Exception:
+                        pass
+
+        if update_kurtosis:
+            self.kurtosis_response_plot.clear()
+            self.kurtosis_reference_plot.clear()
+            if self.last_kurtosis is not None:
+                response_kurtosis = self.last_kurtosis[self.all_response_indices]
+                reference_kurtosis = self.last_kurtosis[self.all_reference_indices]
+                response_bar = pg.BarGraphItem(
+                    x=range(len(self.response_nodes)),
+                    height=response_kurtosis,
+                    width=0.5,
+                    pen="r",
+                    brush="r",
+                )
+                reference_bar = pg.BarGraphItem(
+                    x=range(len(self.reference_nodes)),
+                    height=reference_kurtosis,
+                    width=0.5,
+                    pen="r",
+                    brush="r",
+                )
+                self.kurtosis_response_plot.addItem(response_bar)
+                self.kurtosis_reference_plot.addItem(reference_bar)
+
+    def show_hide_coherence(self):
+        """Sets the visibility of the coherence plots"""
+        if self.system_id_widget.coherence_checkbox.isChecked():
+            self.system_id_widget.coherence_groupbox.show()
+        else:
+            self.system_id_widget.coherence_groupbox.hide()
+
+    def show_hide_levels(self):
+        """Sets the visibility of the level plots"""
+        if self.system_id_widget.levels_checkbox.isChecked():
+            self.system_id_widget.levels_groupbox.show()
+        else:
+            self.system_id_widget.levels_groupbox.hide()
+
+    def show_hide_time_data(self):
+        """Sets the visibility of the time data plots"""
+        if self.system_id_widget.time_data_checkbox.isChecked():
+            self.system_id_widget.time_data_groupbox.show()
+        else:
+            self.system_id_widget.time_data_groupbox.hide()
+
+    def show_hide_transfer_function(self):
+        """Sets the visibility of the transfer function plots"""
+        if self.system_id_widget.transfer_function_checkbox.isChecked():
+            self.system_id_widget.transfer_function_groupbox.show()
+        else:
+            self.system_id_widget.transfer_function_groupbox.hide()
+
+    def show_hide_impulse(self):
+        """Sets the visibility of the impulse response plots"""
+        if self.system_id_widget.impulse_checkbox.isChecked():
+            self.system_id_widget.impulse_groupbox.show()
+        else:
+            self.system_id_widget.impulse_groupbox.hide()
+
+    def show_hide_kurtosis(self):
+        """Sets the visibility of the kurtosis plots"""
+        if self.system_id_widget.kurtosis_checkbox.isChecked():
+            self.system_id_widget.kurtosis_groupbox.show()
+        else:
+            self.system_id_widget.kurtosis_groupbox.hide()
+
+    def update_signal_type(self):
+        """Updates the UI widgets based on the type of signal that has been selected"""
+        if self.system_id_widget.signalTypeComboBox.currentIndex() == 0:  # Random
+            self.system_id_widget.windowComboBox.setCurrentIndex(0)
+            self.system_id_widget.overlapDoubleSpinBox.show()
+            self.system_id_widget.overlapLabel.show()
+            self.system_id_widget.onFractionLabel.hide()
+            self.system_id_widget.onFractionDoubleSpinBox.hide()
+            self.system_id_widget.pretriggerLabel.hide()
+            self.system_id_widget.pretriggerDoubleSpinBox.hide()
+            self.system_id_widget.rampFractionLabel.hide()
+            self.system_id_widget.rampFractionDoubleSpinBox.hide()
+            self.system_id_widget.bandwidthLabel.show()
+            self.system_id_widget.lowFreqCutoffSpinBox.show()
+            self.system_id_widget.highFreqCutoffSpinBox.show()
+        elif (
+            self.system_id_widget.signalTypeComboBox.currentIndex() == 1
+        ):  # Pseudorandom
+            self.system_id_widget.windowComboBox.setCurrentIndex(1)
+            self.system_id_widget.overlapDoubleSpinBox.hide()
+            self.system_id_widget.overlapLabel.hide()
+            self.system_id_widget.onFractionLabel.hide()
+            self.system_id_widget.onFractionDoubleSpinBox.hide()
+            self.system_id_widget.pretriggerLabel.hide()
+            self.system_id_widget.pretriggerDoubleSpinBox.hide()
+            self.system_id_widget.rampFractionLabel.hide()
+            self.system_id_widget.rampFractionDoubleSpinBox.hide()
+            self.system_id_widget.bandwidthLabel.show()
+            self.system_id_widget.lowFreqCutoffSpinBox.show()
+            self.system_id_widget.highFreqCutoffSpinBox.show()
+        elif self.system_id_widget.signalTypeComboBox.currentIndex() == 2:  # Burst
+            self.system_id_widget.windowComboBox.setCurrentIndex(1)
+            self.system_id_widget.overlapDoubleSpinBox.hide()
+            self.system_id_widget.overlapLabel.hide()
+            self.system_id_widget.onFractionLabel.show()
+            self.system_id_widget.onFractionDoubleSpinBox.show()
+            self.system_id_widget.pretriggerLabel.show()
+            self.system_id_widget.pretriggerDoubleSpinBox.show()
+            self.system_id_widget.rampFractionLabel.show()
+            self.system_id_widget.rampFractionDoubleSpinBox.show()
+            self.system_id_widget.bandwidthLabel.show()
+            self.system_id_widget.lowFreqCutoffSpinBox.show()
+            self.system_id_widget.highFreqCutoffSpinBox.show()
+        elif self.system_id_widget.signalTypeComboBox.currentIndex() == 3:  # Chirp
+            self.system_id_widget.windowComboBox.setCurrentIndex(1)
+            self.system_id_widget.overlapDoubleSpinBox.hide()
+            self.system_id_widget.overlapLabel.hide()
+            self.system_id_widget.onFractionLabel.hide()
+            self.system_id_widget.onFractionDoubleSpinBox.hide()
+            self.system_id_widget.pretriggerLabel.hide()
+            self.system_id_widget.pretriggerDoubleSpinBox.hide()
+            self.system_id_widget.rampFractionLabel.hide()
+            self.system_id_widget.rampFractionDoubleSpinBox.hide()
+            self.system_id_widget.bandwidthLabel.hide()
+            self.system_id_widget.lowFreqCutoffSpinBox.hide()
+            self.system_id_widget.highFreqCutoffSpinBox.hide()
+
+    @abstractmethod
+    def update_gui(self, queue_data: tuple):
+        """Update the environment's graphical user interface
+
+        This function will receive data from the gui_update_queue that
+        specifies how the user interface should be updated.  Data will usually
+        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
+        what operation should be taken or which widget should be modified, and
+        the ``data`` notes what data should be used in the update.
+
+        Parameters
+        ----------
+        queue_data : tuple
+            A tuple containing ``(instruction,data)`` pairs where ``instruction``
+            defines and operation or widget to be modified and ``data`` contains
+            the data used to perform the operation.
+        """
+        if super().update_gui(queue_data):
+            return True
+        command, data = queue_data
+        self.log(f"Got GUI Message {command}")
+        # print('Update GUI Got {:}'.format(message))
+        match command:
+            case SysIdUICommands.SYSID_STARTED:
+                self.display_sys_id_started()
+            case SysIdUICommands.SYSID_ENDED:
+                self.display_sys_id_ended()
+            case DataCollectorUICommands.TIME_FRAME:
+                self.last_time_response, accept = data
+                self.update_sysid_plots(
+                    update_time=True,
+                    update_transfer_function=False,
+                    update_noise=False,
+                    update_kurtosis=False,
+                )
+            case DataCollectorUICommands.KURTOSIS:
+                self.last_kurtosis = data
+                self.update_sysid_plots(
+                    update_time=False,
+                    update_transfer_function=False,
+                    update_noise=False,
+                    update_kurtosis=True,
+                )
+            case SysIdDataAnalysisUICommands.NOISE_COMPLETED:
+                self.run_system_id_validate_noise_closeout()
+            case SysIdDataAnalysisUICommands.TRANSFER_COMPLETED:
+                self.run_system_id_validate_transfer_closeout()
+            case SysIdDataAnalysisUICommands.NOISE_UPDATE:
+                (
+                    frames,
+                    total_frames,
+                    self.frequencies,
+                    self.last_response_noise,
+                    self.last_reference_noise,
+                ) = data
+                self.update_sysid_plots(
+                    update_time=False,
+                    update_transfer_function=False,
+                    update_noise=True,
+                    update_kurtosis=False,
+                )
+                self.system_id_widget.current_frames_spinbox.setValue(frames)
+                self.system_id_widget.total_frames_spinbox.setValue(total_frames)
+                self.system_id_widget.progressBar.setValue(
+                    int(frames / total_frames * 100)
+                )
+            case SysIdDataAnalysisUICommands.SYSID_UPDATE:
+                (
+                    frames,
+                    total_frames,
+                    self.frequencies,
+                    self.last_transfer_function,
+                    self.last_coherence,
+                    self.last_response_cpsd,
+                    self.last_reference_cpsd,
+                    self.last_condition,
+                ) = data
+                # print(self.last_transfer_function.shape)
+                # print(self.last_coherence.shape)
+                # print(self.last_response_cpsd.shape)
+                # print(self.last_reference_cpsd.shape)
+                self.update_sysid_plots(
+                    update_time=False,
+                    update_transfer_function=True,
+                    update_noise=True,
+                    update_kurtosis=False,
+                )
+                self.system_id_widget.current_frames_spinbox.setValue(frames)
+                self.system_id_widget.total_frames_spinbox.setValue(total_frames)
+                self.system_id_widget.progressBar.setValue(
+                    int(frames / total_frames * 100)
+                )
+            case _:
+                return False
+        return True

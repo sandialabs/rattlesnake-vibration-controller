@@ -30,8 +30,7 @@ import time
 import threading
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from qtpy.QtCore import Qt, QTimer
-from scipy.interpolate import interp1d
+from qtpy.QtCore import Qt
 from scipy.io import loadmat
 from enum import Enum
 
