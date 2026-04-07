@@ -658,6 +658,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.streaming_environment_select_combobox.clear()
         self.streaming_environment_select_combobox.addItems(streaming_environment_items)
         self.rattlesnake_tabs.setTabEnabled(1, True)
+        if self.has_system_id:
+            self.rattlesnake_tabs.setTabEnabled(2, True)
+        else:
+            self.rattlesnake_tabs.setTabEnabled(4, True)
         self.rattlesnake_tabs.setCurrentIndex(1)
 
     def load_ui_from_profile(self):

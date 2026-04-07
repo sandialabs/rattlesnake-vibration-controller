@@ -263,19 +263,22 @@ def build_modal_environment():
     hardware_metadata = make_sdynpy_system_metadata()
     modal_environment_metadata = make_modal_environment_metadata(hardware_metadata)
     modal_stream_metadata = make_stream_metadata(MODAL_ENVIRONMENT_NAME)
-    modal_environment_instructions = make_time_environment_instructions()
+    modal_environment_instructions = make_modal_environment_instructions()
 
     rattlesnake.initialize_hardware(hardware_metadata)
     rattlesnake.initialize_environments([modal_environment_metadata])
-    rattlesnake.start_acquisition(modal_stream_metadata)
-    rattlesnake.start_environment(modal_environment_instructions)
+    # rattlesnake.start_acquisition(modal_stream_metadata)
+    # rattlesnake.start_environment(modal_environment_instructions)
+
+    return rattlesnake
 
 
 # endregion
 
 # region Startup
 if __name__ == "__main__":
-    rattlesnake = build_time_environment()
+    # rattlesnake = build_time_environment()
+    rattlesnake = build_modal_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

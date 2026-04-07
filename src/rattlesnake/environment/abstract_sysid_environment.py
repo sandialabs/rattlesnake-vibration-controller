@@ -66,35 +66,28 @@ from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 
+# region Commands
 class SystemIdCommands(Enum):
     """Enumeration of commands that could be sent to the system identification environment"""
 
-    PREVIEW_NOISE = 0
-    PREVIEW_TRANSFER_FUNCTION = 1
-    START_SYSTEM_ID = 2
-    STOP_SYSTEM_ID = 3
-    CHECK_FOR_COMPLETE_SHUTDOWN = 4
+    CHECK_FOR_COMPLETE_SHUTDOWN = 0
 
 
-class SystemIdUICommands(Enum):
-    ENABLE_SYSTEM_ID = 0
-    DISABLE_SYSTEM_ID = 1
+class SysIdUICommands(Enum):
+    SYSID_STARTED = 0
+    SYSID_ENDED = 1
+
+    @property
+    def label(self):
+        """Used by UI as names for"""
+        return self.name.replace("_", " ").title()
+
+
+# endregion
 
 
 # region: Metadata
-class AbstractSysIdMetadata(AbstractMetadata):
-    """Abstract class for storing metadata for an environment.
-
-    This class is used as a storage container for parameters used by an
-    environment.  It is returned by the environment UI's
-    ``collect_environment_definition_parameters`` function as well as its
-    ``initialize_environment`` function.  Various parts of the controller and
-    environment will query the class's data members for parameter values.
-
-    Classes inheriting from AbstractMetadata must define:
-      1. store_to_netcdf - A function defining the way the parameters are
-         stored to a netCDF file saved during streaming operations.
-    """
+class SysIdEnvironmentMetadata(AbstractMetadata):
 
     def __init__(self):
         self.sysid_frame_size = None
