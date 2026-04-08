@@ -442,8 +442,8 @@ def test_crashing_environment():
 if __name__ == "__main__":
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
-    rattlesnake = build_sine_environment()
-    # rattlesnake = test_crashing_environment()
+    # rattlesnake = build_sine_environment()
+    rattlesnake = test_crashing_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

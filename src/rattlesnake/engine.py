@@ -579,12 +579,12 @@ class RattlesnakeController:
         self.event_container.acquisition_ready_event.clear()
         self.queue_container.acquisition_command_queue.put(
             TASK_NAME,
-            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata),
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata),
         )
         self.event_container.output_ready_event.clear()
         self.queue_container.output_command_queue.put(
             TASK_NAME,
-            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata),
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata),
         )
 
         if self.blocking:
