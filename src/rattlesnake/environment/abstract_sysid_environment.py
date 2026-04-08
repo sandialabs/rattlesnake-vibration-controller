@@ -207,7 +207,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             environment's metadata is stored.
 
         """
-        self.sysid_metadata.store_to_netcdf(netcdf_group_handle)
+        self.sysid_metadata.save_metadata_to_netcdf(netcdf_group_handle)
 
     @classmethod
     @abstractmethod
@@ -241,7 +241,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             The netCDF dataset from which the data will be read.  It should have
             a group name with the enviroment's name.
         """
-        return SysIdMetadata.retrieve_metadata_from_netcdf(
+        return SysIdMetadata.load_metadata_from_netcdf(
             netcdf_group_handle, hardware_metadata
         )
 
@@ -275,7 +275,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
         """
-        super().store_to_worksheet(worksheet)
+        super().save_metadata_to_worksheet(worksheet)
 
     @classmethod
     @abstractmethod
@@ -301,6 +301,9 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         in the worksheet sharing the environment's name, e.g.
 
         """
+        super().load_metadata_from_worksheet(
+            worksheet, environment_name, channel_list_bools, hardware_metadata
+        )
 
     # endregion
 

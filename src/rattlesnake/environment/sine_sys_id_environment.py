@@ -342,7 +342,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             environment's metadata is stored.
 
         """
-        super().store_to_netcdf(netcdf_group_handle)
+        super().save_metadata_to_netcdf(netcdf_group_handle)
 
         netcdf_group_handle.sample_rate = self.sample_rate
         netcdf_group_handle.samples_per_frame = self.samples_per_frame
@@ -485,7 +485,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
 
         """
 
-        sysid_metadata = SysIdMetadata.retrieve_metadata_from_netcdf(
+        sysid_metadata = SysIdMetadata.load_metadata_from_netcdf(
             netcdf_group_handle, hardware_metadata
         )
         # Get the group
@@ -708,7 +708,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
     def save_metadata_to_worksheet(
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
     ):
-        super().store_to_worksheet(worksheet)
+        super().save_metadata_to_worksheet(worksheet)
 
         if self.ramp_time is not None:
             worksheet.cell(2, 2, self.ramp_time)
@@ -746,7 +746,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             for idx, channel_ind in enumerate(self.control_channel_indices):
                 col_idx = idx + 2
                 worksheet.cell(18, col_idx, channel_ind + 1)
-        self.sysid_metadata.store_to_worksheet(worksheet, start_row=19)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=19)
         response_row = 34
         output_row = 35
         if self.response_transformation_matrix is not None:
@@ -835,7 +835,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             except:
                 break  # This is incase it cant be converted to int
             column_index += 1
-        sysid_metadata = SysIdMetadata.retrieve_metadata_from_worksheet(
+        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
             worksheet, hardware_metadata, start_row=19
         )
 

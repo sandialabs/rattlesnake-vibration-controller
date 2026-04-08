@@ -417,21 +417,25 @@ def build_sine_environment():
     # rattlesnake.preview_system_id_noise(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
     # rattlesnake.preview_system_id_transfer(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
     rattlesnake.run_system_id(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
-    # rattlesnake.start_acquisition(sine_stream_metadata)
+    rattlesnake.start_acquisition(sine_stream_metadata)
 
     return rattlesnake
 
 
 def test_crashing_environment():
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=True, timeout=60)
     hardware_metadata = make_sdynpy_system_metadata()
     sine_environment_metadata = make_sine_environment_metadata(hardware_metadata)
     time_environment_metadata = make_time_environment_metadata(hardware_metadata)
+    sine_sys_id_metadata = make_sys_id_metadata()
+    stream_metadata = make_stream_metadata()
 
     rattlesnake.initialize_hardware(hardware_metadata)
     rattlesnake.initialize_environments(
         [sine_environment_metadata, time_environment_metadata]
     )
+    rattlesnake.run_system_id(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
+    # rattlesnake.start_acquisition(stream_metadata)
 
     return rattlesnake
 
@@ -442,8 +446,8 @@ def test_crashing_environment():
 if __name__ == "__main__":
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
-    # rattlesnake = build_sine_environment()
-    rattlesnake = test_crashing_environment()
+    rattlesnake = build_sine_environment()
+    # rattlesnake = test_crashing_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion
