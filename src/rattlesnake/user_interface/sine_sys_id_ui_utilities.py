@@ -1,619 +1,18 @@
 import os
 
+import numpy as np
 import pyqtgraph as pqtg
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt, QLocale  # pylint: disable=no-name-in-module
 
-from rattlesnake.user_interface.ui_utilities import VaryingNumberOfLinePlot
+from rattlesnake.utilities import DIRECTORY, wrap
 from rattlesnake.environment.sine_sys_id_utilities import (
-    load_specification,
     SineSpecification,
+    load_specification,
     digital_tracking_filter_generator,
     vold_kalman_filter_generator,
 )
-from rattlesnake.utilities import DIRECTORY, wrap
-import numpy as np
-
-
-class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
-    """A simple class to remove the scroll wheel capability from a spin box"""
-
-    def wheelEvent(self, event):  # pylint: disable=invalid-name
-        """Capture the wheel event but ignore it"""
-        event.ignore()
-
-
-class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
-    """A spinbox that changes number of decimals based on the value provided"""
-
-    localization = QLocale(QLocale.English, QLocale.UnitedStates)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.setDecimals(10)
-
-    def textFromValue(self, value):  # pylint: disable=invalid-name
-        """Gets the text to show in the spinbox based on the value stored in the spinbox"""
-        return AdaptiveNoWheelSpinBox.localization.toString(value, "g", self.decimals())
-
-
-class NoWheelComboBox(QtWidgets.QComboBox):
-    """A simple class to remove the scroll wheel capability from a combo box"""
-
-    def wheelEvent(self, event):  # pylint: disable=invalid-name
-        """Capture the wheel event but ignore it"""
-        event.ignore()
-
-
-class SineSweepTable:
-    """A class representing a breakpoint table defining a sine sweep"""
-
-    def __init__(
-        self,
-        parent_tabwidget: QtWidgets.QTabWidget,
-        update_specification_function,
-        remove_function,
-        control_names,
-        data_acquisition_parameters,
-    ):
-        """Initializes a sine sweep table to represent the breakpoints of a sine tone
-
-        Parameters
-        ----------
-        parent_tabwidget : QtWidgets.QTabWidget
-            The parent tabwidget in the sine ui class, which is needed to
-            propogate changes in this widget back up to the main UI class
-        update_specification_function : function
-            The function to call to update the specification when the values
-            in this table have changed
-        remove_function : function
-            The function to call when we remove a table from the tab widget
-        control_names : list of str
-            A list of strings to be used as the control channel names in the
-            table
-        data_acquisition_parameters : DataAcquisitionParameters
-            The data acquisition parameters, including sample rate
-        """
-        self.parent_tabwidget = parent_tabwidget
-        self.update_specification_function = update_specification_function
-        self.remove_function = remove_function
-        self.control_names = control_names
-        self.data_acquisition_parameters = data_acquisition_parameters
-        self.widget = QtWidgets.QWidget()
-        sine_sweep_table_ui_path = os.path.join(
-            DIRECTORY, "user_interface", "ui_files", "sine_sweep_table.ui"
-        )
-        uic.loadUi(sine_sweep_table_ui_path, self.widget)
-        self.index = self.parent_tabwidget.count() - 1
-        self.parent_tabwidget.insertTab(self.index, self.widget, f"Sine {self.index+1}")
-        self.widget.name_editor.setText(f"Sine {self.index+1}")
-        self.parent_tabwidget.setCurrentIndex(self.index)
-        self.connect_callbacks()
-        self.clear_and_update_specification_table()
-
-    def connect_callbacks(self):
-        """Connects the widgets in the UI to methods of the object"""
-        self.widget.add_breakpoint_button.clicked.connect(self.add_breakpoint)
-        self.widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
-        self.widget.load_breakpoints_button.clicked.connect(self.load_specification)
-        self.widget.name_editor.editingFinished.connect(self.update_name)
-        self.widget.start_time_selector.valueChanged.connect(
-            self.update_specification_function
-        )
-        self.widget.remove_tone_button.clicked.connect(self.remove_tone)
-
-    def add_breakpoint(self):
-        """Adds a breakpoint to the table"""
-        selected_indices = self.widget.breakpoint_table.selectedIndexes()
-        if selected_indices:
-            selected_row = selected_indices[0].row()
-        else:
-            # If no row is selected, add the row at the start
-            selected_row = 0
-        control_names = self.control_names
-        self.widget.breakpoint_table.insertRow(selected_row)
-        self.widget.warning_table.insertRow(selected_row)
-        self.widget.abort_table.insertRow(selected_row)
-        # Frequency display, Breakpoint Table
-        spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
-        spinbox.setSingleStep(1)
-        spinbox.setValue(0)
-        spinbox.setKeyboardTracking(False)
-        spinbox.valueChanged.connect(self.update_specification_function)
-        self.widget.breakpoint_table.setCellWidget(selected_row, 0, spinbox)
-        # Frequency display, warning table
-        spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
-        spinbox.setSingleStep(1)
-        spinbox.setValue(0)
-        spinbox.setKeyboardTracking(False)
-        spinbox.setReadOnly(True)
-        spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-        self.widget.warning_table.setCellWidget(selected_row, 0, spinbox)
-        # Frequency display, abort table
-        spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
-        spinbox.setSingleStep(1)
-        spinbox.setValue(0)
-        spinbox.setKeyboardTracking(False)
-        spinbox.setReadOnly(True)
-        self.widget.abort_table.setCellWidget(selected_row, 0, spinbox)
-        # Linear or logarithmic selector
-        combobox = NoWheelComboBox()
-        combobox.addItems(["Linear", "Logarithmic"])
-        combobox.setCurrentIndex(0)
-        combobox.currentIndexChanged.connect(self.update_specification_function)
-        self.widget.breakpoint_table.setCellWidget(selected_row, 1, combobox)
-        # Rate selector
-        spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(-1000000, 1000000)
-        spinbox.setSingleStep(1)
-        spinbox.setValue(1)
-        spinbox.setSuffix(" Hz/s")
-        spinbox.setKeyboardTracking(False)
-        spinbox.valueChanged.connect(self.update_specification_function)
-        self.widget.breakpoint_table.setCellWidget(selected_row, 2, spinbox)
-        # All of the individual values
-        for j in range(len(control_names)):
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, 1000000)
-            spinbox.setSingleStep(1)
-            spinbox.setValue(1)
-            spinbox.setKeyboardTracking(False)
-            spinbox.valueChanged.connect(self.update_specification_function)
-            self.widget.breakpoint_table.setCellWidget(selected_row, 3 + j * 2, spinbox)
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(-1000000, 1000000)
-            spinbox.setSingleStep(1)
-            spinbox.setValue(0)
-            spinbox.setKeyboardTracking(False)
-            spinbox.valueChanged.connect(self.update_specification_function)
-            self.widget.breakpoint_table.setCellWidget(selected_row, 4 + j * 2, spinbox)
-            for k in range(4):
-                if selected_row == 0 and k in (0, 2):
-                    item = self.widget.warning_table.item(selected_row, 1 + k + j * 4)
-                    if item is None:
-                        item = QtWidgets.QTableWidgetItem()
-                        self.widget.warning_table.setItem(
-                            selected_row, 1 + k + j * 4, item
-                        )
-                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                    item = self.widget.abort_table.item(selected_row, 1 + k + j * 4)
-                    if item is None:
-                        item = QtWidgets.QTableWidgetItem()
-                        self.widget.abort_table.setItem(
-                            selected_row, 1 + k + j * 4, item
-                        )
-                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                spinbox = AdaptiveNoWheelSpinBox()
-                spinbox.setRange(0, 1000000)
-                spinbox.setSingleStep(1)
-                spinbox.setValue(0)
-                spinbox.setKeyboardTracking(False)
-                spinbox.setSpecialValueText("Disabled")
-                spinbox.valueChanged.connect(self.update_specification_function)
-                self.widget.warning_table.setCellWidget(
-                    selected_row + (1 if selected_row == 0 and k in (0, 2) else 0),
-                    1 + k + j * 4,
-                    spinbox,
-                )
-                spinbox = AdaptiveNoWheelSpinBox()
-                spinbox.setRange(0, 1000000)
-                spinbox.setSingleStep(1)
-                spinbox.setValue(0)
-                spinbox.setKeyboardTracking(False)
-                spinbox.setSpecialValueText("Disabled")
-                spinbox.valueChanged.connect(self.update_specification_function)
-                self.widget.abort_table.setCellWidget(
-                    selected_row + (1 if selected_row == 0 and k in (0, 2) else 0),
-                    1 + k + j * 4,
-                    spinbox,
-                )
-        self.update_specification_function()
-
-    def remove_breakpoint(self):
-        """Removes a breakpoint from the table"""
-        selected_indices = self.widget.breakpoint_table.selectedIndexes()
-        if selected_indices:
-            selected_row = selected_indices[0].row()
-        else:
-            # If no row is selected, remove the last row
-            selected_row = self.widget.breakpoint_table.rowCount() - 1
-        if selected_row == self.widget.breakpoint_table.rowCount() - 1:
-            last_row = True
-        else:
-            last_row = False
-        if selected_row == 0:
-            first_row = True
-        else:
-            first_row = False
-        self.widget.breakpoint_table.removeRow(selected_row)
-        self.widget.warning_table.removeRow(selected_row)
-        self.widget.abort_table.removeRow(selected_row)
-        if last_row:
-            new_last_row_index = self.widget.breakpoint_table.rowCount() - 1
-            for column in [1, 2]:
-                widget = self.widget.breakpoint_table.cellWidget(
-                    new_last_row_index, column
-                )
-                if widget:
-                    # Remove the widget from the cell
-                    self.widget.breakpoint_table.removeCellWidget(
-                        new_last_row_index, column
-                    )
-                    widget.deleteLater()
-                item = self.widget.breakpoint_table.item(new_last_row_index, column)
-                if item is None:
-                    item = QtWidgets.QTableWidgetItem()
-                    self.widget.breakpoint_table.setItem(
-                        new_last_row_index, column, item
-                    )
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-            for column in np.arange(2, self.widget.warning_table.columnCount(), 2):
-                for table in [self.widget.warning_table, self.widget.abort_table]:
-                    widget = table.cellWidget(new_last_row_index, column)
-                    if widget:
-                        # Remove the widget from the cell
-                        table.removeCellWidget(new_last_row_index, column)
-                        widget.deleteLater()
-                    item = table.item(new_last_row_index, column)
-                    if item is None:
-                        item = QtWidgets.QTableWidgetItem()
-                        table.setItem(new_last_row_index, column, item)
-                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-        if first_row:
-            for column in np.arange(1, self.widget.warning_table.columnCount(), 2):
-                for table in [self.widget.warning_table, self.widget.abort_table]:
-                    widget = table.cellWidget(0, column)
-                    if widget:
-                        # Remove the widget from the cell
-                        table.removeCellWidget(0, column)
-                        widget.deleteLater()
-                    item = table.item(0, column)
-                    if item is None:
-                        item = QtWidgets.QTableWidgetItem()
-                        table.setItem(0, column, item)
-                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-        self.update_specification_function()
-
-    def load_specification(
-        self, clicked, filename=None
-    ):  # pylint: disable=unused-argument
-        """Loads a breakpoint table using a dialog or the specified filename
-
-        Parameters
-        ----------
-        clicked :
-            The clicked event that triggered the callback.
-        filename :
-            File name defining the specification for bypassing the callback when
-            loading from a file (Default value = None).
-
-        """
-        if filename is None:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self.widget,
-                "Select Specification File",
-                filter="Numpy or Mat (*.npy *.npz *.mat)",
-            )
-            if filename == "":
-                return
-        (
-            frequencies,
-            amplitudes,
-            phases,  # Degrees
-            sweep_types,
-            sweep_rates,
-            warnings,
-            aborts,
-            start_time,
-            name,
-        ) = load_specification(filename)
-        self.clear_and_update_specification_table(
-            frequencies,
-            amplitudes,
-            phases,  # Degrees
-            sweep_types,
-            sweep_rates,
-            warnings,
-            aborts,
-            start_time,
-            name,
-        )
-        self.update_specification_function()
-
-    def clear_and_update_specification_table(
-        self,
-        frequencies=None,
-        amplitudes=None,
-        phases=None,
-        sweep_types=None,
-        sweep_rates=None,
-        warning_amplitudes=None,
-        abort_amplitudes=None,
-        start_time=None,
-        sine_name=None,
-        control_names=None,
-    ):
-        """Clears the table and updates it with the optional parameters supplied.
-
-        Parameters
-        ----------
-        frequencies : ndarray, optional
-            A 1D array containing the frequencies to use as the breakpoints. By
-            default, a table consisting of two breakpoints will be specified.
-        amplitudes : ndarray, optional
-            A 2D array consisting of amplitudes for (channel, frequency) pairs.
-            If not specified, an amplitude of zero will be used.
-        phases : ndarray, optional
-            A 2D array consisting of phases for (channel, frequency) pairs.
-            If not specified, an amplitude of zero will be used.  Phases
-            are specified in degrees.
-        sweep_types : ndarray or list of strings, optional
-            A 1D array of strings to use as the sweep type.  They should
-            be one of lin, log, linear, or logarithmic.  Linear is used
-            if not specified.
-        sweep_rates : ndarray, optional
-            A 1D array of values to use as the sweep rate.  They should
-            be in Hz/s for linear sweeps or octave per minute for
-            logarithmic sweeps.
-        warning_amplitudes : ndarray, optional
-            A 4D ndarray with shape 2, 2, num_channels, num_frequencies.
-            The first dimension specifies upper and lower limits, the
-            second dimension specifies frequencies greater or lower than
-            the frequency breakpoint.  If a value is not desired, it
-            should be set to nan.
-        abort_amplitudes : ndarray, optional
-            A 4D ndarray with shape 2, 2, num_channels, num_frequencies.
-            The first dimension specifies upper and lower limits, the
-            second dimension specifies frequencies greater or lower than
-            the frequency breakpoint.  If a value is not desired, it
-            should be set to nan.
-        start_time : float, optional
-            The starting time for the specified sine tone.  If not specified,
-            it will be set to 0
-        sine_name : str, optional
-            The name of the sine tone used in the software.
-        control_names : array of str, optional
-            Channel names to use in the table.  If not specified, the
-            existing channel names will be used.
-        """
-        # print(f'Called clear_and_update_specification with {control_names=}')
-        # print(f'Called clear_and_update_specification with {start_time=}')
-        # print(f'Called clear_and_update_specification with {sine_name=}')
-        if control_names is not None:
-            self.control_names = control_names
-        control_names = self.control_names
-        if frequencies is None:
-            num_rows = 2
-        else:
-            num_rows = frequencies.size
-        self.widget.breakpoint_table.clear()
-        self.widget.breakpoint_table.setRowCount(num_rows)
-        self.widget.breakpoint_table.setColumnCount(3 + 2 * len(control_names))
-        self.widget.warning_table.setRowCount(num_rows)
-        self.widget.warning_table.setColumnCount(1 + 4 * len(control_names))
-        self.widget.abort_table.setRowCount(num_rows)
-        self.widget.abort_table.setColumnCount(1 + 4 * len(control_names))
-        breakpoint_header_labels = ["Frequency", "Sweep Type", "Sweep Rate"]
-        other_header_labels = ["Frequency"]
-        for name in control_names:
-            breakpoint_header_labels.append(name + " Amplitude")
-            breakpoint_header_labels.append(name + " Phase")
-            other_header_labels.append(name + " Lower Left")
-            other_header_labels.append(name + " Lower Right")
-            other_header_labels.append(name + " Upper Left")
-            other_header_labels.append(name + " Upper Right")
-        self.widget.breakpoint_table.setHorizontalHeaderLabels(breakpoint_header_labels)
-        self.widget.warning_table.setHorizontalHeaderLabels(other_header_labels)
-        self.widget.abort_table.setHorizontalHeaderLabels(other_header_labels)
-        # Set up widgets in the table
-        for row in range(num_rows):
-            # Frequency Breakpoint
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
-            spinbox.setSingleStep(1)
-            if frequencies is None:
-                spinbox.setValue(0)
-            else:
-                spinbox.setValue(frequencies[row])
-            spinbox.setKeyboardTracking(False)
-            spinbox.setDecimals(4)
-            spinbox.valueChanged.connect(self.update_specification_function)
-            self.widget.breakpoint_table.setCellWidget(row, 0, spinbox)
-            # Frequency display, warning table
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
-            spinbox.setSingleStep(1)
-            if frequencies is None:
-                spinbox.setValue(0)
-            else:
-                spinbox.setValue(frequencies[row])
-            spinbox.setKeyboardTracking(False)
-            spinbox.setReadOnly(True)
-            spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-            self.widget.warning_table.setCellWidget(row, 0, spinbox)
-            # Frequency display, abort table
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
-            spinbox.setSingleStep(1)
-            if frequencies is None:
-                spinbox.setValue(0)
-            else:
-                spinbox.setValue(frequencies[row])
-            spinbox.setKeyboardTracking(False)
-            spinbox.setReadOnly(True)
-            spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-            self.widget.abort_table.setCellWidget(row, 0, spinbox)
-            # Rate and type
-            if row < num_rows - 1:
-                combobox = NoWheelComboBox()
-                combobox.addItems(["Linear", "Logarithmic"])
-                if sweep_types is not None:
-                    if str(sweep_types[row]).lower() in ["lin", "linear"]:
-                        combobox.setCurrentIndex(0)
-                    else:
-                        combobox.setCurrentIndex(1)
-                combobox.currentIndexChanged.connect(self.update_specification_function)
-                self.widget.breakpoint_table.setCellWidget(row, 1, combobox)
-                spinbox = AdaptiveNoWheelSpinBox()
-                spinbox.setRange(-1000000, 1000000)
-                spinbox.setSingleStep(1)
-                if sweep_rates is not None:
-                    spinbox.setValue(sweep_rates[row])
-                else:
-                    spinbox.setValue(1)
-                if combobox.currentIndex() == 0:
-                    spinbox.setSuffix(" Hz/s")
-                else:
-                    spinbox.setSuffix(" oct/min")
-                spinbox.setKeyboardTracking(False)
-                spinbox.valueChanged.connect(self.update_specification_function)
-                self.widget.breakpoint_table.setCellWidget(row, 2, spinbox)
-            else:
-                item = self.widget.breakpoint_table.item(row, 1)
-                if item is None:
-                    item = QtWidgets.QTableWidgetItem()
-                    self.widget.breakpoint_table.setItem(row, 1, item)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                item = self.widget.breakpoint_table.item(row, 2)
-                if item is None:
-                    item = QtWidgets.QTableWidgetItem()
-                    self.widget.breakpoint_table.setItem(row, 2, item)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-            # Amplitude and Phases
-            for j in range(len(control_names)):
-                spinbox = AdaptiveNoWheelSpinBox()
-                spinbox.setRange(0, 1000000)
-                spinbox.setSingleStep(1)
-                if amplitudes is None:
-                    spinbox.setValue(1)
-                else:
-                    spinbox.setValue(amplitudes[j, row])
-                spinbox.setKeyboardTracking(False)
-                spinbox.valueChanged.connect(self.update_specification_function)
-                self.widget.breakpoint_table.setCellWidget(row, 3 + j * 2, spinbox)
-                spinbox = AdaptiveNoWheelSpinBox()
-                spinbox.setRange(-1000000, 1000000)
-                spinbox.setSingleStep(1)
-                if phases is None:
-                    spinbox.setValue(0)
-                else:
-                    spinbox.setValue(phases[j, row])
-                spinbox.valueChanged.connect(self.update_specification_function)
-                spinbox.setKeyboardTracking(False)
-                self.widget.breakpoint_table.setCellWidget(row, 4 + j * 2, spinbox)
-                for k in range(4):
-                    spinbox = AdaptiveNoWheelSpinBox()
-                    spinbox.setRange(0, 1000000)
-                    spinbox.setSingleStep(1)
-                    if (
-                        row == 0 and k in (0, 2)
-                    ) or (  # If first frequency and looking at left side
-                        row == num_rows - 1 and k in (1, 3)
-                    ):  # or if last frequency and looking at right side
-                        item = self.widget.warning_table.item(row, 1 + k + j * 4)
-                        if item is None:
-                            item = QtWidgets.QTableWidgetItem()
-                            self.widget.warning_table.setItem(row, 1 + k + j * 4, item)
-                        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                        item = self.widget.abort_table.item(row, 1 + k + j * 4)
-                        if item is None:
-                            item = QtWidgets.QTableWidgetItem()
-                            self.widget.abort_table.setItem(row, 1 + k + j * 4, item)
-                        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                    else:
-                        if warning_amplitudes is None:
-                            spinbox.setValue(0)
-                        else:
-                            val = warning_amplitudes[
-                                np.unravel_index(k, (2, 2)) + (j, row)
-                            ]
-                            spinbox.setValue(0 if np.isnan(val) else val)
-                        spinbox.setKeyboardTracking(False)
-                        spinbox.setSpecialValueText("Disabled")
-                        spinbox.valueChanged.connect(self.update_specification_function)
-                        self.widget.warning_table.setCellWidget(
-                            row, 1 + k + j * 4, spinbox
-                        )
-                        spinbox = AdaptiveNoWheelSpinBox()
-                        spinbox.setRange(0, 1000000)
-                        spinbox.setSingleStep(1)
-                        if abort_amplitudes is None:
-                            spinbox.setValue(0)
-                        else:
-                            val = abort_amplitudes[
-                                np.unravel_index(k, (2, 2)) + (j, row)
-                            ]
-                            spinbox.setValue(0 if np.isnan(val) else val)
-                        spinbox.setKeyboardTracking(False)
-                        spinbox.setSpecialValueText("Disabled")
-                        spinbox.valueChanged.connect(self.update_specification_function)
-                        self.widget.abort_table.setCellWidget(
-                            row, 1 + k + j * 4, spinbox
-                        )
-        if sine_name is not None:
-            self.widget.name_editor.setText(sine_name)
-            self.update_name()
-        if start_time is not None:
-            self.widget.start_time_selector.setValue(start_time)
-
-    def update_name(self):
-        """Called when the name of the sine tone is changed"""
-        self.parent_tabwidget.setTabText(self.index, self.widget.name_editor.text())
-
-    def remove_tone(self):
-        """Called when the remove button is pressed"""
-        self.remove_function(self.index)
-
-    def get_specification(self):
-        """Computes a sine sweep specification from the table"""
-        num_control = (self.widget.breakpoint_table.columnCount() - 3) // 2
-        spec = SineSpecification(
-            self.widget.name_editor.text(),
-            self.widget.start_time_selector.value(),
-            num_control,
-            self.widget.breakpoint_table.rowCount(),
-        )
-        for row, spec_row in enumerate(spec.breakpoint_table):
-            spec_row["frequency"] = self.widget.breakpoint_table.cellWidget(
-                row, 0
-            ).value()
-            if row < len(spec.breakpoint_table) - 1:
-                spec_row["sweep_type"] = self.widget.breakpoint_table.cellWidget(
-                    row, 1
-                ).currentIndex()
-                spec_row["sweep_rate"] = self.widget.breakpoint_table.cellWidget(
-                    row, 2
-                ).value()
-            for i in range(num_control):
-                spec_row["amplitude"][i] = self.widget.breakpoint_table.cellWidget(
-                    row, 3 + 2 * i
-                ).value()
-                spec_row["phase"][i] = (
-                    self.widget.breakpoint_table.cellWidget(row, 4 + 2 * i).value()
-                    * np.pi
-                    / 180
-                )  # Convert degrees to radians for all calculations
-                for k in range(4):
-                    ind = np.unravel_index(k, (2, 2))
-                    if (row == 0 and k in (0, 2)) or (
-                        row == len(spec.breakpoint_table) - 1 and k in (1, 3)
-                    ):
-                        spec_row["warning"][ind + (i,)] = np.nan
-                        spec_row["abort"][ind + (i,)] = np.nan
-                    else:
-                        val = self.widget.warning_table.cellWidget(
-                            row, 1 + k + i * 4
-                        ).value()
-                        spec_row["warning"][ind + (i,)] = np.nan if val == 0 else val
-                        val = self.widget.abort_table.cellWidget(
-                            row, 1 + k + i * 4
-                        ).value()
-                        spec_row["abort"][ind + (i,)] = np.nan if val == 0 else val
-        return spec
+from rattlesnake.user_interface.ui_utilities import VaryingNumberOfLinePlot
 
 
 class FilterExplorer(QtWidgets.QDialog):
@@ -1185,3 +584,637 @@ class PlotSineWindow(QtWidgets.QDialog):
             achieved_phase = np.nan * np.ones(2)
         self.amp_curve.setData(achieved_frequency, achieved_amplitude)
         self.phs_curve.setData(achieved_frequency, achieved_phase)
+
+
+class SineSweepTable:
+    """A class representing a breakpoint table defining a sine sweep"""
+
+    def __init__(
+        self,
+        parent_tabwidget: QtWidgets.QTabWidget,
+        update_specification_function,
+        remove_function,
+        control_names,
+        data_acquisition_parameters,
+    ):
+        """Initializes a sine sweep table to represent the breakpoints of a sine tone
+
+        Parameters
+        ----------
+        parent_tabwidget : QtWidgets.QTabWidget
+            The parent tabwidget in the sine ui class, which is needed to
+            propogate changes in this widget back up to the main UI class
+        update_specification_function : function
+            The function to call to update the specification when the values
+            in this table have changed
+        remove_function : function
+            The function to call when we remove a table from the tab widget
+        control_names : list of str
+            A list of strings to be used as the control channel names in the
+            table
+        data_acquisition_parameters : DataAcquisitionParameters
+            The data acquisition parameters, including sample rate
+        """
+        self.parent_tabwidget = parent_tabwidget
+        self.update_specification_function = update_specification_function
+        self.remove_function = remove_function
+        self.control_names = control_names
+        self.data_acquisition_parameters = data_acquisition_parameters
+        self.widget = QtWidgets.QWidget()
+        sine_sweep_table_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "sine_sweep_table.ui"
+        )
+        uic.loadUi(sine_sweep_table_ui_path, self.widget)
+        self.index = self.parent_tabwidget.count() - 1
+        self.parent_tabwidget.insertTab(self.index, self.widget, f"Sine {self.index+1}")
+        self.widget.name_editor.setText(f"Sine {self.index+1}")
+        self.parent_tabwidget.setCurrentIndex(self.index)
+        self.connect_callbacks()
+        self.clear_and_update_specification_table()
+
+    def connect_callbacks(self):
+        """Connects the widgets in the UI to methods of the object"""
+        self.widget.add_breakpoint_button.clicked.connect(self.add_breakpoint)
+        self.widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
+        self.widget.load_breakpoints_button.clicked.connect(self.load_specification)
+        self.widget.name_editor.editingFinished.connect(self.update_name)
+        self.widget.start_time_selector.valueChanged.connect(
+            self.update_specification_function
+        )
+        self.widget.remove_tone_button.clicked.connect(self.remove_tone)
+
+    def add_breakpoint(self):
+        """Adds a breakpoint to the table"""
+        selected_indices = self.widget.breakpoint_table.selectedIndexes()
+        if selected_indices:
+            selected_row = selected_indices[0].row()
+        else:
+            # If no row is selected, add the row at the start
+            selected_row = 0
+        control_names = self.control_names
+        self.widget.breakpoint_table.insertRow(selected_row)
+        self.widget.warning_table.insertRow(selected_row)
+        self.widget.abort_table.insertRow(selected_row)
+        # Frequency display, Breakpoint Table
+        spinbox = AdaptiveNoWheelSpinBox()
+        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        spinbox.setSingleStep(1)
+        spinbox.setValue(0)
+        spinbox.setKeyboardTracking(False)
+        spinbox.valueChanged.connect(self.update_specification_function)
+        self.widget.breakpoint_table.setCellWidget(selected_row, 0, spinbox)
+        # Frequency display, warning table
+        spinbox = AdaptiveNoWheelSpinBox()
+        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        spinbox.setSingleStep(1)
+        spinbox.setValue(0)
+        spinbox.setKeyboardTracking(False)
+        spinbox.setReadOnly(True)
+        spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+        self.widget.warning_table.setCellWidget(selected_row, 0, spinbox)
+        # Frequency display, abort table
+        spinbox = AdaptiveNoWheelSpinBox()
+        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        spinbox.setSingleStep(1)
+        spinbox.setValue(0)
+        spinbox.setKeyboardTracking(False)
+        spinbox.setReadOnly(True)
+        self.widget.abort_table.setCellWidget(selected_row, 0, spinbox)
+        # Linear or logarithmic selector
+        combobox = NoWheelComboBox()
+        combobox.addItems(["Linear", "Logarithmic"])
+        combobox.setCurrentIndex(0)
+        combobox.currentIndexChanged.connect(self.update_specification_function)
+        self.widget.breakpoint_table.setCellWidget(selected_row, 1, combobox)
+        # Rate selector
+        spinbox = AdaptiveNoWheelSpinBox()
+        spinbox.setRange(-1000000, 1000000)
+        spinbox.setSingleStep(1)
+        spinbox.setValue(1)
+        spinbox.setSuffix(" Hz/s")
+        spinbox.setKeyboardTracking(False)
+        spinbox.valueChanged.connect(self.update_specification_function)
+        self.widget.breakpoint_table.setCellWidget(selected_row, 2, spinbox)
+        # All of the individual values
+        for j in range(len(control_names)):
+            spinbox = AdaptiveNoWheelSpinBox()
+            spinbox.setRange(0, 1000000)
+            spinbox.setSingleStep(1)
+            spinbox.setValue(1)
+            spinbox.setKeyboardTracking(False)
+            spinbox.valueChanged.connect(self.update_specification_function)
+            self.widget.breakpoint_table.setCellWidget(selected_row, 3 + j * 2, spinbox)
+            spinbox = AdaptiveNoWheelSpinBox()
+            spinbox.setRange(-1000000, 1000000)
+            spinbox.setSingleStep(1)
+            spinbox.setValue(0)
+            spinbox.setKeyboardTracking(False)
+            spinbox.valueChanged.connect(self.update_specification_function)
+            self.widget.breakpoint_table.setCellWidget(selected_row, 4 + j * 2, spinbox)
+            for k in range(4):
+                if selected_row == 0 and k in (0, 2):
+                    item = self.widget.warning_table.item(selected_row, 1 + k + j * 4)
+                    if item is None:
+                        item = QtWidgets.QTableWidgetItem()
+                        self.widget.warning_table.setItem(
+                            selected_row, 1 + k + j * 4, item
+                        )
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                    item = self.widget.abort_table.item(selected_row, 1 + k + j * 4)
+                    if item is None:
+                        item = QtWidgets.QTableWidgetItem()
+                        self.widget.abort_table.setItem(
+                            selected_row, 1 + k + j * 4, item
+                        )
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(0, 1000000)
+                spinbox.setSingleStep(1)
+                spinbox.setValue(0)
+                spinbox.setKeyboardTracking(False)
+                spinbox.setSpecialValueText("Disabled")
+                spinbox.valueChanged.connect(self.update_specification_function)
+                self.widget.warning_table.setCellWidget(
+                    selected_row + (1 if selected_row == 0 and k in (0, 2) else 0),
+                    1 + k + j * 4,
+                    spinbox,
+                )
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(0, 1000000)
+                spinbox.setSingleStep(1)
+                spinbox.setValue(0)
+                spinbox.setKeyboardTracking(False)
+                spinbox.setSpecialValueText("Disabled")
+                spinbox.valueChanged.connect(self.update_specification_function)
+                self.widget.abort_table.setCellWidget(
+                    selected_row + (1 if selected_row == 0 and k in (0, 2) else 0),
+                    1 + k + j * 4,
+                    spinbox,
+                )
+        self.update_specification_function()
+
+    def remove_breakpoint(self):
+        """Removes a breakpoint from the table"""
+        selected_indices = self.widget.breakpoint_table.selectedIndexes()
+        if selected_indices:
+            selected_row = selected_indices[0].row()
+        else:
+            # If no row is selected, remove the last row
+            selected_row = self.widget.breakpoint_table.rowCount() - 1
+        if selected_row == self.widget.breakpoint_table.rowCount() - 1:
+            last_row = True
+        else:
+            last_row = False
+        if selected_row == 0:
+            first_row = True
+        else:
+            first_row = False
+        self.widget.breakpoint_table.removeRow(selected_row)
+        self.widget.warning_table.removeRow(selected_row)
+        self.widget.abort_table.removeRow(selected_row)
+        if last_row:
+            new_last_row_index = self.widget.breakpoint_table.rowCount() - 1
+            for column in [1, 2]:
+                widget = self.widget.breakpoint_table.cellWidget(
+                    new_last_row_index, column
+                )
+                if widget:
+                    # Remove the widget from the cell
+                    self.widget.breakpoint_table.removeCellWidget(
+                        new_last_row_index, column
+                    )
+                    widget.deleteLater()
+                item = self.widget.breakpoint_table.item(new_last_row_index, column)
+                if item is None:
+                    item = QtWidgets.QTableWidgetItem()
+                    self.widget.breakpoint_table.setItem(
+                        new_last_row_index, column, item
+                    )
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            for column in np.arange(2, self.widget.warning_table.columnCount(), 2):
+                for table in [self.widget.warning_table, self.widget.abort_table]:
+                    widget = table.cellWidget(new_last_row_index, column)
+                    if widget:
+                        # Remove the widget from the cell
+                        table.removeCellWidget(new_last_row_index, column)
+                        widget.deleteLater()
+                    item = table.item(new_last_row_index, column)
+                    if item is None:
+                        item = QtWidgets.QTableWidgetItem()
+                        table.setItem(new_last_row_index, column, item)
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+        if first_row:
+            for column in np.arange(1, self.widget.warning_table.columnCount(), 2):
+                for table in [self.widget.warning_table, self.widget.abort_table]:
+                    widget = table.cellWidget(0, column)
+                    if widget:
+                        # Remove the widget from the cell
+                        table.removeCellWidget(0, column)
+                        widget.deleteLater()
+                    item = table.item(0, column)
+                    if item is None:
+                        item = QtWidgets.QTableWidgetItem()
+                        table.setItem(0, column, item)
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+        self.update_specification_function()
+
+    def load_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
+        """Loads a breakpoint table using a dialog or the specified filename
+
+        Parameters
+        ----------
+        clicked :
+            The clicked event that triggered the callback.
+        filename :
+            File name defining the specification for bypassing the callback when
+            loading from a file (Default value = None).
+
+        """
+        if filename is None:
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self.widget,
+                "Select Specification File",
+                filter="Numpy or Mat (*.npy *.npz *.mat)",
+            )
+            if filename == "":
+                return
+        (
+            frequencies,
+            amplitudes,
+            phases,  # Degrees
+            sweep_types,
+            sweep_rates,
+            warnings,
+            aborts,
+            start_time,
+            name,
+        ) = load_specification(filename)
+        self.clear_and_update_specification_table(
+            frequencies,
+            amplitudes,
+            phases,  # Degrees
+            sweep_types,
+            sweep_rates,
+            warnings,
+            aborts,
+            start_time,
+            name,
+        )
+        self.update_specification_function()
+
+    def clear_and_update_specification_table(
+        self,
+        frequencies=None,
+        amplitudes=None,
+        phases=None,
+        sweep_types=None,
+        sweep_rates=None,
+        warning_amplitudes=None,
+        abort_amplitudes=None,
+        start_time=None,
+        sine_name=None,
+        control_names=None,
+    ):
+        """Clears the table and updates it with the optional parameters supplied.
+
+        Parameters
+        ----------
+        frequencies : ndarray, optional
+            A 1D array containing the frequencies to use as the breakpoints. By
+            default, a table consisting of two breakpoints will be specified.
+        amplitudes : ndarray, optional
+            A 2D array consisting of amplitudes for (channel, frequency) pairs.
+            If not specified, an amplitude of zero will be used.
+        phases : ndarray, optional
+            A 2D array consisting of phases for (channel, frequency) pairs.
+            If not specified, an amplitude of zero will be used.  Phases
+            are specified in degrees.
+        sweep_types : ndarray or list of strings, optional
+            A 1D array of strings to use as the sweep type.  They should
+            be one of lin, log, linear, or logarithmic.  Linear is used
+            if not specified.
+        sweep_rates : ndarray, optional
+            A 1D array of values to use as the sweep rate.  They should
+            be in Hz/s for linear sweeps or octave per minute for
+            logarithmic sweeps.
+        warning_amplitudes : ndarray, optional
+            A 4D ndarray with shape 2, 2, num_channels, num_frequencies.
+            The first dimension specifies upper and lower limits, the
+            second dimension specifies frequencies greater or lower than
+            the frequency breakpoint.  If a value is not desired, it
+            should be set to nan.
+        abort_amplitudes : ndarray, optional
+            A 4D ndarray with shape 2, 2, num_channels, num_frequencies.
+            The first dimension specifies upper and lower limits, the
+            second dimension specifies frequencies greater or lower than
+            the frequency breakpoint.  If a value is not desired, it
+            should be set to nan.
+        start_time : float, optional
+            The starting time for the specified sine tone.  If not specified,
+            it will be set to 0
+        sine_name : str, optional
+            The name of the sine tone used in the software.
+        control_names : array of str, optional
+            Channel names to use in the table.  If not specified, the
+            existing channel names will be used.
+        """
+        # print(f'Called clear_and_update_specification with {control_names=}')
+        # print(f'Called clear_and_update_specification with {start_time=}')
+        # print(f'Called clear_and_update_specification with {sine_name=}')
+        if control_names is not None:
+            self.control_names = control_names
+        control_names = self.control_names
+        if frequencies is None:
+            num_rows = 2
+        else:
+            num_rows = frequencies.size
+        self.widget.breakpoint_table.clear()
+        self.widget.breakpoint_table.setRowCount(num_rows)
+        self.widget.breakpoint_table.setColumnCount(3 + 2 * len(control_names))
+        self.widget.warning_table.setRowCount(num_rows)
+        self.widget.warning_table.setColumnCount(1 + 4 * len(control_names))
+        self.widget.abort_table.setRowCount(num_rows)
+        self.widget.abort_table.setColumnCount(1 + 4 * len(control_names))
+        breakpoint_header_labels = ["Frequency", "Sweep Type", "Sweep Rate"]
+        other_header_labels = ["Frequency"]
+        for name in control_names:
+            breakpoint_header_labels.append(name + " Amplitude")
+            breakpoint_header_labels.append(name + " Phase")
+            other_header_labels.append(name + " Lower Left")
+            other_header_labels.append(name + " Lower Right")
+            other_header_labels.append(name + " Upper Left")
+            other_header_labels.append(name + " Upper Right")
+        self.widget.breakpoint_table.setHorizontalHeaderLabels(breakpoint_header_labels)
+        self.widget.warning_table.setHorizontalHeaderLabels(other_header_labels)
+        self.widget.abort_table.setHorizontalHeaderLabels(other_header_labels)
+        # Set up widgets in the table
+        for row in range(num_rows):
+            # Frequency Breakpoint
+            spinbox = AdaptiveNoWheelSpinBox()
+            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+            spinbox.setSingleStep(1)
+            if frequencies is None:
+                spinbox.setValue(0)
+            else:
+                spinbox.setValue(frequencies[row])
+            spinbox.setKeyboardTracking(False)
+            spinbox.setDecimals(4)
+            spinbox.valueChanged.connect(self.update_specification_function)
+            self.widget.breakpoint_table.setCellWidget(row, 0, spinbox)
+            # Frequency display, warning table
+            spinbox = AdaptiveNoWheelSpinBox()
+            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+            spinbox.setSingleStep(1)
+            if frequencies is None:
+                spinbox.setValue(0)
+            else:
+                spinbox.setValue(frequencies[row])
+            spinbox.setKeyboardTracking(False)
+            spinbox.setReadOnly(True)
+            spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+            self.widget.warning_table.setCellWidget(row, 0, spinbox)
+            # Frequency display, abort table
+            spinbox = AdaptiveNoWheelSpinBox()
+            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+            spinbox.setSingleStep(1)
+            if frequencies is None:
+                spinbox.setValue(0)
+            else:
+                spinbox.setValue(frequencies[row])
+            spinbox.setKeyboardTracking(False)
+            spinbox.setReadOnly(True)
+            spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+            self.widget.abort_table.setCellWidget(row, 0, spinbox)
+            # Rate and type
+            if row < num_rows - 1:
+                combobox = NoWheelComboBox()
+                combobox.addItems(["Linear", "Logarithmic"])
+                if sweep_types is not None:
+                    if str(sweep_types[row]).lower() in ["lin", "linear"]:
+                        combobox.setCurrentIndex(0)
+                    else:
+                        combobox.setCurrentIndex(1)
+                combobox.currentIndexChanged.connect(self.update_specification_function)
+                self.widget.breakpoint_table.setCellWidget(row, 1, combobox)
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(-1000000, 1000000)
+                spinbox.setSingleStep(1)
+                if sweep_rates is not None:
+                    spinbox.setValue(sweep_rates[row])
+                else:
+                    spinbox.setValue(1)
+                if combobox.currentIndex() == 0:
+                    spinbox.setSuffix(" Hz/s")
+                else:
+                    spinbox.setSuffix(" oct/min")
+                spinbox.setKeyboardTracking(False)
+                spinbox.valueChanged.connect(self.update_specification_function)
+                self.widget.breakpoint_table.setCellWidget(row, 2, spinbox)
+            else:
+                item = self.widget.breakpoint_table.item(row, 1)
+                if item is None:
+                    item = QtWidgets.QTableWidgetItem()
+                    self.widget.breakpoint_table.setItem(row, 1, item)
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item = self.widget.breakpoint_table.item(row, 2)
+                if item is None:
+                    item = QtWidgets.QTableWidgetItem()
+                    self.widget.breakpoint_table.setItem(row, 2, item)
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            # Amplitude and Phases
+            for j in range(len(control_names)):
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(0, 1000000)
+                spinbox.setSingleStep(1)
+                if amplitudes is None:
+                    spinbox.setValue(1)
+                else:
+                    spinbox.setValue(amplitudes[j, row])
+                spinbox.setKeyboardTracking(False)
+                spinbox.valueChanged.connect(self.update_specification_function)
+                self.widget.breakpoint_table.setCellWidget(row, 3 + j * 2, spinbox)
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(-1000000, 1000000)
+                spinbox.setSingleStep(1)
+                if phases is None:
+                    spinbox.setValue(0)
+                else:
+                    spinbox.setValue(phases[j, row])
+                spinbox.valueChanged.connect(self.update_specification_function)
+                spinbox.setKeyboardTracking(False)
+                self.widget.breakpoint_table.setCellWidget(row, 4 + j * 2, spinbox)
+                for k in range(4):
+                    spinbox = AdaptiveNoWheelSpinBox()
+                    spinbox.setRange(0, 1000000)
+                    spinbox.setSingleStep(1)
+                    if (
+                        row == 0 and k in (0, 2)
+                    ) or (  # If first frequency and looking at left side
+                        row == num_rows - 1 and k in (1, 3)
+                    ):  # or if last frequency and looking at right side
+                        item = self.widget.warning_table.item(row, 1 + k + j * 4)
+                        if item is None:
+                            item = QtWidgets.QTableWidgetItem()
+                            self.widget.warning_table.setItem(row, 1 + k + j * 4, item)
+                        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                        item = self.widget.abort_table.item(row, 1 + k + j * 4)
+                        if item is None:
+                            item = QtWidgets.QTableWidgetItem()
+                            self.widget.abort_table.setItem(row, 1 + k + j * 4, item)
+                        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                    else:
+                        if warning_amplitudes is None:
+                            spinbox.setValue(0)
+                        else:
+                            val = warning_amplitudes[
+                                np.unravel_index(k, (2, 2)) + (j, row)
+                            ]
+                            spinbox.setValue(0 if np.isnan(val) else val)
+                        spinbox.setKeyboardTracking(False)
+                        spinbox.setSpecialValueText("Disabled")
+                        spinbox.valueChanged.connect(self.update_specification_function)
+                        self.widget.warning_table.setCellWidget(
+                            row, 1 + k + j * 4, spinbox
+                        )
+                        spinbox = AdaptiveNoWheelSpinBox()
+                        spinbox.setRange(0, 1000000)
+                        spinbox.setSingleStep(1)
+                        if abort_amplitudes is None:
+                            spinbox.setValue(0)
+                        else:
+                            val = abort_amplitudes[
+                                np.unravel_index(k, (2, 2)) + (j, row)
+                            ]
+                            spinbox.setValue(0 if np.isnan(val) else val)
+                        spinbox.setKeyboardTracking(False)
+                        spinbox.setSpecialValueText("Disabled")
+                        spinbox.valueChanged.connect(self.update_specification_function)
+                        self.widget.abort_table.setCellWidget(
+                            row, 1 + k + j * 4, spinbox
+                        )
+        if sine_name is not None:
+            self.widget.name_editor.setText(sine_name)
+            self.update_name()
+        if start_time is not None:
+            self.widget.start_time_selector.setValue(start_time)
+
+    def update_name(self):
+        """Called when the name of the sine tone is changed"""
+        self.parent_tabwidget.setTabText(self.index, self.widget.name_editor.text())
+
+    def remove_tone(self):
+        """Called when the remove button is pressed"""
+        self.remove_function(self.index)
+
+    def get_specification(self):
+        """Computes a sine sweep specification from the table"""
+        num_control = (self.widget.breakpoint_table.columnCount() - 3) // 2
+        spec = SineSpecification(
+            self.widget.name_editor.text(),
+            self.widget.start_time_selector.value(),
+            num_control,
+            self.widget.breakpoint_table.rowCount(),
+        )
+        for row, spec_row in enumerate(spec.breakpoint_table):
+            spec_row["frequency"] = self.widget.breakpoint_table.cellWidget(
+                row, 0
+            ).value()
+            if row < len(spec.breakpoint_table) - 1:
+                spec_row["sweep_type"] = self.widget.breakpoint_table.cellWidget(
+                    row, 1
+                ).currentIndex()
+                spec_row["sweep_rate"] = self.widget.breakpoint_table.cellWidget(
+                    row, 2
+                ).value()
+            for i in range(num_control):
+                spec_row["amplitude"][i] = self.widget.breakpoint_table.cellWidget(
+                    row, 3 + 2 * i
+                ).value()
+                spec_row["phase"][i] = (
+                    self.widget.breakpoint_table.cellWidget(row, 4 + 2 * i).value()
+                    * np.pi
+                    / 180
+                )  # Convert degrees to radians for all calculations
+                for k in range(4):
+                    ind = np.unravel_index(k, (2, 2))
+                    if (row == 0 and k in (0, 2)) or (
+                        row == len(spec.breakpoint_table) - 1 and k in (1, 3)
+                    ):
+                        spec_row["warning"][ind + (i,)] = np.nan
+                        spec_row["abort"][ind + (i,)] = np.nan
+                    else:
+                        val = self.widget.warning_table.cellWidget(
+                            row, 1 + k + i * 4
+                        ).value()
+                        spec_row["warning"][ind + (i,)] = np.nan if val == 0 else val
+                        val = self.widget.abort_table.cellWidget(
+                            row, 1 + k + i * 4
+                        ).value()
+                        spec_row["abort"][ind + (i,)] = np.nan if val == 0 else val
+        return spec
+
+    def set_specification(self, spec: SineSpecification):
+
+        frequencies = spec.breakpoint_table["frequency"]
+
+        amplitudes = spec.breakpoint_table["amplitude"].T
+        phases = np.rad2deg(spec.breakpoint_table["phase"].T)
+
+        sweep_types = spec.breakpoint_table["sweep_type"][:-1]
+        sweep_types_str = []
+        for sweep_type in sweep_types:
+            if sweep_type == 0:
+                sweep_types_str.append("Linear")
+            else:
+                sweep_types_str.append("Logorithmic")
+
+        sweep_rates = spec.breakpoint_table["sweep_rate"][:-1]
+
+        warnings = np.transpose(spec.breakpoint_table["warning"], (1, 2, 3, 0))
+
+        aborts = np.transpose(spec.breakpoint_table["abort"], (1, 2, 3, 0))
+
+        self.clear_and_update_specification_table(
+            frequencies=frequencies,
+            amplitudes=amplitudes,
+            phases=phases,
+            sweep_types=sweep_types_str,
+            sweep_rates=sweep_rates,
+            warning_amplitudes=warnings,
+            abort_amplitudes=aborts,
+            start_time=spec.start_time,
+            sine_name=spec.name,
+        )
+
+
+class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
+    """A simple class to remove the scroll wheel capability from a spin box"""
+
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
+        """Capture the wheel event but ignore it"""
+        event.ignore()
+
+
+class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
+    """A spinbox that changes number of decimals based on the value provided"""
+
+    localization = QLocale(QLocale.English, QLocale.UnitedStates)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setDecimals(10)
+
+    def textFromValue(self, value):  # pylint: disable=invalid-name
+        """Gets the text to show in the spinbox based on the value stored in the spinbox"""
+        return AdaptiveNoWheelSpinBox.localization.toString(value, "g", self.decimals())
+
+
+class NoWheelComboBox(QtWidgets.QComboBox):
+    """A simple class to remove the scroll wheel capability from a combo box"""
+
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
+        """Capture the wheel event but ignore it"""
+        event.ignore()

@@ -1155,7 +1155,8 @@ class SineEnvironment(SysIdEnvironment):
         output_active_event: mp.synchronize.Event,
         active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
-        sysid_event: mp.synchronize.Event,
+        sysid_active_event: mp.synchronize.Event,
+        sysid_stored_event: mp.synchronize.Event,
     ):
         """Initializes the sine environment computation class
 
@@ -1190,7 +1191,8 @@ class SineEnvironment(SysIdEnvironment):
             output_active_event,
             active_event,
             ready_event,
-            sysid_event,
+            sysid_active_event,
+            sysid_stored_event,
         )
         self.map_command(
             SineCommands.PERFORM_CONTROL_PREDICTION, self.perform_control_prediction
@@ -1478,6 +1480,7 @@ class SineEnvironment(SysIdEnvironment):
         ) = data
         # Perform the control prediction
         self.perform_control_prediction(True)
+        self.set_sysid_stored()
 
     def filter_predicted_signal(self):
         """Extract amplitude and phase information from predicted signals"""
@@ -2732,7 +2735,8 @@ def sine_process(
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
-    sysid_event: mp.synchronize.Event,
+    sysid_active_event: mp.synchronize.Event,
+    sysid_stored_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """A function to be used by multiprocessing to run the Sine environment.  It sets up
@@ -2837,7 +2841,8 @@ def sine_process(
             output_active_event,
             active_event,
             ready_event,
-            sysid_event,
+            sysid_active_event,
+            sysid_stored_event,
         )
         process_class.run(shutdown_event)
 

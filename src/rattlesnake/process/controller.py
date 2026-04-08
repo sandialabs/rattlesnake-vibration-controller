@@ -31,7 +31,7 @@ class ControllerProcess(AbstractMessageProcess):
         output_active_event: mp.synchronize.Event,
         streaming_active_event: mp.synchronize.Event,
         environment_active_event: mp.synchronize.Event,
-        environment_sysid_event: mp.synchronize.Event,
+        environment_sysid_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """Constructor for the Controller class
@@ -59,7 +59,7 @@ class ControllerProcess(AbstractMessageProcess):
         self._output_active_event = output_active_event
         self._streaming_active_event = streaming_active_event
         self._environment_active_event = environment_active_event
-        self._environment_sysid_event = environment_sysid_event
+        self._environment_sysid_active_event = environment_sysid_active_event
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
@@ -105,7 +105,7 @@ class ControllerProcess(AbstractMessageProcess):
     def environments_sysid_active(self):
         return [
             queue_name
-            for queue_name, sysid_event in self._environment_sysid_event.items()
+            for queue_name, sysid_event in self._environment_sysid_active_event.items()
             if sysid_event.is_set()
         ]
 
@@ -250,7 +250,7 @@ def controller_process(
     output_active_event: mp.synchronize.Event,
     streaming_active_event: mp.synchronize.Event,
     environment_active_event: mp.synchronize.Event,
-    environment_sysid_event: mp.synchronize.Event,
+    environment_sysid_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -274,7 +274,7 @@ def controller_process(
         output_active_event,
         streaming_active_event,
         environment_active_event,
-        environment_sysid_event,
+        environment_sysid_active_event,
         ready_event,
     )
 

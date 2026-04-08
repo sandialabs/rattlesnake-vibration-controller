@@ -163,7 +163,8 @@ class RattlesnakeController:
         environment_close_events = {}
         environment_ready_events = {}
         environment_active_events = {}
-        environment_sysid_events = {}
+        environment_sysid_active_events = {}
+        environment_sysid_stored_events = {}
         environment_command_queues = {}
         environment_data_in_queues = {}
         environment_data_out_queues = {}
@@ -172,7 +173,8 @@ class RattlesnakeController:
             environment_close_events[queue_name] = new_event()
             environment_ready_events[queue_name] = new_event()
             environment_active_events[queue_name] = new_event()
-            environment_sysid_events[queue_name] = new_event()
+            environment_sysid_active_events[queue_name] = new_event()
+            environment_sysid_stored_events[queue_name] = new_event()
             environment_active_events[queue_name].clear()
             environment_command_queues[queue_name] = VerboseMessageQueue(
                 log_file_queue,
@@ -216,7 +218,8 @@ class RattlesnakeController:
             output_active_event,
             streaming_active_event,
             environment_active_events,
-            environment_sysid_events,
+            environment_sysid_active_events,
+            environment_sysid_stored_events,
         )
 
         # Controller
@@ -228,7 +231,7 @@ class RattlesnakeController:
                 self.event_container.output_active_event,
                 self.event_container.streaming_active_event,
                 self.event_container.environment_active_events,
-                self.event_container.environment_sysid_events,
+                self.event_container.environment_sysid_active_events,
                 self.event_container.controller_ready_event,
                 self.event_container.controller_close_event,
             ),
@@ -306,9 +309,9 @@ class RattlesnakeController:
             event.is_set()
             for event in self.event_container.environment_active_events.values()
         )
-        sys_id_active = any(
+        sysid_active = any(
             event.is_set()
-            for event in self.event_container.environment_sysid_events.values()
+            for event in self.event_container.environment_sysid_active_events.values()
         )
 
         if (
@@ -316,7 +319,7 @@ class RattlesnakeController:
             and environment_store
             and acquisition_active
             and output_active
-            and sys_id_active
+            and sysid_active
         ):
             return RattlesnakeState.SYS_ID_ACTIVE
 
@@ -570,7 +573,7 @@ class RattlesnakeController:
 
         # Send environment meetadata to correct processes
         self.log("Setting Environment")
-        self.environment_manager.initialize_environments(
+        environment_metadata = self.environment_manager.initialize_environments(
             environment_metadata_list, self.hardware_metadata
         )
         self.event_container.acquisition_ready_event.clear()
@@ -592,6 +595,9 @@ class RattlesnakeController:
             ]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
+            self.environment_metadata = environment_metadata
+
+        return environment_metadata  # This is used for user_interface to set when events are confirmed
 
     # endregion
 
@@ -641,7 +647,7 @@ class RattlesnakeController:
         if self.blocking:
             ready_event_list = []
             active_event_list = [
-                self.event_container.environment_sysid_events[queue_name]
+                self.event_container.environment_sysid_active_events[queue_name]
             ]
             self.wait_for_events(
                 ready_event_list, active_event_list, active_event_check=True
@@ -664,7 +670,7 @@ class RattlesnakeController:
         if self.blocking:
             ready_event_list = []
             active_event_list = [
-                self.event_container.environment_sysid_events[queue_name]
+                self.event_container.environment_sysid_active_events[queue_name]
             ]
             self.wait_for_events(
                 ready_event_list, active_event_list, active_event_check=True
@@ -687,16 +693,16 @@ class RattlesnakeController:
         if self.blocking:
             ready_event_list = []
             active_event_list = [
-                self.event_container.environment_sysid_events[queue_name]
+                self.event_container.environment_sysid_active_events[queue_name]
             ]
             self.wait_for_events(
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    def load_sys_id_to_environment(self, filepath, environment_name):
+    def load_system_id_to_environment(self, filepath, environment_name):
         pass
 
-    def preview_sys_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
+    def preview_system_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
 
@@ -713,7 +719,9 @@ class RattlesnakeController:
         self.start_acquisition(stream_metadata)
         self.start_system_id_noise(environment_name)
 
-    def preview_sys_id_transfer(self, sysid_metadata: SysIdMetadata, environment_name):
+    def preview_system_id_transfer(
+        self, sysid_metadata: SysIdMetadata, environment_name
+    ):
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for previewing system identification transfer function: {self.state}"
@@ -738,7 +746,9 @@ class RattlesnakeController:
         self.initialize_system_id(sysid_metadata, environment_name)
         queue_name = self.environment_manager.queue_names_dict[environment_name]
 
-        if not sysid_metadata.stream_file:
+        # Check stream file attribute
+        bool_stream = bool(getattr(sysid_metadata, "stream_file", False))
+        if bool_stream:
             stream_metadata = StreamMetadata(
                 StreamType.MANUAL, sysid_metadata.stream_file
             )
@@ -746,34 +756,37 @@ class RattlesnakeController:
             stream_metadata = StreamMetadata(StreamType.NO_STREAM)
 
         self.start_acquisition(stream_metadata)
-        self.start_streaming()
+        if bool_stream:
+            self.start_streaming()
         self.start_system_id_noise(environment_name)
 
         # Wait for automatic shutdown
         if self.blocking:
             ready_event_list = []
             active_event_list = [
-                self.event_container.environment_sysid_events[queue_name]
+                self.event_container.environment_sysid_active_events[queue_name]
             ]
             self.wait_for_events(
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-        self.stop_streaming()
-        self.start_streaming()
+        if bool_stream:
+            self.stop_streaming()
+            self.start_streaming()
         self.start_system_id_transfer_function(environment_name)
 
         # Wait for automatic shutdown
         if self.blocking:
             ready_event_list = []
             active_event_list = [
-                self.event_container.environment_sysid_events[queue_name]
+                self.event_container.environment_sysid_active_events[queue_name]
             ]
             self.wait_for_events(
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-        self.stop_streaming()
+        if bool_stream:
+            self.stop_streaming()
         self.stop_acquisition()
 
     def stop_system_id_run(self, environment_name):

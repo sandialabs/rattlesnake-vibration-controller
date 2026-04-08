@@ -702,7 +702,8 @@ def process(
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
-    sysid_event: mp.synchronize.Event,
+    sysid_active_event: mp.synchronize.Event,
+    sysid_stored_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
@@ -751,3 +752,6 @@ def process(
         ready_event,
     )
     process_class.run(shutdown_event)
+
+
+# endregion

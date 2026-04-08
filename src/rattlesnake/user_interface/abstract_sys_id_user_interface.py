@@ -238,7 +238,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[
                 self.environment_name
             ]
-            return self.rattlesnake.environment_manager.event_container.environment_sysid_events[
+            return self.rattlesnake.environment_manager.event_container.environment_sysid_active_events[
                 queue_name
             ].is_set()
         except:
@@ -416,7 +416,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
     # endregion
 
     # region Callbacks
-    def display_sys_id_started(self):
+    def display_system_id_started(self):
         for widget in [
             self.system_id_widget.preview_noise_button,
             self.system_id_widget.preview_system_id_button,
@@ -447,7 +447,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(True)
 
-    def display_sys_id_ended(self):
+    def display_system_id_ended(self):
         for widget in [
             self.system_id_widget.preview_noise_button,
             self.system_id_widget.preview_system_id_button,
@@ -483,7 +483,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
     1. Initialize system id metadata
     2. Start up hardware acquisition
     3. Start up streaming and noise
-    4. If the full test is happening, wait for sys_id
+    4. If the full test is happening, wait for sysid
     analysis process to send the NOISE_COMPLETED command
     """
 
@@ -599,7 +599,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
         ready_event_list = []
         active_event_list = [
-            self.rattlesnake.event_container.environment_sysid_events[queue_name]
+            self.rattlesnake.event_container.environment_sysid_active_events[queue_name]
         ]
         self.create_event_watcher(
             ready_event_list, active_event_list, active_event_check=True
@@ -625,7 +625,9 @@ class SysIdEnvironmentUI(EnvironmentUI):
         ready_event_list = []
         active_event_list = [
             self.rattlesnake.event_container.streaming_active_event,
-            self.rattlesnake.event_container.environment_sysid_events[queue_name],
+            self.rattlesnake.event_container.environment_sysid_active_events[
+                queue_name
+            ],
         ]
         self.create_event_watcher(
             ready_event_list, active_event_list, active_event_check=False
@@ -649,7 +651,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
         ready_event_list = []
         active_event_list = [
-            self.rattlesnake.event_container.environment_sysid_events[queue_name]
+            self.rattlesnake.event_container.environment_sysid_active_events[queue_name]
         ]
         self.create_event_watcher(
             ready_event_list, active_event_list, active_event_check=True
@@ -675,7 +677,9 @@ class SysIdEnvironmentUI(EnvironmentUI):
             self.rattlesnake.event_container.streaming_active_event,
             self.rattlesnake.event_container.acquisition_active_event,
             self.rattlesnake.event_container.output_active_event,
-            self.rattlesnake.event_container.environment_sysid_events[queue_name],
+            self.rattlesnake.event_container.environment_sysid_active_events[
+                queue_name
+            ],
         ]
         self.create_event_watcher(
             ready_event_list, active_event_list, active_event_check=False
@@ -686,17 +690,17 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     def run_system_id_ready(self):
         if self.sysid_active:
-            self.display_sys_id_started()
+            self.display_system_id_started()
         else:
-            self.display_sys_id_ended()
+            self.display_system_id_ended()
 
         self.clean_up_event_watcher()
 
     def run_system_id_error(self, error):
         if self.sysid_active:
-            self.display_sys_id_started()
+            self.display_system_id_started()
         else:
-            self.display_sys_id_ended()
+            self.display_system_id_ended()
 
         if self.rattlesnake.streaming:
             self.rattlesnake.stop_streaming()
@@ -1502,9 +1506,9 @@ class SysIdEnvironmentUI(EnvironmentUI):
         # print('Update GUI Got {:}'.format(message))
         match command:
             case SysIdUICommands.SYSID_STARTED:
-                self.display_sys_id_started()
+                self.display_system_id_started()
             case SysIdUICommands.SYSID_ENDED:
-                self.display_sys_id_ended()
+                self.display_system_id_ended()
             case DataCollectorUICommands.TIME_FRAME:
                 self.last_time_response, accept = data
                 self.update_sysid_plots(

@@ -17,6 +17,12 @@ from rattlesnake.environment.modal_environment import (
     ModalInstructions,
     ModalCommands,
 )
+from rattlesnake.environment.sine_sys_id_environment import (
+    SineMetadata,
+    SineInstructions,
+)
+from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 
 BUFFER_SIZE = 0.05
 TIME_ENVIRONMENT_NAME = "My Time"
@@ -236,6 +242,132 @@ def make_modal_environment_instructions(environment_name=MODAL_ENVIRONMENT_NAME)
     return modal_instructions
 
 
+def make_sine_environment_metadata(
+    hardware_metadata, environment_name=SINE_ENVIRONMENT_NAME
+):
+    channel_list_bools = [True, True, True, True, True, True]
+    sample_rate = hardware_metadata.sample_rate
+    samples_per_frame = 50
+    number_of_channels = 6
+    specification = SineSpecification(
+        name="Sine Tone 1",
+        start_time=0,
+        num_control=1,
+        num_breakpoints=2,
+    )
+
+    table = specification.breakpoint_table
+
+    table[0]["frequency"] = 1
+    table[0]["sweep_type"] = 0  # 0 = linear
+    table[0]["sweep_rate"] = 1
+    table[0]["amplitude"][0] = 1
+    table[0]["phase"][0] = 0  # radians
+
+    table[1]["frequency"] = 10  # you must set frequency
+    table[1]["sweep_type"] = 0
+    table[1]["sweep_rate"] = 1
+    table[1]["amplitude"][0] = 1
+    table[1]["phase"][0] = 0
+
+    table["warning"][:] = np.nan
+    table["abort"][:] = np.nan
+
+    specifications = [specification]
+    ramp_time = 0.5
+    buffer_blocks = 2
+    control_convergence = 0.15
+    update_drives_after_environment = False
+    phase_fit = False
+    allow_automatic_aborts = False
+    tracking_filter_type = 0
+    tracking_filter_cutoff = 0.15
+    tracking_filter_order = 2
+    vk_filter_order = 2
+    vk_filter_bandwidth = 2
+    vk_filter_blocksize = 1000
+    vk_filter_overlap = 0.15
+    control_python_script = None
+    control_python_class = None
+    control_python_parameters = ""
+    control_channel_indices = [1]
+    output_channel_indices = [3, 4, 5]
+    response_transformation_matrix = None
+    output_transformation_matrix = None
+
+    return SineMetadata(
+        environment_name=environment_name,
+        channel_list_bools=channel_list_bools,
+        sample_rate=sample_rate,
+        samples_per_frame=samples_per_frame,
+        number_of_channels=number_of_channels,
+        specifications=specifications,
+        ramp_time=ramp_time,
+        buffer_blocks=buffer_blocks,
+        control_convergence=control_convergence,
+        update_drives_after_environment=update_drives_after_environment,
+        phase_fit=phase_fit,
+        allow_automatic_aborts=allow_automatic_aborts,
+        tracking_filter_type=tracking_filter_type,
+        tracking_filter_cutoff=tracking_filter_cutoff,
+        tracking_filter_order=tracking_filter_order,
+        vk_filter_order=vk_filter_order,
+        vk_filter_bandwidth=vk_filter_bandwidth,
+        vk_filter_blocksize=vk_filter_blocksize,
+        vk_filter_overlap=vk_filter_overlap,
+        control_python_script=control_python_script,
+        control_python_class=control_python_class,
+        control_python_parameters=control_python_parameters,
+        control_channel_indices=control_channel_indices,
+        output_channel_indices=output_channel_indices,
+        response_transformation_matrix=response_transformation_matrix,
+        output_transformation_matrix=output_transformation_matrix,
+    )
+
+
+def make_sys_id_metadata():
+    sample_rate = 1000
+    sysid_frame_size = 1000
+    sysid_averaging_type = "Linear"
+    sysid_noise_averages = 1
+    sysid_averages = 1
+    sysid_exponential_averaging_coefficient = 0.01
+    sysid_estimator = "H1"
+    sysid_level = 0.01
+    sysid_level_ramp_time = 0.5
+    sysid_signal_type = "Random"
+    sysid_window = "Hann"
+    sysid_overlap = 0.5
+    sysid_burst_on = 0.5
+    sysid_pretrigger = 0.05
+    sysid_burst_ramp_fraction = 0.05
+    sysid_low_frequency_cutoff = 0
+    sysid_high_frequency_cutoff = int(sample_rate / 2)
+    stream_file = None
+    auto_shutdown = False
+    return SysIdMetadata(
+        sample_rate=sample_rate,
+        sysid_frame_size=sysid_frame_size,
+        sysid_averaging_type=sysid_averaging_type,
+        sysid_noise_averages=sysid_noise_averages,
+        sysid_averages=sysid_averages,
+        sysid_exponential_averaging_coefficient=sysid_exponential_averaging_coefficient,
+        sysid_estimator=sysid_estimator,
+        sysid_level=sysid_level,
+        sysid_level_ramp_time=sysid_level_ramp_time,
+        sysid_signal_type=sysid_signal_type,
+        sysid_window=sysid_window,
+        sysid_overlap=sysid_overlap,
+        sysid_burst_on=sysid_burst_on,
+        sysid_pretrigger=sysid_pretrigger,
+        sysid_burst_ramp_fraction=sysid_burst_ramp_fraction,
+        sysid_low_frequency_cutoff=sysid_low_frequency_cutoff,
+        sysid_high_frequency_cutoff=sysid_high_frequency_cutoff,
+        stream_file=stream_file,
+        auto_shutdown=auto_shutdown,
+    )
+
+
 # endregion
 
 
@@ -267,8 +399,8 @@ def build_modal_environment():
 
     rattlesnake.initialize_hardware(hardware_metadata)
     rattlesnake.initialize_environments([modal_environment_metadata])
-    # rattlesnake.start_acquisition(modal_stream_metadata)
-    # rattlesnake.start_environment(modal_environment_instructions)
+    rattlesnake.start_acquisition(modal_stream_metadata)
+    rattlesnake.start_environment(modal_environment_instructions)
 
     return rattlesnake
 
@@ -276,8 +408,30 @@ def build_modal_environment():
 def build_sine_environment():
     rattlesnake = RattlesnakeController(threaded=True, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
+    sine_environment_metadata = make_sine_environment_metadata(hardware_metadata)
+    sine_sys_id_metadata = make_sys_id_metadata()
+    sine_stream_metadata = make_stream_metadata(SINE_ENVIRONMENT_NAME)
 
     rattlesnake.initialize_hardware(hardware_metadata)
+    rattlesnake.initialize_environments([sine_environment_metadata])
+    # rattlesnake.preview_system_id_noise(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
+    # rattlesnake.preview_system_id_transfer(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
+    rattlesnake.run_system_id(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
+    # rattlesnake.start_acquisition(sine_stream_metadata)
+
+    return rattlesnake
+
+
+def test_crashing_environment():
+    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    hardware_metadata = make_sdynpy_system_metadata()
+    sine_environment_metadata = make_sine_environment_metadata(hardware_metadata)
+    time_environment_metadata = make_time_environment_metadata(hardware_metadata)
+
+    rattlesnake.initialize_hardware(hardware_metadata)
+    rattlesnake.initialize_environments(
+        [sine_environment_metadata, time_environment_metadata]
+    )
 
     return rattlesnake
 
@@ -289,6 +443,7 @@ if __name__ == "__main__":
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
     rattlesnake = build_sine_environment()
+    # rattlesnake = test_crashing_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

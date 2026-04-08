@@ -23,7 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import time
 from abc import abstractmethod
 from copy import deepcopy
@@ -353,7 +352,8 @@ class SysIdEnvironment(Environment):
         output_active_event: mp.synchronize.Event,
         active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
-        sysid_event: mp.synchronize.Event,
+        sysid_active_event: mp.synchronize.Event,
+        sysid_stored_event: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
@@ -369,7 +369,8 @@ class SysIdEnvironment(Environment):
             active_event,
             ready_event,
         )
-        self._sysid_event = sysid_event
+        self._sysid_active_event = sysid_active_event
+        self._sysid_stored_event = sysid_stored_event
         self.map_command(GlobalCommands.INITIALIZE_SYSTEM_ID, self.initialize_sysid)
         self.map_command(GlobalCommands.START_SYSTEM_ID_NOISE, self.start_noise)
         self.map_command(
@@ -422,13 +423,23 @@ class SysIdEnvironment(Environment):
     # region Events
     @property
     def sysid_active(self):
-        return self._sysid_event.is_set()
+        return self._sysid_active_event.is_set()
 
     def set_sysid_active(self):
-        self._sysid_event.set()
+        self._sysid_active_event.set()
 
     def clear_sysid_active(self):
-        self._sysid_event.clear()
+        self._sysid_active_event.clear()
+
+    @property
+    def sysid_stored(self):
+        return self._sysid_stored_event.is_set()
+
+    def set_sysid_stored(self):
+        self._sysid_stored_event.set()
+
+    def clear_sysid_stored(self):
+        self._sysid_stored_event.clear()
 
     # endregion
 
@@ -976,6 +987,7 @@ class SysIdEnvironment(Environment):
         self.gui_update_queue.put(
             (UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data))
         )  # Enable tabs
+        self.set_sysid_stored()
 
     @abstractmethod
     def stop_environment(self, data):

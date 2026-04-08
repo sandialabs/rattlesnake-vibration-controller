@@ -90,10 +90,10 @@ class TransientUICommands(Enum):
 # endregion
 
 
-# region Metadata
 class TransientMetadata(AbstractSysIdMetadata):
     """Metadata required to define a transient control law in rattlesnake."""
 
+    # region Metadata
     def __init__(
         self,
         number_of_channels,
@@ -183,7 +183,10 @@ class TransientMetadata(AbstractSysIdMetadata):
         """Gets the number of samples in the signal that is being controlled to"""
         return self.control_signal.shape[-1]
 
-    def store_to_netcdf(
+    # region Validation
+
+    # region Loading
+    def save_metadata_to_netcdf(
         self,
         netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
@@ -254,7 +257,10 @@ class TransientMetadata(AbstractSysIdMetadata):
             var[...] = self.reference_transformation_matrix
 
 
-# region: Queues
+# endregion
+
+
+# region Queues
 class TransientQueues:
     """A container class for the queues that this environment will manage."""
 

@@ -225,6 +225,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.manual_streaming_trigger_button.hide()
 
         # Profile
+        # Create blank timer incase profile list is invalid and it never gets initialized
+        self.profile_list_update_timer = QtCore.QTimer()
         self.profile_table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeToContents
         )
@@ -465,9 +467,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         self.channel_monitor_window = None
                     else:
                         self.channel_monitor_window.update(data)
-            case UICommands.UPDATE_METADATA:
-                environment_name, metadata = data
-                self.environment_metadata[environment_name] = metadata
             case UICommands.STOP:
                 self.disarm_test()
             case UICommands.ENABLE:
@@ -551,8 +550,27 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case RattlesnakeState.ENVIRONMENT_STORE:
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
+                # Enable next tab (sysid/profile)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
+                if self.has_system_id:
+                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                    self.rattlesnake_tabs.setCurrentIndex(2)
+                else:
+                    self.rattlesnake_tabs.setCurrentIndex(4)
                 if has_profile:
                     self.load_ui_from_profile()
+                    self.initialize_profile()
+                if has_streamed:
+                    self.load_ui_from_stream_metadata()
+            case RattlesnakeState.SYS_ID_ACTIVE:
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
+                # Enable sys id tab
+                self.rattlesnake_tabs.setTabEnabled(2, True)
+                self.rattlesnake_tabs.setCurrentIndex(2)
+                if has_profile:
+                    self.load_ui_from_profile()
+                    self.initialize_profile()
                 if has_streamed:
                     self.load_ui_from_stream_metadata()
             case RattlesnakeState.HARDWARE_ACTIVE:
@@ -560,8 +578,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_environments()
                 if has_profile:
                     self.load_ui_from_profile()
+                    self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
+                self.rattlesnake_tabs.setCurrentIndex(5)
             case RattlesnakeState.ENVIRONMENT_ACTIVE:
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
@@ -569,6 +589,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.load_ui_from_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
+                self.rattlesnake_tabs.setCurrentIndex(5)
+                # Display environment started for each active environment
                 for (
                     queue_name,
                     active_event,
@@ -658,11 +680,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.streaming_environment_select_combobox.clear()
         self.streaming_environment_select_combobox.addItems(streaming_environment_items)
         self.rattlesnake_tabs.setTabEnabled(1, True)
-        if self.has_system_id:
-            self.rattlesnake_tabs.setTabEnabled(2, True)
-        else:
-            self.rattlesnake_tabs.setTabEnabled(4, True)
-        self.rattlesnake_tabs.setCurrentIndex(1)
 
     def load_ui_from_profile(self):
         """
@@ -711,9 +728,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             data_item = QtWidgets.QTableWidgetItem(data)
             self.profile_table.setItem(row, 3, data_item)
 
-        self.rattlesnake_tabs.setTabEnabled(4, True)
-        self.rattlesnake_tabs.setCurrentIndex(4)
-
     def load_ui_from_stream_metadata(self):
         """
         Loads the stream metadata object from the rattlesnake object to
@@ -737,8 +751,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.manual_streaming_radiobutton.setChecked(True)
 
         self.streaming_file_display.setText(stream_metadata.stream_file)
-
-        self.initialize_profile()
 
     def save_template_from_ui(self):
         """
@@ -1557,7 +1569,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 environment_metadata_list.append(metadata)
 
             # Send hardware metadata to rattlesnake
-            self.rattlesnake.initialize_environments(environment_metadata_list)
+            environment_metadata = self.rattlesnake.initialize_environments(
+                environment_metadata_list
+            )
 
         except Exception as e:
             self.initialize_environments_error(e)
@@ -1571,18 +1585,20 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         ]
         active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list)
-        self.event_watcher.ready.connect(self.initialize_environments_ready)
+        self.event_watcher.ready.connect(
+            lambda metadata=environment_metadata: self.initialize_environments_ready(
+                metadata
+            )
+        )
         self.event_watcher.error.connect(self.initialize_environments_error)
         self.event_thread.start()
 
-    def initialize_environments_ready(self):
+    def initialize_environments_ready(self, metadata):
         # Clear QThread
         self.cleanup_event_watcher()
 
         # Update rattlesnake state
-        self.rattlesnake.environment_metadata = (
-            self.rattlesnake.environment_manager.environment_metadata
-        )
+        self.rattlesnake.environment_metadata = metadata
 
         # Unlock UI
         streaming_environment_items = [""] + list(self.environment_uis.keys())
@@ -1625,6 +1641,23 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     # endregion
 
     # region Acquisition
+    def enable_ready_run_tabs(self):
+        for i in range(self.run_environment_tabs.count()):
+            environment_name = self.run_environment_tabs.tabText(i)
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+                environment_name
+            ]
+            bool_ready = (
+                self.rattlesnake.environment_manager.acquisition_ready_environments[
+                    queue_name
+                ]
+            )
+
+            if bool_ready:
+                self.run_environment_tabs.widget(i).setEnabled(True)
+            else:
+                self.run_environment_tabs.widget(i).setEnabled(False)
+
     def show_channel_monitor(self):
         """
         Shows the channel monitor window.
@@ -1698,8 +1731,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.arm_test_button.setEnabled(False)
         self.disarm_test_button.setEnabled(True)
         # Environment
-        for i in range(self.run_environment_tabs.count()):
-            self.run_environment_tabs.widget(i).setEnabled(True)
+        self.enable_ready_run_tabs()
         # Streaming
         for widget in self.streaming_widgets:
             widget.setEnabled(False)
@@ -2192,8 +2224,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.reset_profile_ui_timers()
         self.profile_list_update_timer.stop()
 
-        for i in range(self.run_environment_tabs.count()):
-            self.run_environment_tabs.widget(i).setEnabled(True)
+        self.enable_ready_run_tabs()
         self.start_profile_button.setEnabled(True)
         self.stop_profile_button.setEnabled(False)
 
@@ -2208,8 +2239,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Unlock UI
         self.start_profile_button.setEnabled(True)
-        for i in range(self.run_environment_tabs.count()):
-            self.run_environment_tabs.widget(i).setEnabled(True)
+        self.enable_ready_run_tabs()
 
     def stop_profile(self):
         self.stop_profile_button.setEnabled(False)

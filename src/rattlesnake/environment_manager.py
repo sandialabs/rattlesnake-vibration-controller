@@ -18,7 +18,7 @@ from rattlesnake.environment.abstract_environment import (
 )
 from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_PROCESS,
-    SYS_ID_ENVIRONMENTS,
+    SYSID_ENVIRONMENTS,
 )
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
@@ -49,14 +49,19 @@ class EnvironmentManager:
         self.queue_names = []  # Static name for dictionary keys, process names, etc
         self.environment_names = {}  # Name of environment for Ui purposes
         self.environment_types = {}
-        self._environment_metadata = {}
+        self.environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
         self.event_container = event_container
         self.environment_active_events = event_container.environment_active_events
         self.environment_ready_events = event_container.environment_ready_events
         self.environment_close_events = event_container.environment_close_events
-        self.environment_sysid_events = event_container.environment_sysid_events
+        self.environment_sysid_active_events = (
+            event_container.environment_sysid_active_events
+        )
+        self.environment_sysid_stored_events = (
+            event_container.environment_sysid_stored_events
+        )
         self._threaded = threaded
         if threaded:
             self.new_process = threading.Thread
@@ -111,14 +116,6 @@ class EnvironmentManager:
 
     # region State Sync
     @property
-    def environment_metadata(self):
-        return self._environment_metadata
-
-    @environment_metadata.setter
-    def environment_metadata(self, value):
-        self._environment_metadata = value
-
-    @property
     def ready_event_list(self):
         ready_event_list = [
             self.environment_ready_events[queue_name] for queue_name in self.queue_names
@@ -134,11 +131,20 @@ class EnvironmentManager:
         return active_event_list
 
     @property
-    def sysid_event_list(self):
-        sysid_event_list = [
-            self.environment_sysid_events[queue_name] for queue_name in self.queue_names
-        ]
-        return sysid_event_list
+    def acquisition_ready_environments(self):
+        acquisition_ready_environments = {}
+        for queue_name, environment_type in self.environment_types.items():
+            if environment_type in SYSID_ENVIRONMENTS:
+                bool_ready = self.environment_sysid_stored_events[queue_name].is_set()
+                acquisition_ready_environments[queue_name] = bool_ready
+            else:
+                acquisition_ready_environments[queue_name] = True
+
+        return acquisition_ready_environments
+
+    def clear_sysid_events(self):
+        for queue_name in self.queue_names:
+            self.environment_sysid_stored_events[queue_name].clear()
 
     def set_ready_events(self):
         """This is used by the main process to ready the events if a timeout
@@ -162,6 +168,9 @@ class EnvironmentManager:
         metadata_list: List[EnvironmentMetadata],
         hardware_metadata: HardwareMetadata,
     ):
+        # TODO: Remove this, set an equivalency to a sysid data container to see if this needs to be cleared
+        self.clear_sysid_events()
+
         self.log("Initializing Environments")
         mapped_queue_names = set()
         extra_metadata = []
@@ -169,6 +178,7 @@ class EnvironmentManager:
 
         # Check if there is an existing process that maps to this environment type
         # If there is, hijack it and give it new metadata
+
         for metadata in metadata_list:
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
@@ -189,7 +199,7 @@ class EnvironmentManager:
             self.log(f"Assigning {environment_name} to {queue_name} Queue")
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
-            self.environment_metadata[queue_name] = metadata
+            environment_metadata_dict[queue_name] = metadata
             self.queue_container.environment_command_queues[queue_name].put(
                 TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
             )
@@ -208,7 +218,10 @@ class EnvironmentManager:
         # Add process for metadata that needs a new process. Could do this in loop above
         # but I want to clear up queue_names before assigning new ones
         for metadata in extra_metadata:
-            self.add_environment(metadata, hardware_metadata)
+            queue_name = self.add_environment(metadata, hardware_metadata)
+            environment_metadata_dict[queue_name] = metadata
+
+        return environment_metadata_dict
 
     def initialize_system_id(self, sysid_metadata, queue_name):
         environment_metadata_dict = copy.deepcopy(self.environment_metadata)
@@ -265,7 +278,7 @@ class EnvironmentManager:
                 f"No environments exist for {environment_name} instruction"
             )
         environment_type = self.environment_types[queue_name]
-        if environment_type not in SYS_ID_ENVIRONMENTS:
+        if environment_type not in SYSID_ENVIRONMENTS:
             raise RattlesnakeError(
                 f"{environment_name} is a {environment_type} environment which does not require system identification"
             )
@@ -293,6 +306,12 @@ class EnvironmentManager:
             raise RattlesnakeError(
                 f"Instructions for {environment_name} is the wrong type for {environment_type} vs {self.environment_types[queue_name]}"
             )
+
+        if environment_type in SYSID_ENVIRONMENTS:
+            if not self.environment_sysid_stored_events[queue_name].is_set():
+                raise RattlesnakeError(
+                    f"{environment_name} requires a system identification before starting"
+                )
         # Validate instruction
         instructions.validate()
 
@@ -323,6 +342,12 @@ class EnvironmentManager:
                 profile_event._queue_name = queue_name
                 profile_event._environment_type = self.environment_types[queue_name]
 
+                if not self.acquisition_ready_environments[queue_name]:
+                    pass
+                    raise RattlesnakeError(
+                        f"{environment_name} requires a system identifcation before performing profile events"
+                    )
+
     # endregion
 
     # region Environment
@@ -338,6 +363,7 @@ class EnvironmentManager:
         self, metadata: EnvironmentMetadata, hardware_metadata: HardwareMetadata
     ):
         """Adds environment to container with unique name"""
+
         # Find the first available queue for the environment
         queue_name = None
         for queue_name in self.available_queues:
@@ -379,7 +405,8 @@ class EnvironmentManager:
                 self.environment_active_events[queue_name],
                 self.environment_ready_events[queue_name],
                 self.environment_close_events[queue_name],
-                self.environment_sysid_events[queue_name],
+                self.environment_sysid_active_events[queue_name],
+                self.environment_sysid_stored_events[queue_name],
                 self.threaded,
             ),
         )
@@ -391,7 +418,6 @@ class EnvironmentManager:
         self.environment_names[queue_name] = environment_name
         self.environment_types[queue_name] = environment_type
         self.environment_processes[queue_name] = environment_process
-        self.environment_metadata[queue_name] = metadata
         self.queue_container.environment_command_queues[queue_name].put(
             TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
         )
@@ -402,7 +428,10 @@ class EnvironmentManager:
             TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata)
         )
         self.environment_active_events[queue_name].clear()
-        self.environment_sysid_events[queue_name].clear()
+        self.environment_sysid_active_events[queue_name].clear()
+        self.environment_sysid_stored_events[queue_name].clear()
+
+        return queue_name
 
     # endregion
 
