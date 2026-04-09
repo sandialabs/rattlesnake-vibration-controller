@@ -796,6 +796,12 @@ class RattlesnakeController:
         self.stop_system_id(environment_name)
         self.stop_acquisition()
 
+    def save_system_id_to_file(self, environment_name, filepath):
+        pass
+
+    def load_system_id_from_package(self, environment_name, sysid_package):
+        pass
+
     # endregion
 
     # region Acquisition

@@ -665,6 +665,9 @@ class SysIdEnvironment(Environment):
                 output_oversample=self.hardware_metadata.output_oversample,
             )
 
+    # endregion
+
+    # region Loading
     def load_noise(self, data):
         """Sends noise data to the data analysis process"""
         self.data_analysis_command_queue.put(

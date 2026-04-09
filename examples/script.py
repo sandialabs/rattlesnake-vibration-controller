@@ -417,7 +417,7 @@ def build_sine_environment():
     # rattlesnake.preview_system_id_noise(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
     # rattlesnake.preview_system_id_transfer(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
     rattlesnake.run_system_id(sine_sys_id_metadata, SINE_ENVIRONMENT_NAME)
-    rattlesnake.start_acquisition(sine_stream_metadata)
+    # rattlesnake.start_acquisition(sine_stream_metadata)
 
     return rattlesnake
 

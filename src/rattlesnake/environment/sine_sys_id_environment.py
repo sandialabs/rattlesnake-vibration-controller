@@ -65,6 +65,7 @@ from rattlesnake.environment.sine_sys_id_utilities import (
 )
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
+    SysIdDataPackage,
     sysid_data_analysis_process,
 )
 from rattlesnake.process.data_collector import data_collector_process
@@ -1214,14 +1215,7 @@ class SineEnvironment(SysIdEnvironment):
         self.queue_container = queue_container
         self.plot_downsample = None
         # Control data
-        self.sysid_frequencies = None
-        self.sysid_frf = None
-        self.sysid_coherence = None
-        self.sysid_response_cpsd = None
-        self.sysid_reference_cpsd = None
-        self.sysid_condition = None
-        self.sysid_response_noise = None
-        self.sysid_reference_noise = None
+        self.sysid_data = SysIdDataPackage()
         self.sysid_frames = None
         self.control_class = None
         self.extra_control_parameters = None
@@ -1313,14 +1307,7 @@ class SineEnvironment(SysIdEnvironment):
                 )
             )
         ):
-            self.sysid_frequencies = None
-            self.sysid_frf = None
-            self.sysid_coherence = None
-            self.sysid_response_cpsd = None
-            self.sysid_reference_cpsd = None
-            self.sysid_condition = None
-            self.sysid_response_noise = None
-            self.sysid_reference_noise = None
+            self.sysid_data = SysIdDataPackage()
             self.sysid_frames = None
             self.control_class = None
             self.extra_control_parameters = None
@@ -1364,12 +1351,12 @@ class SineEnvironment(SysIdEnvironment):
             self.environment_metadata.buffer_blocks,
             self.extra_control_parameters,  # Required parameters
             self.environment_metadata.sysid_metadata.sysid_frequency_spacing,  # Frequency Spacing
-            self.sysid_frf,  # Transfer Functions
-            self.sysid_response_noise,  # Noise levels and correlation
-            self.sysid_reference_noise,  # from the system identification
-            self.sysid_response_cpsd,  # Response levels and correlation
-            self.sysid_reference_cpsd,  # from the system identification
-            self.sysid_coherence,  # Coherence from the system identification
+            self.sysid_data.sysid_frf,  # Transfer Functions
+            self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+            self.sysid_data.sysid_reference_noise,  # from the system identification
+            self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+            self.sysid_data.sysid_reference_cpsd,  # from the system identification
+            self.sysid_data.sysid_coherence,  # Coherence from the system identification
             self.sysid_frames,  # Number of frames in the FRF matrices
         )
         self.log("Creating Specification Signals...")
@@ -1466,18 +1453,7 @@ class SineEnvironment(SysIdEnvironment):
         # print('Finished System Identification')
         self.log("Finished System Identification")
         super().system_id_complete(data)
-        (
-            self.sysid_frames,
-            _,
-            self.sysid_frequencies,
-            self.sysid_frf,
-            self.sysid_coherence,
-            self.sysid_response_cpsd,
-            self.sysid_reference_cpsd,
-            self.sysid_condition,
-            self.sysid_response_noise,
-            self.sysid_reference_noise,
-        ) = data
+        (self.sysid_frames, _, self.sysid_data) = data
         # Perform the control prediction
         self.perform_control_prediction(True)
         self.set_sysid_stored()
@@ -1641,7 +1617,7 @@ class SineEnvironment(SysIdEnvironment):
     def perform_control_prediction(self, sysid_update):
         """Compute the prediction from the test by convolving with the transfer functions"""
         # print('Performing Control Prediction')
-        if self.sysid_frf is None:
+        if self.sysid_data.sysid_frf is None:
             self.gui_update_queue.put(
                 (
                     UICommands.ERROR,
@@ -1663,12 +1639,12 @@ class SineEnvironment(SysIdEnvironment):
                 self.excitation_signal_phases,
             ) = self.control_class.system_id_update(
                 self.environment_metadata.sysid_metadata.sysid_frequency_spacing,
-                self.sysid_frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification
+                self.sysid_data.sysid_frf,  # Transfer Functions
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_coherence,  # Coherence from the system identification
                 self.sysid_frames,  # Number of frames in the CPSD and FRF matrices
             )
             self.excitation_signals_combined = np.sum(self.excitation_signals, axis=0)
@@ -1681,7 +1657,9 @@ class SineEnvironment(SysIdEnvironment):
         drive_signals = self.excitation_signals_combined[
             :, :: self.hardware_metadata.output_oversample
         ]
-        impulse_responses = np.moveaxis(np.fft.irfft(self.sysid_frf, axis=0), 0, -1)
+        impulse_responses = np.moveaxis(
+            np.fft.irfft(self.sysid_data.sysid_frf, axis=0), 0, -1
+        )
 
         self.log("Predicting Test Response...")
         self.predicted_response_signals_combined = np.zeros(

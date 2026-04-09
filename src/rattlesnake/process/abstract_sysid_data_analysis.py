@@ -431,11 +431,233 @@ class SysIdMetadata:
     # endregion
 
 
-# region Data Analysis
+class SysIdDataPackage:
+    # region Data Package
+    def __init__(
+        self,
+        frequencies=None,
+        sysid_frf=None,
+        sysid_coherence=None,
+        sysid_response_cpsd=None,
+        sysid_reference_cpsd=None,
+        sysid_condition=None,
+        sysid_response_noise=None,
+        sysid_reference_noise=None,
+    ):
+        self.frequencies = frequencies
+        self.sysid_frf = sysid_frf
+        self.sysid_coherence = sysid_coherence
+        self.sysid_response_cpsd = sysid_response_cpsd
+        self.sysid_reference_cpsd = sysid_reference_cpsd
+        self.sysid_condition = sysid_condition
+        self.sysid_response_noise = sysid_response_noise
+        self.sysid_reference_noise = sysid_reference_noise
+
+    # endregion
+
+    # region Loading
+    def save_package_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
+        netcdf_group_handle.createDimension(
+            "sysid_control_channels", self.sysid_frf.shape[1]
+        )
+        netcdf_group_handle.createDimension(
+            "sysid_output_channels", self.sysid_frf.shape[2]
+        )
+        netcdf_group_handle.createDimension("sysid_fft_lines", self.sysid_frf.shape[0])
+        var = netcdf_group_handle.createVariable(
+            "frf_data_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_frf.real
+        var = netcdf_group_handle.createVariable(
+            "frf_data_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_frf.imag
+        var = netcdf_group_handle.createVariable(
+            "frf_coherence", "f8", ("sysid_fft_lines", "sysid_control_channels")
+        )
+        var[...] = self.sysid_coherence.real
+        var = netcdf_group_handle.createVariable(
+            "response_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_cpsd.real
+        var = netcdf_group_handle.createVariable(
+            "response_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_cpsd.imag
+        var = netcdf_group_handle.createVariable(
+            "reference_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_cpsd.real
+        var = netcdf_group_handle.createVariable(
+            "reference_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_cpsd.imag
+        var = netcdf_group_handle.createVariable(
+            "response_noise_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_noise.real
+        var = netcdf_group_handle.createVariable(
+            "response_noise_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_noise.imag
+        var = netcdf_group_handle.createVariable(
+            "reference_noise_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_noise.real
+        var = netcdf_group_handle.createVariable(
+            "reference_noise_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_noise.imag
+
+    @classmethod
+    def load_package_from_netcdf(
+        cls, netcdf_group_handle: nc4._netCDF4.Group, sample_rate: int
+    ):
+        frame_size = netcdf_group_handle.sysid_frame_size
+        fft_lines = netcdf_group_handle.dimensions["fft_lines"].size
+        variables = netcdf_group_handle.variables
+        combine = np.vectorize(complex)
+        sysid_frf = np.array(
+            combine(variables["frf_data_real"][:], variables["frf_data_imag"][:])
+        )
+        sysid_coherence = np.array(variables["frf_coherence"][:])
+        sysid_response_cpsd = np.array(
+            combine(
+                variables["response_cpsd_real"][:],
+                variables["response_cpsd_imag"][:],
+            )
+        )
+        sysid_reference_cpsd = np.array(
+            combine(
+                variables["reference_cpsd_real"][:],
+                variables["reference_cpsd_imag"][:],
+            )
+        )
+        sysid_response_noise = np.array(
+            combine(
+                variables["response_noise_cpsd_real"][:],
+                variables["response_noise_cpsd_imag"][:],
+            )
+        )
+        sysid_reference_noise = np.array(
+            combine(
+                variables["reference_noise_cpsd_real"][:],
+                variables["reference_noise_cpsd_imag"][:],
+            )
+        )
+        sysid_condition = np.linalg.cond(sysid_frf)
+        frequencies = np.arange(fft_lines) * sample_rate / frame_size
+
+        return cls(
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            sysid_response_cpsd,
+            sysid_reference_cpsd,
+            sysid_condition,
+            sysid_response_noise,
+            sysid_reference_noise,
+        )
+
+    def save_package_to_mat_field(self, field_dict):
+        field_dict["frf_data"] = self.sysid_frf
+        field_dict["response_cpsd"] = self.sysid_response_cpsd
+        field_dict["reference_cpsd"] = self.sysid_reference_cpsd
+        field_dict["coherence"] = self.sysid_coherence
+        field_dict["response_noise_cpsd"] = self.sysid_response_noise
+        field_dict["reference_noise_cpsd"] = self.sysid_reference_noise
+
+        for field in [
+            "frf_data",
+            "response_cpsd",
+            "reference_cpsd",
+            "coherence",
+            "response_noise_cpsd",
+            "reference_noise_cpsd",
+        ]:
+            field_dict[field] = np.moveaxis(field_dict[field], 0, -1)
+
+        return field_dict
+
+    @classmethod
+    def load_package_from_mat_field(cls, field_dict):
+        pass
+
+    def save_package_to_numpy_field(self, field_dict):
+        field_dict["frf_data"] = self.sysid_frf
+        field_dict["response_cpsd"] = self.sysid_response_cpsd
+        field_dict["reference_cpsd"] = self.sysid_reference_cpsd
+        field_dict["coherence"] = self.sysid_coherence
+        field_dict["response_noise_cpsd"] = self.sysid_response_noise
+        field_dict["reference_noise_cpsd"] = self.sysid_reference_noise
+
+        return field_dict
+
+    @classmethod
+    def load_package_from_numpy_field(cls, field_dict):
+        sysid_frf = np.array(field_dict["frf_data"])
+        sysid_response_cpsd = np.array(field_dict["response_cpsd"])
+        sysid_reference_cpsd = np.array(field_dict["reference_cpsd"])
+        sysid_coherence = np.array(field_dict["coherence"])
+        sysid_response_noise = np.array(field_dict["response_noise_cpsd"])
+        sysid_reference_noise = np.array(field_dict["reference_noise_cpsd"])
+        sysid_condition = np.linalg.cond(sysid_frf)
+        frequencies = (
+            np.arange(sysid_frf.shape[0])
+            * field_dict["sysid_frequency_spacing"].squeeze()
+        )
+
+        return cls(
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            sysid_response_cpsd,
+            sysid_reference_cpsd,
+            sysid_condition,
+            sysid_response_noise,
+            sysid_reference_noise,
+        )
+
+    @classmethod
+    def load_package_from_worksheet(cls, worksheet):
+        pass
+
+    @classmethod
+    def load_package_from_sdynpy_frf(cls, field_dict):
+        pass
+
+    @classmethod
+    def load_package_from_forcefinder_spr(cls, field_dict):
+        pass
+
+    # endregion
+
+
 class SysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
     using system id"""
 
+    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -490,16 +712,10 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.data_out_queue = data_out_queue
         self.parameters = None
         self.frames = None
-        self.frequencies = None
-        self.sysid_frf = None
-        self.sysid_coherence = None
-        self.sysid_response_cpsd = None
-        self.sysid_reference_cpsd = None
-        self.sysid_response_noise = None
-        self.sysid_reference_noise = None
-        self.sysid_condition = None
+        self.sysid_data = SysIdDataPackage()
         self.startup = True
 
+    # region State Sync
     def initialize_sysid_parameters(self, data: SysIdMetadata):
         """Stores parameters describing the system identification into the object
 
@@ -522,15 +738,15 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.log("Obtained Spectral Data")
         (
             self.frames,
-            self.frequencies,
+            self.sysid_data.frequencies,
             _,
             _,
-            self.sysid_response_noise,
-            self.sysid_reference_noise,
+            self.sysid_data.sysid_response_noise,
+            self.sysid_data.sysid_reference_noise,
             _,
         ) = spectral_data
 
-    def load_sysid_transfer_function(self, spectral_data, skip_sysid=True):
+    def load_sysid_transfer_function(self, spectral_data):
         """Loads system ID data from a previous system identification
 
         Parameters
@@ -538,39 +754,25 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         spectral_data : tuple
             A tuple containing frames, frequencies, system id FRFs, coherence, response cpsd,
             reference_cpsd and condition number
-        skip_sysid : bool, optional
-            If True, send the system identification complete flag to the controller. By default True
         """
         self.log("Obtained Spectral Data")
         (
             self.frames,
-            self.frequencies,
-            self.sysid_frf,
-            self.sysid_coherence,
-            self.sysid_response_cpsd,
-            self.sysid_reference_cpsd,
-            self.sysid_condition,
+            self.sysid_data.frequencies,
+            self.sysid_data.sysid_frf,
+            self.sysid_data.sysid_coherence,
+            self.sysid_data.sysid_response_cpsd,
+            self.sysid_data.sysid_reference_cpsd,
+            self.sysid_data.sysid_condition,
         ) = spectral_data
-        if skip_sysid:
-            self.environment_command_queue.put(
-                self.process_name,
-                (
-                    SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
-                    (
-                        self.frames,
-                        0,
-                        self.frequencies,
-                        self.sysid_frf,
-                        self.sysid_coherence,
-                        self.sysid_response_cpsd,
-                        self.sysid_reference_cpsd,
-                        self.sysid_condition,
-                        self.sysid_response_noise,
-                        self.sysid_reference_noise,
-                    ),
-                ),
-            )
 
+    def load_sysid_data_package(self, sysid_data):
+        self.frames = 0
+        self.sysid_data = sysid_data
+
+    # endregion
+
+    # region Commands
     def run_sysid_noise(self, auto_shutdown):
         """Starts and runs the system identification noise phase.
 
@@ -595,9 +797,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                         (
                             self.frames,
                             self.parameters.sysid_noise_averages,
-                            self.frequencies,
-                            self.sysid_response_noise,
-                            self.sysid_reference_noise,
+                            self.sysid_data.frequencies,
+                            self.sysid_data.sysid_response_noise,
+                            self.sysid_data.sysid_reference_noise,
                         ),
                     ),
                 )
@@ -641,12 +843,12 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                         (
                             self.frames,
                             self.parameters.sysid_averages,
-                            self.frequencies,
-                            self.sysid_frf,
-                            self.sysid_coherence,
-                            self.sysid_response_cpsd,
-                            self.sysid_reference_cpsd,
-                            self.sysid_condition,
+                            self.sysid_data.frequencies,
+                            self.sysid_data.sysid_frf,
+                            self.sysid_data.sysid_coherence,
+                            self.sysid_data.sysid_response_cpsd,
+                            self.sysid_data.sysid_reference_cpsd,
+                            self.sysid_data.sysid_condition,
                         ),
                     ),
                 )
@@ -661,18 +863,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 self.process_name,
                 (
                     SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
-                    (
-                        self.frames,
-                        self.parameters.sysid_averages,
-                        self.frequencies,
-                        self.sysid_frf,
-                        self.sysid_coherence,
-                        self.sysid_response_cpsd,
-                        self.sysid_reference_cpsd,
-                        self.sysid_condition,
-                        self.sysid_response_noise,
-                        self.sysid_reference_noise,
-                    ),
+                    (self.frames, self.parameters.sysid_averages, self.sysid_data),
                 ),
             )
         else:
@@ -705,6 +896,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         )
 
 
+# region Process
 def sysid_data_analysis_process(
     environment_name: str,
     command_queue: VerboseMessageQueue,

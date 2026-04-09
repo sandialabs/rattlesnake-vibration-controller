@@ -23,6 +23,7 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
     SysIdDataAnalysisCommands,
     SysIdDataAnalysisUICommands,
+    SysIdDataPackage,
 )
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
 from rattlesnake.user_interface.ui_utilities import error_message_qt, RotatedAxisItem
@@ -77,15 +78,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
         self.connect_sysid_callbacks()
         self.complete_ui()
 
-        self.frequencies = None
+        self.sysid_data = SysIdDataPackage()
         self.last_time_response = None
-        self.last_transfer_function = None
-        self.last_response_noise = None
-        self.last_reference_noise = None
-        self.last_response_cpsd = None
-        self.last_reference_cpsd = None
-        self.last_coherence = None
-        self.last_condition = None
         self.last_kurtosis = None
 
     def connect_sysid_callbacks(self):
@@ -735,7 +729,10 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     def save_sysid_matrix_file(self):
         """Saves out system identification data to a file"""
-        if self.last_transfer_function is None or self.last_response_noise is None:
+        if (
+            self.sysid_data.sysid_frf is None
+            or self.sysid_data.sysid_response_noise is None
+        ):
             self.display_error(
                 "Run System Identification First!",
                 "System Identification Matrices not yet created.\n\n"
@@ -747,263 +744,265 @@ class SysIdEnvironmentUI(EnvironmentUI):
             "Select File to Save Transfer Function Matrices",
             filter="NetCDF File (*.nc4);;MatLab File (*.mat);;Numpy File (*.npz)",
         )
-        labels = [
-            ["node_number", str],
-            ["node_direction", str],
-            ["comment", str],
-            ["serial_number", str],
-            ["triax_dof", str],
-            ["sensitivity", str],
-            ["unit", str],
-            ["make", str],
-            ["model", str],
-            ["expiration", str],
-            ["physical_device", str],
-            ["physical_channel", str],
-            ["channel_type", str],
-            ["minimum_value", str],
-            ["maximum_value", str],
-            ["coupling", str],
-            ["excitation_source", str],
-            ["excitation", str],
-            ["feedback_device", str],
-            ["feedback_channel", str],
-            ["warning_level", str],
-            ["abort_level", str],
-        ]
-        if file_filter == "NetCDF File (*.nc4)":
-            netcdf_handle = nc4.Dataset(
-                filename, "w", format="NETCDF4", clobber=True
-            )  # pylint: disable=no-member
-            # Create dimensions
-            netcdf_handle.createDimension(
-                "response_channels", len(self.hardware_metadata.channel_list)
-            )
 
-            netcdf_handle.createDimension(
-                "num_environments",
-                len(self.hardware_metadata.environment_names),
-            )
-            # Create attributes
-            netcdf_handle.file_version = "3.0.0"
-            netcdf_handle.sample_rate = self.hardware_metadata.sample_rate
-            netcdf_handle.time_per_write = (
-                self.hardware_metadata.samples_per_write
-                / self.hardware_metadata.output_sample_rate
-            )
-            netcdf_handle.time_per_read = (
-                self.hardware_metadata.samples_per_read
-                / self.hardware_metadata.sample_rate
-            )
-            netcdf_handle.hardware = self.hardware_metadata.hardware
-            netcdf_handle.hardware_file = (
-                "None"
-                if self.hardware_metadata.hardware_file is None
-                else self.hardware_metadata.hardware_file
-            )
-            netcdf_handle.output_oversample = self.hardware_metadata.output_oversample
-            for (
-                name,
-                value,
-            ) in self.hardware_metadata.extra_parameters.items():
-                setattr(netcdf_handle, name, value)
-            # Create Variables
-            var = netcdf_handle.createVariable(
-                "environment_names", str, ("num_environments",)
-            )
-            this_environment_index = None
-            for i, name in enumerate(self.hardware_metadata.environment_names):
-                var[i] = name
-                if name == self.environment_name:
-                    this_environment_index = i
-            var = netcdf_handle.createVariable(
-                "environment_active_channels",
-                "i1",
-                ("response_channels", "num_environments"),
-            )
-            var[...] = self.hardware_metadata.environment_active_channels.astype(
-                "int8"
-            )[
-                self.hardware_metadata.environment_active_channels[
-                    :, this_environment_index
-                ],
-                :,
-            ]
-            # Create channel table variables
-            for label, netcdf_datatype in labels:
-                var = netcdf_handle.createVariable(
-                    "/channels/" + label, netcdf_datatype, ("response_channels",)
-                )
-                channel_data = [
-                    getattr(channel, label)
-                    for channel in self.hardware_metadata.channel_list
-                ]
-                if netcdf_datatype == "i1":
-                    channel_data = np.array([1 if val else 0 for val in channel_data])
-                else:
-                    channel_data = ["" if val is None else val for val in channel_data]
-                for i, cd in enumerate(channel_data):
-                    var[i] = cd
-            group_handle = netcdf_handle.createGroup(self.environment_name)
-            self.environment_metadata.store_to_netcdf(group_handle)
-            try:
-                group_handle.createDimension(
-                    "sysid_control_channels", self.last_transfer_function.shape[1]
-                )
-            except RuntimeError:
-                pass
-            try:
-                group_handle.createDimension(
-                    "sysid_output_channels", self.last_transfer_function.shape[2]
-                )
-            except RuntimeError:
-                pass
-            try:
-                group_handle.createDimension(
-                    "sysid_fft_lines", self.last_transfer_function.shape[0]
-                )
-            except RuntimeError:
-                pass
-            var = group_handle.createVariable(
-                "frf_data_real",
-                "f8",
-                ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
-            )
-            var[...] = self.last_transfer_function.real
-            var = group_handle.createVariable(
-                "frf_data_imag",
-                "f8",
-                ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
-            )
-            var[...] = self.last_transfer_function.imag
-            var = group_handle.createVariable(
-                "frf_coherence", "f8", ("sysid_fft_lines", "sysid_control_channels")
-            )
-            var[...] = self.last_coherence.real
-            var = group_handle.createVariable(
-                "response_cpsd_real",
-                "f8",
-                ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
-            )
-            var[...] = self.last_response_cpsd.real
-            var = group_handle.createVariable(
-                "response_cpsd_imag",
-                "f8",
-                ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
-            )
-            var[...] = self.last_response_cpsd.imag
-            var = group_handle.createVariable(
-                "reference_cpsd_real",
-                "f8",
-                ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
-            )
-            var[...] = self.last_reference_cpsd.real
-            var = group_handle.createVariable(
-                "reference_cpsd_imag",
-                "f8",
-                ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
-            )
-            var[...] = self.last_reference_cpsd.imag
-            var = group_handle.createVariable(
-                "response_noise_cpsd_real",
-                "f8",
-                ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
-            )
-            var[...] = self.last_response_noise.real
-            var = group_handle.createVariable(
-                "response_noise_cpsd_imag",
-                "f8",
-                ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
-            )
-            var[...] = self.last_response_noise.imag
-            var = group_handle.createVariable(
-                "reference_noise_cpsd_real",
-                "f8",
-                ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
-            )
-            var[...] = self.last_reference_noise.real
-            var = group_handle.createVariable(
-                "reference_noise_cpsd_imag",
-                "f8",
-                ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
-            )
-            var[...] = self.last_reference_noise.imag
-        else:
-            field_dict = {}
-            field_dict["version"] = "3.0.0"
-            field_dict["sample_rate"] = self.hardware_metadata.sample_rate
-            field_dict["time_per_write"] = (
-                self.hardware_metadata.samples_per_write
-                / self.hardware_metadata.output_sample_rate
-            )
-            field_dict["time_per_read"] = (
-                self.hardware_metadata.samples_per_read
-                / self.hardware_metadata.sample_rate
-            )
-            field_dict["hardware"] = self.hardware_metadata.hardware
-            field_dict["hardware_file"] = (
-                "None"
-                if self.hardware_metadata.hardware_file is None
-                else self.hardware_metadata.hardware_file
-            )
-            field_dict["output_oversample"] = self.hardware_metadata.output_oversample
-            field_dict["frf_data"] = self.last_transfer_function
-            field_dict["response_cpsd"] = self.last_response_cpsd
-            field_dict["reference_cpsd"] = self.last_reference_cpsd
-            field_dict["coherence"] = self.last_coherence
-            field_dict["response_noise_cpsd"] = self.last_response_noise
-            field_dict["reference_noise_cpsd"] = self.last_reference_noise
-            field_dict["response_indices"] = (
-                self.environment_metadata.response_channel_indices
-            )
-            field_dict["reference_indices"] = (
-                self.environment_metadata.reference_channel_indices
-            )
-            field_dict["response_transformation_matrix"] = (
-                np.nan
-                if self.environment_metadata.response_transformation_matrix is None
-                else self.environment_metadata.response_transformation_matrix
-            )
-            field_dict["reference_transformation_matrix"] = (
-                np.nan
-                if self.environment_metadata.reference_transformation_matrix is None
-                else self.environment_metadata.reference_transformation_matrix
-            )
-            field_dict["sysid_frequency_spacing"] = (
-                self.environment_metadata.sysid_frequency_spacing
-            )
-            field_dict.update(self.hardware_metadata.extra_parameters)
-            for key, value in self.environment_metadata.__dict__.items():
-                try:
-                    if "sysid_" in key:
-                        field_dict[key] = np.array(value)
-                except TypeError:
-                    continue
-            for label, _ in labels:
-                field_dict["channel_" + label] = np.array(
-                    [
-                        (
-                            ""
-                            if getattr(channel, label) is None
-                            else getattr(channel, label)
-                        )
-                        for channel in self.hardware_metadata.channel_list
-                    ]
-                )
-            # print(field_dict)
-            if file_filter == "MatLab File (*.mat)":
-                for field in [
-                    "frf_data",
-                    "response_cpsd",
-                    "reference_cpsd",
-                    "coherence",
-                    "response_noise_cpsd",
-                    "reference_noise_cpsd",
-                ]:
-                    field_dict[field] = np.moveaxis(field_dict[field], 0, -1)
-                savemat(filename, field_dict)
-            elif file_filter == "Numpy File (*.npz)":
-                np.savez(filename, **field_dict)
+        self.rattlesnake.save_system_id_to_file(self.environment_name, filename)
+        # labels = [
+        #     ["node_number", str],
+        #     ["node_direction", str],
+        #     ["comment", str],
+        #     ["serial_number", str],
+        #     ["triax_dof", str],
+        #     ["sensitivity", str],
+        #     ["unit", str],
+        #     ["make", str],
+        #     ["model", str],
+        #     ["expiration", str],
+        #     ["physical_device", str],
+        #     ["physical_channel", str],
+        #     ["channel_type", str],
+        #     ["minimum_value", str],
+        #     ["maximum_value", str],
+        #     ["coupling", str],
+        #     ["excitation_source", str],
+        #     ["excitation", str],
+        #     ["feedback_device", str],
+        #     ["feedback_channel", str],
+        #     ["warning_level", str],
+        #     ["abort_level", str],
+        # ]
+        # if file_filter == "NetCDF File (*.nc4)":
+        #     netcdf_handle = nc4.Dataset(
+        #         filename, "w", format="NETCDF4", clobber=True
+        #     )  # pylint: disable=no-member
+        #     # Create dimensions
+        #     netcdf_handle.createDimension(
+        #         "response_channels", len(self.hardware_metadata.channel_list)
+        #     )
+
+        #     netcdf_handle.createDimension(
+        #         "num_environments",
+        #         len(self.hardware_metadata.environment_names),
+        #     )
+        #     # Create attributes
+        #     netcdf_handle.file_version = "3.0.0"
+        #     netcdf_handle.sample_rate = self.hardware_metadata.sample_rate
+        #     netcdf_handle.time_per_write = (
+        #         self.hardware_metadata.samples_per_write
+        #         / self.hardware_metadata.output_sample_rate
+        #     )
+        #     netcdf_handle.time_per_read = (
+        #         self.hardware_metadata.samples_per_read
+        #         / self.hardware_metadata.sample_rate
+        #     )
+        #     netcdf_handle.hardware = self.hardware_metadata.hardware
+        #     netcdf_handle.hardware_file = (
+        #         "None"
+        #         if self.hardware_metadata.hardware_file is None
+        #         else self.hardware_metadata.hardware_file
+        #     )
+        #     netcdf_handle.output_oversample = self.hardware_metadata.output_oversample
+        #     for (
+        #         name,
+        #         value,
+        #     ) in self.hardware_metadata.extra_parameters.items():
+        #         setattr(netcdf_handle, name, value)
+        #     # Create Variables
+        #     var = netcdf_handle.createVariable(
+        #         "environment_names", str, ("num_environments",)
+        #     )
+        #     this_environment_index = None
+        #     for i, name in enumerate(self.hardware_metadata.environment_names):
+        #         var[i] = name
+        #         if name == self.environment_name:
+        #             this_environment_index = i
+        #     var = netcdf_handle.createVariable(
+        #         "environment_active_channels",
+        #         "i1",
+        #         ("response_channels", "num_environments"),
+        #     )
+        #     var[...] = self.hardware_metadata.environment_active_channels.astype(
+        #         "int8"
+        #     )[
+        #         self.hardware_metadata.environment_active_channels[
+        #             :, this_environment_index
+        #         ],
+        #         :,
+        #     ]
+        #     # Create channel table variables
+        #     for label, netcdf_datatype in labels:
+        #         var = netcdf_handle.createVariable(
+        #             "/channels/" + label, netcdf_datatype, ("response_channels",)
+        #         )
+        #         channel_data = [
+        #             getattr(channel, label)
+        #             for channel in self.hardware_metadata.channel_list
+        #         ]
+        #         if netcdf_datatype == "i1":
+        #             channel_data = np.array([1 if val else 0 for val in channel_data])
+        #         else:
+        #             channel_data = ["" if val is None else val for val in channel_data]
+        #         for i, cd in enumerate(channel_data):
+        #             var[i] = cd
+        #     group_handle = netcdf_handle.createGroup(self.environment_name)
+        #     self.environment_metadata.store_to_netcdf(group_handle)
+        #     try:
+        #         group_handle.createDimension(
+        #             "sysid_control_channels", self.last_transfer_function.shape[1]
+        #         )
+        #     except RuntimeError:
+        #         pass
+        #     try:
+        #         group_handle.createDimension(
+        #             "sysid_output_channels", self.last_transfer_function.shape[2]
+        #         )
+        #     except RuntimeError:
+        #         pass
+        #     try:
+        #         group_handle.createDimension(
+        #             "sysid_fft_lines", self.last_transfer_function.shape[0]
+        #         )
+        #     except RuntimeError:
+        #         pass
+        #     var = group_handle.createVariable(
+        #         "frf_data_real",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
+        #     )
+        #     var[...] = self.last_transfer_function.real
+        #     var = group_handle.createVariable(
+        #         "frf_data_imag",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
+        #     )
+        #     var[...] = self.last_transfer_function.imag
+        #     var = group_handle.createVariable(
+        #         "frf_coherence", "f8", ("sysid_fft_lines", "sysid_control_channels")
+        #     )
+        #     var[...] = self.last_coherence.real
+        #     var = group_handle.createVariable(
+        #         "response_cpsd_real",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        #     )
+        #     var[...] = self.last_response_cpsd.real
+        #     var = group_handle.createVariable(
+        #         "response_cpsd_imag",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        #     )
+        #     var[...] = self.last_response_cpsd.imag
+        #     var = group_handle.createVariable(
+        #         "reference_cpsd_real",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        #     )
+        #     var[...] = self.last_reference_cpsd.real
+        #     var = group_handle.createVariable(
+        #         "reference_cpsd_imag",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        #     )
+        #     var[...] = self.last_reference_cpsd.imag
+        #     var = group_handle.createVariable(
+        #         "response_noise_cpsd_real",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        #     )
+        #     var[...] = self.last_response_noise.real
+        #     var = group_handle.createVariable(
+        #         "response_noise_cpsd_imag",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        #     )
+        #     var[...] = self.last_response_noise.imag
+        #     var = group_handle.createVariable(
+        #         "reference_noise_cpsd_real",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        #     )
+        #     var[...] = self.last_reference_noise.real
+        #     var = group_handle.createVariable(
+        #         "reference_noise_cpsd_imag",
+        #         "f8",
+        #         ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        #     )
+        #     var[...] = self.last_reference_noise.imag
+        # else:
+        #     field_dict = {}
+        #     field_dict["version"] = "3.0.0"
+        #     field_dict["sample_rate"] = self.hardware_metadata.sample_rate
+        #     field_dict["time_per_write"] = (
+        #         self.hardware_metadata.samples_per_write
+        #         / self.hardware_metadata.output_sample_rate
+        #     )
+        #     field_dict["time_per_read"] = (
+        #         self.hardware_metadata.samples_per_read
+        #         / self.hardware_metadata.sample_rate
+        #     )
+        #     field_dict["hardware"] = self.hardware_metadata.hardware
+        #     field_dict["hardware_file"] = (
+        #         "None"
+        #         if self.hardware_metadata.hardware_file is None
+        #         else self.hardware_metadata.hardware_file
+        #     )
+        #     field_dict["output_oversample"] = self.hardware_metadata.output_oversample
+        #     field_dict["frf_data"] = self.last_transfer_function
+        #     field_dict["response_cpsd"] = self.last_response_cpsd
+        #     field_dict["reference_cpsd"] = self.last_reference_cpsd
+        #     field_dict["coherence"] = self.last_coherence
+        #     field_dict["response_noise_cpsd"] = self.last_response_noise
+        #     field_dict["reference_noise_cpsd"] = self.last_reference_noise
+        #     field_dict["response_indices"] = (
+        #         self.environment_metadata.response_channel_indices
+        #     )
+        #     field_dict["reference_indices"] = (
+        #         self.environment_metadata.reference_channel_indices
+        #     )
+        #     field_dict["response_transformation_matrix"] = (
+        #         np.nan
+        #         if self.environment_metadata.response_transformation_matrix is None
+        #         else self.environment_metadata.response_transformation_matrix
+        #     )
+        #     field_dict["reference_transformation_matrix"] = (
+        #         np.nan
+        #         if self.environment_metadata.reference_transformation_matrix is None
+        #         else self.environment_metadata.reference_transformation_matrix
+        #     )
+        #     field_dict["sysid_frequency_spacing"] = (
+        #         self.environment_metadata.sysid_frequency_spacing
+        #     )
+        #     field_dict.update(self.hardware_metadata.extra_parameters)
+        #     for key, value in self.environment_metadata.__dict__.items():
+        #         try:
+        #             if "sysid_" in key:
+        #                 field_dict[key] = np.array(value)
+        #         except TypeError:
+        #             continue
+        #     for label, _ in labels:
+        #         field_dict["channel_" + label] = np.array(
+        #             [
+        #                 (
+        #                     ""
+        #                     if getattr(channel, label) is None
+        #                     else getattr(channel, label)
+        #                 )
+        #                 for channel in self.hardware_metadata.channel_list
+        #             ]
+        #         )
+        #     # print(field_dict)
+        #     if file_filter == "MatLab File (*.mat)":
+        #         for field in [
+        #             "frf_data",
+        #             "response_cpsd",
+        #             "reference_cpsd",
+        #             "coherence",
+        #             "response_noise_cpsd",
+        #             "reference_noise_cpsd",
+        #         ]:
+        #             field_dict[field] = np.moveaxis(field_dict[field], 0, -1)
+        #         savemat(filename, field_dict)
+        #     elif file_filter == "Numpy File (*.npz)":
+        #         np.savez(filename, **field_dict)
 
     def load_sysid_matrix_file(self, filename, popup=True):
         """Loads a system identification dataset from previous analysis or testing
@@ -1020,160 +1019,161 @@ class SysIdEnvironmentUI(EnvironmentUI):
         ValueError
             If the wrong type of file is loaded
         """
-        if popup:
-            filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
-                self.system_id_widget,
-                "Select File to Load Transfer Function Matrices",
-                filter="NetCDF File (*.nc4);;MatLab File (*.mat);;Numpy File (*.npz);;"
-                "SDynPy FRF (*.npz);;Forcefinder SPR (*.npz)",
-            )
-        else:
-            file_filter = None
-        if filename is None or filename == "":
-            return
-        elif file_filter == "NetCDF File (*.nc4)" or (
-            file_filter is None and filename.endswith(".nc4")
-        ):
-            netcdf_handle = nc4.Dataset(
-                filename, "r", format="NETCDF4"
-            )  # pylint: disable=no-member
-            # TODO: error checking to make sure relevant info matches current controller state
-            group_handle = netcdf_handle[self.environment_name]
-            sample_rate = netcdf_handle.sample_rate
-            frame_size = group_handle.sysid_frame_size
-            fft_lines = group_handle.dimensions["fft_lines"].size
-            variables = group_handle.variables
-            combine = np.vectorize(complex)
-            try:
-                self.last_transfer_function = np.array(
-                    combine(
-                        variables["frf_data_real"][:], variables["frf_data_imag"][:]
-                    )
-                )
-                self.last_coherence = np.array(variables["frf_coherence"][:])
-                self.last_response_cpsd = np.array(
-                    combine(
-                        variables["response_cpsd_real"][:],
-                        variables["response_cpsd_imag"][:],
-                    )
-                )
-                self.last_reference_cpsd = np.array(
-                    combine(
-                        variables["reference_cpsd_real"][:],
-                        variables["reference_cpsd_imag"][:],
-                    )
-                )
-                self.last_response_noise = np.array(
-                    combine(
-                        variables["response_noise_cpsd_real"][:],
-                        variables["response_noise_cpsd_imag"][:],
-                    )
-                )
-                self.last_reference_noise = np.array(
-                    combine(
-                        variables["reference_noise_cpsd_real"][:],
-                        variables["reference_noise_cpsd_imag"][:],
-                    )
-                )
-                self.last_condition = np.linalg.cond(self.last_transfer_function)
-                self.frequencies = np.arange(fft_lines) * sample_rate / frame_size
-            except KeyError:
-                # TODO: in the case that a time history file was chosen, should FRF be
-                # auto-computed? could work on environment run or sysid (environment run just
-                # may have poor FRF)
-                # could we use the data analysis process to do the computation? so we don't
-                # lock up the UI
-                # could we also pass the FRF to any virtual hardware?
-                return
-        elif file_filter == "SDynPy FRF (*.npz)":
-            sdynpy_dict = np.load(filename)
-            if sdynpy_dict["function_type"].item() != 4:
-                raise ValueError(
-                    "File must contain a Sdynpy FrequencyResponseFunctionArray"
-                )
-            self.last_transfer_function = np.moveaxis(
-                np.array(sdynpy_dict["data"]["ordinate"]), -1, 0
-            )
-            self.last_condition = np.linalg.cond(self.last_transfer_function)
-            self.frequencies = np.array(sdynpy_dict["data"]["abscissa"][0][0])
-            self.last_coherence = np.zeros((0, self.last_transfer_function.shape[1]))
-            # TODO: pull coordinate out to verify matching info
-        elif file_filter == "Forcefinder SPR (*.npz)":
-            forcefinder_dict = np.load(filename)
-            self.last_transfer_function = np.array(
-                forcefinder_dict["training_frf"]
-            )  # training frf will generally be the one used for testing
-            self.last_condition = np.linalg.cond(self.last_transfer_function)
-            self.frequencies = np.array(forcefinder_dict["abscissa"])
-            self.last_coherence = np.zeros((0, self.last_transfer_function.shape[1]))
-            if "buzz_cpsd" in forcefinder_dict:
-                self.last_response_cpsd = np.array(forcefinder_dict["buzz_cpsd"])
-        else:
-            if file_filter == "MatLab File (*.mat)":
-                field_dict = loadmat(filename)
-                for field in [
-                    "frf_data",
-                    "response_cpsd",
-                    "reference_cpsd",
-                    "coherence",
-                    "response_noise_cpsd",
-                    "reference_noise_cpsd",
-                ]:
-                    field_dict[field] = np.moveaxis(field_dict[field], -1, 0)
-            elif file_filter == "Numpy File (*.npz)":
-                field_dict = np.load(filename)
-            self.last_transfer_function = np.array(field_dict["frf_data"])
-            self.last_response_cpsd = np.array(field_dict["response_cpsd"])
-            self.last_reference_cpsd = np.array(field_dict["reference_cpsd"])
-            self.last_coherence = np.array(field_dict["coherence"])
-            self.last_response_noise = np.array(field_dict["response_noise_cpsd"])
-            self.last_reference_noise = np.array(field_dict["reference_noise_cpsd"])
-            self.last_condition = np.linalg.cond(self.last_transfer_function)
-            self.frequencies = (
-                np.arange(self.last_transfer_function.shape[0])
-                * field_dict["sysid_frequency_spacing"].squeeze()
-            )
-        # Send values to data analysis process (through the
-        # environment queue, environment then passes to data analysis)
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                SysIdDataAnalysisCommands.LOAD_NOISE,
-                (
-                    0,
-                    self.frequencies,
-                    None,
-                    None,
-                    self.last_response_noise,
-                    self.last_reference_noise,
-                    None,
-                ),
-            ),
-        )
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION,
-                (
-                    0,
-                    self.frequencies,
-                    self.last_transfer_function,
-                    self.last_coherence,
-                    self.last_response_cpsd,
-                    self.last_reference_cpsd,
-                    self.last_condition,
-                ),
-            ),
-        )
+        self.rattlesnake.load_system_id_to_environment
+        # if popup:
+        #     filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+        #         self.system_id_widget,
+        #         "Select File to Load Transfer Function Matrices",
+        #         filter="NetCDF File (*.nc4);;MatLab File (*.mat);;Numpy File (*.npz);;"
+        #         "SDynPy FRF (*.npz);;Forcefinder SPR (*.npz)",
+        #     )
+        # else:
+        #     file_filter = None
+        # if filename is None or filename == "":
+        #     return
+        # elif file_filter == "NetCDF File (*.nc4)" or (
+        #     file_filter is None and filename.endswith(".nc4")
+        # ):
+        #     netcdf_handle = nc4.Dataset(
+        #         filename, "r", format="NETCDF4"
+        #     )  # pylint: disable=no-member
+        #     # TODO: error checking to make sure relevant info matches current controller state
+        #     group_handle = netcdf_handle[self.environment_name]
+        #     sample_rate = netcdf_handle.sample_rate
+        #     frame_size = group_handle.sysid_frame_size
+        #     fft_lines = group_handle.dimensions["fft_lines"].size
+        #     variables = group_handle.variables
+        #     combine = np.vectorize(complex)
+        #     try:
+        #         self.last_transfer_function = np.array(
+        #             combine(
+        #                 variables["frf_data_real"][:], variables["frf_data_imag"][:]
+        #             )
+        #         )
+        #         self.last_coherence = np.array(variables["frf_coherence"][:])
+        #         self.last_response_cpsd = np.array(
+        #             combine(
+        #                 variables["response_cpsd_real"][:],
+        #                 variables["response_cpsd_imag"][:],
+        #             )
+        #         )
+        #         self.last_reference_cpsd = np.array(
+        #             combine(
+        #                 variables["reference_cpsd_real"][:],
+        #                 variables["reference_cpsd_imag"][:],
+        #             )
+        #         )
+        #         self.last_response_noise = np.array(
+        #             combine(
+        #                 variables["response_noise_cpsd_real"][:],
+        #                 variables["response_noise_cpsd_imag"][:],
+        #             )
+        #         )
+        #         self.last_reference_noise = np.array(
+        #             combine(
+        #                 variables["reference_noise_cpsd_real"][:],
+        #                 variables["reference_noise_cpsd_imag"][:],
+        #             )
+        #         )
+        #         self.last_condition = np.linalg.cond(self.last_transfer_function)
+        #         self.frequencies = np.arange(fft_lines) * sample_rate / frame_size
+        #     except KeyError:
+        #         # TODO: in the case that a time history file was chosen, should FRF be
+        #         # auto-computed? could work on environment run or sysid (environment run just
+        #         # may have poor FRF)
+        #         # could we use the data analysis process to do the computation? so we don't
+        #         # lock up the UI
+        #         # could we also pass the FRF to any virtual hardware?
+        #         return
+        # elif file_filter == "SDynPy FRF (*.npz)":
+        #     sdynpy_dict = np.load(filename)
+        #     if sdynpy_dict["function_type"].item() != 4:
+        #         raise ValueError(
+        #             "File must contain a Sdynpy FrequencyResponseFunctionArray"
+        #         )
+        #     self.last_transfer_function = np.moveaxis(
+        #         np.array(sdynpy_dict["data"]["ordinate"]), -1, 0
+        #     )
+        #     self.last_condition = np.linalg.cond(self.last_transfer_function)
+        #     self.frequencies = np.array(sdynpy_dict["data"]["abscissa"][0][0])
+        #     self.last_coherence = np.zeros((0, self.last_transfer_function.shape[1]))
+        #     # TODO: pull coordinate out to verify matching info
+        # elif file_filter == "Forcefinder SPR (*.npz)":
+        #     forcefinder_dict = np.load(filename)
+        #     self.last_transfer_function = np.array(
+        #         forcefinder_dict["training_frf"]
+        #     )  # training frf will generally be the one used for testing
+        #     self.last_condition = np.linalg.cond(self.last_transfer_function)
+        #     self.frequencies = np.array(forcefinder_dict["abscissa"])
+        #     self.last_coherence = np.zeros((0, self.last_transfer_function.shape[1]))
+        #     if "buzz_cpsd" in forcefinder_dict:
+        #         self.last_response_cpsd = np.array(forcefinder_dict["buzz_cpsd"])
+        # else:
+        #     if file_filter == "MatLab File (*.mat)":
+        #         field_dict = loadmat(filename)
+        #         for field in [
+        #             "frf_data",
+        #             "response_cpsd",
+        #             "reference_cpsd",
+        #             "coherence",
+        #             "response_noise_cpsd",
+        #             "reference_noise_cpsd",
+        #         ]:
+        #             field_dict[field] = np.moveaxis(field_dict[field], -1, 0)
+        #     elif file_filter == "Numpy File (*.npz)":
+        #         field_dict = np.load(filename)
+        #     self.last_transfer_function = np.array(field_dict["frf_data"])
+        #     self.last_response_cpsd = np.array(field_dict["response_cpsd"])
+        #     self.last_reference_cpsd = np.array(field_dict["reference_cpsd"])
+        #     self.last_coherence = np.array(field_dict["coherence"])
+        #     self.last_response_noise = np.array(field_dict["response_noise_cpsd"])
+        #     self.last_reference_noise = np.array(field_dict["reference_noise_cpsd"])
+        #     self.last_condition = np.linalg.cond(self.last_transfer_function)
+        #     self.frequencies = (
+        #         np.arange(self.last_transfer_function.shape[0])
+        #         * field_dict["sysid_frequency_spacing"].squeeze()
+        #     )
+        # # Send values to data analysis process (through the
+        # # environment queue, environment then passes to data analysis)
+        # self.environment_command_queue.put(
+        #     self.log_name,
+        #     (
+        #         SysIdDataAnalysisCommands.LOAD_NOISE,
+        #         (
+        #             0,
+        #             self.frequencies,
+        #             None,
+        #             None,
+        #             self.last_response_noise,
+        #             self.last_reference_noise,
+        #             None,
+        #         ),
+        #     ),
+        # )
+        # self.environment_command_queue.put(
+        #     self.log_name,
+        #     (
+        #         SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION,
+        #         (
+        #             0,
+        #             self.frequencies,
+        #             self.last_transfer_function,
+        #             self.last_coherence,
+        #             self.last_response_cpsd,
+        #             self.last_reference_cpsd,
+        #             self.last_condition,
+        #         ),
+        #     ),
+        # )
         self.update_sysid_plots(
             update_time=False,
             update_transfer_function=True,
             update_noise=True,
             update_kurtosis=False,
         )
-        self.system_id_widget.current_frames_spinbox.setValue(0)
-        self.system_id_widget.total_frames_spinbox.setValue(0)
-        self.system_id_widget.progressBar.setValue(100)
+        # self.system_id_widget.current_frames_spinbox.setValue(0)
+        # self.system_id_widget.total_frames_spinbox.setValue(0)
+        # self.system_id_widget.progressBar.setValue(100)
 
     @abstractmethod
     def display_environment_ended(self):
@@ -1270,28 +1270,28 @@ class SysIdEnvironmentUI(EnvironmentUI):
             self.coherence_plot.clear()
             self.impulse_response_plot.clear()
             if (
-                self.last_transfer_function is not None
+                self.sysid_data.sysid_frf is not None
                 and len(response_indices) > 0
                 and len(reference_indices) > 0
             ):
-                # print(self.last_transfer_function)
+                # print(self.sysid_data.sysid_frf)
                 # print(np.array(response_indices)[:,np.newaxis])
                 # print(np.array(reference_indices))
                 frf_section = np.reshape(
-                    self.last_transfer_function[
+                    self.sysid_data.sysid_frf[
                         ...,
                         np.array(response_indices)[:, np.newaxis],
                         np.array(reference_indices),
                     ],
-                    (self.frequencies.size, -1),
+                    (self.sysid_data.frequencies.size, -1),
                 ).T
                 impulse_response = np.fft.irfft(frf_section, axis=-1)
                 for i, (frf, imp) in enumerate(zip(frf_section, impulse_response)):
                     self.transfer_function_phase_plot.plot(
-                        self.frequencies, np.angle(frf) * 180 / np.pi, pen=i
+                        self.sysid_data.frequencies, np.angle(frf) * 180 / np.pi, pen=i
                     )
                     self.transfer_function_magnitude_plot.plot(
-                        self.frequencies, np.abs(frf), pen=i
+                        self.sysid_data.frequencies, np.abs(frf), pen=i
                     )
                     self.impulse_response_plot.plot(
                         np.arange(imp.size) / self.environment_metadata.sample_rate,
@@ -1299,37 +1299,45 @@ class SysIdEnvironmentUI(EnvironmentUI):
                         pen=i,
                     )
                 for i, coherence in enumerate(
-                    self.last_coherence[..., response_indices].T
+                    self.sysid_data.sysid_coherence[..., response_indices].T
                 ):
-                    self.coherence_plot.plot(self.frequencies, coherence, pen=i)
-            if self.last_condition is not None:
-                self.condition_plot.plot(self.frequencies, self.last_condition, pen=0)
+                    self.coherence_plot.plot(
+                        self.sysid_data.frequencies, coherence, pen=i
+                    )
+            if self.sysid_data.sysid_condition is not None:
+                self.condition_plot.plot(
+                    self.sysid_data.frequencies, self.sysid_data.sysid_condition, pen=0
+                )
         if update_noise:
             reference_noise = (
                 None
-                if self.last_reference_noise is None or len(reference_indices) == 0
-                else self.last_reference_noise[
+                if self.sysid_data.sysid_reference_noise is None
+                or len(reference_indices) == 0
+                else self.sysid_data.sysid_reference_noise[
                     ..., reference_indices, reference_indices
                 ].real
             )
             response_noise = (
                 None
-                if self.last_response_noise is None or len(response_indices) == 0
-                else self.last_response_noise[
+                if self.sysid_data.sysid_response_noise is None
+                or len(response_indices) == 0
+                else self.sysid_data.sysid_response_noise[
                     ..., response_indices, response_indices
                 ].real
             )
             reference_level = (
                 None
-                if self.last_reference_cpsd is None or len(reference_indices) == 0
-                else self.last_reference_cpsd[
+                if self.sysid_data.sysid_reference_cpsd is None
+                or len(reference_indices) == 0
+                else self.sysid_data.sysid_reference_cpsd[
                     ..., reference_indices, reference_indices
                 ].real
             )
             response_level = (
                 None
-                if self.last_response_cpsd is None or len(response_indices) == 0
-                else self.last_response_cpsd[
+                if self.sysid_data.sysid_response_cpsd is None
+                or len(response_indices) == 0
+                else self.sysid_data.sysid_response_cpsd[
                     ..., response_indices, response_indices
                 ].real
             )
@@ -1338,24 +1346,24 @@ class SysIdEnvironmentUI(EnvironmentUI):
             for i in range(len(reference_indices)):
                 if reference_noise is not None:
                     self.level_reference_plot.plot(
-                        self.frequencies, reference_noise[:, i], pen=i
+                        self.sysid_data.frequencies, reference_noise[:, i], pen=i
                     )
                 if reference_level is not None:
                     try:
                         self.level_reference_plot.plot(
-                            self.frequencies, reference_level[:, i], pen=i
+                            self.sysid_data.frequencies, reference_level[:, i], pen=i
                         )
                     except Exception:
                         pass
             for i in range(len(response_indices)):
                 if response_noise is not None:
                     self.level_response_plot.plot(
-                        self.frequencies, response_noise[:, i], pen=i
+                        self.sysid_data.frequencies, response_noise[:, i], pen=i
                     )
                 if response_level is not None:
                     try:
                         self.level_response_plot.plot(
-                            self.frequencies, response_level[:, i], pen=i
+                            self.sysid_data.frequencies, response_level[:, i], pen=i
                         )
                     except Exception:
                         pass
@@ -1533,9 +1541,9 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 (
                     frames,
                     total_frames,
-                    self.frequencies,
-                    self.last_response_noise,
-                    self.last_reference_noise,
+                    self.sysid_data.frequencies,
+                    self.sysid_data.sysid_response_noise,
+                    self.sysid_data.sysid_reference_noise,
                 ) = data
                 self.update_sysid_plots(
                     update_time=False,
@@ -1552,17 +1560,17 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 (
                     frames,
                     total_frames,
-                    self.frequencies,
-                    self.last_transfer_function,
-                    self.last_coherence,
-                    self.last_response_cpsd,
-                    self.last_reference_cpsd,
-                    self.last_condition,
+                    self.sysid_data.frequencies,
+                    self.sysid_data.sysid_frf,
+                    self.sysid_data.sysid_coherence,
+                    self.sysid_data.sysid_response_cpsd,
+                    self.sysid_data.sysid_reference_cpsd,
+                    self.sysid_data.sysid_condition,
                 ) = data
-                # print(self.last_transfer_function.shape)
-                # print(self.last_coherence.shape)
-                # print(self.last_response_cpsd.shape)
-                # print(self.last_reference_cpsd.shape)
+                # print(self.sysid_data.sysid_frf.shape)
+                # print(self.sysid_data.sysid_coherence.shape)
+                # print(self.sysid_data.sysid_response_cpsd.shape)
+                # print(self.sysid_data.sysid_reference_cpsd.shape)
                 self.update_sysid_plots(
                     update_time=False,
                     update_transfer_function=True,
