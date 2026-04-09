@@ -1350,6 +1350,9 @@ class ModalUI(EnvironmentUI):
         self.create_netcdf4_file(filename)
         self.start_environment()
 
+    # endregion
+
+    # region Commands
     def display_environment_ended(self):
         self.run_widget.stop_test_button.setEnabled(False)
         self.run_widget.preview_test_button.setEnabled(True)
@@ -1395,9 +1398,6 @@ class ModalUI(EnvironmentUI):
             self.netcdf_handle.close()  # Close out of file
         return super().stop_environment_ready()
 
-    # endregion
-
-    # region Commands
     def update_gui(self, queue_data: tuple):
         """Update the environment's graphical user interface
 
