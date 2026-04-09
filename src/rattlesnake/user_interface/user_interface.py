@@ -511,9 +511,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         try:
             self.rattlesnake.load_rattlesnake_from_template(filepath)
-        except Exception:  # pylint: disable=broad-exception-caught
-            tb = traceback.format_exc()
-            self.display_error(tb)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
             return
 
         self.load_ui_from_rattlesnake()
@@ -804,9 +803,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 profile_event_list,
             )
             workbook.save(filepath)
-        except Exception:  # pylint: disable=broad-exception-caught
-            tb = traceback.format_exc()
-            self.display_error(tb)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
             return
 
     # endregion

@@ -8,7 +8,7 @@ from qtpy import QtWidgets, uic
 from scipy.io import loadmat, savemat
 
 from rattlesnake.utilities import DIRECTORY
-from rattlesnake.engine import RattlesnakeController
+from rattlesnake.engine import RattlesnakeController, RattlesnakeState
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
@@ -26,7 +26,11 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataPackage,
 )
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
-from rattlesnake.user_interface.ui_utilities import error_message_qt, RotatedAxisItem
+from rattlesnake.user_interface.ui_utilities import (
+    error_message_qt,
+    RotatedAxisItem,
+    SysIdSelector,
+)
 
 
 # region User Interface
@@ -661,7 +665,14 @@ class SysIdEnvironmentUI(EnvironmentUI):
             ]
             if self.rattlesnake.streaming:
                 self.rattlesnake.stop_streaming()
-            self.rattlesnake.stop_acquisition()
+            # Sometimes this function is run when loading sysid so the hardware
+            # is not active
+            if self.rattlesnake.state in (
+                RattlesnakeState.HARDWARE_ACTIVE,
+                RattlesnakeState.ENVIRONMENT_ACTIVE,
+                RattlesnakeState.SYS_ID_ACTIVE,
+            ):
+                self.rattlesnake.stop_acquisition()
         except Exception as e:
             self.run_system_id_error(e)
             return
@@ -727,25 +738,41 @@ class SysIdEnvironmentUI(EnvironmentUI):
         self.system_id_widget.transfer_function_stream_file_display.setText(filename)
         self.system_id_widget.stream_transfer_function_data_checkbox.setChecked(True)
 
+    def open_sysid_selector(self, source_environments, target_environments):
+        dialog = SysIdSelector(
+            source_environments,
+            target_environments,
+            parent=self,
+        )
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            load_from, load_to = dialog.get_selection()
+
+            if not load_from or not load_to:
+                return
+
+            return (load_from, load_to)
+
     def save_sysid_matrix_file(self):
         """Saves out system identification data to a file"""
         if (
             self.sysid_data.sysid_frf is None
             or self.sysid_data.sysid_response_noise is None
         ):
-            self.display_error(
-                "Run System Identification First!",
-                "System Identification Matrices not yet created.\n\n"
-                "Run System Identification First!",
-            )
+            self.display_error("System Identification Matrices not yet created.")
             return
-        filename, file_filter = QtWidgets.QFileDialog.getSaveFileName(
+        filepath, file_filter = QtWidgets.QFileDialog.getSaveFileName(
             self.system_id_widget,
             "Select File to Save Transfer Function Matrices",
             filter="NetCDF File (*.nc4);;MatLab File (*.mat);;Numpy File (*.npz)",
         )
+        if filepath == "":
+            return
 
-        self.rattlesnake.save_system_id_to_file(self.environment_name, filename)
+        try:
+            os.remove(filepath)  # The sysid_save only appends to files
+            self.rattlesnake.save_system_id_to_file(self.environment_name, filepath)
+        except Exception as e:
+            self.display_error(e)
 
     def load_sysid_matrix_file(self):
         """Loads a system identification dataset from previous analysis or testing
@@ -774,9 +801,21 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
         match file_filter:
             case "NetCDF File (*.nc4)":
-                netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
+                netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
                     filename, "r", format="NETCDF4"
                 )
+                # the world is not ready for this right now
+                # source_environments = netcdf_dataset.variables["environment_names"][...]
+                # target_environments = (
+                #     self.rattlesnake.environment_manager.environment_names.values()
+                # )
+                # load_environment, save_environments = self.open_sysid_selector(
+                #     source_environments, target_environments
+                # )
+                # if not load_environment or not save_environments:
+                #     return
+
+                netcdf_handle = netcdf_dataset.groups[self.environment_name]
                 sysid_data = SysIdDataPackage().load_package_from_netcdf(netcdf_handle)
             case "SDynPy FRF (*.npz)":
                 sdynpy_dict = np.load(filename)
@@ -802,7 +841,13 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 )
                 return
 
-        self.rattlesnake.load_system_id_from_package(self.environment_name, sysid_data)
+        try:
+            self.rattlesnake.load_system_id_from_package(
+                self.environment_name, sysid_data
+            )
+        except Exception as e:
+            self.display_error(e)
+            return
 
     @abstractmethod
     def display_environment_ended(self):

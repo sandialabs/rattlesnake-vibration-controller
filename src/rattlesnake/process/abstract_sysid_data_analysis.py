@@ -182,6 +182,7 @@ class SysIdMetadata:
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
         """
+        netcdf_group_handle.sysid_sample_rate = self.sample_rate
         netcdf_group_handle.sysid_frame_size = self.sysid_frame_size
         netcdf_group_handle.sysid_averaging_type = self.sysid_averaging_type
         netcdf_group_handle.sysid_noise_averages = self.sysid_noise_averages
@@ -436,6 +437,7 @@ class SysIdDataPackage:
     # region Data Package
     def __init__(
         self,
+        sysid_frames=None,
         frequencies=None,
         sysid_frf=None,
         sysid_coherence=None,
@@ -445,6 +447,7 @@ class SysIdDataPackage:
         sysid_response_noise=None,
         sysid_reference_noise=None,
     ):
+        self.sysid_frames = sysid_frames
         self.frequencies = frequencies
         self.sysid_frf = sysid_frf
         self.sysid_coherence = sysid_coherence
@@ -453,6 +456,25 @@ class SysIdDataPackage:
         self.sysid_condition = sysid_condition
         self.sysid_response_noise = sysid_response_noise
         self.sysid_reference_noise = sysid_reference_noise
+
+    # endregion
+    @property
+    def num_response_channels(self):
+        if self.sysid_frf is None:
+            return 0
+
+        return self.sysid_frf.shape[1]
+
+    @property
+    def num_reference_channels(self):
+        if self.sysid_frf is None:
+            return 0
+
+        return self.sysid_frf.shape[2]
+
+    # region Validation
+    def validate(self):
+        return
 
     # endregion
 
@@ -531,11 +553,16 @@ class SysIdDataPackage:
         var[...] = self.sysid_reference_noise.imag
 
     @classmethod
-    def load_package_from_netcdf(
-        cls, netcdf_group_handle: nc4._netCDF4.Group, sample_rate: int
-    ):
+    def load_package_from_netcdf(cls, netcdf_group_handle: nc4._netCDF4.Group):
+        sysid_frames = 1
+        # This is a holdover from v3.0 file saving, renamed to sysid_sample_rate so it doesnt
+        # overwrite environment sample_rate which some environments use (Sine, etc.)
+        if hasattr(netcdf_group_handle, "sample_rate"):
+            sample_rate = netcdf_group_handle.sample_rate
+        else:
+            sample_rate = netcdf_group_handle.sysid_sample_rate
         frame_size = netcdf_group_handle.sysid_frame_size
-        fft_lines = netcdf_group_handle.dimensions["fft_lines"].size
+        fft_lines = netcdf_group_handle.dimensions["sysid_fft_lines"].size
         variables = netcdf_group_handle.variables
         combine = np.vectorize(complex)
         sysid_frf = np.array(
@@ -570,6 +597,7 @@ class SysIdDataPackage:
         frequencies = np.arange(fft_lines) * sample_rate / frame_size
 
         return cls(
+            sysid_frames,
             frequencies,
             sysid_frf,
             sysid_coherence,
@@ -616,6 +644,7 @@ class SysIdDataPackage:
 
     @classmethod
     def load_package_from_numpy_field(cls, field_dict):
+        sysid_frames = 1
         sysid_frf = np.array(field_dict["frf_data"])
         sysid_response_cpsd = np.array(field_dict["response_cpsd"])
         sysid_reference_cpsd = np.array(field_dict["reference_cpsd"])
@@ -629,6 +658,7 @@ class SysIdDataPackage:
         )
 
         return cls(
+            sysid_frames,
             frequencies,
             sysid_frf,
             sysid_coherence,
@@ -761,7 +791,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         """
         self.log("Obtained Spectral Data")
         (
-            self.frames,
+            self.sysid_data.sysid_frames,
             self.sysid_data.frequencies,
             self.sysid_data.sysid_frf,
             self.sysid_data.sysid_coherence,
@@ -773,6 +803,25 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
     def load_sysid_data_package(self, sysid_data):
         self.frames = 0
         self.sysid_data = sysid_data
+
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (
+                    SysIdDataAnalysisUICommands.SYSID_UPDATE,
+                    (
+                        self.sysid_data.sysid_frames,
+                        self.sysid_data.sysid_frames,
+                        self.sysid_data.frequencies,
+                        self.sysid_data.sysid_frf,
+                        self.sysid_data.sysid_coherence,
+                        self.sysid_data.sysid_response_cpsd,
+                        self.sysid_data.sysid_reference_cpsd,
+                        self.sysid_data.sysid_condition,
+                    ),
+                ),
+            )
+        )
 
     # endregion
 
@@ -826,6 +875,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
     def run_sysid_transfer_function(self, auto_shutdown):
         """Starts and runs the system identification
 
+        This function uses self.sysid_data.sysid_frames as some control classes need to know
+        the number of frames used for the FRF calculation specifically.
+
         Parameters
         ----------
         auto_shutdown : bool
@@ -835,17 +887,17 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         """
         if self.startup:
             self.startup = False
-            self.frames = 0
+            self.sysid_data.sysid_frames = 0
         spectral_data = flush_queue(self.data_in_queue)
         if len(spectral_data) > 0:
-            self.load_sysid_transfer_function(spectral_data[-1], skip_sysid=False)
+            self.load_sysid_transfer_function(spectral_data[-1])
             self.gui_update_queue.put(
                 (
                     self.environment_name,
                     (
                         SysIdDataAnalysisUICommands.SYSID_UPDATE,
                         (
-                            self.frames,
+                            self.sysid_data.sysid_frames,
                             self.parameters.sysid_averages,
                             self.sysid_data.frequencies,
                             self.sysid_data.sysid_frf,
@@ -857,7 +909,10 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                     ),
                 )
             )
-        if auto_shutdown and self.parameters.sysid_averages == self.frames:
+        if (
+            auto_shutdown
+            and self.parameters.sysid_averages == self.sysid_data.sysid_frames
+        ):
             self.environment_command_queue.put(
                 self.process_name,
                 (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
@@ -867,7 +922,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 self.process_name,
                 (
                     SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
-                    (self.frames, self.parameters.sysid_averages, self.sysid_data),
+                    (self.parameters.sysid_averages, self.sysid_data),
                 ),
             )
         else:

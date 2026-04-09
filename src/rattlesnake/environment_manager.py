@@ -21,7 +21,10 @@ from rattlesnake.environment.environment_registry import (
     SYSID_ENVIRONMENTS,
 )
 from rattlesnake.profile_manager import ProfileEvent
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdMetadata,
+    SysIdDataPackage,
+)
 
 
 TASK_NAME = "Environment Manager"
@@ -281,6 +284,47 @@ class EnvironmentManager:
         if environment_type not in SYSID_ENVIRONMENTS:
             raise RattlesnakeError(
                 f"{environment_name} is a {environment_type} environment which does not require system identification"
+            )
+
+        return queue_name
+
+    def validate_system_id_package(
+        self, environment_name, data_package: SysIdDataPackage
+    ):
+        try:
+            queue_name = self.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(f"No environments exist for {environment_name} name")
+
+        if self.environment_types[queue_name] not in SYSID_ENVIRONMENTS:
+            raise RattlesnakeError(
+                f"{environment_name} is not a system identification environment"
+            )
+
+        if not isinstance(data_package, SysIdDataPackage):
+            raise RattlesnakeError(
+                "Rattlesnake was provided an sysid_data_package that was not an SysIdDataPackage type"
+            )
+
+        data_package.validate()
+
+        environment_metadata = self.environment_metadata[queue_name]
+        if (
+            environment_metadata.num_response_channels
+            != data_package.num_response_channels
+        ):
+            raise RattlesnakeError(
+                f"The system identification data has {data_package.num_response_channels} response channels "
+                f"and the environment has {environment_metadata.num_response_channels} response channels"
+            )
+
+        if (
+            environment_metadata.num_reference_channels
+            != data_package.num_reference_channels
+        ):
+            raise RattlesnakeError(
+                f"The system identification data has {data_package.num_reference_channels} reference channels "
+                f"and the environment has {environment_metadata.num_reference_channels} reference channels"
             )
 
         return queue_name

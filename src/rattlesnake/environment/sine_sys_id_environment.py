@@ -1215,7 +1215,6 @@ class SineEnvironment(SysIdEnvironment):
         self.queue_container = queue_container
         self.plot_downsample = None
         # Control data
-        self.sysid_frames = None
         self.control_class = None
         self.extra_control_parameters = None
         # Specification data
@@ -1307,7 +1306,6 @@ class SineEnvironment(SysIdEnvironment):
             )
         ):
             self.sysid_data = SysIdDataPackage()
-            self.sysid_frames = None
             self.control_class = None
             self.extra_control_parameters = None
             self.excitation_signals_combined = None
@@ -1356,7 +1354,7 @@ class SineEnvironment(SysIdEnvironment):
             self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
             self.sysid_data.sysid_reference_cpsd,  # from the system identification
             self.sysid_data.sysid_coherence,  # Coherence from the system identification
-            self.sysid_frames,  # Number of frames in the FRF matrices
+            self.sysid_data.sysid_frames,  # Number of frames in the FRF matrices
         )
         self.log("Creating Specification Signals...")
         (
@@ -1452,7 +1450,7 @@ class SineEnvironment(SysIdEnvironment):
         # print('Finished System Identification')
         self.log("Finished System Identification")
         super().system_id_complete(data)
-        (self.sysid_frames, _, self.sysid_data) = data
+        (_, self.sysid_data) = data
         # Perform the control prediction
         self.perform_control_prediction(True)
         self.set_sysid_stored()
@@ -1644,7 +1642,7 @@ class SineEnvironment(SysIdEnvironment):
                 self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
                 self.sysid_data.sysid_reference_cpsd,  # from the system identification
                 self.sysid_data.sysid_coherence,  # Coherence from the system identification
-                self.sysid_frames,  # Number of frames in the CPSD and FRF matrices
+                self.sysid_data.sysid_frames,  # Number of frames in the CPSD and FRF matrices
             )
             self.excitation_signals_combined = np.sum(self.excitation_signals, axis=0)
             self.peak_voltages = np.max(

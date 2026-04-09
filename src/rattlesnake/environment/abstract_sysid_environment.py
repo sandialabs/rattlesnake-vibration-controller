@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import multiprocessing as mp
 import time
 import os
+from pathlib import Path
 from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
@@ -384,6 +385,9 @@ class SysIdEnvironment(Environment):
         self.map_command(GlobalCommands.STOP_SYSTEM_ID, self.stop_system_id)
         self.map_command(GlobalCommands.SAVE_SYSTEM_ID, self.save_system_id_to_file)
         self.map_command(
+            GlobalCommands.LOAD_SYSTEM_ID, self.load_system_id_from_package
+        )
+        self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
         self.map_command(
@@ -686,28 +690,34 @@ class SysIdEnvironment(Environment):
         )
 
     def save_system_id_to_file(self, data):
-        filepath = data
-        filename, file_extension = os.split(filepath)
+        filepath = Path(data)
+        file_extension = filepath.suffix
 
         match file_extension:
             case ".nc4":
-                netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
-                    filepath, "w", format="NETCDF4", clobber=True
+                mode = "a" if os.path.exists(filepath) else "w"
+                netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
+                    filepath, mode, format="NETCDF4"
                 )
+                if self.environment_name not in netcdf_dataset.groups:
+                    netcdf_handle = netcdf_dataset.createGroup(self.environment_name)
+                else:
+                    netcdf_handle = netcdf_dataset.groups[self.environment_name]
+                self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
                 self.sysid_data.save_package_to_netcdf(netcdf_handle)
-                netcdf_handle.close()
+                netcdf_dataset.close()
             case ".mat":
                 field_dict = {}
                 self.sysid_data.save_package_to_mat_field(field_dict)
-                savemat(filename, field_dict)
+                savemat(filepath, field_dict)
             case ".npz":
                 field_dict = {}
                 self.sysid_data.save_package_to_numpy_field(field_dict)
-                np.savez(filename, **field_dict)
+                np.savez(filepath, **field_dict)
 
         self.set_ready()
 
-    def load_system_id(self, data: SysIdDataPackage):
+    def load_system_id_from_package(self, data: SysIdDataPackage):
         # Store SystemIdDataPackage to data_analysis process and environment
         sysid_data = data
         self.data_analysis_command_queue.put(
@@ -717,12 +727,11 @@ class SysIdEnvironment(Environment):
 
         # This seems counterintuitive but lots of environments overwrite the
         # system_id_complete function so it is easier to do it this way
-        sysid_frames = 0
         self.queue_container.environment_command_queue.put(
             self.environment_name,
             (
                 SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
-                (sysid_frames, self.environment_metadata.sysid_metadata, sysid_data),
+                (self.environment_metadata.sysid_metadata, sysid_data),
             ),
         )
 

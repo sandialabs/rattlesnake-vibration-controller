@@ -2392,3 +2392,72 @@ class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
         rect = super().boundingRect()
         rect.adjust(0, 0, 0, 20)  # Add 20 pixels to bottom
         return rect
+
+
+import os
+from PyQt5 import QtWidgets, uic
+
+
+class SysIdSelector(QtWidgets.QDialog):
+    def __init__(self, source_environments, target_environments, parent=None):
+        super().__init__(parent)
+
+        sysid_selector_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "system_identification_selector.ui"
+        )
+        uic.loadUi(sysid_selector_ui_path, self)
+
+        # Store data
+        self.source_environments = list(source_environments)
+        self.target_environments = list(target_environments)
+
+        # Setup tables
+        self._setup_tables()
+        self._populate_tables()
+
+    def _setup_tables(self):
+        # LEFT: single selection
+        self.file_table_widget.setSelectionMode(
+            QtWidgets.QAbstractItemView.SingleSelection
+        )
+        self.file_table_widget.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
+        self.file_table_widget.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
+
+        # RIGHT: multi selection
+        self.current_table_widget.setSelectionMode(
+            QtWidgets.QAbstractItemView.MultiSelection
+        )
+        self.current_table_widget.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
+        self.current_table_widget.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
+
+    def _populate_tables(self):
+        # File environments (left)
+        self.file_table_widget.setRowCount(len(self.source_environments))
+        for row, name in enumerate(self.source_environments):
+            item = QtWidgets.QTableWidgetItem(str(name))
+            self.file_table_widget.setItem(row, 0, item)
+
+        # Current environments (right)
+        self.current_table_widget.setRowCount(len(self.target_environments))
+        for row, name in enumerate(self.target_environments):
+            item = QtWidgets.QTableWidgetItem(str(name))
+            self.current_table_widget.setItem(row, 0, item)
+
+    def get_selection(self):
+        # LEFT (single)
+        file_items = self.file_table_widget.selectedItems()
+        load_from = file_items[0].text() if file_items else None
+
+        # RIGHT (multi)
+        current_items = self.current_table_widget.selectedItems()
+        load_to = [item.text() for item in current_items]
+
+        return load_from, load_to
