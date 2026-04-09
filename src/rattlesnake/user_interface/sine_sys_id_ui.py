@@ -37,10 +37,10 @@ CONTROL_TYPE = EnvironmentType.SINE
 MAXIMUM_NAME_LENGTH = 50
 
 
-# region: User Interface
 class SineUI(SysIdEnvironmentUI):
     """Class to represent the user interface of the MIMO sine module"""
 
+    # region User Interface
     def __init__(
         self,
         environment_name: str,
@@ -248,7 +248,62 @@ class SineUI(SysIdEnvironmentUI):
             self.enable_disable_partial_environment
         )
 
-    # region: Hardware
+    @property
+    def physical_output_names(self):
+        """Defines names of the physical drive channels"""
+        return [self.physical_channel_names[i] for i in self.physical_output_indices]
+
+    @property
+    def physical_control_indices(self):
+        """Gets the physical control indices currently checked"""
+        return [
+            i
+            for i in range(self.definition_widget.control_channels_selector.count())
+            if self.definition_widget.control_channels_selector.item(i).checkState()
+            == Qt.Checked
+        ]
+
+    @property
+    def physical_control_names(self):
+        """Gets the names for the physical control channels currently checked"""
+        return [self.physical_channel_names[i] for i in self.physical_control_indices]
+
+    @property
+    def physical_control_units(self):
+        """Gets the unit for the control channels currently checked"""
+        return [self.physical_unit_names[i] for i in self.physical_control_indices]
+
+    @property
+    def initialized_control_names(self):
+        """Gets the names of the control channels that have been initialized"""
+        if self.environment_metadata.response_transformation_matrix is None:
+            return [
+                self.physical_channel_names[i]
+                for i in self.environment_metadata.control_channel_indices
+            ]
+        return [
+            f"Transformed Response {i + 1}"
+            for i in range(
+                self.environment_metadata.response_transformation_matrix.shape[0]
+            )
+        ]
+
+    @property
+    def initialized_output_names(self):
+        """Gets the names of the drive channels that have been initialized"""
+        if self.environment_metadata.reference_transformation_matrix is None:
+            return self.physical_output_names
+        else:
+            return [
+                f"Transformed Drive {i + 1}"
+                for i in range(
+                    self.environment_metadata.reference_transformation_matrix.shape[0]
+                )
+            ]
+
+    # endregion
+
+    # region State Sync
     def initialize_hardware(self, hardware_metadata):
         super().initialize_hardware(hardware_metadata)
         # Initialize Plots
@@ -380,60 +435,6 @@ class SineUI(SysIdEnvironmentUI):
             )
         self.clear_and_update_specification_table()
 
-    @property
-    def physical_output_names(self):
-        """Defines names of the physical drive channels"""
-        return [self.physical_channel_names[i] for i in self.physical_output_indices]
-
-    @property
-    def physical_control_indices(self):
-        """Gets the physical control indices currently checked"""
-        return [
-            i
-            for i in range(self.definition_widget.control_channels_selector.count())
-            if self.definition_widget.control_channels_selector.item(i).checkState()
-            == Qt.Checked
-        ]
-
-    @property
-    def physical_control_names(self):
-        """Gets the names for the physical control channels currently checked"""
-        return [self.physical_channel_names[i] for i in self.physical_control_indices]
-
-    @property
-    def physical_control_units(self):
-        """Gets the unit for the control channels currently checked"""
-        return [self.physical_unit_names[i] for i in self.physical_control_indices]
-
-    @property
-    def initialized_control_names(self):
-        """Gets the names of the control channels that have been initialized"""
-        if self.environment_metadata.response_transformation_matrix is None:
-            return [
-                self.physical_channel_names[i]
-                for i in self.environment_metadata.control_channel_indices
-            ]
-        return [
-            f"Transformed Response {i + 1}"
-            for i in range(
-                self.environment_metadata.response_transformation_matrix.shape[0]
-            )
-        ]
-
-    @property
-    def initialized_output_names(self):
-        """Gets the names of the drive channels that have been initialized"""
-        if self.environment_metadata.reference_transformation_matrix is None:
-            return self.physical_output_names
-        else:
-            return [
-                f"Transformed Drive {i + 1}"
-                for i in range(
-                    self.environment_metadata.reference_transformation_matrix.shape[0]
-                )
-            ]
-
-    # region: Environment
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
         # Set up channel names in selectors
@@ -738,7 +739,54 @@ class SineUI(SysIdEnvironmentUI):
             sine_table.set_specification(spec)
         # self.update_specification()
 
-    # region: Definition
+    def get_environment_instructions(self):
+        control_test_level = self.run_widget.test_level_selector.value()
+        control_tones = (
+            [
+                self.run_widget.partial_environment_tone_selector.row(item)
+                for item in self.run_widget.partial_environment_tone_selector.selectedItems()
+            ]
+            if self.run_widget.partial_environment_selector.isChecked()
+            else None
+        )
+        control_start_time = (
+            self.run_widget.start_time_selector.value()
+            if self.run_widget.partial_environment_selector.isChecked()
+            else None
+        )
+        control_end_time = (
+            self.run_widget.stop_time_selector.value()
+            if self.run_widget.partial_environment_selector.isChecked()
+            else None
+        )
+        return SineInstructions(
+            self.environment_name,
+            control_test_level,
+            control_tones,
+            control_start_time,
+            control_end_time,
+        )
+
+    def set_environment_instructions(self, instructions):
+        self.run_widget.test_level_selector.setValue(instructions.control_test_level)
+        bool_partial = instructions.control_tones is not None
+        self.run_widget.partial_environment_selector.setChecked(bool_partial)
+        if bool_partial:
+            self.run_widget.start_time_selector.setValue(
+                instructions.control_start_time
+            )
+            self.run_widget.stop_time_selector.setValue(instructions.control_end_time)
+            self.run_widget.partial_environment_tone_selector.clearSelection()
+            for row in instructions.control_tones:
+                item = self.run_widget.partial_environment_tone_selector.item(row)
+                if item is not None:
+                    item.setSelected(True)
+        else:
+            self.run_widget.partial_environment_tone_selector.clearSelection()
+
+    # endregion
+
+    # region Definition
     def update_control_channels(self):
         """Updates the control channels due to selection changes"""
         self.response_transformation_matrix = None
@@ -1085,7 +1133,9 @@ class SineUI(SysIdEnvironmentUI):
             self.output_transformation_matrix = output_transformation
             self.clear_and_update_specification_table()
 
-    # region: Prediction
+    # endregion
+
+    # region Prediction
     def update_response_prediction_tone(self):
         """Called when the tone is changed, sends selection to environment"""
         type_index = self.prediction_widget.response_display_type.currentIndex()
@@ -1290,7 +1340,9 @@ class SineUI(SysIdEnvironmentUI):
             widget.blockSignals(False)
         self.send_excitation_prediction_plot_choices()
 
-    # region: Run
+    # endregion
+
+    # region Run
     def change_test_level_from_profile(self, test_level):
         """Changes the value of the test level from a profile.
 
@@ -1540,52 +1592,9 @@ class SineUI(SysIdEnvironmentUI):
         ]:
             widget.setEnabled(self.run_widget.partial_environment_selector.isChecked())
 
-    # region: Acqusition
-    def get_environment_instructions(self):
-        control_test_level = self.run_widget.test_level_selector.value()
-        control_tones = (
-            [
-                self.run_widget.partial_environment_tone_selector.row(item)
-                for item in self.run_widget.partial_environment_tone_selector.selectedItems()
-            ]
-            if self.run_widget.partial_environment_selector.isChecked()
-            else None
-        )
-        control_start_time = (
-            self.run_widget.start_time_selector.value()
-            if self.run_widget.partial_environment_selector.isChecked()
-            else None
-        )
-        control_end_time = (
-            self.run_widget.stop_time_selector.value()
-            if self.run_widget.partial_environment_selector.isChecked()
-            else None
-        )
-        return SineInstructions(
-            self.environment_name,
-            control_test_level,
-            control_tones,
-            control_start_time,
-            control_end_time,
-        )
+    # endregion
 
-    def set_environment_instructions(self, instructions):
-        self.run_widget.test_level_selector.setValue(instructions.control_test_level)
-        bool_partial = instructions.control_tones is not None
-        self.run_widget.partial_environment_selector.setChecked(bool_partial)
-        if bool_partial:
-            self.run_widget.start_time_selector.setValue(
-                instructions.control_start_time
-            )
-            self.run_widget.stop_time_selector.setValue(instructions.control_end_time)
-            self.run_widget.partial_environment_tone_selector.clearSelection()
-            for row in instructions.control_tones:
-                item = self.run_widget.partial_environment_tone_selector.item(row)
-                if item is not None:
-                    item.setSelected(True)
-        else:
-            self.run_widget.partial_environment_tone_selector.clearSelection()
-
+    # region Commands
     def display_environment_ended(self):
         for widget in [
             self.run_widget.test_level_selector,
@@ -1661,7 +1670,6 @@ class SineUI(SysIdEnvironmentUI):
     def stop_environment_ready(self):
         return super().stop_environment_ready()
 
-    # region: Commands
     def update_gui(self, queue_data):
         if super().update_gui(queue_data):
             return
