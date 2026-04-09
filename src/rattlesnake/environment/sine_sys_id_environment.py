@@ -1215,7 +1215,6 @@ class SineEnvironment(SysIdEnvironment):
         self.queue_container = queue_container
         self.plot_downsample = None
         # Control data
-        self.sysid_data = SysIdDataPackage()
         self.sysid_frames = None
         self.control_class = None
         self.extra_control_parameters = None

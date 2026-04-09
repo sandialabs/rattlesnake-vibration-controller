@@ -48,6 +48,7 @@ class SysIdDataAnalysisCommands(Enum):
     SYSTEM_ID_COMPLETE = 7
     LOAD_TRANSFER_FUNCTION = 8
     LOAD_NOISE = 9
+    LOAD_SYSTEM_ID = 10
 
 
 class SysIdDataAnalysisUICommands(Enum):
@@ -705,6 +706,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.map_command(
             SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION,
             self.load_sysid_transfer_function,
+        )
+        self.map_command(
+            SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, self.load_sysid_data_package
         )
         self.environment_name = environment_name
         self.environment_command_queue = environment_command_queue

@@ -8,7 +8,6 @@ from rattlesnake.utilities import QueueContainer, GlobalCommands
 TASK_NAME = "Controller"
 
 
-# region: ControllerProcess
 class ControllerProcess(AbstractMessageProcess):
     """Class defining behavior during the OUTPUT_START states of Rattlesnake.
 
@@ -23,6 +22,7 @@ class ControllerProcess(AbstractMessageProcess):
     See AbstractMesssageProcess for inherited class members.
     """
 
+    # region Controller
     def __init__(
         self,
         process_name: str,
@@ -109,6 +109,9 @@ class ControllerProcess(AbstractMessageProcess):
             if sysid_event.is_set()
         ]
 
+    # endregion
+
+    # region Hardware
     def run_hardware(self, data: StreamMetadata):
         self.stream_metadata = data
         if self.acquisition_active:
@@ -153,6 +156,41 @@ class ControllerProcess(AbstractMessageProcess):
         if not self.output_active:
             raise RuntimeError("Tried to start hardware when output was not running")
 
+    # endregion
+
+    # region Environment
+    def start_environment(self, data: tuple[str, EnvironmentInstructions]):
+        queue_name, instruction = data
+        if queue_name in self.environments_active:
+            raise RuntimeError(
+                f"Tried to start {queue_name} environment while it was still running"
+            )
+        self.queue_container.output_command_queue.put(
+            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name)
+        )
+        self.queue_container.environment_command_queues[queue_name].put(
+            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction)
+        )
+
+    def stop_environment(self, data: str):
+        queue_name = data
+        if queue_name not in self.environments_active:
+            raise RuntimeError(
+                f"Tried to stop {queue_name} environment when it was not running"
+            )
+        self.queue_container.environment_command_queues[queue_name].put(
+            TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None)
+        )
+
+    def send_environment_command(self, data):
+        queue_name, command, command_data = data
+        self.queue_container.environment_command_queues[queue_name].put(
+            TASK_NAME, (command, command_data)
+        )
+
+    # endregion
+
+    # region System Id
     def start_system_id_noise(self, data):
         queue_name = data
 
@@ -179,29 +217,9 @@ class ControllerProcess(AbstractMessageProcess):
             TASK_NAME, (GlobalCommands.STOP_SYSTEM_ID, True)
         )
 
-    def start_environment(self, data: tuple[str, EnvironmentInstructions]):
-        queue_name, instruction = data
-        if queue_name in self.environments_active:
-            raise RuntimeError(
-                f"Tried to start {queue_name} environment while it was still running"
-            )
-        self.queue_container.output_command_queue.put(
-            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name)
-        )
-        self.queue_container.environment_command_queues[queue_name].put(
-            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction)
-        )
+    # endregion
 
-    def stop_environment(self, data: str):
-        queue_name = data
-        if queue_name not in self.environments_active:
-            raise RuntimeError(
-                f"Tried to stop {queue_name} environment when it was not running"
-            )
-        self.queue_container.environment_command_queues[queue_name].put(
-            TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None)
-        )
-
+    # region Streaming
     def start_streaming(self, data: bool = False):
         # This function has an override so that the controller can still start streaming through this even if the stream_type
         # is not STREAM_TYPE.PROFILE_INSTRUCTION
@@ -233,17 +251,16 @@ class ControllerProcess(AbstractMessageProcess):
         if self.stream_metadata.stream_type == StreamType.MANUAL:
             self.start_streaming(True)
 
-    def send_environment_command(self, data):
-        queue_name, command, command_data = data
-        self.queue_container.environment_command_queues[queue_name].put(
-            TASK_NAME, (command, command_data)
-        )
+    # endregion
 
+    # region Profile
     def profile_closeout(self, data: None):
         self.set_ready()
 
+    # endregion
 
-# region: controller_process
+
+# region Process
 def controller_process(
     queue_container: QueueContainer,
     acquisition_active_event: mp.synchronize.Event,
@@ -279,3 +296,6 @@ def controller_process(
     )
 
     acquisition_instance.run(shutdown_event)
+
+
+# endregion

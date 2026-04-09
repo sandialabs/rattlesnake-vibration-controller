@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import multiprocessing as mp
 import time
+import os
 from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
@@ -33,6 +34,7 @@ from typing import List
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
+from scipy.io import savemat
 
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -40,11 +42,11 @@ from rattlesnake.environment.abstract_environment import (
     EnvironmentMetadata,
     Environment,
 )
-
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataAnalysisCommands,
     SysIdDataAnalysisUICommands,
     SysIdMetadata,
+    SysIdDataPackage,
 )
 from rattlesnake.process.data_collector import (
     Acceptance,
@@ -380,6 +382,7 @@ class SysIdEnvironment(Environment):
             GlobalCommands.START_SYSTEM_ID_TRANSFER, self.start_transfer_function
         )
         self.map_command(GlobalCommands.STOP_SYSTEM_ID, self.stop_system_id)
+        self.map_command(GlobalCommands.SAVE_SYSTEM_ID, self.save_system_id_to_file)
         self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
@@ -416,6 +419,7 @@ class SysIdEnvironment(Environment):
         self.data_analysis_command_queue = data_analysis_command_queue
         self.hardware_metadata = None
         self.environment_metadata = None
+        self.sysid_data = SysIdDataPackage()
         self.collector_shutdown_achieved = True
         self.spectral_shutdown_achieved = True
         self.siggen_shutdown_achieved = True
@@ -679,6 +683,47 @@ class SysIdEnvironment(Environment):
         self.data_analysis_command_queue.put(
             self.environment_name,
             (SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, data),
+        )
+
+    def save_system_id_to_file(self, data):
+        filepath = data
+        filename, file_extension = os.split(filepath)
+
+        match file_extension:
+            case ".nc4":
+                netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
+                    filepath, "w", format="NETCDF4", clobber=True
+                )
+                self.sysid_data.save_package_to_netcdf(netcdf_handle)
+                netcdf_handle.close()
+            case ".mat":
+                field_dict = {}
+                self.sysid_data.save_package_to_mat_field(field_dict)
+                savemat(filename, field_dict)
+            case ".npz":
+                field_dict = {}
+                self.sysid_data.save_package_to_numpy_field(field_dict)
+                np.savez(filename, **field_dict)
+
+        self.set_ready()
+
+    def load_system_id(self, data: SysIdDataPackage):
+        # Store SystemIdDataPackage to data_analysis process and environment
+        sysid_data = data
+        self.data_analysis_command_queue.put(
+            self.environment_name,
+            (SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, sysid_data),
+        )
+
+        # This seems counterintuitive but lots of environments overwrite the
+        # system_id_complete function so it is easier to do it this way
+        sysid_frames = 0
+        self.queue_container.environment_command_queue.put(
+            self.environment_name,
+            (
+                SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
+                (sysid_frames, self.environment_metadata.sysid_metadata, sysid_data),
+            ),
         )
 
     # endregion
@@ -984,6 +1029,7 @@ class SysIdEnvironment(Environment):
     def system_id_complete(self, data):
         """Sends a message to the controller that this environment has completed system id"""
         self.log("Finished System Identification")
+        self.sysid_data = data
         self.gui_update_queue.put(
             (
                 self.environment_name,

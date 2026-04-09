@@ -103,6 +103,8 @@ class GlobalCommands(Enum):
     )
     STREAM_MANUAL = 22  # Notifies controller that manual streaming has been enabled
     SEND_ENVIRONMENT_COMMAND = 23  # Sends environment specific command to environment
+    SAVE_SYSTEM_ID = 24
+    LOAD_SYSTEM_ID = 25
 
     @property
     def label(self):

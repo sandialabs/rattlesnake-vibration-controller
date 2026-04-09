@@ -601,7 +601,7 @@ class RattlesnakeController:
 
     # endregion
 
-    # region System Identification
+    # region System Id
     def initialize_system_id(self, sysid_metadata, environment_name):
         if self.state not in (
             RattlesnakeState.ENVIRONMENT_STORE,
@@ -699,9 +699,6 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    def load_system_id_to_environment(self, filepath, environment_name):
-        pass
-
     def preview_system_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
@@ -797,10 +794,38 @@ class RattlesnakeController:
         self.stop_acquisition()
 
     def save_system_id_to_file(self, environment_name, filepath):
-        pass
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(f"No environments exist for {environment_name} name")
+
+        self.event_container.environment_ready_events[queue_name].clear()
+        self.queue_container.environment_command_queues[queue_name].put(
+            TASK_NAME, (GlobalCommands.SAVE_SYSTEM_ID, filepath)
+        )
+
+        # I dont care about blocking in this case as race issues are very possible
+        ready_event_list = [self.event_container.environment_ready_events[queue_name]]
+        active_event_list = []
+        self.wait_for_events(ready_event_list, active_event_list)
 
     def load_system_id_from_package(self, environment_name, sysid_package):
-        pass
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(f"No environments exist for {environment_name} name")
+
+        self.event_container.environment_sysid_stored_events[queue_name].clear()
+        self.queue_container.environment_command_queues[queue_name].put(
+            TASK_NAME, (GlobalCommands.LOAD_SYSTEM_ID, sysid_package)
+        )
+
+        if self.blocking:
+            ready_event_list = [
+                self.event_container.environment_sysid_stored_events[queue_name]
+            ]
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
     # endregion
 
