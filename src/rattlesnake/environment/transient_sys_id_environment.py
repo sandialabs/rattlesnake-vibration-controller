@@ -286,7 +286,110 @@ class TransientMetadata(SysIdEnvironmentMetadata):
 
     @staticmethod
     def create_blank_worksheet_template(worksheet):
-        pass
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 2, "Transient")
+        worksheet.cell(
+            1,
+            4,
+            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
+        )
+        worksheet.cell(2, 1, "Signal File")
+        worksheet.cell(
+            2, 3, "# Path to the file that contains the time signal that will be output"
+        )
+        worksheet.cell(3, 1, "Ramp Time")
+        worksheet.cell(
+            3,
+            3,
+            "# Time for the environment to ramp between levels or from start or to stop.",
+        )
+        worksheet.cell(4, 1, "Control Python Script:")
+        worksheet.cell(4, 3, "# Path to the Python script containing the control law")
+        worksheet.cell(5, 1, "Control Python Function:")
+        worksheet.cell(
+            5,
+            3,
+            "# Function name within the Python Script that will serve as the control law",
+        )
+        worksheet.cell(6, 1, "Control Parameters:")
+        worksheet.cell(6, 3, "# Extra parameters used in the control law")
+        worksheet.cell(7, 1, "Control Channels (1-based):")
+        worksheet.cell(7, 3, "# List of channels, one per cell on this row")
+        worksheet.cell(8, 1, "System ID Samples per Frame")
+        worksheet.cell(
+            8,
+            3,
+            "# Number of Samples per Measurement Frame in the System Identification",
+        )
+        worksheet.cell(9, 1, "System ID Averaging:")
+        worksheet.cell(9, 3, "# Averaging Type, should be Linear or Exponential")
+        worksheet.cell(10, 1, "Noise Averages:")
+        worksheet.cell(10, 3, "# Number of Averages used when characterizing noise")
+        worksheet.cell(11, 1, "System ID Averages:")
+        worksheet.cell(11, 3, "# Number of Averages used when computing the FRF")
+        worksheet.cell(12, 1, "Exponential Averaging Coefficient:")
+        worksheet.cell(
+            12, 3, "# Averaging Coefficient for Exponential Averaging (if used)"
+        )
+        worksheet.cell(13, 1, "System ID Estimator:")
+        worksheet.cell(
+            13,
+            3,
+            "# Technique used to compute system ID.  Should be one of H1, H2, H3, or Hv.",
+        )
+        worksheet.cell(14, 1, "System ID Level (V RMS):")
+        worksheet.cell(
+            14,
+            3,
+            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
+        )
+        worksheet.cell(15, 1, "System ID Ramp Time")
+        worksheet.cell(
+            15,
+            3,
+            "# Time for the system identification to ramp between levels or from start or to stop.",
+        )
+        worksheet.cell(16, 1, "System ID Signal Type:")
+        worksheet.cell(16, 3, "# Signal to use for the system identification")
+        worksheet.cell(17, 1, "System ID Window:")
+        worksheet.cell(
+            17,
+            3,
+            "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
+        )
+        worksheet.cell(18, 1, "System ID Overlap %:")
+        worksheet.cell(18, 3, "# Overlap to use in the system identification")
+        worksheet.cell(19, 1, "System ID Burst On %:")
+        worksheet.cell(19, 3, "# Percentage of a frame that the burst random is on for")
+        worksheet.cell(20, 1, "System ID Burst Pretrigger %:")
+        worksheet.cell(
+            20,
+            3,
+            "# Percentage of a frame that occurs before the burst starts in a burst random signal",
+        )
+        worksheet.cell(21, 1, "System ID Ramp Fraction %:")
+        worksheet.cell(
+            21,
+            3,
+            '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
+        )
+        worksheet.cell(22, 1, "Response Transformation Matrix:")
+        worksheet.cell(
+            22,
+            2,
+            "# Transformation matrix to apply to the response channels.  Type None if there "
+            "is none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
+            "Transformation Matrix line down so it will fit.  The number of columns should be "
+            "the number of physical control channels.",
+        )
+        worksheet.cell(23, 1, "Output Transformation Matrix:")
+        worksheet.cell(
+            23,
+            2,
+            "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
+            "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should "
+            "be the number of physical output channels in the environment.",
+        )
 
     def save_metadata_to_worksheet(
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
@@ -720,10 +823,16 @@ class TransientEnvironment(SysIdEnvironment):
         )
         peak_voltages = np.max(np.abs(self.next_drive), axis=-1)
         self.gui_update_queue.put(
-            (self.environment_name, ("excitation_voltage_list", peak_voltages))
+            (
+                self.environment_name,
+                (UICommands.SET_ATTR, ("excitation_voltage_list", peak_voltages)),
+            )
         )
         self.gui_update_queue.put(
-            (self.environment_name, ("response_error_list", time_trac))
+            (
+                self.environment_name,
+                (UICommands.SET_ATTR, ("response_error_list", time_trac)),
+            )
         )
         self.gui_update_queue.put(
             (
@@ -920,7 +1029,10 @@ class TransientEnvironment(SysIdEnvironment):
                 self.gui_update_queue.put(
                     (
                         self.environment_name,
-                        ("control_response_error_list", time_trac),
+                        (
+                            UICommands.SET_ATTR,
+                            ("control_response_error_list", time_trac),
+                        ),
                     )
                 )
                 self.queue_container.gui_update_queue.put(
