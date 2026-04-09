@@ -262,7 +262,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         """
         self.log("Initializing Data Acquisition")
         # Store for later
-        self.hardware_metadata = hardware_metadata
+        super().initialize_hardware(hardware_metadata)
         self.system_id_widget.highFreqCutoffSpinBox.setMaximum(
             hardware_metadata.sample_rate // 2
         )
@@ -290,6 +290,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     @abstractmethod
     def initialize_environment(self, environment_metadata):
+        super().initialize_environment(environment_metadata)
         self.system_id_widget.reference_selector.blockSignals(True)
         self.system_id_widget.response_selector.blockSignals(True)
         self.system_id_widget.reference_selector.clear()

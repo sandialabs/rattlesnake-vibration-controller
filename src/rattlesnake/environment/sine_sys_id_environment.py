@@ -1445,12 +1445,11 @@ class SineEnvironment(SysIdEnvironment):
 
     # endregion
 
-    # region Process
+    # region Commands
     def system_id_complete(self, data):
         # print('Finished System Identification')
         self.log("Finished System Identification")
         super().system_id_complete(data)
-        (_, self.sysid_data) = data
         # Perform the control prediction
         self.perform_control_prediction(True)
         self.set_sysid_stored()

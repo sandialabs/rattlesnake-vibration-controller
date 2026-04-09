@@ -435,7 +435,6 @@ class SineUI(SysIdEnvironmentUI):
 
     # region: Environment
     def initialize_environment(self, environment_metadata):
-        self.environment_metadata = environment_metadata
         super().initialize_environment(environment_metadata)
         # Set up channel names in selectors
         for widget in [

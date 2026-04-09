@@ -21,23 +21,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 import importlib
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
+import threading
 import traceback
 from enum import Enum
 from multiprocessing.queues import Queue
+from typing import List
+
+import openpyxl
 import netCDF4 as nc4
 import numpy as np
 import scipy.signal as sig
-from rattlesnake.environment.abstract_sysid_environment import (
-    AbstractSysIdEnvironment,
-    AbstractSysIdMetadata,
-)
-from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
-from rattlesnake.environment.environment_utilities import EnvironmentType
+
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
@@ -45,8 +43,21 @@ from rattlesnake.utilities import (
     shift_signal,
     trac,
 )
-from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentInstructions,
+    EnvironmentCommands,
+)
+from rattlesnake.environment.abstract_sysid_environment import (
+    SysIdEnvironment,
+    SysIdEnvironmentMetadata,
+)
+from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
+
 from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdMetadata,
+    SysIdDataPackage,
     sysid_data_analysis_process,
 )
 from rattlesnake.process.data_collector import (
@@ -64,6 +75,7 @@ from rattlesnake.process.signal_generation_process import (
 from rattlesnake.process.spectral_processing import (
     spectral_processing_process,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 # %% Global Variables
 CONTROL_TYPE = EnvironmentType.TRANSIENT
@@ -71,7 +83,7 @@ BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
 
 # region Commands
-class TransientCommands(Enum):
+class TransientCommands(EnvironmentCommands):
     """Valid commands for the transient environment"""
 
     START_CONTROL = 0
@@ -90,7 +102,7 @@ class TransientUICommands(Enum):
 # endregion
 
 
-class TransientMetadata(AbstractSysIdMetadata):
+class TransientMetadata(SysIdEnvironmentMetadata):
     """Metadata required to define a transient control law in rattlesnake."""
 
     # region Metadata
@@ -183,7 +195,13 @@ class TransientMetadata(AbstractSysIdMetadata):
         """Gets the number of samples in the signal that is being controlled to"""
         return self.control_signal.shape[-1]
 
+    # endregion
+
     # region Validation
+    def validate(self, hardware_metadata):
+        return super().validate(hardware_metadata)
+
+    # endregion
 
     # region Loading
     def save_metadata_to_netcdf(
@@ -256,8 +274,48 @@ class TransientMetadata(AbstractSysIdMetadata):
             )
             var[...] = self.reference_transformation_matrix
 
+    @classmethod
+    def load_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        pass
+
+    @staticmethod
+    def create_blank_worksheet_template(worksheet):
+        pass
+
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
+        pass
+
+    @classmethod
+    def load_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        pass
+
 
 # endregion
+
+
+# region Instructions
+class TransientInstructions(EnvironmentInstructions):
+    def __init__(self, environment_name, test_level, repeat):
+        super().__init__(CONTROL_TYPE, environment_name)
+        self.test_level = test_level
+        self.repeat = repeat
+
+    def validate(self):
+        return super().validate()
 
 
 # region Queues
@@ -326,19 +384,25 @@ class TransientQueues:
         self.log_file_queue = log_file_queue
 
 
-# region: Environment
-class TransientEnvironment(AbstractSysIdEnvironment):
+class TransientEnvironment(SysIdEnvironment):
     """Class defining calculations for the transient environment"""
 
+    # region Environment
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         queue_container: TransientQueues,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
+        sysid_active_event: mp.synchronize.Event,
+        sysid_stored_event: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
+            queue_name,
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
             queue_container.controller_communication_queue,
@@ -349,8 +413,12 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             queue_container.data_analysis_command_queue,
             queue_container.data_in_queue,
             queue_container.data_out_queue,
-            acquisition_active,
-            output_active,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
+            ready_event,
+            sysid_active_event,
+            sysid_stored_event,
         )
         self.map_command(
             TransientCommands.PERFORM_CONTROL_PREDICTION,
@@ -366,18 +434,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
         )
         # Persistent data
-        self.data_acquisition_parameters = None
-        self.environment_parameters = None
+        self.hardware_metadata = None
+        self.environment_metadata = None
         self.queue_container = queue_container
-        self.frames = None
-        self.frequencies = None
-        self.frf = None
-        self.sysid_coherence = None
-        self.sysid_response_cpsd = None
-        self.sysid_reference_cpsd = None
-        self.sysid_condition = None
-        self.sysid_response_noise = None
-        self.sysid_reference_noise = None
         self.control_function_type = None
         self.extra_control_parameters = None
         self.control_function = None
@@ -395,23 +454,19 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         self.has_sent_interactive_control_transfer_function_results = False
         self.last_interactive_parameters = None
 
-    def initialize_environment_test_parameters(
-        self, environment_parameters: TransientMetadata
-    ):
+    # endregion
+
+    # region State Sync
+    def initialize_hardware(self, hardware_metadata):
+        return super().initialize_hardware(hardware_metadata)
+
+    def initialize_environment(self, environment_metadata: TransientMetadata):
         if (
-            self.environment_parameters is None
-            or self.environment_parameters.control_signal.shape
-            != environment_parameters.control_signal.shape
+            self.environment_metadata is None
+            or self.environment_metadata.control_signal.shape
+            != environment_metadata.control_signal.shape
         ):
-            self.frames = None
-            self.frequencies = None
-            self.frf = None
-            self.sysid_coherence = None
-            self.sysid_response_cpsd = None
-            self.sysid_reference_cpsd = None
-            self.sysid_condition = None
-            self.sysid_response_noise = None
-            self.sysid_reference_noise = None
+            self.sysid_data = SysIdDataPackage()
             self.control_function_type = None
             self.extra_control_parameters = None
             self.control_function = None
@@ -419,24 +474,24 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.aligned_response = None
             self.next_drive = None
             self.predicted_response = None
-        super().initialize_environment_test_parameters(environment_parameters)
-        self.environment_parameters: TransientMetadata
+        super().initialize_environment(environment_metadata)
+        self.environment_metadata: TransientMetadata
         # Load in the control law
-        _, file = os.path.split(environment_parameters.control_python_script)
+        _, file = os.path.split(environment_metadata.control_python_script)
         file, _ = os.path.splitext(file)
         spec = importlib.util.spec_from_file_location(
-            file, environment_parameters.control_python_script
+            file, environment_metadata.control_python_script
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        self.control_function_type = environment_parameters.control_python_function_type
+        self.control_function_type = environment_metadata.control_python_function_type
         self.extra_control_parameters = (
-            environment_parameters.control_python_function_parameters
+            environment_metadata.control_python_function_parameters
         )
         if self.control_function_type == 1:  # Generator
             # Get the generator function
             generator_function = getattr(
-                module, environment_parameters.control_python_function
+                module, environment_metadata.control_python_function
             )()
             # Get us to the first yield statement
             next(generator_function)
@@ -444,45 +499,45 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.control_function = generator_function.send
         elif self.control_function_type == 2:  # Class
             self.control_function = getattr(
-                module, environment_parameters.control_python_function
+                module, environment_metadata.control_python_function
             )(
-                self.data_acquisition_parameters.sample_rate,
-                self.environment_parameters.control_signal,
-                self.data_acquisition_parameters.output_oversample,
+                self.hardware_metadata.sample_rate,
+                self.environment_metadata.control_signal,
+                self.hardware_metadata.output_oversample,
                 self.extra_control_parameters,  # Required parameters
-                self.environment_parameters.sysid_frequency_spacing,  # Frequency Spacing
-                self.frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification
-                self.frames,  # Number of frames in the CPSD and FRF matrices
-                self.environment_parameters.sysid_averages,  # Total frames that
+                self.environment_metadata.sysid_frequency_spacing,  # Frequency Spacing
+                self.sysid_data.sysid_frf,  # Transfer Functions
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_coherence,  # Coherence from the system identification
+                self.sysid_data.sysid_frames,  # Number of frames in the CPSD and FRF matrices
+                self.environment_metadata.sysid_averages,  # Total frames that
                 # could be in the CPSD and FRF matrices
                 self.aligned_output,  # Last excitation signal for drive-based control
                 self.aligned_response,
             )  # Last response signal for error-based correction
         elif self.control_function_type == 3:  # Interactive Class
             control_class = getattr(
-                module, environment_parameters.control_python_function
+                module, environment_metadata.control_python_function
             )
             self.control_function = control_class(
                 self.environment_name,
                 self.gui_update_queue,
-                self.data_acquisition_parameters.sample_rate,
-                self.environment_parameters.control_signal,
-                self.data_acquisition_parameters.output_oversample,
+                self.hardware_metadata.sample_rate,
+                self.environment_metadata.control_signal,
+                self.hardware_metadata.output_oversample,
                 self.extra_control_parameters,  # Required parameters
-                self.environment_parameters.sysid_frequency_spacing,  # Frequency Spacing
-                self.frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification
-                self.frames,  # Number of frames in the CPSD and FRF matrices
-                self.environment_parameters.sysid_averages,  # Total frames tha
+                self.environment_metadata.sysid_frequency_spacing,  # Frequency Spacing
+                self.sysid_data.sysid_frf,  # Transfer Functions
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_coherence,  # Coherence from the system identification
+                self.sysid_data.sysid_frames,  # Number of frames in the CPSD and FRF matrices
+                self.environment_metadata.sysid_averages,  # Total frames tha
                 # could be in the CPSD and FRF matrices
                 self.aligned_output,  # Last excitation signal for drive-based control
                 self.aligned_response,
@@ -491,12 +546,15 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.has_sent_interactive_control_transfer_function_results = False
         else:  # Function
             self.control_function = getattr(
-                module, environment_parameters.control_python_function
+                module, environment_metadata.control_python_function
             )
+
+    def initialize_sysid(self, sysid_metadata):
+        return super().initialize_sysid(sysid_metadata)
 
     def update_interactive_control_parameters(self, interactive_control_parameters):
         """Updates the interactive control law based on received parameters"""
-        if self.environment_parameters.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_python_function_type == 3:  # Interactive
             self.control_function.update_parameters(interactive_control_parameters)
             self.last_interactive_parameters = interactive_control_parameters
         else:
@@ -505,10 +563,13 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 "interactive control law.  How did this happen?"
             )
 
+    # endregion
+
+    # region Commands
     def send_interactive_command(self, command):
         """General method that can be used by an interactive UI object to pass commands
         and data to its corresponding computation object"""
-        if self.environment_parameters.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_python_function_type == 3:  # Interactive
             self.control_function.send_command(command)
         else:
             raise ValueError(
@@ -520,24 +581,14 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         """Sends the message that system identification is complete and control calculations
         should be performed"""
         super().system_id_complete(data)
-        (
-            self.frames,
-            _,  # avg,
-            self.frequencies,
-            self.frf,
-            self.sysid_coherence,
-            self.sysid_response_cpsd,
-            self.sysid_reference_cpsd,
-            self.sysid_condition,
-            self.sysid_response_noise,
-            self.sysid_reference_noise,
-        ) = data
+
         # Perform the control prediction
         self.perform_control_prediction(True)
+        self.set_sysid_stored()
 
     def perform_control_prediction(self, sysid_update):
         """Performs the control prediction based on system identification information"""
-        if self.frf is None:
+        if self.sysid_data.sysid_frf is None:
             self.gui_update_queue.put(
                 (
                     UICommands.ERROR,
@@ -551,19 +602,19 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         if self.control_function_type == 1:  # Generator
             output_time_history = self.control_function(
                 (
-                    self.data_acquisition_parameters.sample_rate,
-                    self.environment_parameters.control_signal,
-                    self.environment_parameters.sysid_frequency_spacing,
-                    self.frf,  # Transfer Functions
-                    self.sysid_response_noise,  # Noise levels and correlation
-                    self.sysid_reference_noise,  # from the system identification
-                    self.sysid_response_cpsd,  # Response levels and correlation
-                    self.sysid_reference_cpsd,  # from the system identification
-                    self.sysid_coherence,  # Coherence from the system identification
-                    self.frames,  # Number of frames in the CPSD and FRF matrices
-                    self.environment_parameters.sysid_averages,  # Total frames that could be in
+                    self.hardware_metadata.sample_rate,
+                    self.environment_metadata.control_signal,
+                    self.environment_metadata.sysid_frequency_spacing,
+                    self.sysid_data.sysid_frf,  # Transfer Functions
+                    self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                    self.sysid_data.sysid_reference_noise,  # from the system identification
+                    self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                    self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                    self.sysid_data.sysid_coherence,  # Coherence from the system identification
+                    self.sysid_data.sysid_frames,  # Number of frames in the CPSD and FRF matrices
+                    self.environment_metadata.sysid_averages,  # Total frames that could be in
                     #  the CPSD and FRF matrices
-                    self.data_acquisition_parameters.output_oversample,
+                    self.hardware_metadata.output_oversample,
                     self.extra_control_parameters,  # Required parameters
                     self.next_drive,  # Last excitation signal for drive-based control
                     self.predicted_response,  # Last response signal for error correction
@@ -571,43 +622,43 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             )
         elif self.control_function_type in [2, 3]:  # Class or Interactive Class
             if (
-                self.environment_parameters.control_python_function == 2
+                self.environment_metadata.control_python_function == 2
                 or not self.has_sent_interactive_control_transfer_function_results
             ):
                 if sysid_update:
                     self.control_function.system_id_update(
-                        self.environment_parameters.sysid_frequency_spacing,
-                        self.frf,  # Transfer Functions
-                        self.sysid_response_noise,  # Noise levels and correlation
-                        self.sysid_reference_noise,  # from the system identification
-                        self.sysid_response_cpsd,  # Response levels and correlation
-                        self.sysid_reference_cpsd,  # from the system identification
-                        self.sysid_coherence,  # Coherence from the system identification
-                        self.frames,  # Number of frames in the CPSD and FRF matrices
-                        self.environment_parameters.sysid_averages,  # Total frames that
+                        self.environment_metadata.sysid_frequency_spacing,
+                        self.sysid_data.sysid_frf,  # Transfer Functions
+                        self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                        self.sysid_data.sysid_reference_noise,  # from the system identification
+                        self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                        self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                        self.sysid_data.sysid_coherence,  # Coherence from the system identification
+                        self.sysid_data.sysid_frames,  # Number of frames in the CPSD and FRF matrices
+                        self.environment_metadata.sysid_averages,  # Total frames that
                         # could be in the CPSD and FRF matrices
                     )
 
-                if self.environment_parameters.control_python_function_type == 3:
+                if self.environment_metadata.control_python_function_type == 3:
                     self.gui_update_queue.put(
                         (
                             self.environment_name,
                             (
                                 TransientUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE,
                                 (
-                                    self.frf,
-                                    self.sysid_response_noise,
-                                    self.sysid_reference_noise,
-                                    self.sysid_response_cpsd,
-                                    self.sysid_reference_cpsd,
-                                    self.sysid_coherence,
+                                    self.sysid_data.sysid_frf,
+                                    self.sysid_data.sysid_response_noise,
+                                    self.sysid_data.sysid_reference_noise,
+                                    self.sysid_data.sysid_response_cpsd,
+                                    self.sysid_data.sysid_reference_cpsd,
+                                    self.sysid_data.sysid_coherence,
                                 ),
                             ),
                         )
                     )
                     self.has_sent_interactive_control_transfer_function_results = True
             if (
-                self.environment_parameters.control_python_function_type == 2
+                self.environment_metadata.control_python_function_type == 2
                 or self.last_interactive_parameters is not None
             ):
                 output_time_history = self.control_function.control(
@@ -621,19 +672,19 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 return
         else:  # Function
             output_time_history = self.control_function(
-                self.data_acquisition_parameters.sample_rate,
-                self.environment_parameters.control_signal,
-                self.environment_parameters.sysid_frequency_spacing,
-                self.frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification
-                self.frames,  # Number of frames in the CPSD and FRF matrices
-                self.environment_parameters.sysid_averages,  # Total frames that could
+                self.hardware_metadata.sample_rate,
+                self.environment_metadata.control_signal,
+                self.environment_metadata.sysid_frequency_spacing,
+                self.sysid_data.sysid_frf,  # Transfer Functions
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_coherence,  # Coherence from the system identification
+                self.sysid_data.sysid_frames,  # Number of frames in the CPSD and FRF matrices
+                self.environment_metadata.sysid_averages,  # Total frames that could
                 # be in the CPSD and FRF matrices
-                self.data_acquisition_parameters.output_oversample,
+                self.hardware_metadata.output_oversample,
                 self.extra_control_parameters,  # Required parameters
                 self.next_drive,  # Last excitation signal for drive-based control
                 self.predicted_response,  # Last response signal for error correction
@@ -644,10 +695,10 @@ class TransientEnvironment(AbstractSysIdEnvironment):
     def show_test_prediction(self):
         """Sends the test predictions to the UI"""
         # print('Drive Signals {:}'.format(self.next_drive.shape))
-        drive_signals = self.next_drive[
-            :, :: self.data_acquisition_parameters.output_oversample
-        ]
-        impulse_responses = np.moveaxis(np.fft.irfft(self.frf, axis=0), 0, -1)
+        drive_signals = self.next_drive[:, :: self.hardware_metadata.output_oversample]
+        impulse_responses = np.moveaxis(
+            np.fft.irfft(self.sysid_data.sysid_frf, axis=0), 0, -1
+        )
 
         self.predicted_response = np.zeros(
             (impulse_responses.shape[0], drive_signals.shape[-1])
@@ -663,9 +714,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 ]
 
         # print('Response Prediction {:}'.format(self.predicted_response.shape))
-        # print('Control Signal {:}'.format(self.environment_parameters.control_signal.shape))
+        # print('Control Signal {:}'.format(self.environment_metadata.control_signal.shape))
         time_trac = trac(
-            self.predicted_response, self.environment_parameters.control_signal
+            self.predicted_response, self.environment_metadata.control_signal
         )
         peak_voltages = np.max(np.abs(self.next_drive), axis=-1)
         self.gui_update_queue.put(
@@ -680,11 +731,11 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 (
                     TransientUICommands.CONTROL_PREDICTIONS,
                     (
-                        np.arange(self.environment_parameters.control_signal.shape[-1])
-                        / self.data_acquisition_parameters.sample_rate,
+                        np.arange(self.environment_metadata.control_signal.shape[-1])
+                        / self.hardware_metadata.sample_rate,
                         drive_signals,
                         self.predicted_response,
-                        self.environment_parameters.control_signal,
+                        self.environment_metadata.control_signal,
                     ),
                 ),
             )
@@ -693,17 +744,18 @@ class TransientEnvironment(AbstractSysIdEnvironment):
     def get_signal_generation_metadata(self):
         """Collects the metadata required to define the signal generation process"""
         return SignalGenerationMetadata(
-            samples_per_write=self.data_acquisition_parameters.samples_per_write,
-            level_ramp_samples=self.environment_parameters.test_level_ramp_time
-            * self.environment_parameters.sample_rate
-            * self.data_acquisition_parameters.output_oversample,
-            output_transformation_matrix=self.environment_parameters.reference_transformation_matrix,
+            samples_per_write=self.hardware_metadata.samples_per_write,
+            level_ramp_samples=self.environment_metadata.test_level_ramp_time
+            * self.environment_metadata.sample_rate
+            * self.hardware_metadata.output_oversample,
+            output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
         )
 
-    def start_control(self, data):
+    def start_control(self, data: TransientInstructions):
         """Starts up the control to generate the signal"""
         if self.startup:
-            self.test_level, self.repeat = data
+            self.test_level = data.test_level
+            self.repeat = data.repeat
             self.log("Starting Environment")
             self.siggen_shutdown_achieved = False
             # Set up the signal generation
@@ -731,16 +783,14 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             )
             # Set up the measurement buffers
             n_control_channels = (
-                len(self.environment_parameters.control_channel_indices)
-                if self.environment_parameters.response_transformation_matrix is None
-                else self.environment_parameters.response_transformation_matrix.shape[0]
+                len(self.environment_metadata.control_channel_indices)
+                if self.environment_metadata.response_transformation_matrix is None
+                else self.environment_metadata.response_transformation_matrix.shape[0]
             )
             n_output_channels = (
-                len(self.environment_parameters.output_channel_indices)
-                if self.environment_parameters.reference_transformation_matrix is None
-                else self.environment_parameters.reference_transformation_matrix.shape[
-                    0
-                ]
+                len(self.environment_metadata.output_channel_indices)
+                if self.environment_metadata.reference_transformation_matrix is None
+                else self.environment_metadata.reference_transformation_matrix.shape[0]
             )
             self.control_buffer = FrameBuffer(
                 n_control_channels,
@@ -750,7 +800,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 0,
                 0,
                 0,
-                self.environment_parameters.control_signal.shape[-1],
+                self.environment_metadata.control_signal.shape[-1],
                 0,
                 False,
                 False,
@@ -758,9 +808,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 0,
                 buffer_size_frame_multiplier=1
                 + (
-                    self.data_acquisition_parameters.samples_per_read
+                    self.hardware_metadata.samples_per_read
                     * BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER
-                    / self.environment_parameters.control_signal.shape[-1]
+                    / self.environment_metadata.control_signal.shape[-1]
                 ),
                 starting_value=0.0,
             )
@@ -772,7 +822,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 0,
                 0,
                 0,
-                self.environment_parameters.control_signal.shape[-1],
+                self.environment_metadata.control_signal.shape[-1],
                 0,
                 False,
                 False,
@@ -780,22 +830,24 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 0,
                 buffer_size_frame_multiplier=1
                 + (
-                    self.data_acquisition_parameters.samples_per_read
+                    self.hardware_metadata.samples_per_read
                     * BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER
-                    / self.environment_parameters.control_signal.shape[-1]
+                    / self.environment_metadata.control_signal.shape[-1]
                 ),
                 starting_value=0.0,
             )
             self.startup = False
+            self.set_active()
+            self.gui_update_queue.put(
+                (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
+            )
         # See if any data has come in
         try:
             acquisition_data, last_acquisition = (
                 self.queue_container.data_in_queue.get_nowait()
             )
             if self.last_signal_found is not None:
-                self.last_signal_found -= (
-                    self.data_acquisition_parameters.samples_per_read
-                )
+                self.last_signal_found -= self.hardware_metadata.samples_per_read
             if last_acquisition:
                 self.log(
                     f"Acquired Last Data, Signal Generation "
@@ -805,21 +857,21 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.log("Acquired Data")
             scale_factor = 0.0 if self.test_level < 1e-10 else 1 / self.test_level
             control_data = (
-                acquisition_data[self.environment_parameters.control_channel_indices]
+                acquisition_data[self.environment_metadata.control_channel_indices]
                 * scale_factor
             )
-            if self.environment_parameters.response_transformation_matrix is not None:
+            if self.environment_metadata.response_transformation_matrix is not None:
                 control_data = (
-                    self.environment_parameters.response_transformation_matrix
+                    self.environment_metadata.response_transformation_matrix
                     @ control_data
                 )
             output_data = (
-                acquisition_data[self.environment_parameters.output_channel_indices]
+                acquisition_data[self.environment_metadata.output_channel_indices]
                 * scale_factor
             )
-            if self.environment_parameters.reference_transformation_matrix is not None:
+            if self.environment_metadata.reference_transformation_matrix is not None:
                 output_data = (
-                    self.environment_parameters.reference_transformation_matrix
+                    self.environment_metadata.reference_transformation_matrix
                     @ output_data
                 )
             # Add the data to the buffers
@@ -835,9 +887,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                     _,
                 ) = align_signals(
                     self.output_buffer[:],
-                    self.next_drive[
-                        :, :: self.data_acquisition_parameters.output_oversample
-                    ],
+                    self.next_drive[:, :: self.hardware_metadata.output_oversample],
                     correlation_threshold=0.5,
                 )
             else:
@@ -860,12 +910,12 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.log(f"Alignment Found at {sample_delay} samples")
                 self.aligned_response = shift_signal(
                     self.control_buffer[:],
-                    self.environment_parameters.control_signal.shape[-1],
+                    self.environment_metadata.control_signal.shape[-1],
                     sample_delay,
                     phase_change,
                 )
                 time_trac = trac(
-                    self.aligned_response, self.environment_parameters.control_signal
+                    self.aligned_response, self.environment_metadata.control_signal
                 )
                 self.gui_update_queue.put(
                     (
@@ -894,7 +944,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                     self.last_signal_found is None
                     or (
                         self.last_signal_found
-                        + self.environment_parameters.control_signal.shape[-1] * 0.8
+                        + self.environment_metadata.control_signal.shape[-1] * 0.8
                     )
                     < sample_delay
                 ):
@@ -915,6 +965,15 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.environment_name, (TransientCommands.START_CONTROL, None)
             )
 
+    def stop_environment(self, data):
+        """Starts the shutdown sequence based on commands from the UI"""
+        self.queue_container.signal_generation_command_queue.put(
+            self.environment_name, (SignalGenerationCommands.START_SHUTDOWN, None)
+        )
+
+    # endregion
+
+    # region Shutdown
     def shutdown(self):
         """Let the UI know that this environment has completely shut down"""
         self.log("Environment Shut Down")
@@ -923,26 +982,27 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         )
         self.startup = True
 
-    def stop_environment(self, data):
-        """Starts the shutdown sequence based on commands from the UI"""
-        self.queue_container.signal_generation_command_queue.put(
-            self.environment_name, (SignalGenerationCommands.START_SHUTDOWN, None)
-        )
+    # endregion
 
 
-# %% Process
-
-
+# region Process
 def transient_process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
-    gui_update_queue: Queue,
-    controller_communication_queue: VerboseMessageQueue,
-    log_file_queue: Queue,
-    data_in_queue: Queue,
-    data_out_queue: Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    gui_update_queue: mp.Queue,
+    controller_command_queue: VerboseMessageQueue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+    sysid_active_event: mp.synchronize.Event,
+    sysid_stored_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """
     Transient vibration environment process function called by multiprocessing
@@ -973,18 +1033,23 @@ def transient_process(
         A synchronized value that indicates when the output is active
     """
     try:
+        if threaded:
+            new_process = threading.Thread  # worker threads
+        else:
+            new_process = mp.Process  # worker processes
+
         # Create vibration queues
         queue_container = TransientQueues(
             environment_name,
             input_queue,
             gui_update_queue,
-            controller_communication_queue,
+            controller_command_queue,
             data_in_queue,
             data_out_queue,
             log_file_queue,
         )
 
-        spectral_proc = mp.Process(
+        spectral_proc = new_process(
             target=spectral_processing_process,
             args=(
                 environment_name,
@@ -997,7 +1062,7 @@ def transient_process(
             ),
         )
         spectral_proc.start()
-        analysis_proc = mp.Process(
+        analysis_proc = new_process(
             target=sysid_data_analysis_process,
             args=(
                 environment_name,
@@ -1010,7 +1075,7 @@ def transient_process(
             ),
         )
         analysis_proc.start()
-        siggen_proc = mp.Process(
+        siggen_proc = new_process(
             target=signal_generation_process,
             args=(
                 environment_name,
@@ -1023,7 +1088,7 @@ def transient_process(
             ),
         )
         siggen_proc.start()
-        collection_proc = mp.Process(
+        collection_proc = new_process(
             target=data_collector_process,
             args=(
                 environment_name,
@@ -1038,9 +1103,17 @@ def transient_process(
         collection_proc.start()
 
         process_class = TransientEnvironment(
-            environment_name, queue_container, acquisition_active, output_active
+            environment_name,
+            queue_name,
+            queue_container,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
+            ready_event,
+            sysid_active_event,
+            sysid_stored_event,
         )
-        process_class.run()
+        process_class.run(shutdown_event)
 
         # Rejoin all the processes
         process_class.log("Joining Subprocesses")
@@ -1054,3 +1127,6 @@ def transient_process(
         collection_proc.join()
     except Exception:  # pylint: disable = broad-exception-caught
         print(traceback.format_exc())
+
+
+# endregion

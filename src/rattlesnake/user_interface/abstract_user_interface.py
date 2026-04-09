@@ -32,6 +32,7 @@ class EnvironmentUI(ABC):
         self.environment_name = environment_name
         self.rattlesnake = rattlesnake
         self.hardware_metadata = None
+        self.environment_metadata = None
         self.definition_widget = None
         self.system_id_widget = None
         self.prediction_widget = None
@@ -81,6 +82,7 @@ class EnvironmentUI(ABC):
         existing rattlesnake state, this will be called after set_environment_metadata.
         This allows you to update the system id, test predictions, and run tab with data from
         the environment definitions tab."""
+        self.environment_metadata = environment_metadata
 
     @abstractmethod
     def get_environment_metadata(self, global_channel_list) -> EnvironmentMetadata:

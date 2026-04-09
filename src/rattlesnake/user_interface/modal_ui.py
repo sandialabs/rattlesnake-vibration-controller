@@ -132,8 +132,6 @@ class ModalUI(EnvironmentUI):
             ["Enabled", "Reference", "Channel"]
         )
 
-        self.hardware_metadata = None
-        self.metadata = None
         self.channel_names = None
         self.acceptance_function = None
         self.plot_data_items = {}
@@ -217,13 +215,16 @@ class ModalUI(EnvironmentUI):
         return [
             self.channel_names[i]
             for i in range(len(self.channel_names))
-            if i not in self.metadata.response_channel_indices
+            if i not in self.environment_metadata.response_channel_indices
         ]
 
     @property
     def initialized_reference_names(self):
         """Returns channel names corresponding to the initialized reference channels"""
-        return [self.channel_names[i] for i in self.metadata.reference_channel_indices]
+        return [
+            self.channel_names[i]
+            for i in self.environment_metadata.reference_channel_indices
+        ]
 
     def complete_ui(self):
         """Applies some finishing touches to the UI"""
@@ -449,9 +450,13 @@ class ModalUI(EnvironmentUI):
             widget.setMaximum(self.hardware_metadata.sample_rate / 2)
 
     def initialize_environment(self, environment_metadata):
-        self.metadata = environment_metadata
-        self.reference_channel_indices = self.metadata.reference_channel_indices
-        self.response_channel_indices = self.metadata.response_channel_indices
+        self.environment_metadata = environment_metadata
+        self.reference_channel_indices = (
+            self.environment_metadata.reference_channel_indices
+        )
+        self.response_channel_indices = (
+            self.environment_metadata.response_channel_indices
+        )
         self.run_widget.channel_display_area.reference_channel_indices = (
             self.reference_channel_indices
         )
@@ -479,29 +484,32 @@ class ModalUI(EnvironmentUI):
             widget.response_coordinate_selector.setCurrentIndex(current_response)
             widget.reference_coordinate_selector.setCurrentIndex(current_reference)
             widget.data_type_selector.setCurrentIndex(current_data_type)
-        self.run_widget.total_averages_display.setValue(self.metadata.num_averages)
+        self.run_widget.total_averages_display.setValue(
+            self.environment_metadata.num_averages
+        )
         self.run_widget.channel_display_area.time_abscissa = (
-            np.arange(self.metadata.samples_per_frame) / self.metadata.sample_rate
+            np.arange(self.environment_metadata.samples_per_frame)
+            / self.environment_metadata.sample_rate
         )
         self.run_widget.channel_display_area.frequency_abscissa = np.fft.rfftfreq(
-            self.metadata.samples_per_frame,
-            1 / self.metadata.sample_rate,
+            self.environment_metadata.samples_per_frame,
+            1 / self.environment_metadata.sample_rate,
         )
-        if self.metadata.frf_window == "rectangle":
+        if self.environment_metadata.frf_window == "rectangle":
             window = 1
-        elif self.metadata.frf_window == "exponential":
-            window_parameter = -(self.metadata.samples_per_frame) / np.log(
-                self.metadata.exponential_window_value_at_frame_end
+        elif self.environment_metadata.frf_window == "exponential":
+            window_parameter = -(self.environment_metadata.samples_per_frame) / np.log(
+                self.environment_metadata.exponential_window_value_at_frame_end
             )
             window = sig.get_window(
                 ("exponential", 0, window_parameter),
-                self.metadata.samples_per_frame,
+                self.environment_metadata.samples_per_frame,
                 fftbins=True,
             )
         else:
             window = sig.get_window(
-                self.metadata.frf_window,
-                self.metadata.samples_per_frame,
+                self.environment_metadata.frf_window,
+                self.environment_metadata.samples_per_frame,
                 fftbins=True,
             )
         self.run_widget.channel_display_area.window_function = window
@@ -1231,13 +1239,17 @@ class ModalUI(EnvironmentUI):
                 for i, channel in enumerate(self.hardware_metadata.channel_list)
             ]
         )
-        reference_node_numbers = node_numbers[self.metadata.reference_channel_indices]
-        reference_node_directions = node_directions[
-            self.metadata.reference_channel_indices
+        reference_node_numbers = node_numbers[
+            self.environment_metadata.reference_channel_indices
         ]
-        response_node_numbers = node_numbers[self.metadata.response_channel_indices]
+        reference_node_directions = node_directions[
+            self.environment_metadata.reference_channel_indices
+        ]
+        response_node_numbers = node_numbers[
+            self.environment_metadata.response_channel_indices
+        ]
         response_node_directions = node_directions[
-            self.metadata.response_channel_indices
+            self.environment_metadata.response_channel_indices
         ]
         corresponding_drive_responses = []
         for node, direction in zip(reference_node_numbers, reference_node_directions):
@@ -1277,7 +1289,7 @@ class ModalUI(EnvironmentUI):
             self.rattlesnake.environment_metadata,
         )  # This is scuffed but is an edge case
         group_handle = self.netcdf_handle.groups[self.environment_name]
-        group_handle.createDimension("fft_lines", self.metadata.fft_lines)
+        group_handle.createDimension("fft_lines", self.environment_metadata.fft_lines)
         group_handle.createVariable(
             "frf_data_real",
             "f8",
@@ -1435,11 +1447,15 @@ class ModalUI(EnvironmentUI):
                         self.last_response_cpsd.shape[0],
                     )
                 )
-                for i, index in enumerate(self.metadata.reference_channel_indices):
+                for i, index in enumerate(
+                    self.environment_metadata.reference_channel_indices
+                ):
                     self.run_widget.channel_display_area.last_autospectrum[index, :] = (
                         self.last_reference_cpsd[:, i].real
                     )
-                for i, index in enumerate(self.metadata.response_channel_indices):
+                for i, index in enumerate(
+                    self.environment_metadata.response_channel_indices
+                ):
                     self.run_widget.channel_display_area.last_autospectrum[index, :] = (
                         self.last_response_cpsd[:, i].real
                     )
@@ -1453,7 +1469,7 @@ class ModalUI(EnvironmentUI):
                     group.variables["frf_data_real"][:] = np.real(self.last_frf)
                     group.variables["frf_data_imag"][:] = np.imag(self.last_frf)
                     group.variables["coherence"][:] = self.last_coherence
-                if self.acquiring and frames >= self.metadata.num_averages:
+                if self.acquiring and frames >= self.environment_metadata.num_averages:
                     self.stop_environment()
                     self.acquiring = False
             case DataCollectorUICommands.TIME_FRAME:
@@ -1469,11 +1485,13 @@ class ModalUI(EnvironmentUI):
                 if self.netcdf_handle is not None and accepted:
                     # Get current timestep
                     num_timesteps = self.netcdf_handle.dimensions["time_samples"].size
-                    current_frame = num_timesteps // self.metadata.samples_per_frame
-                    if current_frame < self.metadata.num_averages:
+                    current_frame = (
+                        num_timesteps // self.environment_metadata.samples_per_frame
+                    )
+                    if current_frame < self.environment_metadata.num_averages:
                         timesteps = slice(num_timesteps, None, None)
                         self.netcdf_handle.variables["time_data"][:, timesteps] = frame
-                if self.metadata.accept_type == "Manual" and not accepted:
+                if self.environment_metadata.accept_type == "Manual" and not accepted:
                     self.run_widget.accept_average_button.setEnabled(True)
                     self.run_widget.reject_average_button.setEnabled(True)
             case _:

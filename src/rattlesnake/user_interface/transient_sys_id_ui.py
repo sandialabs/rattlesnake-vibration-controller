@@ -1,20 +1,33 @@
+import inspect
+import os
+from multiprocessing.queues import Queue
+
+import netCDF4 as nc4
+import numpy as np
+from qtpy import QtCore, QtWidgets, uic
+from qtpy.QtCore import Qt
+
+from rattlesnake.engine import RattlesnakeController
+from rattlesnake.utilities import (
+    DIRECTORY,
+    GlobalCommands,
+    db2scale,
+    load_python_module,
+    rms_time,
+)
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
     TransientUICommands,
     TransientMetadata,
 )
-from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
     ControlLawUICommands,
 )
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.user_interface.ui_utilities import (
-    environment_definition_ui_paths,
-    environment_prediction_ui_paths,
-    environment_run_ui_paths,
-)
+
+from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
 from rattlesnake.user_interface.ui_utilities import (
     UICommands,
     PlotTimeWindow,
@@ -23,58 +36,39 @@ from rattlesnake.user_interface.ui_utilities import (
     load_time_history,
     multiline_plotter,
 )
-from rattlesnake.utilities import db2scale, load_python_module, rms_time
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from qtpy import QtCore, QtWidgets, uic
-from qtpy.QtCore import Qt
-from multiprocessing.queues import Queue
-import inspect
-import os
-import numpy as np
-import netCDF4 as nc4
 
 CONTROL_TYPE = EnvironmentType.TRANSIENT
 MAXIMUM_NAME_LENGTH = 50
 
 
-# region: User Interface
-class TransientUI(AbstractSysIdUI):
+class TransientUI(SysIdEnvironmentUI):
     """Class defining the user interface for the transient environment"""
 
+    # region User Interface
     def __init__(
         self,
         environment_name: str,
-        definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,
-        test_predictions_tabwidget: QtWidgets.QTabWidget,
-        run_tabwidget: QtWidgets.QTabWidget,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
+        rattlesnake: RattlesnakeController,
     ):
-        super().__init__(
-            environment_name,
-            environment_command_queue,
-            controller_communication_queue,
-            log_file_queue,
-            system_id_tabwidget,
-        )
+        super().__init__(CONTROL_TYPE, environment_name, rattlesnake)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget
+        transient_definition_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "sine_definition.ui"
         )
-        definition_tabwidget.addTab(self.definition_widget, self.environment_name)
+        uic.loadUi(transient_definition_ui_path, self.definition_widget)
         # Add the page to the control prediction tabwidget
         self.prediction_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_prediction_ui_paths[CONTROL_TYPE], self.prediction_widget
+        transient_prediction_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "transient_prediction.ui"
         )
-        test_predictions_tabwidget.addTab(self.prediction_widget, self.environment_name)
+        uic.loadUi(transient_prediction_ui_path, self.prediction_widget)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_run_ui_paths[CONTROL_TYPE], self.run_widget)
-        run_tabwidget.addTab(self.run_widget, self.environment_name)
+        transient_run_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "sine_run.ui"
+        )
+        uic.loadUi(transient_run_ui_path, self.run_widget)
 
         self.specification_signal = None
         self.show_signal_checkboxes = None
@@ -191,10 +185,9 @@ class TransientUI(AbstractSysIdUI):
             self.set_display_duration
         )
 
-    # %% Data Acquisition
-
-    def initialize_data_acquisition(self, data_acquisition_parameters):
-        super().initialize_data_acquisition(data_acquisition_parameters)
+    # region Hardware
+    def initialize_hardware(self, data_acquisition_parameters):
+        super().initialize_hardware(data_acquisition_parameters)
         # Initialize the plots
         for plot in [
             self.definition_widget.signal_display_plot,
@@ -249,8 +242,6 @@ class TransientUI(AbstractSysIdUI):
         """Names of the physical drive channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
-    # %% Environment
-
     @property
     def physical_control_indices(self):
         """Indices of the control channels"""
@@ -294,6 +285,10 @@ class TransientUI(AbstractSysIdUI):
                     self.environment_parameters.reference_transformation_matrix.shape[0]
                 )
             ]
+
+    # region Environment
+    def initialize_environment(self, environment_metadata):
+        return super().initialize_environment(environment_metadata)
 
     def update_control_channels(self):
         """Callback called when control channels are updated in the UI"""

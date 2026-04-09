@@ -1038,7 +1038,7 @@ class SysIdEnvironment(Environment):
     def system_id_complete(self, data):
         """Sends a message to the controller that this environment has completed system id"""
         self.log("Finished System Identification")
-        self.sysid_data = data
+        (_, self.sysid_data) = data
         self.gui_update_queue.put(
             (
                 self.environment_name,

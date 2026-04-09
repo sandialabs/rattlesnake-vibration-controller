@@ -222,7 +222,7 @@ class TimeUI(EnvironmentUI):
         self.hardware_metadata = hardware_metadata
 
     def initialize_environment(self, environment_metadata):
-        return
+        return super().initialize_environment(environment_metadata)
 
     def get_environment_metadata(self, global_channel_list=None) -> TimeMetadata:
         """Collect the parameters from the user interface defining the environment
