@@ -203,6 +203,9 @@ class EnvironmentManager:
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
             environment_metadata_dict[queue_name] = metadata
+            self.queue_container.environment_command_queues[
+                queue_name
+            ].assign_environment(environment_name)
             self.queue_container.environment_command_queues[queue_name].put(
                 TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata)
             )
@@ -430,9 +433,6 @@ class EnvironmentManager:
 
         # Figure out what type of environment to add
         environment_process_function = ENVIRONMENT_PROCESS[environment_type]
-        self.queue_container.environment_command_queues[queue_name].assign_environment(
-            environment_name
-        )
         environment_process = self.new_process(
             target=environment_process_function,
             args=(

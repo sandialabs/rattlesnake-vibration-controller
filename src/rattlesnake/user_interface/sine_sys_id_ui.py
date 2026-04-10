@@ -725,9 +725,6 @@ class SineUI(SysIdEnvironmentUI):
             self.definition_widget.control_channels_selector.item(
                 control_channel
             ).setCheckState(Qt.Checked)
-        self.physical_output_indices = metadata.output_channel_indices
-        self.response_transformation_matrix = metadata.response_transformation_matrix
-        self.output_transformation_matrix = metadata.reference_transformation_matrix
 
         for idx in reversed(range(len(self.sine_tables) - 1)):
             self.remove_sine_table_entry(idx + 1)
@@ -738,6 +735,9 @@ class SineUI(SysIdEnvironmentUI):
             sine_table = self.sine_tables[idx]
             sine_table.set_specification(spec)
         # self.update_specification()
+
+        self.response_transformation_matrix = metadata.response_transformation_matrix
+        self.output_transformation_matrix = metadata.reference_transformation_matrix
 
     def get_environment_instructions(self):
         control_test_level = self.run_widget.test_level_selector.value()

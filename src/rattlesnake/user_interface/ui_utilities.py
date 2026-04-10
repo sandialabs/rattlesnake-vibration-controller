@@ -499,7 +499,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         """
         super().__init__(parent)
         transformation_matrices_ui_path = os.path.join(
-            DIRECTORY, "user_interface" "ui_files", "transformation_matrices.ui"
+            DIRECTORY, "user_interface", "ui_files", "transformation_matrices.ui"
         )
         uic.loadUi(transformation_matrices_ui_path, self)
         self.setWindowTitle("Transformation Matrix Definition")
@@ -675,7 +675,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
 
     def save_response_transformation_matrix(self):
         """Saves the response transformation matrix to a csv file"""
-        string_array = self.get_table_strings(self.response_transformation_matrix)
+        string_array = get_table_strings(self.response_transformation_matrix)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save Response Transformation",
@@ -850,7 +850,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
 
     def save_output_transformation_matrix(self):
         """Saves output transformation matrix to a CSV file"""
-        string_array = self.get_table_strings(self.output_transformation_matrix)
+        string_array = get_table_strings(self.output_transformation_matrix)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save Output Transformation", filter="Comma-separated Values (*.csv)"
         )

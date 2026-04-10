@@ -450,7 +450,7 @@ class ModalUI(EnvironmentUI):
             widget.setMaximum(self.hardware_metadata.sample_rate / 2)
 
     def initialize_environment(self, environment_metadata):
-        self.environment_metadata = environment_metadata
+        super().initialize_environment(environment_metadata)
         self.reference_channel_indices = (
             self.environment_metadata.reference_channel_indices
         )

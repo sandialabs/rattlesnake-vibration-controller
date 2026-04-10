@@ -439,7 +439,7 @@ class TimeEnvironment(Environment):
         self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         # Persistent data
         self.hardware_metadata = None
-        self.metadata = None
+        self.environment_metadata = None
         self.shutdown_flag = False
         self.current_test_level = 0.0
         self.target_test_level = 0.0
@@ -478,7 +478,7 @@ class TimeEnvironment(Environment):
         ]
         self.set_ready()
 
-    def initialize_environment(self, metadata: TimeMetadata):
+    def initialize_environment(self, environment_metadata: TimeMetadata):
         """
         Initialize the environment parameters specific to this environment
 
@@ -492,8 +492,7 @@ class TimeEnvironment(Environment):
 
         """
         self.log("Initializing Environment Parameters")
-        self.metadata = metadata
-        self.set_ready()
+        super().initialize_environment(environment_metadata)
 
     # endregion
 
@@ -535,7 +534,7 @@ class TimeEnvironment(Environment):
                     )
                 )
                 self.log("Test Level set to {:}".format(self.current_test_level))
-            self.signal_remainder = self.metadata.output_signal
+            self.signal_remainder = self.environment_metadata.output_signal
             self.set_active()
             self.queue_container.gui_update_queue.put(
                 (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
@@ -565,7 +564,8 @@ class TimeEnvironment(Environment):
                 and self.repeat
             ):
                 self.signal_remainder = np.concatenate(
-                    (self.signal_remainder, self.metadata.output_signal), axis=-1
+                    (self.signal_remainder, self.environment_metadata.output_signal),
+                    axis=-1,
                 )
             elif (
                 self.hardware_metadata.samples_per_write
@@ -697,7 +697,7 @@ class TimeEnvironment(Environment):
         self.test_level_target = data
         self.test_level_change = (
             self.test_level_target - self.current_test_level
-        ) / self.metadata.cancel_rampdown_samples
+        ) / self.environment_metadata.cancel_rampdown_samples
         if self.test_level_change != 0.0:
             self.log(
                 "Changed test level to {:} from {:}, {:} change per sample".format(

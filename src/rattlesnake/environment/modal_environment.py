@@ -1010,7 +1010,7 @@ class ModalEnvironment(Environment):
         )
         self.queue_container = queue_container
         self.hardware_metadata = None
-        self.metadata = None
+        self.environment_metadata = None
         self.frame_number = 0
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
@@ -1052,7 +1052,7 @@ class ModalEnvironment(Environment):
         self.hardware_metadata = hardware_metadata
         self.set_ready()
 
-    def initialize_environment(self, metadata: ModalMetadata):
+    def initialize_environment(self, environment_metadata: ModalMetadata):
         """
         Initialize the environment parameters specific to this environment
 
@@ -1065,7 +1065,8 @@ class ModalEnvironment(Environment):
             A container containing the parameters defining the environment
 
         """
-        self.metadata = metadata
+        self.environment_name = environment_metadata.environment_name
+        self.environment_metadata = environment_metadata
 
         # Set up the collector
         self.queue_container.collector_command_queue.put(
@@ -1097,50 +1098,58 @@ class ModalEnvironment(Environment):
     def get_data_collector_metadata(self) -> CollectorMetadata:
         """Collects metadata used to define the data collector"""
         num_channels = len(self.hardware_metadata.channel_list)
-        reference_channel_indices = self.metadata.reference_channel_indices
-        response_channel_indices = self.metadata.response_channel_indices
-        if self.metadata.trigger_type == "Free Run":
+        reference_channel_indices = self.environment_metadata.reference_channel_indices
+        response_channel_indices = self.environment_metadata.response_channel_indices
+        if self.environment_metadata.trigger_type == "Free Run":
             acquisition_type = AcquisitionType.FREE_RUN
-        elif self.metadata.trigger_type == "First Frame":
+        elif self.environment_metadata.trigger_type == "First Frame":
             acquisition_type = AcquisitionType.TRIGGER_FIRST_FRAME
-        elif self.metadata.trigger_type == "Every Frame":
+        elif self.environment_metadata.trigger_type == "Every Frame":
             acquisition_type = AcquisitionType.TRIGGER_EVERY_FRAME
         else:
-            raise ValueError(f"Invalid Acquisition Type: {self.metadata.trigger_type}")
-        if self.metadata.accept_type == "Accept All":
+            raise ValueError(
+                f"Invalid Acquisition Type: {self.environment_metadata.trigger_type}"
+            )
+        if self.environment_metadata.accept_type == "Accept All":
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = None
-        elif self.metadata.accept_type == "Manual":
+        elif self.environment_metadata.accept_type == "Manual":
             acceptance = Acceptance.MANUAL
             acceptance_function = None
-        elif self.metadata.accept_type == "Autoreject...":
+        elif self.environment_metadata.accept_type == "Autoreject...":
             acceptance = Acceptance.AUTOMATIC
-            acceptance_function = self.metadata.acceptance_function
+            acceptance_function = self.environment_metadata.acceptance_function
         else:
-            raise ValueError(f"Invalid Acceptance Type: {self.metadata.accept_type}")
-        overlap_fraction = self.metadata.overlap
-        trigger_channel_index = self.metadata.trigger_channel
+            raise ValueError(
+                f"Invalid Acceptance Type: {self.environment_metadata.accept_type}"
+            )
+        overlap_fraction = self.environment_metadata.overlap
+        trigger_channel_index = self.environment_metadata.trigger_channel
         trigger_slope = (
             TriggerSlope.POSITIVE
-            if self.metadata.trigger_slope_positive
+            if self.environment_metadata.trigger_slope_positive
             else TriggerSlope.NEGATIVE
         )
-        (_, trigger_level, _, trigger_hysteresis) = self.metadata.get_trigger_levels(
-            self.hardware_metadata.channel_list
+        (_, trigger_level, _, trigger_hysteresis) = (
+            self.environment_metadata.get_trigger_levels(
+                self.hardware_metadata.channel_list
+            )
         )
-        trigger_hysteresis_samples = self.metadata.hysteresis_samples
-        pretrigger_fraction = self.metadata.pretrigger
-        frame_size = self.metadata.samples_per_frame
-        if self.metadata.frf_window == "hann":
+        trigger_hysteresis_samples = self.environment_metadata.hysteresis_samples
+        pretrigger_fraction = self.environment_metadata.pretrigger
+        frame_size = self.environment_metadata.samples_per_frame
+        if self.environment_metadata.frf_window == "hann":
             window = Window.HANN
-        elif self.metadata.frf_window == "rectangle":
+        elif self.environment_metadata.frf_window == "rectangle":
             window = Window.RECTANGLE
-        elif self.metadata.frf_window == "exponential":
+        elif self.environment_metadata.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            raise ValueError(f"Invalid Window Type: {self.metadata.frf_window}")
+            raise ValueError(
+                f"Invalid Window Type: {self.environment_metadata.frf_window}"
+            )
         window_parameter = -(frame_size) / np.log(
-            self.metadata.exponential_window_value_at_frame_end
+            self.environment_metadata.exponential_window_value_at_frame_end
         )
         return CollectorMetadata(
             num_channels,
@@ -1167,29 +1176,33 @@ class ModalEnvironment(Environment):
         """Collects metadata to define the spectral processing"""
         averaging_type = (
             AveragingTypes.LINEAR
-            if self.metadata.averaging_type == "Linear"
+            if self.environment_metadata.averaging_type == "Linear"
             else AveragingTypes.EXPONENTIAL
         )
-        averages = self.metadata.num_averages
-        exponential_averaging_coefficient = self.metadata.averaging_coefficient
-        if self.metadata.frf_technique == "H1":
+        averages = self.environment_metadata.num_averages
+        exponential_averaging_coefficient = (
+            self.environment_metadata.averaging_coefficient
+        )
+        if self.environment_metadata.frf_technique == "H1":
             frf_estimator = Estimator.H1
-        elif self.metadata.frf_technique == "H2":
+        elif self.environment_metadata.frf_technique == "H2":
             frf_estimator = Estimator.H2
-        elif self.metadata.frf_technique == "H3":
+        elif self.environment_metadata.frf_technique == "H3":
             frf_estimator = Estimator.H3
-        elif self.metadata.frf_technique == "Hv":
+        elif self.environment_metadata.frf_technique == "Hv":
             frf_estimator = Estimator.HV
         else:
             raise ValueError(
-                f"Invalid FRF Estimator {self.metadata.frf_technique}. "
+                f"Invalid FRF Estimator {self.environment_metadata.frf_technique}. "
                 "How did you get here?"
             )
-        num_response_channels = len(self.metadata.response_channel_indices)
-        num_reference_channels = len(self.metadata.reference_channel_indices)
-        frequency_spacing = self.metadata.frequency_spacing
-        sample_rate = self.metadata.sample_rate
-        num_frequency_lines = self.metadata.fft_lines
+        num_response_channels = len(self.environment_metadata.response_channel_indices)
+        num_reference_channels = len(
+            self.environment_metadata.reference_channel_indices
+        )
+        frequency_spacing = self.environment_metadata.frequency_spacing
+        sample_rate = self.environment_metadata.sample_rate
+        num_frequency_lines = self.environment_metadata.fft_lines
         return SpectralProcessingMetadata(
             averaging_type,
             averages,
@@ -1210,12 +1223,12 @@ class ModalEnvironment(Environment):
             samples_per_write=self.hardware_metadata.samples_per_write,
             level_ramp_samples=1,
             output_transformation_matrix=None,
-            disabled_signals=self.metadata.disabled_signals,
+            disabled_signals=self.environment_metadata.disabled_signals,
         )
 
     def get_signal_generator(self):
         """Gets the signal generator object used to generate signals for the environment"""
-        return self.metadata.get_signal_generator()
+        return self.environment_metadata.get_signal_generator()
 
     # endregion
 
@@ -1247,7 +1260,7 @@ class ModalEnvironment(Environment):
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.metadata.skip_frames, 1),
+                (self.environment_metadata.skip_frames, 1),
             ),
         )
         time.sleep(0.01)
@@ -1347,7 +1360,7 @@ class ModalEnvironment(Environment):
                         ModalUICommands.SPECTRAL_UPDATE,
                         (
                             frames,
-                            self.metadata.num_averages,
+                            self.environment_metadata.num_averages,
                             frequencies,
                             frf,
                             coherence,

@@ -1,7 +1,6 @@
 from rattlesnake.environment.environment_utilities import EnvironmentType
 
 UNIMPLEMENTED_ENVIRONMENT = [
-    EnvironmentType.TRANSIENT,
     EnvironmentType.RANDOM,
 ]
 

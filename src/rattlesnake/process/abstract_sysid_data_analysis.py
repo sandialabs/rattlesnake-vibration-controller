@@ -31,7 +31,7 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import VerboseMessageQueue, flush_queue
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
 
 
 # region Commands
@@ -722,6 +722,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             The name of the environment owning this process
         """
         super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
+        self, self.map_command(
+            GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment
+        )
         self.map_command(
             SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
             self.initialize_sysid_parameters,
@@ -750,6 +753,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.startup = True
 
     # region State Sync
+    def initialize_environment(self, data: str):
+        self.environment_name = data
+
     def initialize_sysid_parameters(self, data: SysIdMetadata):
         """Stores parameters describing the system identification into the object
 
@@ -803,25 +809,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
     def load_sysid_data_package(self, sysid_data):
         self.frames = 0
         self.sysid_data = sysid_data
-
-        self.gui_update_queue.put(
-            (
-                self.environment_name,
-                (
-                    SysIdDataAnalysisUICommands.SYSID_UPDATE,
-                    (
-                        self.sysid_data.sysid_frames,
-                        self.sysid_data.sysid_frames,
-                        self.sysid_data.frequencies,
-                        self.sysid_data.sysid_frf,
-                        self.sysid_data.sysid_coherence,
-                        self.sysid_data.sysid_response_cpsd,
-                        self.sysid_data.sysid_reference_cpsd,
-                        self.sysid_data.sysid_condition,
-                    ),
-                ),
-            )
-        )
 
     # endregion
 

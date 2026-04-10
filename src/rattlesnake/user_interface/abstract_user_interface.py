@@ -82,6 +82,7 @@ class EnvironmentUI(ABC):
         existing rattlesnake state, this will be called after set_environment_metadata.
         This allows you to update the system id, test predictions, and run tab with data from
         the environment definitions tab."""
+        self.environment_name = environment_metadata.environment_name
         self.environment_metadata = environment_metadata
 
     @abstractmethod
@@ -108,9 +109,7 @@ class EnvironmentUI(ABC):
         Update the user interface from environment metadata
 
         This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
+        This function should set up the user interface accordingly.
         """
 
     @abstractmethod

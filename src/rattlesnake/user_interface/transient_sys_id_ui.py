@@ -14,6 +14,7 @@ from rattlesnake.utilities import (
     db2scale,
     load_python_module,
     rms_time,
+    load_time_history,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -21,6 +22,7 @@ from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
     TransientUICommands,
     TransientMetadata,
+    TransientInstructions,
 )
 from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
@@ -33,7 +35,6 @@ from rattlesnake.user_interface.ui_utilities import (
     PlotTimeWindow,
     TransformationMatrixWindow,
     colororder,
-    load_time_history,
     multiline_plotter,
 )
 
@@ -54,7 +55,7 @@ class TransientUI(SysIdEnvironmentUI):
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
         transient_definition_ui_path = os.path.join(
-            DIRECTORY, "user_interface", "ui_files", "sine_definition.ui"
+            DIRECTORY, "user_interface", "ui_files", "transient_definition.ui"
         )
         uic.loadUi(transient_definition_ui_path, self.definition_widget)
         # Add the page to the control prediction tabwidget
@@ -66,7 +67,7 @@ class TransientUI(SysIdEnvironmentUI):
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
         transient_run_ui_path = os.path.join(
-            DIRECTORY, "user_interface", "ui_files", "sine_run.ui"
+            DIRECTORY, "user_interface", "ui_files", "transient_run.ui"
         )
         uic.loadUi(transient_run_ui_path, self.run_widget)
 
@@ -112,9 +113,6 @@ class TransientUI(SysIdEnvironmentUI):
         self.connect_callbacks()
 
         # Complete the profile commands
-        self.command_map["Set Test Level"] = self.change_test_level_from_profile
-        self.command_map["Set Repeat"] = self.set_repeat_from_profile
-        self.command_map["Set No Repeat"] = self.set_norepeat_from_profile
 
     def connect_callbacks(self):
         """Connects the callbacks to the transient UI widgets"""
@@ -169,8 +167,8 @@ class TransientUI(SysIdEnvironmentUI):
             self.recompute_predictions
         )
         # Run Test
-        self.run_widget.start_test_button.clicked.connect(self.start_control)
-        self.run_widget.stop_test_button.clicked.connect(self.stop_control)
+        self.run_widget.start_test_button.clicked.connect(self.start_environment)
+        self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
         self.run_widget.create_window_button.clicked.connect(self.create_window)
         self.run_widget.show_all_channels_button.clicked.connect(self.show_all_channels)
         self.run_widget.tile_windows_button.clicked.connect(self.tile_windows)
@@ -208,29 +206,29 @@ class TransientUI(SysIdEnvironmentUI):
     @property
     def initialized_control_names(self):
         """Names of the control channels that have been initialized"""
-        if self.environment_parameters.response_transformation_matrix is None:
+        if self.environment_metadata.response_transformation_matrix is None:
             return [
                 self.physical_channel_names[i]
-                for i in self.environment_parameters.control_channel_indices
+                for i in self.environment_metadata.control_channel_indices
             ]
         else:
             return [
                 f"Transformed Response {i + 1}"
                 for i in range(
-                    self.environment_parameters.response_transformation_matrix.shape[0]
+                    self.environment_metadata.response_transformation_matrix.shape[0]
                 )
             ]
 
     @property
     def initialized_output_names(self):
         """Names of the drive channels that have been initialized"""
-        if self.environment_parameters.reference_transformation_matrix is None:
+        if self.environment_metadata.reference_transformation_matrix is None:
             return self.physical_output_names
         else:
             return [
                 f"Transformed Drive {i + 1}"
                 for i in range(
-                    self.environment_parameters.reference_transformation_matrix.shape[0]
+                    self.environment_metadata.reference_transformation_matrix.shape[0]
                 )
             ]
 
@@ -291,11 +289,11 @@ class TransientUI(SysIdEnvironmentUI):
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
         # Make sure everything is defined
-        if self.environment_parameters.control_signal is None:
+        if self.environment_metadata.control_signal is None:
             raise ValueError(
                 f"Control Signal is not defined for {self.environment_name}!"
             )
-        if self.environment_parameters.control_python_script is None:
+        if self.environment_metadata.control_python_script is None:
             raise ValueError(
                 f"Control function has not been loaded for {self.environment_name}"
             )
@@ -321,9 +319,9 @@ class TransientUI(SysIdEnvironmentUI):
         self.prediction_widget.excitation_display_plot.getPlotItem().clear()
         self.prediction_widget.response_display_plot.getPlotItem().clear()
         self.plot_data_items["response_prediction"] = multiline_plotter(
-            np.arange(self.environment_parameters.control_signal.shape[-1])
-            / self.environment_parameters.sample_rate,
-            np.zeros((2, self.environment_parameters.control_signal.shape[-1])),
+            np.arange(self.environment_metadata.control_signal.shape[-1])
+            / self.environment_metadata.sample_rate,
+            np.zeros((2, self.environment_metadata.control_signal.shape[-1])),
             widget=self.prediction_widget.response_display_plot,
             other_pen_options={"width": 1},
             names=["Prediction", "Spec"],
@@ -331,9 +329,9 @@ class TransientUI(SysIdEnvironmentUI):
             clip_to_view=True,
         )
         self.plot_data_items["excitation_prediction"] = multiline_plotter(
-            np.arange(self.environment_parameters.control_signal.shape[-1])
-            / self.environment_parameters.sample_rate,
-            np.zeros((1, self.environment_parameters.control_signal.shape[-1])),
+            np.arange(self.environment_metadata.control_signal.shape[-1])
+            / self.environment_metadata.sample_rate,
+            np.zeros((1, self.environment_metadata.control_signal.shape[-1])),
             widget=self.prediction_widget.excitation_display_plot,
             other_pen_options={"width": 1},
             names=["Prediction"],
@@ -344,7 +342,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.run_widget.output_signal_plot.getPlotItem().clear()
         self.run_widget.response_signal_plot.getPlotItem().clear()
         self.max_plot_samples = (
-            self.data_acquisition_parameters.sample_rate
+            self.hardware_metadata.sample_rate
             * self.run_widget.display_duration_spinbox.value()
         )
         self.plot_data_items["output_signal_measurement"] = multiline_plotter(
@@ -388,7 +386,7 @@ class TransientUI(SysIdEnvironmentUI):
             if ui_class == self.interactive_control_law_widget.__class__:
                 print("initializing data acquisition and environment parameters")
                 self.interactive_control_law_widget.initialize_parameters(
-                    self.data_acquisition_parameters, self.environment_parameters
+                    self.hardware_metadata, self.environment_metadata
                 )
             else:
                 if self.interactive_control_law_widget is not None:
@@ -401,14 +399,18 @@ class TransientUI(SysIdEnvironmentUI):
                     self.environment_command_queue,
                     self.interactive_control_law_window,
                     self,
-                    self.data_acquisition_parameters,
-                    self.environment_parameters,
+                    self.hardware_metadata,
+                    self.environment_metadata,
                 )
             self.interactive_control_law_window.show()
-        return self.environment_parameters
+        return self.environment_metadata
 
-    def collect_environment_definition_parameters(self):
-        """Collects the metadata defining the environment from the UI widgets"""
+    def get_environment_metadata(self, global_channel_list):
+        if self.hardware_metadata and global_channel_list:
+            channel_list_bools = self.get_channel_list_bools(global_channel_list)
+        else:
+            channel_list_bools = []
+
         if self.python_control_module is None:
             control_module = None
             control_function = None
@@ -428,70 +430,79 @@ class TransientUI(SysIdEnvironmentUI):
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
         return TransientMetadata(
-            len(self.data_acquisition_parameters.channel_list),
-            self.definition_widget.sample_rate_display.value(),
-            self.specification_signal,
-            self.definition_widget.ramp_selector.value(),
-            control_module,
-            control_function,
-            control_function_type,
-            control_function_parameters,
-            self.physical_control_indices,
-            self.physical_output_indices,
-            self.response_transformation_matrix,
-            self.output_transformation_matrix,
+            environment_name=self.environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=self.definition_widget.sample_rate_display.value(),
+            number_of_channels=len(self.hardware_metadata.channel_list),
+            control_signal=self.specification_signal,
+            ramp_time=self.definition_widget.ramp_selector.value(),
+            control_python_script=control_module,
+            control_python_function=control_function,
+            control_python_function_type=control_function_type,
+            control_python_function_parameters=control_function_parameters,
+            control_channel_indices=self.physical_control_indices,
+            output_channel_indices=self.physical_output_indices,
+            response_transformation_matrix=self.response_transformation_matrix,
+            output_transformation_matrix=self.output_transformation_matrix,
         )
 
-    def retrieve_metadata(self, netcdf_handle=None, environment_name=None):
-        group = super().retrieve_metadata(netcdf_handle, environment_name)
+    def set_environment_metadata(self, metadata):
+        """Sets the UI widgets and internal state from a metadata object."""
 
-        # Control channels
-        try:
-            for i in group.variables["control_channel_indices"][...]:
-                item = self.definition_widget.control_channels_selector.item(i)
-                item.setCheckState(Qt.Checked)
-        except KeyError:
-            print(
-                "no variable control_channel_indices, please select control channels manually"
-            )
-        # Other Data
-        try:
-            self.response_transformation_matrix = group.variables[
-                "response_transformation_matrix"
-            ][...].data
-        except KeyError:
-            self.response_transformation_matrix = None
-        try:
-            self.output_transformation_matrix = group.variables[
-                "reference_transformation_matrix"
-            ][...].data
-        except KeyError:
-            self.output_transformation_matrix = None
-        self.define_transformation_matrices(None, dialog=False)
+        # Basic numeric and UI values
+        self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
+        self.definition_widget.ramp_selector.setValue(metadata.ramp_time)
 
-        if (
-            environment_name is None
-        ):  # environment_name is passed when the saved environment doesn't
-            # match the current environment
-            self.definition_widget.ramp_selector.setValue(group.test_level_ramp_time)
-            self.specification_signal = group.variables["control_signal"][...].data
-            self.select_python_module(None, group.control_python_script)
-            index = self.definition_widget.control_function_input.findText(
-                group.control_python_function
+        # Python Control Module Logic
+        if metadata.control_python_script:
+            # Assuming select_python_module triggers the logic to load functions into the UI
+            self.select_python_module(None, metadata.control_python_script)
+
+            # Set the function dropdown
+            func_index = self.definition_widget.control_function_input.findText(
+                metadata.control_python_function
             )
-            if index == -1:
-                index = 0
-                default = self.definition_widget.control_function_input.itemText(index)
-                print(
-                    f'Warning: control function "{group.control_python_function}" '
-                    f'not found, defaulting to "{default}"'
+            if func_index != -1:
+                self.definition_widget.control_function_input.setCurrentIndex(
+                    func_index
                 )
-            self.definition_widget.control_function_input.setCurrentIndex(index)
-            self.definition_widget.control_parameters_text_input.setText(
-                group.control_python_function_parameters
+
+            # Set the generator type selector
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                metadata.control_python_function_type
             )
-            self.setup_specification_table()
-            self.show_signal()
+
+            # Set the parameters text
+            self.definition_widget.control_parameters_text_input.setPlainText(
+                ""
+                if metadata.control_python_function_parameters is None
+                else str(metadata.control_python_function_parameters)
+            )
+
+        # Control Channel Selection (ListWidget/Selector)
+        # First, clear all existing checks
+        for i in range(self.definition_widget.control_channels_selector.count()):
+            self.definition_widget.control_channels_selector.item(i).setCheckState(
+                Qt.Unchecked
+            )
+
+        # Check the indices provided in metadata
+        for control_channel in metadata.control_channel_indices:
+            item = self.definition_widget.control_channels_selector.item(
+                control_channel
+            )
+            if item:
+                item.setCheckState(Qt.Checked)
+
+    def get_environment_instructions(self):
+        test_level = self.run_widget.test_level_selector.value()
+        repeat = self.run_widget.repeat_signal_checkbox.isChecked()
+        instruction = TransientInstructions(self.environment_name, test_level, repeat)
+
+        return instruction
+
+    def set_environment_instructions(self, instructions):
+        return super().set_environment_instructions(instructions)
 
     def set_parameters_from_template(self, worksheet):
         self.definition_widget.ramp_selector.setValue(float(worksheet.cell(3, 2).value))
@@ -915,7 +926,7 @@ class TransientUI(SysIdEnvironmentUI):
         """Plots the control predictions based on the currently selected item"""
         times = (
             np.arange(self.specification_signal.shape[-1])
-            / self.data_acquisition_parameters.sample_rate
+            / self.hardware_metadata.sample_rate
         )
         index = self.prediction_widget.excitation_selector.currentIndex()
         self.plot_data_items["excitation_prediction"][0].setData(
@@ -972,53 +983,9 @@ class TransientUI(SysIdEnvironmentUI):
     # endregion
 
     # region Run
-    def start_control(self):
-        """Starts the chain of events to start the environment"""
-        self.controller_communication_queue.put(
-            self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
-        )
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                TransientCommands.START_CONTROL,
-                (
-                    db2scale(self.run_widget.test_level_selector.value()),
-                    self.run_widget.repeat_signal_checkbox.isChecked(),
-                ),
-            ),
-        )
-        if self.run_widget.test_level_selector.value() >= 0:
-            self.controller_communication_queue.put(
-                self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
-            )
-        for item in self.plot_data_items["control_signal_measurement"]:
-            item.clear()
-        for item in self.plot_data_items["output_signal_measurement"]:
-            item.clear()
-
-    def stop_control(self):
-        """Starts the sequence of events to stop the controller prematurely"""
-        self.environment_command_queue.put(
-            self.log_name, (TransientCommands.STOP_CONTROL, None)
-        )
-
-    def change_test_level_from_profile(self, test_level):
-        """Updates the test level based on a profile event"""
-        self.run_widget.test_level_selector.setValue(int(test_level))
-
-    def set_repeat_from_profile(self, data):  # pylint: disable=unused-argument
-        """Sets whether or not to repeat the signal based on profile events"""
-        self.run_widget.repeat_signal_checkbox.setChecked(True)
-
-    def set_norepeat_from_profile(self, data):  # pylint: disable=unused-argument
-        """Sets whether or not to repeat the signal based on profile events"""
-        self.run_widget.repeat_signal_checkbox.setChecked(False)
-
     def set_display_duration(self, value):
         """Updates the display duration in the UI"""
-        self.max_plot_samples = int(
-            self.data_acquisition_parameters.sample_rate * value
-        )
+        self.max_plot_samples = int(self.hardware_metadata.sample_rate * value)
 
     def create_window(
         self, event, control_index=None
@@ -1039,8 +1006,8 @@ class TransientUI(SysIdEnvironmentUI):
             PlotTimeWindow(
                 None,
                 control_index,
-                self.environment_parameters.control_signal,
-                self.data_acquisition_parameters.sample_rate,
+                self.environment_metadata.control_signal,
+                self.hardware_metadata.sample_rate,
                 self.run_widget.control_channel_selector.itemText(control_index),
             )
         )
@@ -1049,7 +1016,7 @@ class TransientUI(SysIdEnvironmentUI):
 
     def show_all_channels(self):
         """Creates a subwindow for each ASD in the CPSD matrix"""
-        for i in range(self.environment_parameters.control_signal.shape[0]):
+        for i in range(self.environment_metadata.control_signal.shape[0]):
             self.create_window(None, i)
         self.tile_windows()
 
@@ -1124,7 +1091,7 @@ class TransientUI(SysIdEnvironmentUI):
             ["abort_level", str],
         ]
         global_data_parameters: HardwareMetadata
-        global_data_parameters = self.data_acquisition_parameters
+        global_data_parameters = self.hardware_metadata
         netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
             filename, "w", format="NETCDF4", clobber=True
         )
@@ -1203,13 +1170,13 @@ class TransientUI(SysIdEnvironmentUI):
                 var[i] = cd
         # Save the environment to the file
         group_handle = netcdf_handle.createGroup(self.environment_name)
-        self.environment_parameters.store_to_netcdf(group_handle)
+        self.environment_metadata.store_to_netcdf(group_handle)
         # Create Variables for Spectral Data
         group_handle.createDimension(
             "drive_channels", self.last_transfer_function.shape[2]
         )
         group_handle.createDimension(
-            "fft_lines", self.environment_parameters.sysid_frame_size // 2 + 1
+            "fft_lines", self.environment_metadata.sysid_frame_size // 2 + 1
         )
         var = group_handle.createVariable(
             "frf_data_real",
@@ -1281,6 +1248,9 @@ class TransientUI(SysIdEnvironmentUI):
         var[...] = self.last_output_data
         netcdf_handle.close()
 
+    # endregion
+
+    # region Commands
     def display_environment_ended(self):
         """Enables or disables the buttons to start control if it's already running"""
         for widget in [
@@ -1302,6 +1272,28 @@ class TransientUI(SysIdEnvironmentUI):
         for widget in [self.run_widget.stop_test_button]:
             widget.setEnabled(True)
 
+    def start_control(self):
+        """Starts the chain of events to start the environment"""
+        self.controller_communication_queue.put(
+            self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
+        )
+        self.environment_command_queue.put(
+            self.log_name,
+            (
+                TransientCommands.START_CONTROL,
+                (
+                    db2scale(self.run_widget.test_level_selector.value()),
+                    self.run_widget.repeat_signal_checkbox.isChecked(),
+                ),
+            ),
+        )
+
+    def stop_control(self):
+        """Starts the sequence of events to stop the controller prematurely"""
+        self.environment_command_queue.put(
+            self.log_name, (TransientCommands.STOP_CONTROL, None)
+        )
+
     def start_environment(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""
         for widget in [
@@ -1310,6 +1302,11 @@ class TransientUI(SysIdEnvironmentUI):
             self.run_widget.start_test_button,
         ]:
             widget.setEnabled(False)
+
+        for item in self.plot_data_items["control_signal_measurement"]:
+            item.clear()
+        for item in self.plot_data_items["output_signal_measurement"]:
+            item.clear()
 
         super().start_environment()
         self.rattlesnake.environment_at_target_level(self.environment_name)
@@ -1333,9 +1330,18 @@ class TransientUI(SysIdEnvironmentUI):
     def stop_environment_ready(self):
         return super().stop_environment_ready()
 
-    # endregion
+    def change_test_level_from_profile(self, test_level):
+        """Updates the test level based on a profile event"""
+        self.run_widget.test_level_selector.setValue(int(test_level))
 
-    # region Commands
+    def set_repeat_from_profile(self, data):  # pylint: disable=unused-argument
+        """Sets whether or not to repeat the signal based on profile events"""
+        self.run_widget.repeat_signal_checkbox.setChecked(True)
+
+    def set_norepeat_from_profile(self, data):  # pylint: disable=unused-argument
+        """Sets whether or not to repeat the signal based on profile events"""
+        self.run_widget.repeat_signal_checkbox.setChecked(False)
+
     def update_gui(self, queue_data):
         if super().update_gui(queue_data):
             return
@@ -1356,9 +1362,7 @@ class TransientUI(SysIdEnvironmentUI):
                         if np.min(y) < min_y:
                             min_y = np.min(y)
                         if self.max_plot_samples == x.size:
-                            x += (
-                                this_data.size
-                            ) / self.data_acquisition_parameters.sample_rate
+                            x += (this_data.size) / self.hardware_metadata.sample_rate
                             y = np.roll(y, -this_data.size)
                             y[-this_data.size :] = this_data
                         else:
@@ -1368,7 +1372,7 @@ class TransientUI(SysIdEnvironmentUI):
                                     x[-1]
                                     + (
                                         (1 + np.arange(this_data.size))
-                                        / self.data_acquisition_parameters.sample_rate
+                                        / self.hardware_metadata.sample_rate
                                     ),
                                 ),
                                 axis=0,
@@ -1377,7 +1381,7 @@ class TransientUI(SysIdEnvironmentUI):
                     else:
                         x = (
                             np.arange(this_data.size)
-                            / self.data_acquisition_parameters.sample_rate
+                            / self.hardware_metadata.sample_rate
                         )
                         y = this_data
                     curve.setData(
@@ -1390,9 +1394,7 @@ class TransientUI(SysIdEnvironmentUI):
                     x, y = curve.getOriginalDataset()
                     if y is not None:
                         if self.max_plot_samples == x.size:
-                            x += (
-                                this_output.size
-                            ) / self.data_acquisition_parameters.sample_rate
+                            x += (this_output.size) / self.hardware_metadata.sample_rate
                             y = np.roll(y, -this_output.size)
                             y[-this_output.size :] = this_output
                         else:
@@ -1402,7 +1404,7 @@ class TransientUI(SysIdEnvironmentUI):
                                     x[-1]
                                     + (
                                         (1 + np.arange(this_output.size))
-                                        / self.data_acquisition_parameters.sample_rate
+                                        / self.hardware_metadata.sample_rate
                                     ),
                                 ),
                                 axis=0,
@@ -1411,7 +1413,7 @@ class TransientUI(SysIdEnvironmentUI):
                     else:
                         x = (
                             np.arange(this_output.size)
-                            / self.data_acquisition_parameters.sample_rate
+                            / self.hardware_metadata.sample_rate
                         )
                         y = this_output
                     curve.setData(
@@ -1431,10 +1433,7 @@ class TransientUI(SysIdEnvironmentUI):
                     self.last_control_data,
                 ):
                     x, y = curve.getOriginalDataset()
-                    x = (
-                        np.arange(this_data.size)
-                        / self.data_acquisition_parameters.sample_rate
-                    )
+                    x = np.arange(this_data.size) / self.hardware_metadata.sample_rate
                     y = this_data
                     curve.setData(x, y)
                 # Display the data
@@ -1443,21 +1442,18 @@ class TransientUI(SysIdEnvironmentUI):
                     self.last_output_data,
                 ):
                     x, y = curve.getOriginalDataset()
-                    x = (
-                        np.arange(this_output.size)
-                        / self.data_acquisition_parameters.sample_rate
-                    )
+                    x = np.arange(this_output.size) / self.hardware_metadata.sample_rate
                     y = this_output
                     curve.setData(x, y)
-                sr = self.data_acquisition_parameters.sample_rate
+                sr = self.hardware_metadata.sample_rate
                 self.plot_data_items["signal_range"].setData(
                     np.array(
                         (
                             0,
                             0,
-                            (self.environment_parameters.control_signal.shape[-1] - 1)
+                            (self.environment_metadata.control_signal.shape[-1] - 1)
                             / sr,
-                            (self.environment_parameters.control_signal.shape[-1] - 1)
+                            (self.environment_metadata.control_signal.shape[-1] - 1)
                             / sr,
                             0,
                         )
@@ -1478,8 +1474,12 @@ class TransientUI(SysIdEnvironmentUI):
             case ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE:
                 if self.interactive_control_law_widget is not None:
                     self.interactive_control_law_widget.update_ui_control(data)
-            case TransientUICommands.ENABLE_CONTROL:
-                self.enable_control(True)
+            case TransientCommands.SET_TEST_LEVEL:
+                self.change_test_level_from_profile()
+            case TransientCommands.SET_REPEAT:
+                self.set_repeat_from_profile()
+            case TransientCommands.SET_NO_REPEAT:
+                self.set_norepeat_from_profile()
             case UICommands.ENABLE:
                 widget = None
                 for parent in [

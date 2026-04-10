@@ -525,6 +525,8 @@ class Environment(ABC):
         environment_metadata : EnvironmentMetadata
             A container containing the parameters defining the environment.
         """
+        self.environment_name = environment_metadata.environment_name
+        self.environment_metadata = environment_metadata
         self.set_ready()
 
     # endregion

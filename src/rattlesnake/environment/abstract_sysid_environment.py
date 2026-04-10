@@ -485,8 +485,11 @@ class SysIdEnvironment(Environment):
             A container containing the parameters defining the environment
 
         """
-        self.environment_metadata = environment_metadata
-        self.set_ready()
+        self.data_analysis_command_queue.put(
+            self.environment_name,
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_name),
+        )
+        super().initialize_environment(environment_metadata)
 
     @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
@@ -723,6 +726,25 @@ class SysIdEnvironment(Environment):
         self.data_analysis_command_queue.put(
             self.environment_name,
             (SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, sysid_data),
+        )
+
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (
+                    SysIdDataAnalysisUICommands.SYSID_UPDATE,
+                    (
+                        sysid_data.sysid_frames,
+                        sysid_data.sysid_frames,
+                        sysid_data.frequencies,
+                        sysid_data.sysid_frf,
+                        sysid_data.sysid_coherence,
+                        sysid_data.sysid_response_cpsd,
+                        sysid_data.sysid_reference_cpsd,
+                        sysid_data.sysid_condition,
+                    ),
+                ),
+            )
         )
 
         # This seems counterintuitive but lots of environments overwrite the
