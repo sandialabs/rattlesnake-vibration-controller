@@ -502,7 +502,8 @@ class TransientUI(SysIdEnvironmentUI):
         return instruction
 
     def set_environment_instructions(self, instructions):
-        return super().set_environment_instructions(instructions)
+        self.run_widget.test_level_selector.setValue(instructions.test_level)
+        self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
 
     def set_parameters_from_template(self, worksheet):
         self.definition_widget.ramp_selector.setValue(float(worksheet.cell(3, 2).value))
