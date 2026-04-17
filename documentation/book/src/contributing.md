@@ -177,7 +177,7 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
-The separate the concerns of test, build, release, and publish are contained in the `.github/workflows/` files.
+The separate the concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
 
 * **Continuous Integration (CI)**
   * **Test (Verification)**
