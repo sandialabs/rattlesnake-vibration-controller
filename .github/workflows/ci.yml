@@ -8,12 +8,12 @@ on:
       - main
       - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
     # Only trigger if files in these paths change
-    paths:
-      - 'src/**'                    # Any source code changes
-      - 'pyproject.toml'            # Any dependency changes
-      - 'uv.lock'                   # Any locked version changes
-      - '.github/workflows/ci.yml'  # Changes to the workflow itself
-      - 'src/rattlesnake/cicd/**'   # Changes to your reporting scripts
+    # paths:
+    #   - 'src/**'                    # Any source code changes
+    #   - 'pyproject.toml'            # Any dependency changes
+    #   - 'uv.lock'                   # Any locked version changes
+    #   - '.github/workflows/ci.yml'  # Changes to the workflow itself
+    #   - 'src/rattlesnake/cicd/**'   # Changes to your reporting scripts
   pull_request:
     branches:
       - main
