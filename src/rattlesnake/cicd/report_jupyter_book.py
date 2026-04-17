@@ -115,12 +115,12 @@ def main() -> int:
             args.github_repo,
         )
         update_myst_file(args.myst_file, footer_md)
-        print(f"✅ Successfully updated Jupyter Book metadata in {args.myst_file}")
+        print(f"[OK] Successfully updated Jupyter Book metadata in {args.myst_file}")
     except (FileNotFoundError, IOError) as e:
-        print(f"❌ File Error: {e}")
+        print(f"[X] File Error: {e}")
         return 1
     except ValueError as e:  # Catch potential parsing errors
-        print(f"❌ Input Error: {e}")
+        print(f"[X] Input Error: {e}")
         return 1
     return 0
 
