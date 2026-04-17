@@ -18,12 +18,13 @@ on:
     branches:
       - main
       - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-    paths:
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/ci.yml'
-      - 'src/rattlesnake/cicd/**'
+    # Only trigger if files in these paths change
+    # paths:
+    #   - 'src/**'
+    #   - 'pyproject.toml'
+    #   - 'uv.lock'
+    #   - '.github/workflows/ci.yml'
+    #   - 'src/rattlesnake/cicd/**'
 
 
 # Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
