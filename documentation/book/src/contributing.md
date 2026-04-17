@@ -67,11 +67,11 @@ deactivate
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
 
-Now that your have a virtual environment, you are read to populate that virtual environment with libraries specific to your virtual environment.
+Now that you have a virtual environment, you are ready to populate it with libraries specific to the project.
 
 ## Documentation
 
-The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Following are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
+The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Below are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
 
 Install documentation dependencies either with `pip`
 
@@ -87,10 +87,6 @@ uv add "jupyter-book"
 
 ### Local Build
 
-```sh
-cd rattlesnake-vibration-controller/documentation
-```
-
 Within this `documentation` folder, the `myst.yml` file specifies how Jupyter Book should build the documentation.  Importantly, it links to Markdown files that contain the book's content.
 
 ```sh
@@ -104,7 +100,7 @@ This will build the Jupyter Book documentation.
 The foregoing command may not work behind a corporate firewall.
 ```
 
-The output will be similar to this:
+The output will be similar to:
 
 ```sh
 building myst-cli session with API URL: https://api.mystmd.org
@@ -181,18 +177,18 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
-The separate the concerns of test, build, release, and publish are contained in the `.github/workflows/` files.
+The separate the concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
 
 * **Continuous Integration (CI)**
   * **Test (Verification)**
     * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
     * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
-    * **What happens:** Automated tool run unit tests, integration tests, and code quality assessments.
+    * **What happens:** Automated tool run unit tests, integration tests, and code quality assessments are performed.
       * **Testing** (e.g., [pytest](https://docs.pytest.org/en/stable/)) runs your unit and integration tests.
-      * **Code coverage** (e.g., pytest with a coverage report) assess number of lines of code covered by tests.
+      * **Code coverage** (e.g., pytest with a coverage report) assesses number of lines of code covered by tests.
       * **Linting** (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and 
-      * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks assure code consistency.
-      *  **Documentation** may also be assembled and compiled.  This is particularly imporant for interactive documentation that has examples that depend on source code functionality.
+      * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks ensure code consistency.
+      *  **Documentation** may also be assembled and compiled.  This is particularly important for interactive documentation that has examples that depend on source code functionality.
     * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
   * **Build (Packaging)**
     * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
