@@ -25,7 +25,16 @@ on:
     #   - 'uv.lock'
     #   - '.github/workflows/ci.yml'
     #   - 'src/rattlesnake/cicd/**'
-
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Testing level (small | full)'
+        required: true
+        default: 'small'
+        type: choice
+        options:
+          - small
+          - full
 
 # Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
 concurrency:
@@ -83,7 +92,22 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest -v
+          # Detect message from Push OR Pull Request
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          
+          # Root tests + short tests should likely be the default "small" suite
+          TEST_PATHS="tests/*.py tests/short"
+          
+          if [[ "$COMMIT_MSG" == *"[full ci]"* ]] || [[ "${{ github.event.inputs.test_level }}" == "full" ]]; then
+            echo "🚀 FULL CI MODE: Including heavy simulations from tests/long"
+            # In full mode, just run the whole tests directory
+            TEST_PATHS="tests"
+          else
+            echo "⏱️ SMALL CI MODE: Running core tests and tests/short only"
+          fi
+          
+          # Execute pytest on selected directories
+          python -m pytest -vs $TEST_PATHS
 
   lint:
     runs-on: ubuntu-latest
@@ -168,7 +192,18 @@ jobs:
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          # Match logic from pytest_matrix
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          TEST_PATHS="tests/*.py tests/short"
+          
+          if [[ "$COMMIT_MSG" == *"[full ci]"* ]] || [[ "${{ github.event.inputs.test_level }}" == "full" ]]; then
+            echo "🚀 FULL CI MODE: Including heavy simulations for coverage"
+            TEST_PATHS="tests"
+          else
+            echo "⏱️ SMALL CI MODE: Running core tests for coverage"
+          fi
+
+          uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
           uv run python src/rattlesnake/cicd/report_coverage.py \
             --input_file coverage.xml \
