@@ -91,6 +91,7 @@ jobs:
           python -m pip install .[dev]
 
       - name: Run tests
+        shell: bash
         run: |
           # Detect message from Push OR Pull Request
           COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
