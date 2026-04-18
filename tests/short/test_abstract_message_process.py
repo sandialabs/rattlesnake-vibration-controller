@@ -1,11 +1,15 @@
+"""
+Tests for Abstract Message Process
+
+This module contains tests for the AbstractMessageProcess class, verifying
+initialization, logging, command mapping, and the main run loop.
+"""
+
 import multiprocessing as mp
 from unittest import mock
-
 import pytest
+
 from functions.common_functions import fake_time
-
-# from PyQt5 import QtWidgets  # comment out unused import
-
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
@@ -13,24 +17,36 @@ from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 # Create log_file_queue
 @pytest.fixture()
 def log_file_queue():
+    """
+    Fixture for a log file queue.
+    """
     return mp.Queue()
 
 
 # Create command queue
 @pytest.fixture()
 def abstract_command_queue(log_file_queue):
+    """
+    Fixture for an abstract command queue.
+    """
     return VerboseMessageQueue(log_file_queue, "Abstract Command Queue")
 
 
 # Create Gui update queue
 @pytest.fixture()
 def gui_update_queue():
+    """
+    Fixture for a GUI update queue.
+    """
     return mp.Queue()
 
 
 # Initialize an AbstractMessageProcess
 @pytest.fixture()
 def abstract_message_process(log_file_queue, abstract_command_queue, gui_update_queue):
+    """
+    Fixture for an AbstractMessageProcess instance.
+    """
     return AbstractMessageProcess(
         "Process Name", log_file_queue, abstract_command_queue, gui_update_queue
     )
@@ -38,6 +54,9 @@ def abstract_message_process(log_file_queue, abstract_command_queue, gui_update_
 
 # Test
 def test_abstract_message_process_init(log_file_queue, abstract_command_queue, gui_update_queue):
+    """
+    Test the initialization of the AbstractMessageProcess class.
+    """
     abstract_message_process = AbstractMessageProcess(
         "Process Name", log_file_queue, abstract_command_queue, gui_update_queue
     )
@@ -64,6 +83,9 @@ def test_abstract_message_process_init(log_file_queue, abstract_command_queue, g
 # Replace date and time with a string
 @mock.patch("rattlesnake.process.abstract_message_process.datetime")
 def test_abstract_message_process_log(mock_time, mock_put, abstract_message_process):
+    """
+    Test the logging functionality of the AbstractMessageProcess class.
+    """
     message = "Test Message"
     mock_time.now = fake_time
 
@@ -75,6 +97,9 @@ def test_abstract_message_process_log(mock_time, mock_put, abstract_message_proc
 
 # Test if the quit function works
 def test_abstract_message_process_quit(abstract_message_process):
+    """
+    Test the quit functionality of the AbstractMessageProcess class.
+    """
     data = abstract_message_process.quit(None)
 
     # Test that the quit function returns True
@@ -83,6 +108,9 @@ def test_abstract_message_process_quit(abstract_message_process):
 
 # Test the map_command function
 def test_abstract_message_process_map_command(abstract_message_process):
+    """
+    Test the mapping of custom commands to the AbstractMessageProcess.
+    """
     # Create custom key and function
     key = "Test Key"
 
@@ -113,6 +141,9 @@ def test_abstract_message_process_map_command(abstract_message_process):
 def test_abstract_message_process_run(
     mock_log, mock_get, mock_function, mock_key, abstract_message_process
 ):
+    """
+    Test the main run loop of the AbstractMessageProcess class.
+    """
     # Create a command_map
     abstract_message_process._command_map = {
         mock_key: mock_function,

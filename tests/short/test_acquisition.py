@@ -1,36 +1,56 @@
-from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.utilities import (
-    VerboseMessageQueue,
-    QueueContainer,
-    DataAcquisitionParameters,
-    Channel,
-    GlobalCommands,
-)
-from rattlesnake.process.acquisition import AcquisitionProcess, acquisition_process
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition
-from rattlesnake.user_interface.ui_utilities import UICommands
-from functions.common_functions import create_hardware_dict_acquisition
-from functions.acquisition_functions import create_acquire_log_calls
-from unittest import mock
+"""
+Tests for Acquisition Process
+
+This module contains tests for the AcquisitionProcess class, verifying its
+initialization, hardware initialization, streaming control, and data
+acquisition logic.
+"""
+
 import multiprocessing as mp
-import pytest
+from unittest import mock
+
 import numpy as np
+import pytest
+
+from functions.acquisition_functions import create_acquire_log_calls
+from functions.common_functions import create_hardware_dict_acquisition
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.process.acquisition import AcquisitionProcess, acquisition_process
+from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import (
+    Channel,
+    DataAcquisitionParameters,
+    GlobalCommands,
+    QueueContainer,
+    VerboseMessageQueue,
+)
+
+# from rattlesnake.hardware.abstract_hardware import HardwareAcquisition  # unused import
 
 
 # Create log_file_queue
 @pytest.fixture
 def log_file_queue():
+    """
+    Fixture for a log file queue.
+    """
     return mp.Queue()
 
 
 @pytest.fixture
 def hardware_dict():
+    """
+    Fixture for the acquisition hardware dictionary.
+    """
     return create_hardware_dict_acquisition()
 
 
 # Create modal environment type
 @pytest.fixture
 def environments():
+    """
+    Fixture for environment types.
+    """
     control_type = ControlTypes(6)
     return [[control_type, control_type.name.title()]]
 
@@ -38,6 +58,9 @@ def environments():
 # Create queue_container
 @pytest.fixture
 def queue_container(log_file_queue):
+    """
+    Fixture for a QueueContainer instance.
+    """
     queue_container = QueueContainer(
         VerboseMessageQueue(log_file_queue, "Controller Communication Queue"),
         VerboseMessageQueue(log_file_queue, "Acquisition Command Queue"),
@@ -56,6 +79,9 @@ def queue_container(log_file_queue):
 
 @pytest.fixture
 def acquisition_process_obj(queue_container, environments):
+    """
+    Fixture for an AcquisitionProcess instance.
+    """
     acquisition_process = AcquisitionProcess(
         "Process Name", queue_container, environments, mp.Value("i", 0)
     )
@@ -64,11 +90,17 @@ def acquisition_process_obj(queue_container, environments):
 
 @pytest.fixture
 def environment_channels():
+    """
+    Fixture for environment channel booleans.
+    """
     return [[True]]
 
 
 @pytest.fixture
 def channel_list():
+    """
+    Fixture for a list of Channel objects.
+    """
     return [
         Channel.from_channel_table_row(
             [
@@ -127,6 +159,9 @@ def channel_list():
 
 @pytest.fixture()
 def data_acquisition_parameters(channel_list):
+    """
+    Fixture for a DataAcquisitionParameters instance.
+    """
     sample_rate = 2000
     time_per_read = 0.25
     time_per_write = 0.25
@@ -158,6 +193,9 @@ def data_acquisition_parameters(channel_list):
 
 # Test AcquisitonProcess initialization
 def test_acquisition_process_init(queue_container, environments):
+    """
+    Test the initialization of the AcquisitionProcess class.
+    """
     acquisition_process = AcquisitionProcess(
         "Process Name", queue_container, environments, mp.Value("i", 0)
     )
@@ -183,6 +221,9 @@ def test_acquisition_process_initialize_data_acquisition(
     environment_channels,
     acquisition_process_obj,
 ):
+    """
+    Test the hardware initialization within AcquisitionProcess.
+    """
     data_acquisition_parameters.hardware = hardware_idx
 
     with mock.patch(hardware_dict[hardware_idx]) as mock_hardware:
@@ -208,8 +249,12 @@ def test_acquisition_process_initialize_data_acquisition(
     np.testing.assert_array_almost_equal(acquisition_process_obj.read_data, np.zeros((2, 2000)))
 
 
+# #TODO: CBH to ask Dan why this test takes hangs on CBH computer.
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_stop_environment(mock_log, acquisition_process_obj):
+    """
+    Test stopping an environment within AcquisitionProcess.
+    """
     data = "Modal"
 
     mock_hardware = mock.MagicMock()
@@ -223,6 +268,9 @@ def test_acquisition_process_stop_environment(mock_log, acquisition_process_obj)
 @pytest.mark.parametrize("prev_streamed", [True, False])
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 def test_acqusition_process_start_streaming(mock_put, prev_streamed, acquisition_process_obj):
+    """
+    Test starting data streaming.
+    """
     acquisition_process_obj.has_streamed = prev_streamed
     acquisition_process_obj.start_streaming(None)
     if prev_streamed:
@@ -232,6 +280,9 @@ def test_acqusition_process_start_streaming(mock_put, prev_streamed, acquisition
 
 
 def test_acquisition_process_stop_streaming(acquisition_process_obj):
+    """
+    Test stopping data streaming.
+    """
     acquisition_process_obj.stop_streaming(None)
 
     assert acquisition_process_obj.streaming == False
@@ -256,6 +307,9 @@ def test_acquisition_acquire_signal(
     mock_align,
     acquisition_process_obj,
 ):
+    """
+    Test the main signal acquisition logic.
+    """
     mock_get.side_effect = [("Modal", None), (None, None)]
     mock_time.side_effect = [0, 10, 20]
     mock_hardware = mock.MagicMock()
@@ -287,6 +341,9 @@ def test_acquisition_acquire_signal(
 
 
 def test_add_data_to_buffer(acquisition_process_obj):
+    """
+    Test adding acquired data to the internal buffer.
+    """
     data = np.zeros((1, 100))
     acquisition_process_obj.read_data = np.zeros((1, 100))
     acquisition_process_obj.add_data_to_buffer(data)
@@ -299,6 +356,9 @@ def test_add_data_to_buffer(acquisition_process_obj):
 def test_acquisition_process_get_first_output_data(
     mock_log, mock_flush, queue_container, acquisition_process_obj
 ):
+    """
+    Test synchronization with the first output data.
+    """
     mock_flush.return_value = [("Modal", "Data")]
 
     acquisition_process_obj.get_first_output_data()
@@ -310,6 +370,9 @@ def test_acquisition_process_get_first_output_data(
 
 
 def test_acquisition_process_stop_acquisition(acquisition_process_obj):
+    """
+    Test triggering acquisition shutdown.
+    """
     acquisition_process_obj.stop_acquisition(None)
 
     assert acquisition_process_obj.shutdown_flag == True
@@ -318,6 +381,9 @@ def test_acquisition_process_stop_acquisition(acquisition_process_obj):
 @mock.patch("rattlesnake.process.acquisition.flush_queue")
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.log")
 def test_acquisition_process_quit(mock_log, mock_flush, acquisition_process_obj):
+    """
+    Test the quit functionality of the AcquisitionProcess.
+    """
     mock_hardware = mock.MagicMock()
     acquisition_process_obj.hardware = mock_hardware
 
@@ -331,6 +397,9 @@ def test_acquisition_process_quit(mock_log, mock_flush, acquisition_process_obj)
 # Prevent the run while loop from starting
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_acquisition_process_func(mock_run, queue_container, environments):
+    """
+    Test the standalone acquisition_process function that spawns the class.
+    """
     acquisition_process(queue_container, environments, mp.Value("i", 0))
 
     # Test that the run function was called

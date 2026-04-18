@@ -1,3 +1,11 @@
+"""
+Signal Generation Helper Functions for Testing
+
+This module provides functions to generate various types of signals (square,
+sine, chirp, random, etc.) and their corresponding expected (assertion) data
+for verification in tests.
+"""
+
 from rattlesnake.process.signal_generation import (
     RandomSignalGenerator,
     BurstRandomSignalGenerator,
@@ -11,6 +19,15 @@ import scipy.signal as sig
 
 
 def generate_square_signal(argument_dict):
+    """
+    Generate a SquareSignalGenerator object.
+
+    Args:
+        argument_dict (dict): Parameters for the square signal generator.
+
+    Returns:
+        SquareSignalGenerator: The initialized signal generator.
+    """
     signal_generator = SquareSignalGenerator(
         level=argument_dict["level"],
         sample_rate=argument_dict["sample_rate"],
@@ -26,6 +43,15 @@ def generate_square_signal(argument_dict):
 
 
 def generate_assert_square_signal(argument_dict):
+    """
+    Generate the expected assertion data for a square signal.
+
+    Args:
+        argument_dict (dict): Parameters defining the square signal.
+
+    Returns:
+        np.ndarray: The expected square signal data.
+    """
     amplitude = np.broadcast_to(argument_dict["level"], (argument_dict["num_signals"], 1)).copy()
     frequency = np.array(argument_dict["frequency"], dtype=float)
     time = np.arange(
@@ -45,6 +71,15 @@ def generate_assert_square_signal(argument_dict):
 
 
 def generate_sine_signal(argument_dict):
+    """
+    Generate a SineSignalGenerator object.
+
+    Args:
+        argument_dict (dict): Parameters for the sine signal generator.
+
+    Returns:
+        SineSignalGenerator: The initialized signal generator.
+    """
     signal_generator = SineSignalGenerator(
         level=argument_dict["level"],
         sample_rate=argument_dict["sample_rate"],
@@ -59,6 +94,15 @@ def generate_sine_signal(argument_dict):
 
 
 def generate_assert_sine_signal(argument_dict):
+    """
+    Generate the expected assertion data for a sine signal.
+
+    Args:
+        argument_dict (dict): Parameters defining the sine signal.
+
+    Returns:
+        np.ndarray: The expected sine signal data.
+    """
     amplitude = np.broadcast_to(argument_dict["level"], (argument_dict["num_signals"], 1)).copy()
     frequency = np.array(argument_dict["frequency"], dtype=float)
     time = np.arange(
@@ -73,6 +117,15 @@ def generate_assert_sine_signal(argument_dict):
 
 
 def generate_chirp_signal(argument_dict):
+    """
+    Generate a ChirpSignalGenerator object.
+
+    Args:
+        argument_dict (dict): Parameters for the chirp signal generator.
+
+    Returns:
+        ChirpSignalGenerator: The initialized signal generator.
+    """
     signal_generator = ChirpSignalGenerator(
         level=argument_dict["level"],
         sample_rate=argument_dict["sample_rate"],
@@ -87,6 +140,15 @@ def generate_chirp_signal(argument_dict):
 
 
 def generate_assert_chirp_signal(argument_dict):
+    """
+    Generate the expected assertion data for a chirp signal.
+
+    Args:
+        argument_dict (dict): Parameters defining the chirp signal.
+
+    Returns:
+        np.ndarray: The expected chirp signal data.
+    """
     amplitude = argument_dict["level"]
     time = np.arange(
         argument_dict["num_samples_per_frame"] * argument_dict["output_oversample"]
@@ -106,6 +168,15 @@ def generate_assert_chirp_signal(argument_dict):
 
 
 def generate_random_signal(argument_dict):
+    """
+    Generate a RandomSignalGenerator object.
+
+    Args:
+        argument_dict (dict): Parameters for the random signal generator.
+
+    Returns:
+        RandomSignalGenerator: The initialized signal generator.
+    """
     signal_generator = RandomSignalGenerator(
         rms=argument_dict["rms"],
         sample_rate=argument_dict["sample_rate"],
@@ -118,17 +189,21 @@ def generate_random_signal(argument_dict):
         cola_exponent=argument_dict["cola_exponent"],
         output_oversample=argument_dict["output_oversample"],
     )
-    # frame_output_samples = int(argument_dict["num_samples_per_frame"]*argument_dict["output_oversample"])
-    # data = signal_generator.generate_frame()[0]
-    # while data.shape[-1] < frame_output_samples:
-    #     data = np.concatenate((data,signal_generator.generate_frame()[0]),axis=-1)
-    # data = data[...,:frame_output_samples]
-    # times = np.arange(frame_output_samples)/(argument_dict["sample_rate"]*argument_dict["output_oversample"])
 
     return signal_generator
 
 
 def generate_random_queue(argument_dict, cola_queue):
+    """
+    Generate expected random signal data and update the COLA queue.
+
+    Args:
+        argument_dict (dict): Parameters for random signal generation.
+        cola_queue (np.ndarray): The current COLA queue.
+
+    Returns:
+        tuple: (assert_data, updated_cola_queue)
+    """
     signal = argument_dict["rms"] * np.random.randn(
         argument_dict["num_signals"],
         argument_dict["num_samples_per_frame"] * argument_dict["output_oversample"],
@@ -176,6 +251,15 @@ def generate_random_queue(argument_dict, cola_queue):
 
 
 def generate_burst_random_signal(argument_dict):
+    """
+    Generate a BurstRandomSignalGenerator object.
+
+    Args:
+        argument_dict (dict): Parameters for the burst random signal generator.
+
+    Returns:
+        BurstRandomSignalGenerator: The initialized signal generator.
+    """
     signal_generator = BurstRandomSignalGenerator(
         rms=argument_dict["rms"],
         sample_rate=argument_dict["sample_rate"],
@@ -188,15 +272,19 @@ def generate_burst_random_signal(argument_dict):
         output_oversample=argument_dict["output_oversample"],
     )
 
-    # frame_output_samples = int(
-    #     argument_dict["num_samples_per_frame"]*argument_dict["output_oversample"])
-    # times = np.arange(frame_output_samples) / \
-    #     (argument_dict["sample_rate"]*argument_dict["output_oversample"])
-
     return signal_generator
 
 
 def generate_assert_burst_random_signal(argument_dict):
+    """
+    Generate the expected assertion data for a burst random signal.
+
+    Args:
+        argument_dict (dict): Parameters defining the burst random signal.
+
+    Returns:
+        np.ndarray: The expected burst random signal data.
+    """
     signal = argument_dict["rms"] * np.random.randn(
         argument_dict["num_signals"],
         argument_dict["num_samples_per_frame"] * argument_dict["output_oversample"],
@@ -237,6 +325,15 @@ def generate_assert_burst_random_signal(argument_dict):
 
 
 def generate_pseudorandom_signal(argument_dict):
+    """
+    Generate a PseudorandomSignalGenerator object.
+
+    Args:
+        argument_dict (dict): Parameters for the pseudorandom signal generator.
+
+    Returns:
+        PseudorandomSignalGenerator: The initialized signal generator.
+    """
     signal_generator = PseudorandomSignalGenerator(
         rms=argument_dict["rms"],
         sample_rate=argument_dict["sample_rate"],
@@ -251,6 +348,15 @@ def generate_pseudorandom_signal(argument_dict):
 
 
 def generate_assert_pseudorandom_signal(argument_dict):
+    """
+    Generate the expected assertion data for a pseudorandom signal.
+
+    Args:
+        argument_dict (dict): Parameters defining the pseudorandom signal.
+
+    Returns:
+        np.ndarray: The expected pseudorandom signal data.
+    """
     freq = np.fft.rfftfreq(
         argument_dict["num_samples_per_frame"] * argument_dict["output_oversample"],
         1 / (argument_dict["sample_rate"] * argument_dict["output_oversample"]),
