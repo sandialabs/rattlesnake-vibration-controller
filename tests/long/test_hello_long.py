@@ -1,6 +1,6 @@
 """This is a minimum working example of a test framework."""
 
-import pytest
+# import pytest  # unused import
 
 from rattlesnake import hello
 

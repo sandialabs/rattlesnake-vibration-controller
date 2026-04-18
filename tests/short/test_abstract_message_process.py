@@ -103,7 +103,7 @@ def test_abstract_message_process_quit(abstract_message_process):
     data = abstract_message_process.quit(None)
 
     # Test that the quit function returns True
-    assert data == True
+    assert data is True
 
 
 # Test the map_command function

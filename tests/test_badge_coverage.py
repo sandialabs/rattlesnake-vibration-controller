@@ -50,12 +50,17 @@ def test_main_success(mock_get, tmp_path, mock_github_env_file):
     # Mock command line arguments
     test_args = [
         "badge_coverage.py",
-        "--input_file", str(input_file),
-        "--output_dir", str(output_dir),
-        "--github_repo", "owner/repo",
-        "--deploy_subdir", "dev",
-        "--run_id", "123",
-        "--export_env"
+        "--input_file",
+        str(input_file),
+        "--output_dir",
+        str(output_dir),
+        "--github_repo",
+        "owner/repo",
+        "--deploy_subdir",
+        "dev",
+        "--run_id",
+        "123",
+        "--export_env",
     ]
 
     with patch("sys.argv", test_args):
@@ -67,13 +72,13 @@ def test_main_success(mock_get, tmp_path, mock_github_env_file):
 
     # Check JSON file
     assert (output_dir / "coverage-info.json").exists()
-    with open(output_dir / "coverage-info.json", "r") as f:
+    with open(output_dir / "coverage-info.json", "r", encoding="utf-8") as f:
         metadata = json.load(f)
         assert metadata["coverage"] == "85.0"
         assert metadata["color"] == "green"
 
     # Check GITHUB_ENV
-    with open(mock_github_env_file, "r") as f:
+    with open(mock_github_env_file, "r", encoding="utf-8") as f:
         env_content = f.read()
         assert "COVERAGE=85.0" in env_content
         assert "BADGE_COLOR_COV=green" in env_content

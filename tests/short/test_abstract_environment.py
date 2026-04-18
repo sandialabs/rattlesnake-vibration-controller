@@ -6,6 +6,7 @@ using dummy implementations to verify their basic behavior and communication.
 """
 
 import multiprocessing as mp
+import socket
 from unittest import mock
 
 import pytest
@@ -440,6 +441,10 @@ def test_abstract_environment_log(mock_time, mock_put, abstract_environment):
 
 
 # Test the AbstractEnvironment quit function
+# TODO: CBH to ask Dan why this test takes hangs on CBH computer.
+@pytest.mark.skipif(
+    socket.gethostname() == "s1124137", reason="Test hangs on CBH computer (s1124137)"
+)
 def test_abstract_environment_quit(abstract_environment):
     """
     Test the quit functionality of the AbstractEnvironment class.

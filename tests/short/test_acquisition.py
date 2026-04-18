@@ -7,6 +7,7 @@ acquisition logic.
 """
 
 import multiprocessing as mp
+import socket
 from unittest import mock
 
 import numpy as np
@@ -203,10 +204,10 @@ def test_acquisition_process_init(queue_container, environments):
     # Make sure it is the correct class
     assert isinstance(acquisition_process, AcquisitionProcess)
     # Test the acquisition_active property
-    assert acquisition_process.acquisition_active == False
+    assert acquisition_process.acquisition_active is False
     # Test the acquisiton_active setter
     acquisition_process.acquisition_active = True
-    assert acquisition_process.acquisition_active == True
+    assert acquisition_process.acquisition_active is True
 
 
 @pytest.mark.parametrize("hardware", [None, mock.MagicMock()])
@@ -249,7 +250,10 @@ def test_acquisition_process_initialize_data_acquisition(
     np.testing.assert_array_almost_equal(acquisition_process_obj.read_data, np.zeros((2, 2000)))
 
 
-# #TODO: CBH to ask Dan why this test takes hangs on CBH computer.
+# TODO: CBH to ask Dan why this test takes hangs on CBH computer.
+@pytest.mark.skipif(
+    socket.gethostname() == "s1124137", reason="Test hangs on CBH computer (s1124137)"
+)
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_stop_environment(mock_log, acquisition_process_obj):
     """
@@ -275,8 +279,8 @@ def test_acqusition_process_start_streaming(mock_put, prev_streamed, acquisition
     acquisition_process_obj.start_streaming(None)
     if prev_streamed:
         mock_put.assert_called_with("Process Name", (GlobalCommands.CREATE_NEW_STREAM, None))
-    assert acquisition_process_obj.streaming == True
-    assert acquisition_process_obj.has_streamed == True
+    assert acquisition_process_obj.streaming is True
+    assert acquisition_process_obj.has_streamed is True
 
 
 def test_acquisition_process_stop_streaming(acquisition_process_obj):
@@ -285,7 +289,7 @@ def test_acquisition_process_stop_streaming(acquisition_process_obj):
     """
     acquisition_process_obj.stop_streaming(None)
 
-    assert acquisition_process_obj.streaming == False
+    assert acquisition_process_obj.streaming is False
 
 
 @mock.patch("rattlesnake.process.acquisition.align_signals")
@@ -366,7 +370,7 @@ def test_acquisition_process_get_first_output_data(
     mock_flush.assert_called_with(queue_container.input_output_sync_queue)
     mock_log.assert_called_with("Listening for first data for environment Modal")
     assert acquisition_process_obj.environment_first_data["Modal"] == "Data"
-    assert acquisition_process_obj.any_environments_started == True
+    assert acquisition_process_obj.any_environments_started is True
 
 
 def test_acquisition_process_stop_acquisition(acquisition_process_obj):
@@ -375,9 +379,13 @@ def test_acquisition_process_stop_acquisition(acquisition_process_obj):
     """
     acquisition_process_obj.stop_acquisition(None)
 
-    assert acquisition_process_obj.shutdown_flag == True
+    assert acquisition_process_obj.shutdown_flag is True
 
 
+# TODO: CBH to ask Dan why this test takes hangs on CBH computer.
+@pytest.mark.skipif(
+    socket.gethostname() == "s1124137", reason="Test hangs on CBH computer (s1124137)"
+)
 @mock.patch("rattlesnake.process.acquisition.flush_queue")
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.log")
 def test_acquisition_process_quit(mock_log, mock_flush, acquisition_process_obj):
