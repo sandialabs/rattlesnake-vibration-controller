@@ -40,4 +40,4 @@ def test_main_success(tmp_path, monkeypatch, capsys):
     content = output_file.read_text(encoding="utf-8")
     assert github_repo in content
     captured = capsys.readouterr()
-    assert "✅ Project Dashboard generated" in captured.out
+    assert "[OK] Project Dashboard generated" in captured.out
