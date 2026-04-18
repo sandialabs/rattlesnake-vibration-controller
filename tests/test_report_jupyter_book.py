@@ -98,7 +98,7 @@ site:
     exit_code = main()
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert "✅ Successfully updated Jupyter Book metadata" in captured.out
+    assert "[OK] Successfully updated Jupyter Book metadata" in captured.out
     
     updated_content = myst_file.read_text()
     assert "Generated:<br>" in updated_content

@@ -108,7 +108,7 @@ def test_main_success(monkeypatch, capsys, tmp_path):
     exit_code = main()
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert "✅ Lint report generated" in captured.out
+    assert "[OK] Lint report generated" in captured.out
     assert output_file.exists()
 
 
