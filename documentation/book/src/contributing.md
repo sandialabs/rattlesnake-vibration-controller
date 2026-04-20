@@ -5,13 +5,75 @@ numbering:
 (sec:contributing)=
 # Contributing
 
+## Installation
+
+A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is **highly** recommended.
+This ensures project dependencies do not conflict with the system-wide Python installation.
+
+Create a new virtual environment folder within your project directory. It is conventional to name this folder `.venv`.
+
+```bash
+# macOS / Linux / Windows
+python3 -m venv .venv
+```
+
+Activating the environment tells your shell to use the Python interpreter and pip packages located inside the `.venv` folder.
+
+#### macOS / Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+#### Windows (PowerShell):
+
+```sh
+.venv\Scripts\Activate.ps1
+```
+
+#### Windows (Command Prompt), DOS
+
+```sh
+.venv\Scripts\activate.bat
+```
+
+Once activated, your terminal prompt will typically show `(.venv)`. You can now install dependencies safely.
+
+```bash
+# Install specific packages, for example, the "requests" package
+pip install requests
+
+# Or install the entire Rattlesnake development in editable mode
+pip install -e .[dev]
+```
+
+Confirm that your shell is pointing to the correct Python binary.
+
+```bash
+# macOS / Linux
+which python
+
+# Windows
+where python
+```
+
+The output should point to a path inside your project's `.venv` folder.
+
+To exit the virtual environment and return to the global system stack:
+
+```bash
+deactivate
+```
+
+> **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
+
+Now that you have a virtual environment, you are ready to populate it with libraries specific to the project.
+
 ## Documentation
 
-The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Following are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
+The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Below are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
 
-### Installation
-
-A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is recommended.  Then, install either with `pip`
+Install documentation dependencies either with `pip`
 
 ```sh
 pip install "jupyter-book>=2.0.0"
@@ -24,10 +86,6 @@ uv add "jupyter-book"
 ```
 
 ### Local Build
-
-```sh
-cd rattlesnake-vibration-controller/documentation
-```
 
 Within this `documentation` folder, the `myst.yml` file specifies how Jupyter Book should build the documentation.  Importantly, it links to Markdown files that contain the book's content.
 
@@ -42,7 +100,7 @@ This will build the Jupyter Book documentation.
 The foregoing command may not work behind a corporate firewall.
 ```
 
-The output will be similar to this:
+The output will be similar to:
 
 ```sh
 building myst-cli session with API URL: https://api.mystmd.org
@@ -116,3 +174,32 @@ Run the `jupyter book build` command from the `documentation` directory. The bui
 cd documentation
 jupyter book build
 ```
+
+## Continuous Integration/Continuous Deployment (CI/CD)
+
+The separate the concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
+
+* **Continuous Integration (CI)**
+  * **Test (Verification)**
+    * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
+    * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
+    * **What happens:** Automated tool run unit tests, integration tests, and code quality assessments are performed.
+      * **Testing** (e.g., [pytest](https://docs.pytest.org/en/stable/)) runs your unit and integration tests.
+      * **Code coverage** (e.g., pytest with a coverage report) assesses number of lines of code covered by tests.
+      * **Linting** (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and 
+      * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks ensure code consistency.
+      *  **Documentation** may also be assembled and compiled.  This is particularly important for interactive documentation that has examples that depend on source code functionality.
+    * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
+  * **Build (Packaging)**
+    * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
+    * **What happens:** Tools (like `python -m build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
+     * **Key Outcome:** Portability. You now have a single file (an "artifact") that contains everything needed to install your library on any compatible system.
+  * **Release (Documentation & Tagging)**
+     * **Purpose:** To create an official "point-in-time" snapshot of the project for project management and users. It uses an immutable Git tag and GitHub Release page.
+     * **What happens:** A permanent Git tag (like v1.0.0) is assigned to a specific commit. A GitHub Release page is generated with a Changelog (i.e., What's New?) and the build artifacts are attached to it as "Release Assets."
+    * **Key Outcome:** Traceability. It provides a clear history of the project's evolution and a stable place for users to download specific versions.
+* **Continuous Delivery (CD)**
+  * **Publish (Distribution)**
+     * **Purpose:** To make the software easily available to the global ecosystem.
+     * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
+     * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
