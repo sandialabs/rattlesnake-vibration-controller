@@ -1320,7 +1320,6 @@ class SineEnvironment(SysIdEnvironment):
             self.predicted_response_phases = None
             self.ramp_samples = None
         super().initialize_environment(environment_metadata)
-        self.environment_metadata: SineMetadata
         if not environment_metadata.control_python_script:
             control_class = DefaultSineControlLaw
             self.extra_control_parameters = (

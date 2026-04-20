@@ -30,8 +30,9 @@ from enum import Enum
 import numpy as np
 
 from rattlesnake.process.abstract_sysid_data_analysis import (
-    AbstractSysIDAnalysisProcess,
-    SysIDDataAnalysisCommands,
+    SysIDAnalysisProcess,
+    SysIdDataAnalysisCommands,
+    SysIdMetadata,
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.environment.random_vibration_sys_id_environment import (
@@ -48,6 +49,7 @@ from rattlesnake.utilities import (
 )
 
 
+# region Commands
 class RandomVibrationDataAnalysisCommands(Enum):
     """Enumeration containing valid commands for the random data analysis process"""
 
@@ -64,9 +66,21 @@ class RandomVibrationDataAnalysisUICommands(Enum):
     UPDATE_TEST_RESPONSE_ERROR_LIST = 3
 
 
-class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
+# endregion
+
+
+# region Metadata
+class RandomVibrationSysIdMetadata(SysIdMetadata):
+    pass
+
+
+# endregion
+
+
+class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
 
+    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -122,8 +136,11 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
         self.has_sent_interactive_control_transfer_function_results = False
         self.last_interactive_parameters = None
 
-    def initialize_sysid_parameters(self, data: RandomVibrationMetadata):
-        self.parameters: RandomVibrationMetadata
+    # endregion
+
+    # region StateSync
+    def initialize_sysid_parameters(self, data: RandomVibrationSysIdMetadata):
+        self.parameters: RandomVibrationSysIdMetadata
         super().initialize_sysid_parameters(data)  # This defines self.parameters
 
         # Find the frequency lines to perform control and compute error over

@@ -509,6 +509,9 @@ class TransientInstructions(EnvironmentInstructions):
         return super().validate()
 
 
+# endregion
+
+
 # region Queues
 class TransientQueues:
     """A container class for the queues that this environment will manage."""
@@ -674,8 +677,7 @@ class TransientEnvironment(SysIdEnvironment):
             self.aligned_response = None
             self.next_drive = None
             self.predicted_response = None
-        self.environment_name = environment_metadata.environment_name
-        self.environment_metadata = environment_metadata
+        super().initialize_environment(environment_metadata)
         # Load in the control law
         _, file = os.path.split(environment_metadata.control_python_script)
         file, _ = os.path.splitext(file)
@@ -764,6 +766,16 @@ class TransientEnvironment(SysIdEnvironment):
                 "Received an UPDATE_INTERACTIVE_CONTROL_PARAMETERS signal without an "
                 "interactive control law.  How did this happen?"
             )
+
+    def get_signal_generation_metadata(self):
+        """Collects the metadata required to define the signal generation process"""
+        return SignalGenerationMetadata(
+            samples_per_write=self.hardware_metadata.samples_per_write,
+            level_ramp_samples=self.environment_metadata.test_level_ramp_time
+            * self.environment_metadata.sample_rate
+            * self.hardware_metadata.output_oversample,
+            output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
+        )
 
     # endregion
 
@@ -947,16 +959,6 @@ class TransientEnvironment(SysIdEnvironment):
                     ),
                 ),
             )
-        )
-
-    def get_signal_generation_metadata(self):
-        """Collects the metadata required to define the signal generation process"""
-        return SignalGenerationMetadata(
-            samples_per_write=self.hardware_metadata.samples_per_write,
-            level_ramp_samples=self.environment_metadata.test_level_ramp_time
-            * self.environment_metadata.sample_rate
-            * self.hardware_metadata.output_oversample,
-            output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
         )
 
     def start_control(self, data: TransientInstructions):
