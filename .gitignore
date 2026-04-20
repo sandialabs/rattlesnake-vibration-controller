@@ -2,6 +2,7 @@
 **/__pycache__/**
 test_data/**
 todo.txt
+todo.md
 logs/**
 **/~$*
 **/*.aux
