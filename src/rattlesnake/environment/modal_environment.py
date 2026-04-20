@@ -23,15 +23,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import threading
 import time
+from typing import List
 from enum import Enum
 from glob import glob
-from multiprocessing.queues import Queue
+
+import openpyxl
 import netCDF4 as nc4
 import numpy as np
-from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
-from rattlesnake.environment.environment_utilities import ControlTypes
+
+from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentCommands,
+    EnvironmentMetadata,
+    EnvironmentInstructions,
+    Environment,
+)
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
@@ -41,85 +50,63 @@ from rattlesnake.process.signal_generation import (
     SquareSignalGenerator,
 )
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
     flush_queue,
 )
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from ..process.data_collector import (  # noqa # pylint: disable=wrong-import-position
+    Acceptance,
+    AcquisitionType,
+    CollectorMetadata,
+    DataCollectorCommands,
+    TriggerSlope,
+    Window,
+    data_collector_process,
+)
+from ..process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
+    SignalGenerationCommands,
+    SignalGenerationMetadata,
+    signal_generation_process,
+)
+from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
+    AveragingTypes,
+    Estimator,
+    SpectralProcessingCommands,
+    SpectralProcessingMetadata,
+    spectral_processing_process,
+)
 
-CONTROL_TYPE = ControlTypes.MODAL
+
+CONTROL_TYPE = EnvironmentType.MODAL
 WAIT_TIME = 0.02
 
 
-class ModalCommands(Enum):
+# region Commands
+class ModalCommands(EnvironmentCommands):
     """Valid commands for the modal environment"""
 
-    START_CONTROL = 0
-    STOP_CONTROL = 1
     ACCEPT_FRAME = 2
     RUN_CONTROL = 3
     CHECK_FOR_COMPLETE_SHUTDOWN = 4
 
+    VALID_PROFILE_COMMANDS = ()
+    VALID_DATA = {
+        ACCEPT_FRAME: int,
+        RUN_CONTROL: type(None),
+        CHECK_FOR_COMPLETE_SHUTDOWN: type(None),
+    }
+
 
 class ModalUICommands(Enum):
-    SPECTRAL_UPDATE = 0
-    FINISHED = 1
+    SPECTRAL_UPDATE = 1
 
 
-# region: Queues
-class ModalQueues:
-    """A set of queues used by the modal environment"""
-
-    def __init__(
-        self,
-        environment_name: str,
-        environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: mp.queues.Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: mp.queues.Queue,
-        data_out_queue: mp.queues.Queue,
-        log_file_queue: VerboseMessageQueue,
-    ):
-        """
-        Creates a namespace to store all the queues used by the Modal Environment
-
-        Parameters
-        ----------
-        environment_command_queue : VerboseMessageQueue
-            Queue from which the environment will receive instructions.
-        gui_update_queue : mp.queues.Queue
-            Queue to which the environment will put GUI updates.
-        controller_communication_queue : VerboseMessageQueue
-            Queue to which the environment will put global contorller instructions.
-        data_in_queue : mp.queues.Queue
-            Queue from which the environment will receive data from acquisition.
-        data_out_queue : mp.queues.Queue
-            Queue to which the environment will write data for output.
-        log_file_queue : VerboseMessageQueue
-            Queue to which the environment will write log file messages.
-        """
-        self.environment_command_queue = environment_command_queue
-        self.gui_update_queue = gui_update_queue
-        self.controller_communication_queue = controller_communication_queue
-        self.data_in_queue = data_in_queue
-        self.data_out_queue = data_out_queue
-        self.log_file_queue = log_file_queue
-        self.data_for_spectral_computation_queue = mp.Queue()
-        self.updated_spectral_quantities_queue = mp.Queue()
-        self.signal_generation_update_queue = mp.Queue()
-        self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Spectral Computation Command Queue"
-        )
-        self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Collector Command Queue"
-        )
-        self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Signal Generation Command Queue"
-        )
+# endregion
 
 
-# region: Metadata
-class ModalMetadata(AbstractMetadata):
+# region Metadata
+class ModalMetadata(EnvironmentMetadata):
     """Class for storing metadata for an environment.
 
     This class is used as a storage container for parameters used by an
@@ -131,7 +118,9 @@ class ModalMetadata(AbstractMetadata):
 
     def __init__(
         self,
-        sample_rate: float,
+        environment_name: str,
+        channel_list_bools: list,
+        sample_rate: int,
         samples_per_frame: int,
         averaging_type: str,
         num_averages: int,
@@ -157,10 +146,12 @@ class ModalMetadata(AbstractMetadata):
         reference_channel_indices,
         response_channel_indices,
         output_channel_indices,
-        data_acquisition_parameters: DataAcquisitionParameters,
+        output_oversample: int,
         exponential_window_value_at_frame_end: float,
     ):
-        self.sample_rate = sample_rate
+        super().__init__(
+            CONTROL_TYPE, environment_name, channel_list_bools, sample_rate
+        )
         self.samples_per_frame = samples_per_frame
         self.averaging_type = averaging_type
         self.num_averages = num_averages
@@ -186,9 +177,11 @@ class ModalMetadata(AbstractMetadata):
         self.reference_channel_indices = reference_channel_indices
         self.response_channel_indices = response_channel_indices
         self.output_channel_indices = output_channel_indices
-        self.exponential_window_value_at_frame_end = exponential_window_value_at_frame_end
+        self.exponential_window_value_at_frame_end = (
+            exponential_window_value_at_frame_end
+        )
         # Set up signal generator
-        self.output_oversample = data_acquisition_parameters.output_oversample
+        self.output_oversample = output_oversample
         self.signal_generator = self.get_signal_generator()
 
     def get_signal_generator(self):
@@ -362,7 +355,8 @@ class ModalMetadata(AbstractMetadata):
             i
             for i, index in enumerate(self.output_channel_indices)
             if not (
-                index in self.response_channel_indices or index in self.reference_channel_indices
+                index in self.response_channel_indices
+                or index in self.reference_channel_indices
             )
         ]
 
@@ -372,8 +366,28 @@ class ModalMetadata(AbstractMetadata):
         level"""
         return int(self.hysteresis_length * self.samples_per_frame)
 
-    def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+    def generate_signal(self):
+        """Generates a single frame of data"""
+        if self.signal_generator is None:
+            return np.zeros(
+                (
+                    len(self.output_channel_indices),
+                    self.samples_per_frame * self.output_oversample,
+                )
+            )
+        else:
+            return self.signal_generator.generate_frame()[0]
+
+    # region Validation
+    def validate(self, hardware_metadata):
+        return super().validate(hardware_metadata)
+
+    # endregion
+
+    # region Loading
+    def save_metadata_to_netcdf(
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
         """Store parameters to a group in a netCDF streaming file.
 
@@ -406,15 +420,23 @@ class ModalMetadata(AbstractMetadata):
         netcdf_group_handle.wait_for_steady_state = self.wait_for_steady_state
         netcdf_group_handle.trigger_channel = self.trigger_channel
         netcdf_group_handle.pretrigger = self.pretrigger
-        netcdf_group_handle.trigger_slope_positive = 1 if self.trigger_slope_positive else 0
+        netcdf_group_handle.trigger_slope_positive = (
+            1 if self.trigger_slope_positive else 0
+        )
         netcdf_group_handle.trigger_level = self.trigger_level
         netcdf_group_handle.hysteresis_level = self.hysteresis_level
         netcdf_group_handle.hysteresis_length = self.hysteresis_length
         netcdf_group_handle.signal_generator_type = self.signal_generator_type
         netcdf_group_handle.signal_generator_level = self.signal_generator_level
-        netcdf_group_handle.signal_generator_min_frequency = self.signal_generator_min_frequency
-        netcdf_group_handle.signal_generator_max_frequency = self.signal_generator_max_frequency
-        netcdf_group_handle.signal_generator_on_fraction = self.signal_generator_on_fraction
+        netcdf_group_handle.signal_generator_min_frequency = (
+            self.signal_generator_min_frequency
+        )
+        netcdf_group_handle.signal_generator_max_frequency = (
+            self.signal_generator_max_frequency
+        )
+        netcdf_group_handle.signal_generator_on_fraction = (
+            self.signal_generator_on_fraction
+        )
         netcdf_group_handle.exponential_window_value_at_frame_end = (
             self.exponential_window_value_at_frame_end
         )
@@ -432,185 +454,563 @@ class ModalMetadata(AbstractMetadata):
         )
         var[...] = self.reference_channel_indices
         # Response channels
-        netcdf_group_handle.createDimension("response_channels", len(self.response_channel_indices))
+        netcdf_group_handle.createDimension(
+            "response_channels", len(self.response_channel_indices)
+        )
         var = netcdf_group_handle.createVariable(
             "response_channel_indices", "i4", ("response_channels")
         )
         var[...] = self.response_channel_indices
 
     @classmethod
-    def from_ui(cls, ui):
-        """
-        Creates a ModalMetadata object from the user interface
+    def load_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Dataset,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        """Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_netcdf
+        function in the ModalMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment's name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
 
         Parameters
         ----------
-        ui : ModalUI
-            A Modal User Interface.
-
-        Returns
-        -------
-        test_parameters : ModalMetadata
-            Parameters corresponding to the data in the user interface
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment's name.
 
         """
-        signal_generator_level = 0
-        signal_generator_min_frequency = 0
-        signal_generator_max_frequency = 0
-        signal_generator_on_percent = 0
-        if ui.definition_widget.signal_generator_selector.currentIndex() == 0:  # None
-            signal_generator_type = "none"
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 1:  # Random
-            signal_generator_type = "random"
-            signal_generator_level = ui.definition_widget.random_rms_selector.value()
-            signal_generator_min_frequency = (
-                ui.definition_widget.random_min_frequency_selector.value()
-            )
-            signal_generator_max_frequency = (
-                ui.definition_widget.random_max_frequency_selector.value()
-            )
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 2:  # Burst Random
-            signal_generator_type = "burst"
-            signal_generator_level = ui.definition_widget.burst_rms_selector.value()
-            signal_generator_min_frequency = (
-                ui.definition_widget.burst_min_frequency_selector.value()
-            )
-            signal_generator_max_frequency = (
-                ui.definition_widget.burst_max_frequency_selector.value()
-            )
-            signal_generator_on_percent = ui.definition_widget.burst_on_percentage_selector.value()
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 3:  # Pseudorandom
-            signal_generator_type = "pseudorandom"
-            signal_generator_level = ui.definition_widget.pseudorandom_rms_selector.value()
-            signal_generator_min_frequency = (
-                ui.definition_widget.pseudorandom_min_frequency_selector.value()
-            )
-            signal_generator_max_frequency = (
-                ui.definition_widget.pseudorandom_max_frequency_selector.value()
-            )
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 4:  # Chirp
-            signal_generator_type = "chirp"
-            signal_generator_level = ui.definition_widget.chirp_level_selector.value()
-            signal_generator_min_frequency = (
-                ui.definition_widget.chirp_min_frequency_selector.value()
-            )
-            signal_generator_max_frequency = (
-                ui.definition_widget.chirp_max_frequency_selector.value()
-            )
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 5:  # Square
-            signal_generator_type = "square"
-            signal_generator_level = ui.definition_widget.square_level_selector.value()
-            signal_generator_min_frequency = ui.definition_widget.square_frequency_selector.value()
-            signal_generator_on_percent = ui.definition_widget.square_percent_on_selector.value()
-        elif ui.definition_widget.signal_generator_selector.currentIndex() == 6:  # Sine
-            signal_generator_type = "sine"
-            signal_generator_level = ui.definition_widget.sine_level_selector.value()
-            signal_generator_min_frequency = ui.definition_widget.sine_frequency_selector.value()
+        samples_per_frame = netcdf_group_handle.samples_per_frame
+        averaging_type = netcdf_group_handle.averaging_type
+        num_averages = netcdf_group_handle.num_averages
+        averaging_coefficient = netcdf_group_handle.averaging_coefficient
+        frf_technique = netcdf_group_handle.frf_technique
+        frf_window = netcdf_group_handle.frf_window
+        overlap_percent = netcdf_group_handle.overlap * 100
+        trigger_type = netcdf_group_handle.trigger_type
+        accept_type = netcdf_group_handle.accept_type
+        if accept_type == "Autoreject...":
+            acceptance_function = netcdf_group_handle.acceptance_function.split(":")
         else:
-            index = ui.definition_widget.signal_generator_selector.currentIndex()
-            raise ValueError(f"Invalid Signal Generator {index} (How did you get here?)")
+            acceptance_function = None
+        wait_for_steady_state = netcdf_group_handle.wait_for_steady_state
+        trigger_channel = netcdf_group_handle.trigger_channel
+        pretrigger_percent = netcdf_group_handle.pretrigger * 100
+        trigger_slope_positive = netcdf_group_handle.trigger_slope_positive
+        trigger_level_percent = netcdf_group_handle.trigger_level * 100
+        hysteresis_level_percent = netcdf_group_handle.hysteresis_level * 100
+        hysteresis_frame_percent = netcdf_group_handle.hysteresis_length * 100
+        signal_generator_type = netcdf_group_handle.signal_generator_type
+        signal_generator_level = netcdf_group_handle.signal_generator_level
+        signal_generator_min_frequency = (
+            netcdf_group_handle.signal_generator_min_frequency
+        )
+        signal_generator_max_frequency = (
+            netcdf_group_handle.signal_generator_max_frequency
+        )
+        signal_generator_on_percent = netcdf_group_handle.signal_generator_level * 100
+        reference_channel_indices = netcdf_group_handle.variables[
+            "reference_channel_indices"
+        ][...]
+        response_channel_indices = netcdf_group_handle.variables[
+            "response_channel_indices"
+        ][...]
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
+            if channel_bool
+        ]
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+        exponential_window_value_at_frame_end = (
+            netcdf_group_handle.exponential_window_value_at_frame_end
+        )
+
         return cls(
-            ui.definition_widget.sample_rate_display.value(),
-            ui.definition_widget.samples_per_frame_selector.value(),
-            ui.definition_widget.system_id_averaging_scheme_selector.itemText(
-                ui.definition_widget.system_id_averaging_scheme_selector.currentIndex()
-            ),
-            ui.definition_widget.system_id_frames_to_average_selector.value(),
-            ui.definition_widget.system_id_averaging_coefficient_selector.value(),
-            ui.definition_widget.system_id_frf_technique_selector.itemText(
-                ui.definition_widget.system_id_frf_technique_selector.currentIndex()
-            ),
-            ui.definition_widget.system_id_transfer_function_computation_window_selector.itemText(
-                ui.definition_widget.system_id_transfer_function_computation_window_selector.currentIndex()
-            ).lower(),
-            ui.definition_widget.system_id_overlap_percentage_selector.value(),
-            ui.definition_widget.triggering_type_selector.itemText(
-                ui.definition_widget.triggering_type_selector.currentIndex()
-            ),
-            ui.definition_widget.acceptance_selector.itemText(
-                ui.definition_widget.acceptance_selector.currentIndex()
-            ),
-            ui.definition_widget.wait_for_steady_selector.value(),
-            ui.definition_widget.trigger_channel_selector.currentIndex(),
-            ui.definition_widget.pretrigger_selector.value(),
-            ui.definition_widget.trigger_slope_selector.currentIndex() == 0,
-            ui.definition_widget.trigger_level_selector.value(),
-            ui.definition_widget.hysteresis_selector.value(),
-            ui.definition_widget.hysteresis_length_selector.value(),
+            environment_name,
+            channel_list_bools,
+            hardware_metadata.sample_rate,
+            samples_per_frame,
+            averaging_type,
+            num_averages,
+            averaging_coefficient,
+            frf_technique,
+            frf_window,
+            overlap_percent,
+            trigger_type,
+            accept_type,
+            wait_for_steady_state,
+            trigger_channel,
+            pretrigger_percent,
+            trigger_slope_positive,
+            trigger_level_percent,
+            hysteresis_level_percent,
+            hysteresis_frame_percent,
             signal_generator_type,
             signal_generator_level,
             signal_generator_min_frequency,
             signal_generator_max_frequency,
             signal_generator_on_percent,
-            ui.acceptance_function,
-            ui.reference_indices,
-            ui.response_indices,
-            ui.all_output_channel_indices,
-            ui.data_acquisition_parameters,
-            ui.definition_widget.window_value_selector.value() / 100,
+            acceptance_function,
+            reference_channel_indices,
+            response_channel_indices,
+            output_channel_indices,
+            hardware_metadata.output_oversample,
+            exponential_window_value_at_frame_end,
         )
 
-    def generate_signal(self):
-        """Generates a single frame of data"""
-        if self.signal_generator is None:
-            return np.zeros(
-                (
-                    len(self.output_channel_indices),
-                    self.samples_per_frame * self.output_oversample,
-                )
-            )
+    @staticmethod
+    def create_blank_worksheet_template(worksheet):
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 2, "Modal")
+        worksheet.cell(2, 1, "Samples Per Frame:")
+        worksheet.cell(2, 3, "# Number of Samples per Measurement Frame")
+        worksheet.cell(3, 1, "Averaging Type:")
+        worksheet.cell(3, 3, "# Averaging Type")
+        worksheet.cell(4, 1, "Number of Averages:")
+        worksheet.cell(4, 3, "# Number of Averages used when computing the FRF")
+        worksheet.cell(5, 1, "Averaging Coefficient:")
+        worksheet.cell(5, 3, "# Averaging Coefficient for Exponential Averaging")
+        worksheet.cell(6, 1, "FRF Technique:")
+        worksheet.cell(6, 3, "# FRF Technique")
+        worksheet.cell(7, 1, "FRF Window:")
+        worksheet.cell(7, 3, "# Window used to compute FRF")
+        worksheet.cell(8, 1, "Exponential Window End Value:")
+        worksheet.cell(
+            8,
+            3,
+            "# Exponential Window Value at the end of the measurement frame (0.5 or 50%, not 50)",
+        )
+        worksheet.cell(9, 1, "FRF Overlap:")
+        worksheet.cell(9, 3, "# Overlap for FRF calculations (0.5 or 50%, not 50)")
+        worksheet.cell(10, 1, "Triggering Type:")
+        worksheet.cell(10, 3, '# One of "Free Run", "First Frame", or "Every Frame"')
+        worksheet.cell(11, 1, "Average Acceptance:")
+        worksheet.cell(11, 3, '# One of "Accept All", "Manual", or "Autoreject"')
+        worksheet.cell(12, 1, "Trigger Channel")
+        worksheet.cell(12, 3, "# Channel number (1-based) to use for triggering")
+        worksheet.cell(13, 1, "Pretrigger")
+        worksheet.cell(
+            13, 3, "# Amount of frame to use as pretrigger (0.5 or 50%, not 50)"
+        )
+        worksheet.cell(14, 1, "Trigger Slope")
+        worksheet.cell(14, 3, '# One of "Positive" or "Negative"')
+        worksheet.cell(15, 1, "Trigger Level")
+        worksheet.cell(
+            15,
+            3,
+            "# Level to use to trigger the test as a fraction of the total range of the channel "
+            "(0.5 or 50%, not 50)",
+        )
+        worksheet.cell(16, 1, "Hysteresis Level")
+        worksheet.cell(
+            16,
+            3,
+            "# Level that a channel must fall below before another trigger can be considered "
+            "(0.5 or 50%, not 50)",
+        )
+        worksheet.cell(17, 1, "Hysteresis Frame Fraction")
+        worksheet.cell(
+            17,
+            3,
+            "# Fraction of the frame that a channel maintain hysteresis condition before another "
+            "trigger can be considered (0.5 or 50%, not 50)",
+        )
+        worksheet.cell(18, 1, "Signal Generator Type")
+        worksheet.cell(
+            18,
+            3,
+            '# One of "None", "Random", "Burst Random", "Pseudorandom", "Chirp", "Square", or '
+            '"Sine"',
+        )
+        worksheet.cell(19, 1, "Signal Generator Level")
+        worksheet.cell(
+            19,
+            3,
+            "# RMS voltage level for random signals, Peak voltage level for chirp, sine, and "
+            "square pulse",
+        )
+        worksheet.cell(20, 1, "Signal Generator Frequency 1")
+        worksheet.cell(
+            20,
+            3,
+            "# Minimum frequency for broadband signals or frequency for sine and square pulse",
+        )
+        worksheet.cell(21, 1, "Signal Generator Frequency 2")
+        worksheet.cell(
+            21,
+            3,
+            "# Maximum frequency for broadband signals.  Ignored for sine and square pulse",
+        )
+        worksheet.cell(22, 1, "Signal Generator On Fraction")
+        worksheet.cell(
+            22,
+            3,
+            "# Fraction of time that the burst or square wave is on (0.5 or 50%, not 50)",
+        )
+        worksheet.cell(23, 1, "Wait Time for Steady State")
+        worksheet.cell(
+            23,
+            3,
+            "# Time to wait after output starts to allow the system to reach steady state",
+        )
+        worksheet.cell(24, 1, "Autoaccept Script")
+        worksheet.cell(24, 3, "# File in which an autoacceptance function is defined")
+        worksheet.cell(25, 1, "Autoaccept Function")
+        worksheet.cell(
+            25, 3, "# Function name in which the autoacceptance function is defined"
+        )
+        worksheet.cell(26, 1, "Reference Channels")
+        worksheet.cell(26, 3, "# List of channels, one per cell on this row")
+        worksheet.cell(27, 1, "Disabled Channels")
+        worksheet.cell(27, 3, "# List of channels, one per cell on this row")
+
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
+        """Creates a template worksheet in an Excel workbook defining the
+        environment.
+
+        This function creates a template worksheet in an Excel workbook that
+        when filled out could be read by the controller to re-create the
+        environment.
+
+        This function is the "write" counterpart to the
+        ``set_parameters_from_template`` function in the ``ModalUI`` class,
+        which reads the values from the template file to populate the user
+        interface.
+
+        Parameters
+        ----------
+        environment_name : str :
+            The name of the environment that will specify the worksheet's name
+        workbook : openpyxl.worksheet.worksheet.Worksheet :
+            A reference to an ``openpyxl`` workbook.
+
+        """
+        super().save_metadata_to_worksheet(worksheet)
+
+        if self.samples_per_frame is not None:
+            worksheet.cell(2, 2, self.samples_per_frame)
+        if self.averaging_type is not None:
+            worksheet.cell(3, 2, self.averaging_type)
+        if self.num_averages is not None:
+            worksheet.cell(4, 2, self.num_averages)
+        if self.averaging_coefficient is not None:
+            worksheet.cell(5, 2, self.averaging_coefficient)
+        if self.frf_technique is not None:
+            worksheet.cell(6, 2, self.frf_technique)
+        if self.frf_window is not None:
+            worksheet.cell(7, 2, self.frf_window)
+        if self.exponential_window_value_at_frame_end:
+            worksheet.cell(8, 2, self.exponential_window_value_at_frame_end)
+        if self.overlap is not None:
+            worksheet.cell(9, 2, self.overlap)
+        if self.trigger_type is not None:
+            worksheet.cell(10, 2, self.trigger_type)
+        if self.accept_type is not None:
+            worksheet.cell(11, 2, self.accept_type)
+        if self.trigger_channel is not None:
+            worksheet.cell(12, 2, self.trigger_channel)
+        if self.pretrigger is not None:
+            worksheet.cell(13, 2, self.pretrigger)
+        if self.trigger_slope_positive is not None:
+            worksheet.cell(14, 2, self.trigger_slope_positive)
+        if self.trigger_level is not None:
+            worksheet.cell(15, 2, self.trigger_level)
+        if self.hysteresis_level is not None:
+            worksheet.cell(16, 2, self.hysteresis_level)
+        if self.hysteresis_length is not None:
+            worksheet.cell(17, 2, self.hysteresis_length)
+        if self.signal_generator_type is not None:
+            worksheet.cell(18, 2, self.signal_generator_type)
+        if self.signal_generator_level is not None:
+            worksheet.cell(19, 2, self.signal_generator_level)
+        if self.signal_generator_min_frequency is not None:
+            worksheet.cell(20, 2, self.signal_generator_min_frequency)
+        if self.signal_generator_max_frequency is not None:
+            worksheet.cell(21, 2, self.signal_generator_max_frequency)
+        if self.signal_generator_on_fraction is not None:
+            worksheet.cell(22, 2, self.signal_generator_on_fraction)
+        if self.wait_for_steady_state is not None:
+            worksheet.cell(23, 2, self.wait_for_steady_state)
+        if self.acceptance_function is not None:
+            worksheet.cell(24, 2, self.acceptance_function[0])
+            worksheet.cell(25, 2, self.acceptance_function[1])
+        if self.reference_channel_indices is not None:
+            for idx, channel_ind in enumerate(self.reference_channel_indices):
+                col_idx = idx + 2
+                worksheet.cell(26, col_idx, channel_ind + 1)
+        num_channels = sum(self.channel_list_bools)
+        if self.response_channel_indices is not None:
+            col_idx = 2
+            for channel_ind in range(num_channels):
+                if (
+                    channel_ind not in self.response_channel_indices
+                    and channel_ind not in self.reference_channel_indices
+                ):
+                    worksheet.cell(27, col_idx, channel_ind + 1)
+                    col_idx += 1
+
+    @classmethod
+    def load_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        """
+        Collects parameters for the user interface from the Excel template file
+
+        This function reads a filled out template worksheet to create an
+        environment.  Cells on this worksheet contain parameters needed to
+        specify the environment, so this function should read those cells and
+        update the UI widgets with those parameters.
+
+        This function is the "read" counterpart to the
+        ``create_environment_template`` function in the ``ModalUI`` class,
+        which writes a template file that can be filled out by a user.
+
+
+        Parameters
+        ----------
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            An openpyxl worksheet that contains the environment template.
+            Cells on this worksheet should contain the parameters needed for the
+            user interface.
+
+        """
+        samples_per_frame = worksheet.cell(2, 2).value
+        averaging_type = worksheet.cell(3, 2).value
+        num_averages = worksheet.cell(4, 2).value
+        averaging_coefficient = worksheet.cell(5, 2).value
+        frf_technique = worksheet.cell(6, 2).value
+        frf_window = worksheet.cell(7, 2).value
+        overlap = worksheet.cell(9, 2).value
+        overlap_percent = overlap * 100 if overlap else 0
+        trigger_type = worksheet.cell(10, 2).value
+        exponential_window_value_at_frame_end = worksheet.cell(8, 2).value
+        accept_type = worksheet.cell(11, 2).value
+        if accept_type == "Autoreject":
+            acceptance_function = [
+                worksheet.cell(24, 2).value,
+                worksheet.cell(25, 2).value,
+            ]
         else:
-            return self.signal_generator.generate_frame()[0]
+            acceptance_function = None
+        trigger_channel = worksheet.cell(12, 2).value
+        pretrigger = worksheet.cell(13, 2).value
+        pretrigger_percent = pretrigger * 100 if pretrigger else 0
+        trigger_slope_positive = worksheet.cell(14, 2).value
+        trigger_level = worksheet.cell(15, 2).value
+        trigger_level_percent = trigger_level * 100 if trigger_level else 0
+        hysteresis_level = worksheet.cell(16, 2).value
+        hysteresis_level_percent = hysteresis_level * 100 if hysteresis_level else 0
+        hysteresis_frame = worksheet.cell(17, 2).value
+        hysteresis_frame_percent = hysteresis_frame * 100 if hysteresis_frame else 0
+        signal_generator_type = worksheet.cell(18, 2).value
+        signal_generator_level = worksheet.cell(19, 2).value
+        signal_generator_min_frequency = worksheet.cell(20, 2).value
+        signal_generator_max_frequency = worksheet.cell(21, 2).value
+        signal_generator_on_fraction = worksheet.cell(22, 2).value
+        signal_generator_on_percent = (
+            signal_generator_on_fraction * 100 if signal_generator_on_fraction else 0
+        )
+        wait_for_steady_state = worksheet.cell(23, 2).value
+        max_row = 0
+        column_index = 2
+        reference_channel_indices = []
+        response_channel_indices = []
+        output_channel_indices = []
+        while True:
+            value = worksheet.cell(26, column_index).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            reference_channel_indices.append(int(value) - 1)
+            column_index += 1
+        max_row = len(channel_list_bools)
+        for i in range(max_row):
+            response_channel_indices.append(int(i))
+        column_index = 2
+        while True:
+            value = worksheet.cell(27, column_index).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            response_channel_indices.remove(value - 1)
+            column_index += 1
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
+            if channel_bool
+        ]
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
+        return cls(
+            environment_name,
+            channel_list_bools,
+            hardware_metadata.sample_rate,
+            samples_per_frame,
+            averaging_type,
+            num_averages,
+            averaging_coefficient,
+            frf_technique,
+            frf_window,
+            overlap_percent,
+            trigger_type,
+            accept_type,
+            wait_for_steady_state,
+            trigger_channel,
+            pretrigger_percent,
+            trigger_slope_positive,
+            trigger_level_percent,
+            hysteresis_level_percent,
+            hysteresis_frame_percent,
+            signal_generator_type,
+            signal_generator_level,
+            signal_generator_min_frequency,
+            signal_generator_max_frequency,
+            signal_generator_on_percent,
+            acceptance_function,
+            reference_channel_indices,
+            response_channel_indices,
+            output_channel_indices,
+            hardware_metadata.output_oversample,
+            exponential_window_value_at_frame_end,
+        )
+
+    # endregion
 
 
-from ..process.data_collector import (  # noqa # pylint: disable=wrong-import-position
-    Acceptance,
-    AcquisitionType,
-    CollectorMetadata,
-    DataCollectorCommands,
-    TriggerSlope,
-    Window,
-    data_collector_process,
-)
-from ..process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
-    SignalGenerationCommands,
-    SignalGenerationMetadata,
-    signal_generation_process,
-)
-from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
-    AveragingTypes,
-    Estimator,
-    SpectralProcessingCommands,
-    SpectralProcessingMetadata,
-    spectral_processing_process,
-)
+# region Instructions
+class ModalInstructions(EnvironmentInstructions):
+    def __init__(self, environment_name):
+        super().__init__(CONTROL_TYPE, environment_name)
+
+    def validate(self):
+        return super().validate()
 
 
-# region: Environment
-class ModalEnvironment(AbstractEnvironment):
+# endregion
+
+
+# region Queues
+class ModalQueues:
+    """A set of queues used by the modal environment"""
+
+    def __init__(
+        self,
+        environment_name: str,
+        environment_command_queue: VerboseMessageQueue,
+        gui_update_queue: mp.Queue,
+        controller_communication_queue: VerboseMessageQueue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
+        log_file_queue: mp.Queue,
+    ):
+        """
+        Creates a namespace to store all the queues used by the Modal Environment
+
+        Parameters
+        ----------
+        environment_command_queue : VerboseMessageQueue
+            Queue from which the environment will receive instructions.
+        gui_update_queue : mp.queues.Queue
+            Queue to which the environment will put GUI updates.
+        controller_communication_queue : VerboseMessageQueue
+            Queue to which the environment will put global contorller instructions.
+        data_in_queue : mp.queues.Queue
+            Queue from which the environment will receive data from acquisition.
+        data_out_queue : mp.queues.Queue
+            Queue to which the environment will write data for output.
+        log_file_queue : VerboseMessageQueue
+            Queue to which the environment will write log file messages.
+        """
+        self.environment_command_queue = environment_command_queue
+        self.gui_update_queue = gui_update_queue
+        self.controller_communication_queue = controller_communication_queue
+        self.data_in_queue = data_in_queue
+        self.data_out_queue = data_out_queue
+        self.log_file_queue = log_file_queue
+        self.data_for_spectral_computation_queue = mp.Queue()
+        self.updated_spectral_quantities_queue = mp.Queue()
+        self.signal_generation_update_queue = mp.Queue()
+        self.spectral_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Spectral Computation Command Queue",
+        )
+        self.collector_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Data Collector Command Queue",
+        )
+        self.signal_generation_command_queue = VerboseMessageQueue(
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Signal Generation Command Queue",
+        )
+
+
+# endregion
+
+
+# region Environment
+class ModalEnvironment(Environment):
     """Modal Environment class defining the interface with the controller"""
 
     def __init__(
         self,
         environment_name: str,
-        queues: ModalQueues,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        queue_name: str,
+        queue_container: ModalQueues,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
-            queues.environment_command_queue,
-            queues.gui_update_queue,
-            queues.controller_communication_queue,
-            queues.log_file_queue,
-            queues.data_in_queue,
-            queues.data_out_queue,
-            acquisition_active,
-            output_active,
+            queue_name,
+            queue_container.environment_command_queue,
+            queue_container.gui_update_queue,
+            queue_container.controller_communication_queue,
+            queue_container.log_file_queue,
+            queue_container.data_in_queue,
+            queue_container.data_out_queue,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
+            ready_event,
         )
-        self.queue_container = queues
-        self.data_acquisition_parameters = None
-        self.environment_parameters = None
+        self.queue_container = queue_container
+        self.hardware_metadata = None
+        self.environment_metadata = None
         self.frame_number = 0
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
@@ -618,10 +1018,11 @@ class ModalEnvironment(AbstractEnvironment):
 
         # Map commands
         self.map_command(ModalCommands.ACCEPT_FRAME, self.accept_frame)
-        self.map_command(ModalCommands.START_CONTROL, self.start_environment)
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(ModalCommands.RUN_CONTROL, self.run_control)
-        self.map_command(ModalCommands.STOP_CONTROL, self.stop_environment)
-        self.map_command(ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown)
+        self.map_command(
+            ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown
+        )
         self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
@@ -633,9 +1034,10 @@ class ModalEnvironment(AbstractEnvironment):
             self.spectral_shutdown_achieved_fn,
         )
 
-    def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: DataAcquisitionParameters
-    ):
+    # endregion
+
+    # region State Sync
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
 
         The environment will receive the global data acquisition parameters from
@@ -643,13 +1045,14 @@ class ModalEnvironment(AbstractEnvironment):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        hardware_metadata : DataAcquisitionParameters :
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """
-        self.data_acquisition_parameters = data_acquisition_parameters
+        self.hardware_metadata = hardware_metadata
+        self.set_ready()
 
-    def initialize_environment_test_parameters(self, environment_parameters: ModalMetadata):
+    def initialize_environment(self, environment_metadata: ModalMetadata):
         """
         Initialize the environment parameters specific to this environment
 
@@ -662,7 +1065,8 @@ class ModalEnvironment(AbstractEnvironment):
             A container containing the parameters defining the environment
 
         """
-        self.environment_parameters = environment_parameters
+        self.environment_name = environment_metadata.environment_name
+        self.environment_metadata = environment_metadata
 
         # Set up the collector
         self.queue_container.collector_command_queue.put(
@@ -689,55 +1093,63 @@ class ModalEnvironment(AbstractEnvironment):
             ),
         )
 
+        self.set_ready()
+
     def get_data_collector_metadata(self) -> CollectorMetadata:
         """Collects metadata used to define the data collector"""
-        num_channels = len(self.data_acquisition_parameters.channel_list)
-        reference_channel_indices = self.environment_parameters.reference_channel_indices
-        response_channel_indices = self.environment_parameters.response_channel_indices
-        if self.environment_parameters.trigger_type == "Free Run":
+        num_channels = len(self.hardware_metadata.channel_list)
+        reference_channel_indices = self.environment_metadata.reference_channel_indices
+        response_channel_indices = self.environment_metadata.response_channel_indices
+        if self.environment_metadata.trigger_type == "Free Run":
             acquisition_type = AcquisitionType.FREE_RUN
-        elif self.environment_parameters.trigger_type == "First Frame":
+        elif self.environment_metadata.trigger_type == "First Frame":
             acquisition_type = AcquisitionType.TRIGGER_FIRST_FRAME
-        elif self.environment_parameters.trigger_type == "Every Frame":
+        elif self.environment_metadata.trigger_type == "Every Frame":
             acquisition_type = AcquisitionType.TRIGGER_EVERY_FRAME
         else:
             raise ValueError(
-                f"Invalid Acquisition Type: {self.environment_parameters.trigger_type}"
+                f"Invalid Acquisition Type: {self.environment_metadata.trigger_type}"
             )
-        if self.environment_parameters.accept_type == "Accept All":
+        if self.environment_metadata.accept_type == "Accept All":
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = None
-        elif self.environment_parameters.accept_type == "Manual":
+        elif self.environment_metadata.accept_type == "Manual":
             acceptance = Acceptance.MANUAL
             acceptance_function = None
-        elif self.environment_parameters.accept_type == "Autoreject...":
+        elif self.environment_metadata.accept_type == "Autoreject...":
             acceptance = Acceptance.AUTOMATIC
-            acceptance_function = self.environment_parameters.acceptance_function
+            acceptance_function = self.environment_metadata.acceptance_function
         else:
-            raise ValueError(f"Invalid Acceptance Type: {self.environment_parameters.accept_type}")
-        overlap_fraction = self.environment_parameters.overlap
-        trigger_channel_index = self.environment_parameters.trigger_channel
+            raise ValueError(
+                f"Invalid Acceptance Type: {self.environment_metadata.accept_type}"
+            )
+        overlap_fraction = self.environment_metadata.overlap
+        trigger_channel_index = self.environment_metadata.trigger_channel
         trigger_slope = (
             TriggerSlope.POSITIVE
-            if self.environment_parameters.trigger_slope_positive
+            if self.environment_metadata.trigger_slope_positive
             else TriggerSlope.NEGATIVE
         )
-        (_, trigger_level, _, trigger_hysteresis) = self.environment_parameters.get_trigger_levels(
-            self.data_acquisition_parameters.channel_list
+        (_, trigger_level, _, trigger_hysteresis) = (
+            self.environment_metadata.get_trigger_levels(
+                self.hardware_metadata.channel_list
+            )
         )
-        trigger_hysteresis_samples = self.environment_parameters.hysteresis_samples
-        pretrigger_fraction = self.environment_parameters.pretrigger
-        frame_size = self.environment_parameters.samples_per_frame
-        if self.environment_parameters.frf_window == "hann":
+        trigger_hysteresis_samples = self.environment_metadata.hysteresis_samples
+        pretrigger_fraction = self.environment_metadata.pretrigger
+        frame_size = self.environment_metadata.samples_per_frame
+        if self.environment_metadata.frf_window == "hann":
             window = Window.HANN
-        elif self.environment_parameters.frf_window == "rectangle":
+        elif self.environment_metadata.frf_window == "rectangle":
             window = Window.RECTANGLE
-        elif self.environment_parameters.frf_window == "exponential":
+        elif self.environment_metadata.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            raise ValueError(f"Invalid Window Type: {self.environment_parameters.frf_window}")
+            raise ValueError(
+                f"Invalid Window Type: {self.environment_metadata.frf_window}"
+            )
         window_parameter = -(frame_size) / np.log(
-            self.environment_parameters.exponential_window_value_at_frame_end
+            self.environment_metadata.exponential_window_value_at_frame_end
         )
         return CollectorMetadata(
             num_channels,
@@ -764,29 +1176,33 @@ class ModalEnvironment(AbstractEnvironment):
         """Collects metadata to define the spectral processing"""
         averaging_type = (
             AveragingTypes.LINEAR
-            if self.environment_parameters.averaging_type == "Linear"
+            if self.environment_metadata.averaging_type == "Linear"
             else AveragingTypes.EXPONENTIAL
         )
-        averages = self.environment_parameters.num_averages
-        exponential_averaging_coefficient = self.environment_parameters.averaging_coefficient
-        if self.environment_parameters.frf_technique == "H1":
+        averages = self.environment_metadata.num_averages
+        exponential_averaging_coefficient = (
+            self.environment_metadata.averaging_coefficient
+        )
+        if self.environment_metadata.frf_technique == "H1":
             frf_estimator = Estimator.H1
-        elif self.environment_parameters.frf_technique == "H2":
+        elif self.environment_metadata.frf_technique == "H2":
             frf_estimator = Estimator.H2
-        elif self.environment_parameters.frf_technique == "H3":
+        elif self.environment_metadata.frf_technique == "H3":
             frf_estimator = Estimator.H3
-        elif self.environment_parameters.frf_technique == "Hv":
+        elif self.environment_metadata.frf_technique == "Hv":
             frf_estimator = Estimator.HV
         else:
             raise ValueError(
-                f"Invalid FRF Estimator {self.environment_parameters.frf_technique}. "
+                f"Invalid FRF Estimator {self.environment_metadata.frf_technique}. "
                 "How did you get here?"
             )
-        num_response_channels = len(self.environment_parameters.response_channel_indices)
-        num_reference_channels = len(self.environment_parameters.reference_channel_indices)
-        frequency_spacing = self.environment_parameters.frequency_spacing
-        sample_rate = self.environment_parameters.sample_rate
-        num_frequency_lines = self.environment_parameters.fft_lines
+        num_response_channels = len(self.environment_metadata.response_channel_indices)
+        num_reference_channels = len(
+            self.environment_metadata.reference_channel_indices
+        )
+        frequency_spacing = self.environment_metadata.frequency_spacing
+        sample_rate = self.environment_metadata.sample_rate
+        num_frequency_lines = self.environment_metadata.fft_lines
         return SpectralProcessingMetadata(
             averaging_type,
             averages,
@@ -804,16 +1220,19 @@ class ModalEnvironment(AbstractEnvironment):
     def get_signal_generation_metadata(self) -> SignalGenerationMetadata:
         """Collects metadata to define the signal generator"""
         return SignalGenerationMetadata(
-            samples_per_write=self.data_acquisition_parameters.samples_per_write,
+            samples_per_write=self.hardware_metadata.samples_per_write,
             level_ramp_samples=1,
             output_transformation_matrix=None,
-            disabled_signals=self.environment_parameters.disabled_signals,
+            disabled_signals=self.environment_metadata.disabled_signals,
         )
 
     def get_signal_generator(self):
         """Gets the signal generator object used to generate signals for the environment"""
-        return self.environment_parameters.get_signal_generator()
+        return self.environment_metadata.get_signal_generator()
 
+    # endregion
+
+    # region Commands
     def start_environment(self, data):  # pylint: disable=unused-argument
         """Starts the environment
 
@@ -841,7 +1260,7 @@ class ModalEnvironment(AbstractEnvironment):
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.environment_parameters.skip_frames, 1),
+                (self.environment_metadata.skip_frames, 1),
             ),
         )
         time.sleep(0.01)
@@ -905,6 +1324,11 @@ class ModalEnvironment(AbstractEnvironment):
             self.environment_name, (ModalCommands.RUN_CONTROL, None)
         )
 
+        self.set_active()
+        self.queue_container.gui_update_queue.put(
+            (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
+        )
+
     def run_control(self, data):  # pylint: disable=unused-argument
         """Runs the environment
 
@@ -936,7 +1360,7 @@ class ModalEnvironment(AbstractEnvironment):
                         ModalUICommands.SPECTRAL_UPDATE,
                         (
                             frames,
-                            self.environment_parameters.num_averages,
+                            self.environment_metadata.num_averages,
                             frequencies,
                             frf,
                             coherence,
@@ -953,6 +1377,9 @@ class ModalEnvironment(AbstractEnvironment):
             self.environment_name, (ModalCommands.RUN_CONTROL, None)
         )
 
+    # endregion
+
+    # region Shutdown
     def siggen_shutdown_achieved_fn(self, data):  # pylint: disable=unused-argument
         """Sets the signal generation shutdown flag to True
 
@@ -1001,7 +1428,11 @@ class ModalEnvironment(AbstractEnvironment):
             and self.spectral_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
-            self.gui_update_queue.put((self.environment_name, (ModalUICommands.FINISHED, None)))
+            self.clear_active()
+            self.queue_container.gui_update_queue.put(
+                (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
+            )
+            # self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
         else:
             # Recheck some time later
             time.sleep(1)
@@ -1071,18 +1502,27 @@ class ModalEnvironment(AbstractEnvironment):
             queue.put(self.environment_name, (GlobalCommands.QUIT, None))
         return True
 
+    # endregion
 
-# region: Process
+
+# region Process
 def modal_process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
-    gui_update_queue: Queue,
-    controller_communication_queue: VerboseMessageQueue,
-    log_file_queue: Queue,
-    data_in_queue: Queue,
-    data_out_queue: Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    gui_update_queue: mp.Queue,
+    controller_command_queue: VerboseMessageQueue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+    sysid_active_event: mp.synchronize.Event,
+    sysid_stored_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """Modal environment process function called by multiprocessing
 
@@ -1108,17 +1548,22 @@ def modal_process(
         Queue to which data will be written that will be output by the hardware.
 
     """
+    if threaded:
+        new_process = threading.Thread  # worker threads
+    else:
+        new_process = mp.Process  # worker processes
+
     queue_container = ModalQueues(
         environment_name,
         input_queue,
         gui_update_queue,
-        controller_communication_queue,
+        controller_command_queue,
         data_in_queue,
         data_out_queue,
         log_file_queue,
     )
 
-    spectral_proc = mp.Process(
+    spectral_proc = new_process(
         target=spectral_processing_process,
         args=(
             environment_name,
@@ -1131,7 +1576,8 @@ def modal_process(
         ),
     )
     spectral_proc.start()
-    siggen_proc = mp.Process(
+
+    siggen_proc = new_process(
         target=signal_generation_process,
         args=(
             environment_name,
@@ -1144,7 +1590,8 @@ def modal_process(
         ),
     )
     siggen_proc.start()
-    collection_proc = mp.Process(
+
+    collection_proc = new_process(
         target=data_collector_process,
         args=(
             environment_name,
@@ -1156,13 +1603,18 @@ def modal_process(
             queue_container.gui_update_queue,
         ),
     )
-
     collection_proc.start()
 
     process_class = ModalEnvironment(
-        environment_name, queue_container, acquisition_active, output_active
+        environment_name,
+        queue_name,
+        queue_container,
+        acquisition_active_event,
+        output_active_event,
+        active_event,
+        ready_event,
     )
-    process_class.run()
+    process_class.run(shutdown_event)
 
     # Rejoin all the processes
     process_class.log("Joining Subprocesses")
@@ -1172,3 +1624,6 @@ def modal_process(
     siggen_proc.join()
     process_class.log("Joining Data Collection")
     collection_proc.join()
+
+
+# endregion

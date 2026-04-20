@@ -32,7 +32,9 @@ import scipy.signal as signal
 from scipy.io import loadmat
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import flush_queue
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_utilities import Channel
 
 
 # region: Acqusition
@@ -87,7 +89,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -97,7 +99,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -135,7 +137,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
         # the read size
         self.force_buffer = np.zeros((0, np.sum(~self.response_channels)))
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -143,7 +145,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -151,11 +153,13 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
-            test_data.sample_rate * self.integration_oversample
-        )
+        self.times = np.arange(
+            test_data.samples_per_read * self.integration_oversample + 1
+        ) / (test_data.sample_rate * self.integration_oversample)
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
+        self.acquisition_delay = (
+            test_data.samples_per_write / test_data.output_oversample
+        )
 
     def start(self):
         """Method to start acquiring data.
@@ -270,7 +274,7 @@ class StateSpaceOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -279,7 +283,7 @@ class StateSpaceOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

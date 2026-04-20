@@ -32,7 +32,8 @@ import nidaqmx.stream_writers as ni_write
 import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3
 
@@ -65,7 +66,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -75,7 +76,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -102,7 +103,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             A list of ``Channel`` objects defining the channels in the test
 
         """
-        physical_devices = list(set(channel.physical_device for channel in channel_data))
+        physical_devices = list(
+            set(channel.physical_device for channel in channel_data)
+        )
         device_tasks = {}
         extra_task_index = 1
         task_names = set([])
@@ -139,7 +142,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                             channel.physical_device
                         ).compact_daq_chassis_device
                         pfi_terminals = [
-                            trigger for trigger in chassis_device.terminals if "/PFI0" in trigger
+                            trigger
+                            for trigger in chassis_device.terminals
+                            if "/PFI0" in trigger
                         ]
                         print(f"PFI Terminals on CDAQ Device:\n{pfi_terminals}")
                         self.read_triggers[task_index] = pfi_terminals[0]
@@ -151,14 +156,14 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             self._create_channel(channel, task_index)
         print(f"Input Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -166,7 +171,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.readers = []
         self.read_datas = []
         self.acquisition_delay = BUFFER_SIZE_FACTOR * test_data.samples_per_write
-        self.read_data = np.zeros((len(test_data.channel_list), test_data.samples_per_read))
+        self.read_data = np.zeros(
+            (len(test_data.channel_list), test_data.samples_per_read)
+        )
         for i, (task, trigger) in enumerate(zip(self.tasks, self.read_triggers)):
             task.timing.cfg_samp_clk_timing(
                 test_data.sample_rate,
@@ -177,12 +184,18 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             if trigger is not None:
                 task.triggers.start_trigger.dig_edge_src = trigger
                 task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
-                task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
+                task.triggers.start_trigger.trig_type = (
+                    ni.constants.TriggerType.DIGITAL_EDGE
+                )
                 print(f"Acquisition Task {i} Trigger {trigger}")
             self.readers.append(ni_read.AnalogMultiChannelReader(task.in_stream))
-            self.read_datas.append(np.zeros((len(task.ai_channels), test_data.samples_per_read)))
+            self.read_datas.append(
+                np.zeros((len(task.ai_channels), test_data.samples_per_read))
+            )
 
-            print(f"Acquisition Task {i} Actual Sample Rate: {task.timing.samp_clk_rate}")
+            print(
+                f"Acquisition Task {i} Actual Sample Rate: {task.timing.samp_clk_rate}"
+            )
 
     def start(self):
         """Start acquiring data"""
@@ -203,7 +216,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 sample_mode=nic.AcquisitionType.CONTINUOUS,
                 samps_per_chan=self.test_data.samples_per_write,
             )
-            self.trigger_output_task.out_stream.regen_mode = nic.RegenerationMode.ALLOW_REGENERATION
+            self.trigger_output_task.out_stream.regen_mode = (
+                nic.RegenerationMode.ALLOW_REGENERATION
+            )
             writer = ni_write.AnalogMultiChannelWriter(
                 self.trigger_output_task.out_stream, auto_start=False
             )
@@ -262,8 +277,12 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             ``n_samples``
         """
         remaining_data = []
-        for task, reader, channel_mapping in zip(self.tasks, self.readers, self.channel_task_map):
-            read_data = np.zeros((len(task.ai_channels), task.in_stream.avail_samp_per_chan))
+        for task, reader, channel_mapping in zip(
+            self.tasks, self.readers, self.channel_task_map
+        ):
+            read_data = np.zeros(
+                (len(task.ai_channels), task.in_stream.avail_samp_per_chan)
+            )
             reader.read_many_sample(
                 read_data,
                 number_of_samples_per_channel=read_data.shape[-1],
@@ -315,23 +334,31 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             channel :
                 A reference to the NIDAQmx channel created by the function
         """
-        physical_channel = channel_data.physical_device + "/" + channel_data.physical_channel
+        physical_channel = (
+            channel_data.physical_device + "/" + channel_data.physical_channel
+        )
         # Parse the channel structure to make sure datatypes are correct
         # Sensitivity
         try:
             sensitivity = float(channel_data.sensitivity)
         except (TypeError, ValueError) as e:
-            raise ValueError(f"{channel_data.sensitivity} not a valid sensitivity") from e
+            raise ValueError(
+                f"{channel_data.sensitivity} not a valid sensitivity"
+            ) from e
         # Minimum Value
         try:
             minimum_value = float(channel_data.minimum_value)
         except (TypeError, ValueError) as e:
-            raise ValueError(f"{channel_data.minimum_value} not a valid minimum value") from e
+            raise ValueError(
+                f"{channel_data.minimum_value} not a valid minimum value"
+            ) from e
         # Maximum Value
         try:
             maximum_value = float(channel_data.maximum_value)
         except (TypeError, ValueError) as e:
-            raise ValueError(f"{channel_data.maximum_value} not a valid maximum value") from e
+            raise ValueError(
+                f"{channel_data.maximum_value} not a valid maximum value"
+            ) from e
         # Channel Type and Units
         if channel_data.channel_type.lower() in [
             "accelerometer",
@@ -342,7 +369,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             if channel_data.unit.lower() in ["g", "gs"]:
                 unit = nic.AccelUnits.G
             else:
-                raise ValueError(f"Accelerometer units must be in G, not {channel_data.unit}")
+                raise ValueError(
+                    f"Accelerometer units must be in G, not {channel_data.unit}"
+                )
         elif channel_data.channel_type.lower() == "force":
             channel_type = nic.UsageTypeAI.FORCE_IEPE_SENSOR
             if channel_data.unit.lower() in [
@@ -372,7 +401,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             try:
                 excitation = float(channel_data.excitation)
             except (TypeError, ValueError) as e:
-                raise ValueError(f"{channel_data.excitation} not a valid excitation") from e
+                raise ValueError(
+                    f"{channel_data.excitation} not a valid excitation"
+                ) from e
         elif channel_data.excitation_source.lower() == "none":
             excitation_source = nic.ExcitationSource.NONE
             excitation = 0
@@ -480,7 +511,7 @@ class NIDAQmxOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -490,7 +521,7 @@ class NIDAQmxOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -575,7 +606,9 @@ class NIDAQmxOutput(HardwareOutput):
                             ][0]
                         except ni.DaqError:
                             self.write_triggers[task_index] = (
-                                "/" + channel_data[0].physical_device.strip() + "/ai/StartTrigger"
+                                "/"
+                                + channel_data[0].physical_device.strip()
+                                + "/ai/StartTrigger"
                             )
                     else:
                         try:
@@ -583,7 +616,9 @@ class NIDAQmxOutput(HardwareOutput):
                                 channel.feedback_device
                             ).compact_daq_chassis_device
                             self.write_triggers[task_index] = [
-                                trigger for trigger in chassis_device.terminals if "PFI0" in trigger
+                                trigger
+                                for trigger in chassis_device.terminals
+                                if "PFI0" in trigger
                             ][0]
                         except ni.DaqError:
                             self.write_triggers[task_index] = (
@@ -592,14 +627,14 @@ class NIDAQmxOutput(HardwareOutput):
                 self._create_channel(channel, task_index)
         print(f"Output Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         """
@@ -616,9 +651,13 @@ class NIDAQmxOutput(HardwareOutput):
             # task.out_stream.relative_to = nic.WriteRelativeTo.CURRENT_WRITE_POSITION
             task.triggers.start_trigger.dig_edge_src = trigger
             task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
-            task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
+            task.triggers.start_trigger.trig_type = (
+                ni.constants.TriggerType.DIGITAL_EDGE
+            )
             print(f"Output Task {i} Trigger {trigger}")
-            task.out_stream.output_buf_size = self.buffer_size_factor * test_data.samples_per_write
+            task.out_stream.output_buf_size = (
+                self.buffer_size_factor * test_data.samples_per_write
+            )
             self.writers.append(
                 ni_write.AnalogMultiChannelWriter(task.out_stream, auto_start=False)
             )
@@ -642,7 +681,9 @@ class NIDAQmxOutput(HardwareOutput):
 
         """
         for i, writer in enumerate(self.writers):
-            writer.write_many_sample(data[self.channel_task_map[i]], timeout=nic.WAIT_INFINITELY)
+            writer.write_many_sample(
+                data[self.channel_task_map[i]], timeout=nic.WAIT_INFINITELY
+            )
         if not self.has_printed_write_statement:
             print("Output Wrote Data")
             self.has_printed_write_statement = True
@@ -710,13 +751,19 @@ class NIDAQmxOutput(HardwareOutput):
         try:
             minimum_value = float(channel_data.minimum_value)
         except (TypeError, ValueError) as e:
-            raise ValueError(f"{channel_data.minimum_value} not a valid minimum value") from e
+            raise ValueError(
+                f"{channel_data.minimum_value} not a valid minimum value"
+            ) from e
         # Maximum Value
         try:
             maximum_value = float(channel_data.maximum_value)
         except (TypeError, ValueError) as e:
-            raise ValueError(f"{channel_data.maximum_value} not a valid maximum value") from e
-        physical_channel = channel_data.feedback_device + "/" + channel_data.feedback_channel
+            raise ValueError(
+                f"{channel_data.maximum_value} not a valid maximum value"
+            ) from e
+        physical_channel = (
+            channel_data.feedback_device + "/" + channel_data.feedback_channel
+        )
         channel = self.tasks[device_index].ao_channels.add_ao_voltage_chan(
             physical_channel, min_val=minimum_value, max_val=maximum_value
         )

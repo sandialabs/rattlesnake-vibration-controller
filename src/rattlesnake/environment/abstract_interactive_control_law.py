@@ -73,6 +73,11 @@ from enum import Enum
 from rattlesnake.utilities import GlobalCommands
 
 
+class ControlLawCommands(Enum):
+    UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 0
+    SEND_INTERACTIVE_COMMAND = 1
+
+
 class ControlLawUICommands(Enum):
     INTERACTIVE_CONTROL_UPDATE = 0
 
@@ -103,7 +108,9 @@ class AbstractControlLawUI(ABC):
         self.data_acquisition_parameters = None
         self.environment_parameters = None
 
-    def initialize_parameters(self, data_acquisition_parameters, environment_parameters):
+    def initialize_parameters(
+        self, data_acquisition_parameters, environment_parameters
+    ):
         """Stores the data acquisition and environment parameters to the UI
 
         Parameters
@@ -121,7 +128,7 @@ class AbstractControlLawUI(ABC):
         self.send_parameters_queue.put(
             self.process_name,
             (
-                GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+                ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
                 self.collect_parameters(),
             ),
         )
@@ -130,7 +137,7 @@ class AbstractControlLawUI(ABC):
         """Tells the environment process to run a specific command"""
         self.send_parameters_queue.put(
             self.process_name,
-            (GlobalCommands.SEND_INTERACTIVE_COMMAND, (command, args)),
+            (ControlLawCommands.SEND_INTERACTIVE_COMMAND, (command, args)),
         )
 
     @abstractmethod
@@ -204,7 +211,10 @@ class AbstractControlLawComputation(ABC):
         self.gui_update_queue.put(
             (
                 self.environment_name,
-                (ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE, self.collect_results()),
+                (
+                    ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE,
+                    self.collect_results(),
+                ),
             )
         )
 

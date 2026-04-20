@@ -29,8 +29,13 @@ from typing import List
 import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.hardware.data_physics_interface import DPQuattro, QuattroCoupling, QuattroStatus
-from rattlesnake.utilities import Channel, DataAcquisitionParameters
+from rattlesnake.hardware.data_physics_interface import (
+    DPQuattro,
+    QuattroCoupling,
+    QuattroStatus,
+)
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
@@ -79,7 +84,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -89,7 +94,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -170,7 +175,9 @@ class DataPhysicsAcquisition(HardwareAcquisition):
             self.input_sensitivities[channel_index] = (
                 1.0 if is_output else float(channel.sensitivity) / 1000
             )
-            self.input_ranges[channel_index] = 10.0 if is_output else float(channel.maximum_value)
+            self.input_ranges[channel_index] = (
+                10.0 if is_output else float(channel.maximum_value)
+            )
 
             # Set up the output
             if is_output:
@@ -182,7 +189,9 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         self.quattro.setup_input_parameters(
             self.input_couplings, self.input_sensitivities, self.input_ranges
         )
-        self.quattro.setup_output_parameters(self.output_sensitivities, self.output_ranges)
+        self.quattro.setup_output_parameters(
+            self.output_sensitivities, self.output_ranges
+        )
 
     def start(self):
         """Method to start acquiring data from the hardware"""
@@ -207,7 +216,9 @@ class DataPhysicsAcquisition(HardwareAcquisition):
             # channel table using self.input_channel_order
             if samples_available > 0:
                 self.read_data.append(
-                    self.quattro.read_input_data(samples_available)[self.input_channel_order]
+                    self.quattro.read_input_data(samples_available)[
+                        self.input_channel_order
+                    ]
                 )
             # Pause for a bit to allow more samples to accumulate
             time.sleep(self.time_per_read / SLEEP_FACTOR)
@@ -215,7 +226,9 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         # read data into the number of samples requested, and put the remainder
         # as the start of the next self.read_data list.
         read_data = np.concatenate(self.read_data, axis=-1)
-        self.read_data = [read_data[:, self.data_acquisition_parameters.samples_per_read :]]
+        self.read_data = [
+            read_data[:, self.data_acquisition_parameters.samples_per_read :]
+        ]
         return read_data[:, : self.data_acquisition_parameters.samples_per_read]
 
     def read_remaining(self) -> np.ndarray:
@@ -240,7 +253,9 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         # read data into the number of samples requested, and put the remainder
         # as the start of the next self.read_data list.
         read_data = np.concatenate(self.read_data, axis=-1)
-        self.read_data = [read_data[:, self.data_acquisition_parameters.samples_per_read :]]
+        self.read_data = [
+            read_data[:, self.data_acquisition_parameters.samples_per_read :]
+        ]
         read_data = np.concatenate(self.read_data, axis=-1)
         return read_data
 
@@ -291,7 +306,10 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         #     f"{samples_on_buffer} Samples on Output Buffer, "
         #     f"(<{self.data_acquisition_parameters.samples_per_write} to output more)"
         # )
-        if not block and samples_on_buffer >= self.data_acquisition_parameters.samples_per_write:
+        if (
+            not block
+            and samples_on_buffer >= self.data_acquisition_parameters.samples_per_write
+        ):
             # print('Too much data on buffer, not putting new data')
             return
         try:
@@ -342,7 +360,7 @@ class DataPhysicsOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -352,7 +370,7 @@ class DataPhysicsOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

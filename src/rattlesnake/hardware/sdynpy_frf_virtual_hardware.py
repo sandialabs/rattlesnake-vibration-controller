@@ -29,11 +29,11 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
 from rattlesnake.utilities import (
-    Channel,
-    DataAcquisitionParameters,
     flush_queue,
     reduce_array_by_coordinate,
 )
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_utilities import Channel
 
 try:
     # cupy may not exist if correct modules aren't installed
@@ -144,7 +144,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
     # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -154,7 +154,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -223,7 +223,11 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
             # compute irf and transpose so that shape becomes (nref, nresp, nsamples)
             self.irf = np.fft.irfft(array, axis=0).T
             num_samples = self.irf.shape[-1]
-            dt = 1 / (self.sdynpy_data["abscissa"].max() * num_samples / np.floor(num_samples / 2))
+            dt = 1 / (
+                self.sdynpy_data["abscissa"].max()
+                * num_samples
+                / np.floor(num_samples / 2)
+            )
         elif self.function_type == 29:
             self.irf = array.T
             dt = mean_spacing
@@ -258,7 +262,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         )
         self.sys_out = np.zeros((len(channel_data), self.times.size), dtype=np.float64)
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -266,7 +270,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -345,9 +349,9 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
             # Setting up and doing the convolution (using GPU if possible)
             # (see sdynpy.data.TimeHistoryArray.mimo_forward)
             for reference_irfs, inputs in zip(self.irf, this_force):
-                self.output_signal_time += oaconvolve(reference_irfs, inputs[np.newaxis, :])[
-                    :, : self.convolution_samples
-                ]
+                self.output_signal_time += oaconvolve(
+                    reference_irfs, inputs[np.newaxis, :]
+                )[:, : self.convolution_samples]
 
             # assign latest frame of data to correct channels
             # (transfer from GPU to CPU if necessary)
@@ -355,12 +359,16 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
                 self.sys_out[self.response_channels, :] = self.output_signal_time[
                     :, -self.times.size :
                 ].get()
-                self.sys_out[self.output_channels, :] = this_force[:, -self.times.size :].get()
+                self.sys_out[self.output_channels, :] = this_force[
+                    :, -self.times.size :
+                ].get()
             else:
                 self.sys_out[self.response_channels, :] = self.output_signal_time[
                     :, -self.times.size :
                 ]
-                self.sys_out[self.output_channels, :] = this_force[:, -self.times.size :]
+                self.sys_out[self.output_channels, :] = this_force[
+                    :, -self.times.size :
+                ]
         else:
             self.sys_out[:] = 0
 
@@ -414,7 +422,7 @@ class SDynPyFRFOutput(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -423,7 +431,7 @@ class SDynPyFRFOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

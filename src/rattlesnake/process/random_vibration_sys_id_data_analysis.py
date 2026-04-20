@@ -30,9 +30,11 @@ from enum import Enum
 import numpy as np
 
 from rattlesnake.process.abstract_sysid_data_analysis import (
-    AbstractSysIDAnalysisProcess,
-    SysIDDataAnalysisCommands,
+    SysIDAnalysisProcess,
+    SysIdDataAnalysisCommands,
+    SysIdMetadata,
 )
+from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
@@ -47,6 +49,7 @@ from rattlesnake.utilities import (
 )
 
 
+# region Commands
 class RandomVibrationDataAnalysisCommands(Enum):
     """Enumeration containing valid commands for the random data analysis process"""
 
@@ -54,8 +57,6 @@ class RandomVibrationDataAnalysisCommands(Enum):
     PERFORM_CONTROL_PREDICTION = 1
     RUN_CONTROL = 2
     STOP_CONTROL = 3
-    # SHUTDOWN_ACHIEVED = 4
-    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
 
 
 class RandomVibrationDataAnalysisUICommands(Enum):
@@ -65,9 +66,21 @@ class RandomVibrationDataAnalysisUICommands(Enum):
     UPDATE_TEST_RESPONSE_ERROR_LIST = 3
 
 
-class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
+# endregion
+
+
+# region Metadata
+class RandomVibrationSysIdMetadata(SysIdMetadata):
+    pass
+
+
+# endregion
+
+
+class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
 
+    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -97,13 +110,19 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             RandomVibrationDataAnalysisCommands.PERFORM_CONTROL_PREDICTION,
             self.perform_control_prediction,
         )
-        self.map_command(RandomVibrationDataAnalysisCommands.RUN_CONTROL, self.run_control)
-        self.map_command(RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_control)
         self.map_command(
-            GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+            RandomVibrationDataAnalysisCommands.RUN_CONTROL, self.run_control
+        )
+        self.map_command(
+            RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_control
+        )
+        self.map_command(
+            ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
         )
-        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(
+            ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
+        )
         self.error_indices = None
         self.control_function = None
         self.response_cpsd_prediction = None
@@ -117,18 +136,24 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
         self.has_sent_interactive_control_transfer_function_results = False
         self.last_interactive_parameters = None
 
-    def initialize_sysid_parameters(self, data: RandomVibrationMetadata):
-        self.parameters: RandomVibrationMetadata
+    # endregion
+
+    # region StateSync
+    def initialize_sysid_parameters(self, data: RandomVibrationSysIdMetadata):
+        self.parameters: RandomVibrationSysIdMetadata
         super().initialize_sysid_parameters(data)  # This defines self.parameters
 
         # Find the frequency lines to perform control and compute error over
         # print(type(data.specification_cpsd_matrix))
         # print(data.specification_cpsd_matrix)
         self.error_indices = ~np.all(
-            (data.specification_cpsd_matrix == 0) | np.isnan(data.specification_cpsd_matrix),
+            (data.specification_cpsd_matrix == 0)
+            | np.isnan(data.specification_cpsd_matrix),
             axis=(-1, -2),
         )
-        self.frequencies = self.parameters.frequency_spacing * np.arange(self.parameters.fft_lines)
+        self.frequencies = self.parameters.frequency_spacing * np.arange(
+            self.parameters.fft_lines
+        )
         # Load in the control script
         _, file = os.path.split(data.control_python_script)
         file, _ = os.path.splitext(file)
@@ -145,7 +170,9 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             self.control_function = generator_function.send
         elif self.parameters.control_python_function_type == 2:  # Class
             control_frf = (
-                self.control_frf if self.parameters.update_tf_during_control else self.sysid_frf
+                self.control_frf
+                if self.parameters.update_tf_during_control
+                else self.sysid_frf
             )
             control_coherence = (
                 self.control_coherence
@@ -170,7 +197,9 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             )
         elif self.parameters.control_python_function_type == 3:  # Interactive
             control_frf = (
-                self.control_frf if self.parameters.update_tf_during_control else self.sysid_frf
+                self.control_frf
+                if self.parameters.update_tf_during_control
+                else self.sysid_frf
             )
             control_coherence = (
                 self.control_coherence
@@ -273,7 +302,9 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                     None,
                 )
             else:
-                self.log("Have not yet received control parameters from interactive control law!")
+                self.log(
+                    "Have not yet received control parameters from interactive control law!"
+                )
                 self.command_queue.put(
                     self.process_name,
                     (
@@ -300,14 +331,20 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                 None,  # Last Control Response for Error Correction
                 None,  # Last Control Excitation for Drive-based control
             )
-        response_cpsd = self.sysid_frf @ output_cpsd @ self.sysid_frf.conjugate().transpose(0, 2, 1)
+        response_cpsd = (
+            self.sysid_frf @ output_cpsd @ self.sysid_frf.conjugate().transpose(0, 2, 1)
+        )
         self.drive_cpsd_prediction = output_cpsd
         self.response_cpsd_prediction = response_cpsd
-        rms_drives = rms_csd(self.drive_cpsd_prediction, self.parameters.frequency_spacing)
+        rms_drives = rms_csd(
+            self.drive_cpsd_prediction, self.parameters.frequency_spacing
+        )
         response_db_error = power2db(
             np.einsum("ijj->ij", self.response_cpsd_prediction[self.error_indices]).real
         ) - power2db(
-            np.einsum("ijj->ij", self.parameters.specification_cpsd_matrix[self.error_indices]).real
+            np.einsum(
+                "ijj->ij", self.parameters.specification_cpsd_matrix[self.error_indices]
+            ).real
         )
         rms_db_error = rms_time(response_db_error, axis=0)
         self.gui_update_queue.put(
@@ -370,7 +407,9 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             warning_channels = []
             abort_channels = []
             with np.errstate(invalid="ignore"):
-                lines_out = (self.parameters.percent_lines_out / 100) * self.parameters.fft_lines
+                lines_out = (
+                    self.parameters.percent_lines_out / 100
+                ) * self.parameters.fft_lines
                 for i in range(self.last_response_cpsd.shape[-1]):
                     if (
                         sum(
@@ -435,7 +474,9 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             self.log("Controlling")
             # Create the new control output
             control_frf = (
-                self.control_frf if self.parameters.update_tf_during_control else self.sysid_frf
+                self.control_frf
+                if self.parameters.update_tf_during_control
+                else self.sysid_frf
             )
             control_coherence = (
                 self.control_coherence

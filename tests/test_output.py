@@ -5,7 +5,7 @@ from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from functions.common_functions import create_hardware_dict_output
 from unittest import mock
 import multiprocessing as mp
@@ -22,7 +22,7 @@ def log_file_queue():
 # Create modal environment
 @pytest.fixture
 def environments():
-    control_type = ControlTypes(6)
+    control_type = EnvironmentType(6)
     return [[control_type, control_type.name.title()]]
 
 
@@ -149,7 +149,9 @@ def data_acquisition_parameters(channel_list):
 
 # Test the OutputProcess intialization
 def test_output_process_init(queue_container, environments):
-    output_process = OutputProcess("Process Name", queue_container, environments, mp.Value("i", 0))
+    output_process = OutputProcess(
+        "Process Name", queue_container, environments, mp.Value("i", 0)
+    )
 
     # Test if object is the correct class
     assert isinstance(output_process, OutputProcess)
@@ -164,7 +166,12 @@ def test_output_process_init(queue_container, environments):
 @pytest.mark.parametrize("hardware_idx", [0, 1, 2, 4, 5])
 @mock.patch("rattlesnake.process.output.OutputProcess.log")
 def test_output_process_initialize_data_acquisition(
-    mock_log, hardware, hardware_idx, output_process_obj, data_acquisition_parameters, hardware_dict
+    mock_log,
+    hardware,
+    hardware_idx,
+    output_process_obj,
+    data_acquisition_parameters,
+    hardware_dict,
 ):
     data_acquisition_parameters.hardware = hardware_idx
 
@@ -181,7 +188,9 @@ def test_output_process_initialize_data_acquisition(
     # Test if log message was stored
     mock_log.assert_called_with("Initializing Data Acquisition")
 
-    assert output_process_obj.environment_output_channels["Environment Name"] == np.array([0])
+    assert output_process_obj.environment_output_channels[
+        "Environment Name"
+    ] == np.array([0])
 
 
 # @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
@@ -255,7 +264,7 @@ if __name__ == "__main__":
         {"Modal": mp.Queue()},
     )
 
-    control_type = ControlTypes(6)
+    control_type = EnvironmentType(6)
     environments = [[control_type, control_type.name.title()]]
 
     output_process_obj = OutputProcess(

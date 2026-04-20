@@ -29,7 +29,9 @@ from typing import List
 import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.utilities import flush_queue
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_utilities import Channel
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
@@ -82,7 +84,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
 
     # region: Store Metadata
     def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up channels and sampling properties
@@ -92,7 +94,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -245,7 +247,9 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
             output_sensitivities = np.array(output_sensitivities)[self.output_sorting]
 
             # Now send the data to the dp900 device
-            self.dp900.setup_output_parameters(output_sensitivities, output_ranges, output_channels)
+            self.dp900.setup_output_parameters(
+                output_sensitivities, output_ranges, output_channels
+            )
 
             # Since the outputs are at the end, we want to adjust the sorting to
             # put the outputs at the end
@@ -277,7 +281,9 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
             # Pause for a bit to allow more samples to accumulate
             time.sleep(self.time_per_read / SLEEP_FACTOR)
         # Read the data now that we have enough samples
-        read_data = self.dp900.read_input_data(self.data_acquisition_parameters.samples_per_read)
+        read_data = self.dp900.read_input_data(
+            self.data_acquisition_parameters.samples_per_read
+        )
         # Now we need to sort the data correctly to give it back to the channel table
         read_data[self.channel_sorting] = read_data.copy()
         return read_data
@@ -405,7 +411,7 @@ class DataPhysicsDP900Output(HardwareOutput):
 
     # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+        self, test_data: HardwareMetadata, channel_data: List[Channel]
     ):
         """
         Initialize the hardware and set up sources and sampling properties
@@ -415,7 +421,7 @@ class DataPhysicsDP900Output(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :

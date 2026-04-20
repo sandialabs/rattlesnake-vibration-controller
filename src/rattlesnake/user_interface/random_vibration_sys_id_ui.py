@@ -1,19 +1,19 @@
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
     db2scale,
-    error_message_qt,
     load_python_module,
 )
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
     RandomVibrationCommands,
     RandomVibrationUICommands,
 )
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import (
+    error_message_qt,
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
@@ -46,7 +46,7 @@ import numpy as np
 import openpyxl
 import netCDF4 as nc4
 
-CONTROL_TYPE = ControlTypes.RANDOM
+CONTROL_TYPE = EnvironmentType.RANDOM
 MAXIMUM_NAME_LENGTH = 50
 
 
@@ -110,11 +110,15 @@ class RandomVibrationUI(AbstractSysIdUI):
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
+        uic.loadUi(
+            environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget
+        )
         definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the control prediction tabwidget
         self.prediction_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_prediction_ui_paths[CONTROL_TYPE], self.prediction_widget)
+        uic.loadUi(
+            environment_prediction_ui_paths[CONTROL_TYPE], self.prediction_widget
+        )
         test_predictions_tabwidget.addTab(self.prediction_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
@@ -190,7 +194,9 @@ class RandomVibrationUI(AbstractSysIdUI):
 
         # Complete the profile commands
         self.command_map["Set Test Level"] = self.change_test_level_from_profile
-        self.command_map["Change Specification"] = self.change_specification_from_profile
+        self.command_map["Change Specification"] = (
+            self.change_specification_from_profile
+        )
         self.command_map["Save Control Data"] = self.save_control_data_from_profile
 
     def connect_callbacks(self):
@@ -199,7 +205,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.definition_widget.samples_per_frame_selector.valueChanged.connect(
             self.update_parameters_and_clear_spec
         )
-        self.definition_widget.cpsd_overlap_selector.valueChanged.connect(self.update_parameters)
+        self.definition_widget.cpsd_overlap_selector.valueChanged.connect(
+            self.update_parameters
+        )
         self.definition_widget.cola_overlap_percentage_selector.valueChanged.connect(
             self.update_parameters
         )
@@ -247,8 +255,12 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.prediction_widget.minimum_voltage_button.clicked.connect(
             self.show_min_voltage_prediction
         )
-        self.prediction_widget.maximum_error_button.clicked.connect(self.show_max_error_prediction)
-        self.prediction_widget.minimum_error_button.clicked.connect(self.show_min_error_prediction)
+        self.prediction_widget.maximum_error_button.clicked.connect(
+            self.show_max_error_prediction
+        )
+        self.prediction_widget.minimum_error_button.clicked.connect(
+            self.show_min_error_prediction
+        )
         self.prediction_widget.response_error_list.itemClicked.connect(
             self.update_response_error_prediction_selector
         )
@@ -266,19 +278,27 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.run_widget.stop_test_button.clicked.connect(self.stop_control)
         self.run_widget.create_window_button.clicked.connect(self.create_window)
         self.run_widget.show_all_asds_button.clicked.connect(self.show_all_asds)
-        self.run_widget.show_all_csds_phscoh_button.clicked.connect(self.show_all_csds_phscoh)
-        self.run_widget.show_all_csds_realimag_button.clicked.connect(self.show_all_csds_realimag)
+        self.run_widget.show_all_csds_phscoh_button.clicked.connect(
+            self.show_all_csds_phscoh
+        )
+        self.run_widget.show_all_csds_realimag_button.clicked.connect(
+            self.show_all_csds_realimag
+        )
         self.run_widget.tile_windows_button.clicked.connect(self.tile_windows)
         self.run_widget.close_windows_button.clicked.connect(self.close_windows)
         self.run_timer.timeout.connect(self.update_run_time)
         self.run_widget.test_response_error_list.itemDoubleClicked.connect(
             self.show_magnitude_window
         )
-        self.run_widget.save_current_spectral_data_button.clicked.connect(self.save_spectral_data)
+        self.run_widget.save_current_spectral_data_button.clicked.connect(
+            self.save_spectral_data
+        )
 
     # %% Initialize Data Aquisition
 
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
+    def initialize_data_acquisition(
+        self, data_acquisition_parameters: HardwareMetadata
+    ):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -287,7 +307,7 @@ class RandomVibrationUI(AbstractSysIdUI):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        data_acquisition_parameters : HardwareMetadata :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 
@@ -387,7 +407,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             if channel.feedback_device
         ]
         # Set up widgets
-        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
+        self.definition_widget.sample_rate_display.setValue(
+            data_acquisition_parameters.sample_rate
+        )
         self.definition_widget.samples_per_frame_selector.setValue(
             data_acquisition_parameters.sample_rate
         )
@@ -398,8 +420,12 @@ class RandomVibrationUI(AbstractSysIdUI):
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.Unchecked)
             self.definition_widget.control_channels_selector.addItem(item)
-        self.definition_widget.input_channels_display.setValue(len(self.physical_channel_names))
-        self.definition_widget.output_channels_display.setValue(len(self.physical_output_indices))
+        self.definition_widget.input_channels_display.setValue(
+            len(self.physical_channel_names)
+        )
+        self.definition_widget.output_channels_display.setValue(
+            len(self.physical_output_indices)
+        )
         self.definition_widget.control_channels_display.setValue(0)
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
@@ -418,7 +444,8 @@ class RandomVibrationUI(AbstractSysIdUI):
         return [
             i
             for i in range(self.definition_widget.control_channels_selector.count())
-            if self.definition_widget.control_channels_selector.item(i).checkState() == Qt.Checked
+            if self.definition_widget.control_channels_selector.item(i).checkState()
+            == Qt.Checked
         ]
 
     @property
@@ -436,7 +463,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         else:
             return [
                 f"Transformed Response {i + 1}"
-                for i in range(self.environment_parameters.response_transformation_matrix.shape[0])
+                for i in range(
+                    self.environment_parameters.response_transformation_matrix.shape[0]
+                )
             ]
 
     @property
@@ -446,10 +475,14 @@ class RandomVibrationUI(AbstractSysIdUI):
         else:
             return [
                 f"Transformed Drive {i + 1}"
-                for i in range(self.environment_parameters.reference_transformation_matrix.shape[0])
+                for i in range(
+                    self.environment_parameters.reference_transformation_matrix.shape[0]
+                )
             ]
 
-    def select_spec_file(self, clicked, filename=None):  # pylint: disable=unused-argument
+    def select_spec_file(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         """Loads a specification using a dialog or the specified filename
 
         Parameters
@@ -479,7 +512,9 @@ class RandomVibrationUI(AbstractSysIdUI):
                     (
                         self.data_acquisition_parameters.channel_list[i].node_number,
                         _direction_map[
-                            self.data_acquisition_parameters.channel_list[i].node_direction
+                            self.data_acquisition_parameters.channel_list[
+                                i
+                            ].node_direction
                         ],
                     )
                     for i in self.physical_control_indices
@@ -509,7 +544,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             self.definition_widget.auto_abort_checkbox.setEnabled(True)
         self.show_specification()
 
-    def select_python_module(self, clicked, filename=None):  # pylint: disable=unused-argument
+    def select_python_module(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
         Parameters
@@ -545,7 +582,9 @@ class RandomVibrationUI(AbstractSysIdUI):
                         (
                             method in function[1].__dict__
                             and not (
-                                hasattr(function[1].__dict__[method], "__isabstractmethod__")
+                                hasattr(
+                                    function[1].__dict__[method], "__isabstractmethod__"
+                                )
                                 and function[1].__dict__[method].__isabstractmethod__
                             )
                         )
@@ -577,13 +616,23 @@ class RandomVibrationUI(AbstractSysIdUI):
         except AttributeError:
             return
         if inspect.isgeneratorfunction(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(1)
-        elif inspect.isclass(function) and issubclass(function, AbstractControlLawComputation):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(3)
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                1
+            )
+        elif inspect.isclass(function) and issubclass(
+            function, AbstractControlLawComputation
+        ):
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                3
+            )
         elif inspect.isclass(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(2)
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                2
+            )
         else:
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(0)
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                0
+            )
 
     def show_specification(self):
         """Show the specification on the GUI"""
@@ -665,19 +714,27 @@ class RandomVibrationUI(AbstractSysIdUI):
                 )
             else:
                 self.plot_data_items["specification_warning_upper"].setData(
-                    np.array([0, self.definition_widget.sample_rate_display.value() / 2]),
+                    np.array(
+                        [0, self.definition_widget.sample_rate_display.value() / 2]
+                    ),
                     np.zeros(2),
                 )
                 self.plot_data_items["specification_warning_lower"].setData(
-                    np.array([0, self.definition_widget.sample_rate_display.value() / 2]),
+                    np.array(
+                        [0, self.definition_widget.sample_rate_display.value() / 2]
+                    ),
                     np.zeros(2),
                 )
                 self.plot_data_items["specification_abort_upper"].setData(
-                    np.array([0, self.definition_widget.sample_rate_display.value() / 2]),
+                    np.array(
+                        [0, self.definition_widget.sample_rate_display.value() / 2]
+                    ),
                     np.zeros(2),
                 )
                 self.plot_data_items["specification_abort_lower"].setData(
-                    np.array([0, self.definition_widget.sample_rate_display.value() / 2]),
+                    np.array(
+                        [0, self.definition_widget.sample_rate_display.value() / 2]
+                    ),
                     np.zeros(2),
                 )
             self.plot_data_items["specification_sum"].setData(
@@ -710,14 +767,20 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.specification_warning_matrix = None
         self.specification_cpsd_matrix = None
         self.specification_frequency_lines = None
-        self.definition_widget.control_channels_display.setValue(len(self.physical_control_indices))
+        self.definition_widget.control_channels_display.setValue(
+            len(self.physical_control_indices)
+        )
         self.definition_widget.specification_row_selector.blockSignals(True)
         self.definition_widget.specification_column_selector.blockSignals(True)
         self.definition_widget.specification_row_selector.clear()
         self.definition_widget.specification_column_selector.clear()
         for i, control_name in enumerate(self.physical_control_names):
-            self.definition_widget.specification_row_selector.addItem(f"{i + 1}: {control_name}")
-            self.definition_widget.specification_column_selector.addItem(f"{i + 1}: {control_name}")
+            self.definition_widget.specification_row_selector.addItem(
+                f"{i + 1}: {control_name}"
+            )
+            self.definition_widget.specification_column_selector.addItem(
+                f"{i + 1}: {control_name}"
+            )
         self.definition_widget.specification_row_selector.blockSignals(False)
         self.definition_widget.specification_column_selector.blockSignals(False)
         self.define_transformation_matrices(None, False)
@@ -790,19 +853,29 @@ class RandomVibrationUI(AbstractSysIdUI):
     def update_parameters(self):
         """Recompute derived parameters from updated sampling parameters"""
         data = self.collect_environment_definition_parameters()
-        self.definition_widget.samples_per_acquire_display.setValue(data.samples_per_acquire)
+        self.definition_widget.samples_per_acquire_display.setValue(
+            data.samples_per_acquire
+        )
         self.definition_widget.frame_time_display.setValue(data.frame_time)
-        self.definition_widget.nyquist_frequency_display.setValue(data.nyquist_frequency)
+        self.definition_widget.nyquist_frequency_display.setValue(
+            data.nyquist_frequency
+        )
         self.definition_widget.fft_lines_display.setValue(data.fft_lines)
-        self.definition_widget.frequency_spacing_display.setValue(data.frequency_spacing)
-        self.definition_widget.samples_per_write_display.setValue(data.samples_per_output)
+        self.definition_widget.frequency_spacing_display.setValue(
+            data.frequency_spacing
+        )
+        self.definition_widget.samples_per_write_display.setValue(
+            data.samples_per_output
+        )
 
     def update_parameters_and_clear_spec(self):
         """Clears the specification data and updates parameters"""
         samples_per_frame = self.definition_widget.samples_per_frame_selector.value()
         if samples_per_frame % 2 != 0:
             self.definition_widget.samples_per_frame_selector.blockSignals(True)
-            self.definition_widget.samples_per_frame_selector.setValue(samples_per_frame + 1)
+            self.definition_widget.samples_per_frame_selector.setValue(
+                samples_per_frame + 1
+            )
             self.definition_widget.samples_per_frame_selector.blockSignals(False)
         self.specification_frequency_lines = None
         self.specification_cpsd_matrix = None
@@ -829,7 +902,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             control_function_type = None
             control_function_parameters = None
         else:
-            control_module = self.definition_widget.control_script_file_path_input.text()
+            control_module = (
+                self.definition_widget.control_script_file_path_input.text()
+            )
             control_function = self.definition_widget.control_function_input.itemText(
                 self.definition_widget.control_function_input.currentIndex()
             )
@@ -847,7 +922,8 @@ class RandomVibrationUI(AbstractSysIdUI):
             cola_window=self.definition_widget.cola_window_selector.itemText(
                 self.definition_widget.cola_window_selector.currentIndex()
             ),
-            cola_overlap=self.definition_widget.cola_overlap_percentage_selector.value() / 100,
+            cola_overlap=self.definition_widget.cola_overlap_percentage_selector.value()
+            / 100,
             cola_window_exponent=self.definition_widget.cola_exponent_selector.value(),
             sigma_clip=self.definition_widget.sigma_clipping_selector.value(),
             update_tf_during_control=self.definition_widget.update_transfer_function_during_control_selector.isChecked(),
@@ -986,7 +1062,10 @@ class RandomVibrationUI(AbstractSysIdUI):
             names=["Real Prediction", "Imag Prediction"],
         )
         # Create the interactive control law if necessary
-        if self.definition_widget.control_function_generator_selector.currentIndex() == 3:
+        if (
+            self.definition_widget.control_function_generator_selector.currentIndex()
+            == 3
+        ):
             control_class = getattr(
                 self.python_control_module,
                 self.definition_widget.control_function_input.itemText(
@@ -1003,7 +1082,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             else:
                 if self.interactive_control_law_widget is not None:
                     self.interactive_control_law_widget.close()
-                self.interactive_control_law_window = QtWidgets.QDialog(self.definition_widget)
+                self.interactive_control_law_window = QtWidgets.QDialog(
+                    self.definition_widget
+                )
                 self.interactive_control_law_widget = ui_class(
                     self.log_name,
                     self.environment_command_queue,
@@ -1060,10 +1141,16 @@ class RandomVibrationUI(AbstractSysIdUI):
     def update_control_predictions(self):
         """Updates the control prediction with new data"""
         excite_row_index = self.prediction_widget.excitation_row_selector.currentIndex()
-        excite_column_index = self.prediction_widget.excitation_column_selector.currentIndex()
+        excite_column_index = (
+            self.prediction_widget.excitation_column_selector.currentIndex()
+        )
         self.plot_data_items["excitation_prediction"][0].setData(
             self.frequencies,
-            np.abs(np.real(self.excitation_prediction[:, excite_row_index, excite_column_index])),
+            np.abs(
+                np.real(
+                    self.excitation_prediction[:, excite_row_index, excite_column_index]
+                )
+            ),
         )
         row_index = self.prediction_widget.response_row_selector.currentIndex()
         column_index = self.prediction_widget.response_column_selector.currentIndex()
@@ -1073,10 +1160,14 @@ class RandomVibrationUI(AbstractSysIdUI):
         )
         if row_index == column_index:
             warning_upper = abs(
-                self.environment_parameters.specification_warning_matrix[1, :, row_index]
+                self.environment_parameters.specification_warning_matrix[
+                    1, :, row_index
+                ]
             )
             warning_lower = abs(
-                self.environment_parameters.specification_warning_matrix[0, :, row_index]
+                self.environment_parameters.specification_warning_matrix[
+                    0, :, row_index
+                ]
             )
             abort_upper = abs(
                 self.environment_parameters.specification_abort_matrix[1, :, row_index]
@@ -1125,7 +1216,11 @@ class RandomVibrationUI(AbstractSysIdUI):
             self.plot_data_items["excitation_prediction"][1].setData(
                 self.frequencies,
                 np.abs(
-                    np.imag(self.excitation_prediction[:, excite_row_index, excite_column_index])
+                    np.imag(
+                        self.excitation_prediction[
+                            :, excite_row_index, excite_column_index
+                        ]
+                    )
                 ),
             )
             self.plot_data_items["response_prediction"][2].setData(
@@ -1220,13 +1315,17 @@ class RandomVibrationUI(AbstractSysIdUI):
             str(datetime.timedelta(seconds=time_elapsed)).split(".", maxsplit=1)[0]
         )
         self.run_widget.time_at_level_display.setText(
-            str(datetime.timedelta(seconds=time_at_level_elapsed)).split(".", maxsplit=1)[0]
+            str(datetime.timedelta(seconds=time_at_level_elapsed)).split(
+                ".", maxsplit=1
+            )[0]
         )
         # Check if we need to stop the test due to timeout
         if self.run_widget.timed_test_radiobutton.isChecked():
             check_time = self.run_widget.test_time_selector.time()
             check_time_seconds = (
-                check_time.hour() * 3600 + check_time.minute() * 60 + check_time.second()
+                check_time.hour() * 3600
+                + check_time.minute() * 60
+                + check_time.second()
             )
             if self.run_widget.time_test_at_target_level_checkbox.isChecked():
                 if (
@@ -1385,7 +1484,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         """Tile subwindow equally across the screen"""
         screen_rect = QtWidgets.QApplication.desktop().screenGeometry()
         # Go through and remove any closed windows
-        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
+        self.plot_windows = [
+            window for window in self.plot_windows if window.isVisible()
+        ]
         num_windows = len(self.plot_windows)
         ncols = int(np.ceil(np.sqrt(num_windows)))
         nrows = int(np.ceil(num_windows / ncols))
@@ -1406,7 +1507,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         """Saves the control data to a file when requested by a profile argument"""
         self.save_spectral_data(None, filename)
 
-    def save_spectral_data(self, clicked, filename=None):  # pylint: disable=unused-argument
+    def save_spectral_data(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         """Save Spectral Data from the Controller"""
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -1440,13 +1543,15 @@ class RandomVibrationUI(AbstractSysIdUI):
             ["warning_level", str],
             ["abort_level", str],
         ]
-        global_data_parameters: DataAcquisitionParameters
+        global_data_parameters: HardwareMetadata
         global_data_parameters = self.data_acquisition_parameters
         netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
             filename, "w", format="NETCDF4", clobber=True
         )
         # Create dimensions
-        netcdf_handle.createDimension("response_channels", len(global_data_parameters.channel_list))
+        netcdf_handle.createDimension(
+            "response_channels", len(global_data_parameters.channel_list)
+        )
         netcdf_handle.createDimension(
             "output_channels",
             len(
@@ -1465,7 +1570,8 @@ class RandomVibrationUI(AbstractSysIdUI):
         netcdf_handle.file_version = "3.0.0"
         netcdf_handle.sample_rate = global_data_parameters.sample_rate
         netcdf_handle.time_per_write = (
-            global_data_parameters.samples_per_write / global_data_parameters.output_sample_rate
+            global_data_parameters.samples_per_write
+            / global_data_parameters.output_sample_rate
         )
         netcdf_handle.time_per_read = (
             global_data_parameters.samples_per_read / global_data_parameters.sample_rate
@@ -1480,7 +1586,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         for key, value in global_data_parameters.extra_parameters.items():
             setattr(netcdf_handle, key, value)
         # Create Variables
-        var = netcdf_handle.createVariable("environment_names", str, ("num_environments",))
+        var = netcdf_handle.createVariable(
+            "environment_names", str, ("num_environments",)
+        )
         this_environment_index = None
         for i, name in enumerate(global_data_parameters.environment_names):
             var[i] = name
@@ -1492,7 +1600,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             ("response_channels", "num_environments"),
         )
         var[...] = global_data_parameters.environment_active_channels.astype("int8")[
-            global_data_parameters.environment_active_channels[:, this_environment_index],
+            global_data_parameters.environment_active_channels[
+                :, this_environment_index
+            ],
             :,
         ]
         # Create channel table variables
@@ -1501,7 +1611,8 @@ class RandomVibrationUI(AbstractSysIdUI):
                 "/channels/" + label, netcdf_datatype, ("response_channels",)
             )
             channel_data = [
-                getattr(channel, label) for channel in global_data_parameters.channel_list
+                getattr(channel, label)
+                for channel in global_data_parameters.channel_list
             ]
             if netcdf_datatype == "i1":
                 channel_data = np.array([1 if val else 0 for val in channel_data])
@@ -1512,7 +1623,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         group_handle = netcdf_handle.createGroup(self.environment_name)
         self.environment_parameters.store_to_netcdf(group_handle)
         # Create Variables for Spectral Data
-        group_handle.createDimension("drive_channels", self.last_transfer_function.shape[2])
+        group_handle.createDimension(
+            "drive_channels", self.last_transfer_function.shape[2]
+        )
         var = group_handle.createVariable(
             "frf_data_real",
             "f8",
@@ -1617,18 +1730,20 @@ class RandomVibrationUI(AbstractSysIdUI):
                 item = self.definition_widget.control_channels_selector.item(i)
                 item.setCheckState(Qt.Checked)
         except KeyError:
-            print("no variable control_channel_indices, please select control channels manually")
+            print(
+                "no variable control_channel_indices, please select control channels manually"
+            )
         # Other data
         try:
-            self.response_transformation_matrix = group.variables["response_transformation_matrix"][
-                ...
-            ].data
+            self.response_transformation_matrix = group.variables[
+                "response_transformation_matrix"
+            ][...].data
         except KeyError:
             self.response_transformation_matrix = None
         try:
-            self.output_transformation_matrix = group.variables["reference_transformation_matrix"][
-                ...
-            ].data
+            self.output_transformation_matrix = group.variables[
+                "reference_transformation_matrix"
+            ][...].data
         except KeyError:
             self.output_transformation_matrix = None
         self.define_transformation_matrices(None, dialog=False)
@@ -1637,13 +1752,21 @@ class RandomVibrationUI(AbstractSysIdUI):
         # current environment
         if environment_name is None:
             # Spinboxes
-            self.definition_widget.samples_per_frame_selector.setValue(group.samples_per_frame)
-            self.definition_widget.ramp_time_spinbox.setValue(group.test_level_ramp_time)
+            self.definition_widget.samples_per_frame_selector.setValue(
+                group.samples_per_frame
+            )
+            self.definition_widget.ramp_time_spinbox.setValue(
+                group.test_level_ramp_time
+            )
             self.definition_widget.cola_overlap_percentage_selector.setValue(
                 group.cola_overlap * 100
             )
-            self.definition_widget.cola_exponent_selector.setValue(group.cola_window_exponent)
-            self.definition_widget.cpsd_overlap_selector.setValue(group.cpsd_overlap * 100)
+            self.definition_widget.cola_exponent_selector.setValue(
+                group.cola_window_exponent
+            )
+            self.definition_widget.cpsd_overlap_selector.setValue(
+                group.cpsd_overlap * 100
+            )
             self.definition_widget.cpsd_frames_selector.setValue(group.frames_in_cpsd)
             # Checkboxes
             self.definition_widget.update_transfer_function_during_control_selector.setChecked(
@@ -1657,22 +1780,24 @@ class RandomVibrationUI(AbstractSysIdUI):
                 self.definition_widget.cola_window_selector.findText(group.cola_window)
             )
             self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
-                self.definition_widget.cpsd_computation_window_selector.findText(group.cpsd_window)
+                self.definition_widget.cpsd_computation_window_selector.findText(
+                    group.cpsd_window
+                )
             )
             # Specification
-            self.specification_frequency_lines = group.variables["specification_frequency_lines"][
-                ...
-            ].data
+            self.specification_frequency_lines = group.variables[
+                "specification_frequency_lines"
+            ][...].data
             self.specification_cpsd_matrix = (
                 group.variables["specification_cpsd_matrix_real"][...].data
                 + 1j * group.variables["specification_cpsd_matrix_imag"][...].data
             )
-            self.specification_warning_matrix = group.variables["specification_warning_matrix"][
-                ...
-            ].data
-            self.specification_abort_matrix = group.variables["specification_abort_matrix"][
-                ...
-            ].data
+            self.specification_warning_matrix = group.variables[
+                "specification_warning_matrix"
+            ][...].data
+            self.specification_abort_matrix = group.variables[
+                "specification_abort_matrix"
+            ][...].data
             self.select_python_module(None, group.control_python_script)
             index = self.definition_widget.control_function_input.findText(
                 group.control_python_function
@@ -1740,7 +1865,9 @@ class RandomVibrationUI(AbstractSysIdUI):
                     if (
                         sum(
                             self.response_prediction[:, i, i]
-                            > self.environment_parameters.specification_abort_matrix[1, :, i]
+                            > self.environment_parameters.specification_abort_matrix[
+                                1, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -1748,7 +1875,9 @@ class RandomVibrationUI(AbstractSysIdUI):
                     elif (
                         sum(
                             self.response_prediction[:, i, i]
-                            < self.environment_parameters.specification_abort_matrix[0, :, i]
+                            < self.environment_parameters.specification_abort_matrix[
+                                0, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -1756,7 +1885,9 @@ class RandomVibrationUI(AbstractSysIdUI):
                     elif (
                         sum(
                             self.response_prediction[:, i, i]
-                            > self.environment_parameters.specification_warning_matrix[1, :, i]
+                            > self.environment_parameters.specification_warning_matrix[
+                                1, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -1764,7 +1895,9 @@ class RandomVibrationUI(AbstractSysIdUI):
                     elif (
                         sum(
                             self.response_prediction[:, i, i]
-                            < self.environment_parameters.specification_warning_matrix[0, :, i]
+                            < self.environment_parameters.specification_warning_matrix[
+                                0, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -1792,19 +1925,29 @@ class RandomVibrationUI(AbstractSysIdUI):
                 self.frequencies, np.einsum("ijj", self.last_response_cpsd).real
             )
             # Go through and remove any closed windows
-            self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
+            self.plot_windows = [
+                window for window in self.plot_windows if window.isVisible()
+            ]
             for window in self.plot_windows:
                 window.update_plot(self.last_response_cpsd)
-        elif message == RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE:
+        elif (
+            message
+            == RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE
+        ):
             if self.interactive_control_law_widget is not None:
                 self.interactive_control_law_widget.update_ui_sysid(*data)
         elif message == ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE:
             if self.interactive_control_law_widget is not None:
                 self.interactive_control_law_widget.update_ui_control(data)
-        elif message == RandomVibrationDataAnalysisUICommands.UPDATE_TEST_RESPONSE_ERROR_LIST:
+        elif (
+            message
+            == RandomVibrationDataAnalysisUICommands.UPDATE_TEST_RESPONSE_ERROR_LIST
+        ):
             rms_db_error, warning_channels, abort_channels = data
             self.run_widget.test_response_error_list.clear()
-            self.run_widget.test_response_error_list.addItems([f"{d:.3f}" for d in rms_db_error])
+            self.run_widget.test_response_error_list.addItems(
+                [f"{d:.3f}" for d in rms_db_error]
+            )
             for index in warning_channels:
                 item = self.run_widget.test_response_error_list.item(index)
                 item.setBackground(QColor(255, 255, 125))
@@ -1947,7 +2090,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         worksheet.cell(18, 1, "System ID Averages:")
         worksheet.cell(18, 2, "# Number of Averages used when computing the FRF")
         worksheet.cell(19, 1, "Exponential Averaging Coefficient:")
-        worksheet.cell(19, 2, "# Averaging Coefficient for Exponential Averaging (if used)")
+        worksheet.cell(
+            19, 2, "# Averaging Coefficient for Exponential Averaging (if used)"
+        )
         worksheet.cell(20, 1, "System ID Estimator:")
         worksheet.cell(
             20,
@@ -2003,7 +2148,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             "the number of physical output channels in the environment.",
         )
 
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def set_parameters_from_template(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         """
         Collects parameters for the user interface from the Excel template file
 
@@ -2025,34 +2172,50 @@ class RandomVibrationUI(AbstractSysIdUI):
             user interface.
 
         """
-        self.definition_widget.samples_per_frame_selector.setValue(int(worksheet.cell(2, 2).value))
-        self.definition_widget.ramp_time_spinbox.setValue(float(worksheet.cell(3, 2).value))
+        self.definition_widget.samples_per_frame_selector.setValue(
+            int(worksheet.cell(2, 2).value)
+        )
+        self.definition_widget.ramp_time_spinbox.setValue(
+            float(worksheet.cell(3, 2).value)
+        )
         self.definition_widget.cola_window_selector.setCurrentIndex(
-            self.definition_widget.cola_window_selector.findText(worksheet.cell(4, 2).value)
+            self.definition_widget.cola_window_selector.findText(
+                worksheet.cell(4, 2).value
+            )
         )
         self.definition_widget.cola_overlap_percentage_selector.setValue(
             float(worksheet.cell(5, 2).value)
         )
-        self.definition_widget.cola_exponent_selector.setValue(float(worksheet.cell(6, 2).value))
+        self.definition_widget.cola_exponent_selector.setValue(
+            float(worksheet.cell(6, 2).value)
+        )
         self.definition_widget.update_transfer_function_during_control_selector.setChecked(
             worksheet.cell(7, 2).value.upper() == "Y"
         )
-        self.definition_widget.cpsd_frames_selector.setValue(int(worksheet.cell(8, 2).value))
+        self.definition_widget.cpsd_frames_selector.setValue(
+            int(worksheet.cell(8, 2).value)
+        )
         self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
             self.definition_widget.cpsd_computation_window_selector.findText(
                 worksheet.cell(9, 2).value
             )
         )
-        self.definition_widget.cpsd_overlap_selector.setValue(float(worksheet.cell(10, 2).value))
+        self.definition_widget.cpsd_overlap_selector.setValue(
+            float(worksheet.cell(10, 2).value)
+        )
         self.definition_widget.auto_abort_checkbox.setChecked(
             worksheet.cell(11, 2).value.upper() == "Y"
         )
         self.select_python_module(None, worksheet.cell(12, 2).value)
         self.definition_widget.control_function_input.setCurrentIndex(
-            self.definition_widget.control_function_input.findText(worksheet.cell(13, 2).value)
+            self.definition_widget.control_function_input.findText(
+                worksheet.cell(13, 2).value
+            )
         )
         self.definition_widget.control_parameters_text_input.setText(
-            "" if worksheet.cell(14, 2).value is None else str(worksheet.cell(14, 2).value)
+            ""
+            if worksheet.cell(14, 2).value is None
+            else str(worksheet.cell(14, 2).value)
         )
         column_index = 2
         while True:
@@ -2063,17 +2226,27 @@ class RandomVibrationUI(AbstractSysIdUI):
             item.setCheckState(Qt.Checked)
             column_index += 1
         self.system_id_widget.averagingTypeComboBox.setCurrentIndex(
-            self.system_id_widget.averagingTypeComboBox.findText(worksheet.cell(16, 2).value)
+            self.system_id_widget.averagingTypeComboBox.findText(
+                worksheet.cell(16, 2).value
+            )
         )
-        self.system_id_widget.noiseAveragesSpinBox.setValue(int(worksheet.cell(17, 2).value))
-        self.system_id_widget.systemIDAveragesSpinBox.setValue(int(worksheet.cell(18, 2).value))
+        self.system_id_widget.noiseAveragesSpinBox.setValue(
+            int(worksheet.cell(17, 2).value)
+        )
+        self.system_id_widget.systemIDAveragesSpinBox.setValue(
+            int(worksheet.cell(18, 2).value)
+        )
         self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(
             float(worksheet.cell(19, 2).value)
         )
         self.system_id_widget.estimatorComboBox.setCurrentIndex(
-            self.system_id_widget.estimatorComboBox.findText(worksheet.cell(20, 2).value)
+            self.system_id_widget.estimatorComboBox.findText(
+                worksheet.cell(20, 2).value
+            )
         )
-        self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(21, 2).value))
+        self.system_id_widget.levelDoubleSpinBox.setValue(
+            float(worksheet.cell(21, 2).value)
+        )
         # this should be a temporary solution - template file rework needed
         low, high = worksheet.cell(21, 3).value, worksheet.cell(21, 4).value
         sigma = worksheet.cell(21, 5).value
@@ -2087,15 +2260,25 @@ class RandomVibrationUI(AbstractSysIdUI):
             )  # TODO: sigma clipping and bandwidths should get
             # their own rows, but how to maintain backward compatibility?
         self.system_id_widget.signalTypeComboBox.setCurrentIndex(
-            self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(22, 2).value)
+            self.system_id_widget.signalTypeComboBox.findText(
+                worksheet.cell(22, 2).value
+            )
         )
         self.system_id_widget.windowComboBox.setCurrentIndex(
             self.system_id_widget.windowComboBox.findText(worksheet.cell(23, 2).value)
         )
-        self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(24, 2).value))
-        self.system_id_widget.onFractionDoubleSpinBox.setValue(float(worksheet.cell(25, 2).value))
-        self.system_id_widget.pretriggerDoubleSpinBox.setValue(float(worksheet.cell(26, 2).value))
-        self.system_id_widget.rampFractionDoubleSpinBox.setValue(float(worksheet.cell(27, 2).value))
+        self.system_id_widget.overlapDoubleSpinBox.setValue(
+            float(worksheet.cell(24, 2).value)
+        )
+        self.system_id_widget.onFractionDoubleSpinBox.setValue(
+            float(worksheet.cell(25, 2).value)
+        )
+        self.system_id_widget.pretriggerDoubleSpinBox.setValue(
+            float(worksheet.cell(26, 2).value)
+        )
+        self.system_id_widget.rampFractionDoubleSpinBox.setValue(
+            float(worksheet.cell(27, 2).value)
+        )
 
         # Now we need to find the transformation matrices' sizes
         response_channels = self.definition_widget.control_channels_display.value()
@@ -2108,7 +2291,10 @@ class RandomVibrationUI(AbstractSysIdUI):
             self.response_transformation_matrix = None
         else:
             while True:
-                if worksheet.cell(output_transform_row, 1).value == "Output Transformation Matrix:":
+                if (
+                    worksheet.cell(output_transform_row, 1).value
+                    == "Output Transformation Matrix:"
+                ):
                     break
                 output_transform_row += 1
             response_size = output_transform_row - 29
@@ -2116,7 +2302,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             for i in range(response_size):
                 response_transformation.append([])
                 for j in range(response_channels):
-                    response_transformation[-1].append(float(worksheet.cell(29 + i, 2 + j).value))
+                    response_transformation[-1].append(
+                        float(worksheet.cell(29 + i, 2 + j).value)
+                    )
             self.response_transformation_matrix = np.array(response_transformation)
         if (
             isinstance(worksheet.cell(output_transform_row, 2).value, str)

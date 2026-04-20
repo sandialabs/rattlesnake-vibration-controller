@@ -1,4 +1,4 @@
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.utilities import (
     VerboseMessageQueue,
     QueueContainer,
@@ -31,7 +31,7 @@ def hardware_dict():
 # Create modal environment type
 @pytest.fixture
 def environments():
-    control_type = ControlTypes(6)
+    control_type = EnvironmentType(6)
     return [[control_type, control_type.name.title()]]
 
 
@@ -201,11 +201,17 @@ def test_acquisition_process_initialize_data_acquisition(
     # Test if output indices were stored
     assert acquisition_process_obj.output_indices[0] == 1
     # Test if warning limit was stored
-    np.testing.assert_array_almost_equal(acquisition_process_obj.warning_limits, [float("inf"), 5])
+    np.testing.assert_array_almost_equal(
+        acquisition_process_obj.warning_limits, [float("inf"), 5]
+    )
     # Test if abort limit was stored
-    np.testing.assert_array_almost_equal(acquisition_process_obj.abort_limits, [float("inf"), 10])
+    np.testing.assert_array_almost_equal(
+        acquisition_process_obj.abort_limits, [float("inf"), 10]
+    )
     # Test if data array was initialized
-    np.testing.assert_array_almost_equal(acquisition_process_obj.read_data, np.zeros((2, 2000)))
+    np.testing.assert_array_almost_equal(
+        acquisition_process_obj.read_data, np.zeros((2, 2000))
+    )
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
@@ -222,11 +228,15 @@ def test_acquisition_process_stop_environment(mock_log, acquisition_process_obj)
 
 @pytest.mark.parametrize("prev_streamed", [True, False])
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
-def test_acqusition_process_start_streaming(mock_put, prev_streamed, acquisition_process_obj):
+def test_acqusition_process_start_streaming(
+    mock_put, prev_streamed, acquisition_process_obj
+):
     acquisition_process_obj.has_streamed = prev_streamed
     acquisition_process_obj.start_streaming(None)
     if prev_streamed:
-        mock_put.assert_called_with("Process Name", (GlobalCommands.CREATE_NEW_STREAM, None))
+        mock_put.assert_called_with(
+            "Process Name", (GlobalCommands.CREATE_NEW_STREAM, None)
+        )
     assert acquisition_process_obj.streaming == True
     assert acquisition_process_obj.has_streamed == True
 
@@ -278,11 +288,15 @@ def test_acquisition_acquire_signal(
     log_calls = create_acquire_log_calls()
     mock_log.assert_has_calls(log_calls)
     assert mock_put.call_args_list[0][0][0][0] == UICommands.MONITOR
-    np.testing.assert_array_equal(mock_put.call_args_list[1][0][0][0], np.zeros((2, 98)))
+    np.testing.assert_array_equal(
+        mock_put.call_args_list[1][0][0][0], np.zeros((2, 98))
+    )
     vput_calls = [mock.call("Process Name", (GlobalCommands.RUN_HARDWARE, None))]
     mock_vput.assert_has_calls(vput_calls)
     assert mock_vput.call_args_list[1][0][1][0] == GlobalCommands.STREAMING_DATA
-    np.testing.assert_array_equal(mock_vput.call_args_list[1][0][1][1], np.ones((2, 100)))
+    np.testing.assert_array_equal(
+        mock_vput.call_args_list[1][0][1][1], np.ones((2, 100))
+    )
     np.testing.assert_array_equal(mock_add.call_args_list[0][0], np.ones((1, 2, 100)))
 
 
@@ -340,7 +354,7 @@ def test_acquisition_process_func(mock_run, queue_container, environments):
 if __name__ == "__main__":
     log_file_queue = mp.Queue()
 
-    environments = [[ControlTypes(6), ControlTypes(6).name.title()]]
+    environments = [[EnvironmentType(6), EnvironmentType(6).name.title()]]
 
     queue_container = QueueContainer(
         VerboseMessageQueue(log_file_queue, "Controller Communication Queue"),
