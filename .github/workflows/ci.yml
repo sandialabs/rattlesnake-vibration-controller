@@ -25,6 +25,8 @@ on:
     #   - 'uv.lock'
     #   - '.github/workflows/ci.yml'
     #   - 'src/rattlesnake/cicd/**'
+  workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
+  # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
   workflow_dispatch:
     inputs:
       test_level:
