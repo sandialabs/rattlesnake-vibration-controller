@@ -24,7 +24,7 @@ def extract_score(input_file: str) -> float:
             if match:
                 return float(match.group(1))
     except Exception as e:
-        print(f"⚠️ Error reading lint output: {e}")
+        print(f"[!] Error reading lint output: {e}")
     return 0.0
 
 
@@ -34,7 +34,7 @@ def export_to_github_env(color: str):
     if env_path:
         with open(env_path, "a", encoding="utf-8") as f:
             f.write(f"BADGE_COLOR={color}\n")
-        print(f"    🎨 Exported BADGE_COLOR={color} to GITHUB_ENV")
+        print(f"    [C] Exported BADGE_COLOR={color} to GITHUB_ENV")
 
 
 def main():
@@ -57,7 +57,7 @@ def main():
     elif args.input_file:
         score = extract_score(args.input_file)
     else:
-        print("❌ Error: Must provide either --input_file or --score")
+        print("[X] Error: Must provide either --input_file or --score")
         sys.exit(1)
 
     color = get_score_color_lint(str(score))
@@ -77,9 +77,9 @@ def main():
             response.raise_for_status()
             with open(Path(args.output_dir) / "lint.svg", "wb") as f:
                 f.write(response.content)
-            print(f"✅ Lint SVG badge saved to {args.output_dir}")
+            print(f"[OK] Lint SVG badge saved to {args.output_dir}")
         except Exception as e:
-            print(f"❌ Failed to download badge: {e}")
+            print(f"[X] Failed to download badge: {e}")
 
         # Generate JSON metadata if other required args are present
         if all([args.github_repo, args.deploy_subdir, args.run_id]):
@@ -95,9 +95,9 @@ def main():
 
             with open(Path(args.output_dir) / "lint-info.json", "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2)
-            print(f"✅ Lint JSON metadata saved to {args.output_dir}")
+            print(f"[OK] Lint JSON metadata saved to {args.output_dir}")
 
-    print(f"🏁 Lint badge processing complete: Score={score}, Color={color}")
+    print(f"Lint badge processing complete: Score={score}, Color={color}")
 
 
 if __name__ == "__main__":

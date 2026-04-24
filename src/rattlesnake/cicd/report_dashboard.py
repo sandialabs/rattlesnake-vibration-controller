@@ -153,7 +153,7 @@ def main():
     with open(args.output_file, "w", encoding="utf-8") as f:
         f.write(html)
 
-    print(f"✅ Project Dashboard generated: {args.output_file}")
+    print(f"[OK] Project Dashboard generated: {args.output_file}")
 
 
 if __name__ == "__main__":

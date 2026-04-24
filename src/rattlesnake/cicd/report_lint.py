@@ -299,12 +299,12 @@ def main() -> int:
             args.github_sha,
             args.github_repo,
         )
-        print(f"✅ Lint report generated: {args.output_file}")
+        print(f"[OK] Lint report generated: {args.output_file}")
     except (FileNotFoundError, IOError) as e:
-        print(f"❌ File Error: {e}")
+        print(f"[X] File Error: {e}")
         return 1
     except ValueError as e:  # Catch potential parsing errors
-        print(f"❌ Input Error: {e}")
+        print(f"[X] Input Error: {e}")
         return 1
     return 0
 

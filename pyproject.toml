@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rattlesnake"
+name = "rattlesnake-vibration-controller"
 # version = "3.1.1"  # Deprecate use of hard-coded version numbers, now hatch-vcs
 dynamic = ["version"]  # Removed static version, now determined by hatch-vcs
 description = "Multiple-Input Multiple-Output Vibration Controller"

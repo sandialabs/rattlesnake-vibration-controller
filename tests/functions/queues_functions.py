@@ -1,7 +1,7 @@
 """
 Rattlesnake Queue Test Functions
 
-This code contains the functions used in test_queues.py. These functions
+This module contains the functions used in test_queues.py. These functions
 clear the queues and mock a datetime.now function.
 """
 
@@ -14,6 +14,14 @@ from datetime import datetime
 
 # Clear verbose queue
 def clear_verbose_queue(q, task_name, verbose_array):
+    """
+    Clear a VerboseMessageQueue and store the message content.
+
+    Args:
+        q: The VerboseMessageQueue to clear.
+        task_name: The name of the task accessing the queue.
+        verbose_array: A list or array to store the retrieved message content.
+    """
     # Mock the datetime and message_id objects used during the log message in the VerboseQueue.get function
     with (
         mock.patch("rattlesnake.utilities.datetime") as mock_time,
@@ -32,6 +40,13 @@ def clear_verbose_queue(q, task_name, verbose_array):
 
 # Clear the log_file_queue
 def clear_log_queue(q, log_string):
+    """
+    Clear a log queue and append its content to a shared string.
+
+    Args:
+        q: The queue to clear.
+        log_string: A multiprocessing Value containing the accumulated log string.
+    """
     # Get string from queue and store it to the log_string bstring
     while not q.empty():
         output_string = q.get()

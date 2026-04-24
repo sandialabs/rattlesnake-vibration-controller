@@ -1,3 +1,10 @@
+"""
+Modal Environment Helper Functions for Testing
+
+This module provides utility functions and mock data generators specifically for
+testing the modal environment and its associated components.
+"""
+
 from rattlesnake.environment.modal_environment import ModalCommands
 from rattlesnake.process.data_collector import (
     AcquisitionType,
@@ -17,6 +24,12 @@ import numpy as np
 
 
 def create_signal_generator_dict():
+    """
+    Create a dictionary mapping indices to signal generator types and classes.
+
+    Returns:
+        dict: Mapping of indices to (name, class_string) tuples.
+    """
     signal_generator_dict = {
         0: ("none", "rattlesnake.environment.modal_environment.PseudorandomSignalGenerator"),
         1: ("random", "rattlesnake.environment.modal_environment.RandomSignalGenerator"),
@@ -33,6 +46,12 @@ def create_signal_generator_dict():
 
 
 def create_modal_commands_dict():
+    """
+    Create a dictionary mapping indices to ModalCommands.
+
+    Returns:
+        dict: Mapping of indices to ModalCommands members.
+    """
     modal_commands_dict = {
         0: ModalCommands.START_CONTROL,
         1: ModalCommands.STOP_CONTROL,
@@ -44,6 +63,12 @@ def create_modal_commands_dict():
 
 
 def create_environment_template_calls():
+    """
+    Create a list of expected mock calls for creating an environment template.
+
+    Returns:
+        list: A list of mock.call objects.
+    """
     environment_template_calls = [
         mock.call(1, 1, "Control Type"),
         mock.call(1, 2, "Modal"),
@@ -138,6 +163,12 @@ def create_environment_template_calls():
 
 
 def create_environment_collector_metadata_calls():
+    """
+    Create a list of expected mock calls for data collector metadata.
+
+    Returns:
+        list: A list of mock.call objects.
+    """
     metadata_call = [
         mock.call(
             1,
@@ -164,6 +195,12 @@ def create_environment_collector_metadata_calls():
 
 
 def create_environment_spectral_metadata_calls():
+    """
+    Create a list of expected mock calls for spectral processing metadata.
+
+    Returns:
+        list: A list of mock.call objects.
+    """
     metadata_call = [
         mock.call(
             AveragingTypes.LINEAR,
@@ -183,6 +220,12 @@ def create_environment_spectral_metadata_calls():
 
 
 def create_environment_signal_metadata_calls():
+    """
+    Create a list of expected mock calls for signal generation metadata.
+
+    Returns:
+        list: A list of mock.call objects.
+    """
     metadata_call = [
         mock.call(
             samples_per_write=102400,
@@ -195,6 +238,18 @@ def create_environment_signal_metadata_calls():
 
 
 def create_environment_start_calls(mock_collect, mock_signal, mock_siggen, mock_spectral):
+    """
+    Create a list of expected mock calls when starting an environment.
+
+    Args:
+        mock_collect: Mock function for collector parameters.
+        mock_signal: Mock function for signal parameters.
+        mock_siggen: Mock function for signal generator parameters.
+        mock_spectral: Mock function for spectral parameters.
+
+    Returns:
+        list: A list of mock.call objects.
+    """
     environment_name = "Environment_name"
     start_calls = [
         mock.call(

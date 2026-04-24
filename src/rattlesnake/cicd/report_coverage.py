@@ -286,19 +286,19 @@ def main() -> int:
             args.github_repo,
         )
 
-        print(f"✅ Coverage HTML report generated: {args.output_file}")
-        print(f"📊 - valid lines of code: {cm.lines_valid}")
-        print(f"🔍 - lines covered: {cm.lines_covered}")
-        print(f"🎉 - coverage: {cm.coverage} percent")
+        print(f"[OK] Coverage HTML report generated: {args.output_file}")
+        print(f"[I] - valid lines of code: {cm.lines_valid}")
+        print(f"[I] - lines covered: {cm.lines_covered}")
+        print(f"[I] - coverage: {cm.coverage} percent")
 
     except FileNotFoundError:
-        print(f"❌ Error: The input file '{args.input_file}' was not found.")
+        print(f"[X] Error: The input file '{args.input_file}' was not found.")
         return 1
     except IOError as e:
-        print(f"❌ I/O error occurred: {e}")
+        print(f"[X] I/O error occurred: {e}")
         return 1
     except ValueError as e:
-        print(f"❌ Input Error : {e}")
+        print(f"[X] Input Error : {e}")
         return 1
 
     return 0  # Success exit code

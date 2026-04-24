@@ -23,7 +23,7 @@ def extract_coverage(input_file: str) -> float:
         coverage = float(root.attrib["line-rate"]) * 100
         return coverage
     except Exception as e:
-        print(f"⚠️ Error parsing coverage.xml: {e}")
+        print(f"[!] Error parsing coverage.xml: {e}")
         return 0.0
 
 
@@ -34,7 +34,7 @@ def export_to_github_env(coverage: float, color: str):
         with open(env_path, "a", encoding="utf-8") as f:
             f.write(f"COVERAGE={coverage:.1f}\n")
             f.write(f"BADGE_COLOR_COV={color}\n")
-        print(f"    🎨 Exported COVERAGE={coverage:.1f} and BADGE_COLOR_COV={color}")
+        print(f"    [C] Exported COVERAGE={coverage:.1f} and BADGE_COLOR_COV={color}")
 
 
 def main():
@@ -57,7 +57,7 @@ def main():
     elif args.input_file:
         coverage = extract_coverage(args.input_file)
     else:
-        print("❌ Error: Must provide either --input_file or --coverage")
+        print("[X] Error: Must provide either --input_file or --coverage")
         sys.exit(1)
 
     color = get_score_color_coverage(str(coverage))
@@ -78,9 +78,9 @@ def main():
             response.raise_for_status()
             with open(Path(args.output_dir) / "coverage.svg", "wb") as f:
                 f.write(response.content)
-            print(f"✅ Coverage SVG badge saved to {args.output_dir}")
+            print(f"[OK] Coverage SVG badge saved to {args.output_dir}")
         except Exception as e:
-            print(f"❌ Failed to download badge: {e}")
+            print(f"[X] Failed to download badge: {e}")
 
         # Generate JSON metadata if other required args are present
         if all([args.github_repo, args.deploy_subdir, args.run_id]):
@@ -101,9 +101,9 @@ def main():
                 encoding="utf-8",
             ) as f:
                 json.dump(metadata, f, indent=2)
-            print(f"✅ Coverage JSON metadata saved to {args.output_dir}")
+            print(f"[OK] Coverage JSON metadata saved to {args.output_dir}")
 
-    print(f"🏁 Coverage badge processing complete: {coverage:.1f}% ({color})")
+    print(f"Coverage badge processing complete: {coverage:.1f}% ({color})")
 
 
 if __name__ == "__main__":

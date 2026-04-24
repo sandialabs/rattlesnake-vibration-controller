@@ -108,7 +108,7 @@ def test_main_success(monkeypatch, capsys, tmp_path):
     exit_code = main()
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert "✅ Coverage HTML report generated" in captured.out
+    assert "[OK] Coverage HTML report generated" in captured.out
     assert output_file.exists()
 
 

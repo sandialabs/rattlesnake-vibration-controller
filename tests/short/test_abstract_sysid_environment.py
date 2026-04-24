@@ -1,65 +1,80 @@
+"""
+Tests for Abstract System Identification Environment
+
+This module contains tests for the AbstractSysIdEnvironment and AbstractSysIdMetadata
+classes, verifying their initialization and basic functionality.
+"""
+
 import multiprocessing as mp
 
-# from unittest import mock  # unused import
-
-import numpy as np
 import pytest
+
 from functions.abstract_sysid_functions import (
     DummyAbstractSysIdEnvironment,
     DummyAbstractSysIdMetadata,
-    # DummyAbstractSysIdUI,  # usused import
 )
 from functions.common_functions import DummyMainWindow
-
-# from PyQt5 import QtWidgets  # unused import
-
 from rattlesnake.environment.abstract_sysid_environment import SystemIdCommands
 from rattlesnake.utilities import VerboseMessageQueue
+
+# import numpy as np  # unused import
 
 
 @pytest.fixture()
 def log_file_queue():
+    """
+    Fixture for a log file queue.
+    """
     return mp.Queue
 
 
 @pytest.fixture
 def app(qtbot):
+    """
+    Fixture for the Qt application bot.
+    """
     return qtbot
 
 
 @pytest.fixture
 def main_window(app):
+    """
+    Fixture for a DummyMainWindow instance.
+    """
     return DummyMainWindow()
 
 
 @pytest.fixture
 def abstract_sysid_metadata():
+    """
+    Fixture for a DummyAbstractSysIdMetadata instance.
+    """
     return DummyAbstractSysIdMetadata()
 
 
 @pytest.mark.parametrize("sysid_idx", [0, 1, 2, 3, 4])
 def test_system_id_commands(sysid_idx):
+    """
+    Test the initialization of SystemIdCommands with various indices.
+    """
     sysid_command = SystemIdCommands(sysid_idx)
 
     assert isinstance(sysid_command, SystemIdCommands)
 
 
 def test_abstract_sysid_metadata_init():
+    """
+    Test the initialization of AbstractSysIdMetadata via DummyAbstractSysIdMetadata.
+    """
     abstract_sysid_metadata = DummyAbstractSysIdMetadata()
 
     assert isinstance(abstract_sysid_metadata, DummyAbstractSysIdMetadata)
 
 
-# def test_abstract_sysid_ui_init(log_file_queue, main_window):
-#     abstract_sysid_ui = DummyAbstractSysIdUI("Environment Name",
-#                                              VerboseMessageQueue(log_file_queue, 'Environment Command Queue'),
-#                                              VerboseMessageQueue(log_file_queue, 'Controller Communication Queue'),
-#                                              log_file_queue, main_window.system_id_tabwidget)
-
-#     assert isinstance(abstract_sysid_ui, DummyAbstractSysIdUI)
-
-
 def test_abstract_sysid_environment(log_file_queue):
+    """
+    Test the initialization of AbstractSysIdEnvironment via DummyAbstractSysIdEnvironment.
+    """
     abstract_sysid_environment = DummyAbstractSysIdEnvironment(
         "Environment Name",
         VerboseMessageQueue(log_file_queue, "Environment Command Queue"),
@@ -80,5 +95,4 @@ def test_abstract_sysid_environment(log_file_queue):
 
 
 if __name__ == "__main__":
-    # test_abstract_sysid_metadata_init(transform_matrix=None)  # function has no parameter
     test_abstract_sysid_metadata_init()

@@ -98,7 +98,7 @@ site:
     exit_code = main()
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert "✅ Successfully updated Jupyter Book metadata" in captured.out
+    assert "[OK] Successfully updated Jupyter Book metadata" in captured.out
     
     updated_content = myst_file.read_text()
     assert "Generated:<br>" in updated_content
@@ -121,4 +121,5 @@ def test_main_error(monkeypatch, capsys):
     exit_code = main()
     assert exit_code == 1
     captured = capsys.readouterr()
-    assert "❌ File Error:" in captured.out
+    assert "[X] File Error:" in captured.out
+
