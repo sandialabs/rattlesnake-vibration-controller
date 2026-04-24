@@ -36,7 +36,6 @@ def generate_dashboard_html(github_repo: str) -> str:
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <span class="text-2xl">🐍</span>
                 <span class="text-xl font-bold tracking-tight text-blue-600">Rattlesnake</span>
             </div>
             <a href="https://github.com/{github_repo}"
