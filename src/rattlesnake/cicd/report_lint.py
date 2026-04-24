@@ -8,18 +8,13 @@ import argparse
 import os
 import re
 import sys
-from typing import List, NamedTuple, Tuple
+from typing import List, Tuple
 
-from rattlesnake.cicd.utilities import get_multiline_timestamp, get_score_color_lint
-
-
-class ReportMetadata(NamedTuple):
-    """Container for CI/CD metadata used in reports."""
-    timestamp: str
-    run_id: str
-    ref_name: str
-    github_sha: str
-    github_repo: str
+from rattlesnake.cicd.utilities import (
+    get_multiline_timestamp,
+    get_score_color_lint,
+    ReportMetadata,
+)
 
 
 def get_lint_content(input_file: str) -> str:

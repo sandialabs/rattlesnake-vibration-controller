@@ -5,8 +5,18 @@ Utilities for CICD processes.
 
 import re
 from datetime import datetime
+from typing import NamedTuple
 
 import pytz
+
+
+class ReportMetadata(NamedTuple):
+    """Container for CI/CD metadata used in reports."""
+    timestamp: str
+    run_id: str
+    ref_name: str
+    github_sha: str
+    github_repo: str
 
 
 def get_score_color_lint(pylint_score: str) -> str:
