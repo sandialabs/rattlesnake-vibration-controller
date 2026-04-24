@@ -258,8 +258,10 @@ Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 * Enter the following details:
   * Owner: sandialabs
   * Repository name: rattlesnake-vibration-controller
-  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory))
-  * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used `pypi` for live publishing to the PyPI site, and `testpypi` for test publishing to the TestPyPI site.
+  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory)
+  * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used 
+    * `pypi` for live publishing to the PyPI site, and
+    * `testpypi` for test publishing to the TestPyPI site.
   * Click the **Add** button
 
 We follow PEP 440 (the Python standard for versioning), which requires version strings to follow this specific structure:
