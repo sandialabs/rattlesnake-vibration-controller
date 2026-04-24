@@ -211,9 +211,9 @@ def test_output_process_start_environment(mock_log, output_process_obj):
     output_process_obj.start_environment("Modal")
 
     mock_log.assert_called_with("Started Environment Modal")
-    assert output_process_obj.environment_starting_up_flags["Modal"] == True
-    assert output_process_obj.environment_shutting_down_flags["Modal"] == False
-    assert output_process_obj.environment_active_flags["Modal"] == False
+    assert output_process_obj.environment_starting_up_flags["Modal"] is True
+    assert output_process_obj.environment_shutting_down_flags["Modal"] is False
+    assert output_process_obj.environment_active_flags["Modal"] is False
 
 
 @mock.patch("rattlesnake.process.acquisition.flush_queue")

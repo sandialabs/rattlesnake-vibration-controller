@@ -8,33 +8,35 @@ CI/CD metadata (timestamp, branch, commit hash).
 
 import argparse
 import sys
-from rattlesnake.cicd.utilities import get_multiline_timestamp
+from rattlesnake.cicd.utilities import (
+    ReportMetadata,
+    add_common_args,
+    get_multiline_timestamp,
+    report_main_runner,
+)
 
 
 def generate_footer_md(
-    timestamp_raw: str, run_id: str, ref_name: str, github_sha: str, github_repo: str
+    metadata: ReportMetadata,
 ) -> str:
     """
     Generate a Markdown snippet with CI/CD metadata.
 
     Args:
-        timestamp_raw: Raw UTC timestamp string from CI/CD
-        run_id: GitHub Actions run ID
-        ref_name: Git reference name (branch)
-        github_sha: GitHub commit SHA
-        github_repo: GitHub repository name
+        metadata: CI/CD metadata
 
     Returns:
         Markdown string formatted for the primary_sidebar_footer block
     """
     # Use 6-space indentation as found in myst.yml for the block content
     indent: str = "      "
-    ts_lines = get_multiline_timestamp(timestamp_raw)
+    ts_lines = get_multiline_timestamp(metadata.timestamp)
 
     # Use HTML links instead of Markdown links since we are inside a <div>
-    run_url = f"https://github.com/{github_repo}/actions/runs/{run_id}"
-    branch_url = f"https://github.com/{github_repo}/tree/{ref_name}"
-    commit_url = f"https://github.com/{github_repo}/commit/{github_sha}"
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
 
     return (
         f"\n"
@@ -44,9 +46,9 @@ def generate_footer_md(
         f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[2]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
-        f'{indent}Run ID: <a href="{run_url}">{run_id}</a><br>\n'
-        f'{indent}Branch: <a href="{branch_url}">{ref_name}</a><br>\n'
-        f'{indent}Commit: <a href="{commit_url}">{github_sha[:7]}</a><br>\n'
+        f'{indent}Run ID: <a href="{run_url}">{metadata.run_id}</a><br>\n'
+        f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
+        f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
     )
 
@@ -81,6 +83,19 @@ def update_myst_file(file_path: str, footer_md: str) -> None:
         raise IOError(f'Error updating file "{file_path}": {e}') from e
 
 
+def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
+    """
+    Orchestrate report generation.
+
+    Args:
+        args: Parsed command line arguments
+        metadata: CI/CD metadata
+    """
+    footer_md: str = generate_footer_md(metadata)
+    update_myst_file(args.myst_file, footer_md)
+    print(f"[OK] Successfully updated Jupyter Book metadata in {args.myst_file}")
+
+
 def parse_arguments() -> argparse.Namespace:
     """
     Parse command line arguments.
@@ -92,13 +107,8 @@ def parse_arguments() -> argparse.Namespace:
         description="Inject CI/CD metadata into myst.yml",
     )
     parser.add_argument("--myst_file", required=True, help="Path to myst.yml")
-    parser.add_argument(
-        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
-    )
-    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
-    parser.add_argument("--ref_name", required=True, help="Git branch name")
-    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
-    parser.add_argument("--github_repo", required=True, help="GitHub repository name")
+
+    add_common_args(parser)
 
     return parser.parse_args()
 
@@ -106,23 +116,7 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> int:
     """Main entry point."""
     args: argparse.Namespace = parse_arguments()
-    try:
-        footer_md: str = generate_footer_md(
-            args.timestamp,
-            args.run_id,
-            args.ref_name,
-            args.github_sha,
-            args.github_repo,
-        )
-        update_myst_file(args.myst_file, footer_md)
-        print(f"[OK] Successfully updated Jupyter Book metadata in {args.myst_file}")
-    except (FileNotFoundError, IOError) as e:
-        print(f"[X] File Error: {e}")
-        return 1
-    except ValueError as e:  # Catch potential parsing errors
-        print(f"[X] Input Error: {e}")
-        return 1
-    return 0
+    return report_main_runner(generate_report, args)
 
 
 if __name__ == "__main__":

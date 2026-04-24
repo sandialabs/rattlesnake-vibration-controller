@@ -17,6 +17,7 @@ from rattlesnake.cicd.report_lint import (
     get_score_from_summary,
     main,
 )
+from rattlesnake.cicd.utilities import ReportMetadata
 
 
 def test_get_lint_content_success(tmp_path):
@@ -60,20 +61,34 @@ def test_get_score_from_summary_not_found():
 
 def test_get_html_header():
     """Test generating the HTML header."""
-    header = get_html_header("9.00", "20240101_120000_UTC")
+    header = get_html_header("9.00")
     assert "<title>Lint Report</title>" in header
     assert "9.00/10" in header
 
 
 def test_get_html_issues_table_empty():
     """Test generating issues table when there are no issues."""
-    assert "No issues found" in get_html_issues_table([], "owner/repo", "sha")
+    metadata = ReportMetadata(
+        timestamp="20240101_120000_UTC",
+        run_id="run123",
+        ref_name="main",
+        github_sha="sha",
+        github_repo="owner/repo",
+    )
+    assert "No issues found" in get_html_issues_table([], metadata)
 
 
 def test_get_html_issues_table_with_data():
     """Test generating issues table with multiple issues."""
     issues = ["path/to/file.py:10:1: C0103: Invalid name", "other/file.py:5:1: E0602: Undefined variable"]
-    html = get_html_issues_table(issues, "owner/repo", "sha")
+    metadata = ReportMetadata(
+        timestamp="20240101_120000_UTC",
+        run_id="run123",
+        ref_name="main",
+        github_sha="sha",
+        github_repo="owner/repo",
+    )
+    html = get_html_issues_table(issues, metadata)
     assert "path/to/file.py" in html
     assert "Convention" in html
     assert "Error" in html
@@ -82,7 +97,14 @@ def test_get_html_issues_table_with_data():
 
 def test_get_html_footer():
     """Test generating the HTML footer."""
-    footer = get_html_footer("run123", "main", "owner/repo")
+    metadata = ReportMetadata(
+        timestamp="20240101_120000_UTC",
+        run_id="run123",
+        ref_name="main",
+        github_sha="sha",
+        github_repo="owner/repo",
+    )
+    footer = get_html_footer(metadata)
     assert "run123" in footer
     assert "main" in footer
 
@@ -130,4 +152,3 @@ def test_main_error(monkeypatch, capsys):
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "[X] File Error:" in captured.out
-

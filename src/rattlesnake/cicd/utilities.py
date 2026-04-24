@@ -3,10 +3,133 @@
 Utilities for CICD processes.
 """
 
+import argparse
+import json
 import re
 from datetime import datetime
+from typing import NamedTuple
 
 import pytz
+import requests
+
+
+class ReportMetadata(NamedTuple):
+    """Container for CI/CD metadata used in reports."""
+    timestamp: str
+    run_id: str
+    ref_name: str
+    github_sha: str
+    github_repo: str
+
+
+def add_common_args(parser: argparse.ArgumentParser) -> None:
+    """
+    Add shared CI/CD arguments to an argument parser.
+
+    Args:
+        parser: The argparse.ArgumentParser to update.
+    """
+    parser.add_argument(
+        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
+    )
+    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
+    parser.add_argument("--ref_name", required=True, help="Git reference name (branch)")
+    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
+    parser.add_argument("--github_repo", required=True, help="GitHub repository name")
+
+
+def add_badge_args(parser: argparse.ArgumentParser) -> None:
+    """
+    Add shared arguments for badge generation scripts.
+
+    Args:
+        parser: The argparse.ArgumentParser to update.
+    """
+    parser.add_argument("--output_dir", help="Directory to save badges")
+    parser.add_argument("--github_repo", help="owner/repo")
+    parser.add_argument("--deploy_subdir", help="main or dev")
+    parser.add_argument("--run_id", help="GitHub Run ID")
+    parser.add_argument("--github_server_url", default="https://github.com")
+
+
+def report_metadata_creation(args: argparse.Namespace) -> ReportMetadata:
+    """
+    Create ReportMetadata from parsed arguments.
+
+    Args:
+        args: Parsed command line arguments.
+
+    Returns:
+        ReportMetadata instance.
+    """
+    return ReportMetadata(
+        timestamp=args.timestamp,
+        run_id=args.run_id,
+        ref_name=args.ref_name,
+        github_sha=args.github_sha,
+        github_repo=args.github_repo,
+    )
+
+
+def report_main_runner(main_func, args: argparse.Namespace) -> int:
+    """
+    Common execution loop for report generation scripts.
+
+    Args:
+        main_func: Function that takes (args, metadata) and returns None.
+        args: Parsed command line arguments.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    metadata: ReportMetadata = report_metadata_creation(args)
+
+    try:
+        main_func(args, metadata)
+    except (FileNotFoundError, IOError) as e:
+        print(f"[X] File Error: {e}")
+        return 1
+    except ValueError as e:
+        print(f"[X] Input Error: {e}")
+        return 1
+    return 0
+
+
+def badge_image_download(url: str, output_path: str) -> bool:
+    """
+    Download a badge SVG from a URL.
+
+    Args:
+        url: The URL of the badge.
+        output_path: Local file path to save the SVG.
+
+    Returns:
+        True if successful, False otherwise.
+    """
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+        return True
+    except requests.RequestException as e:
+        print(f"[X] Failed to download badge from {url}: {e}")
+        return False
+
+
+def badge_metadata_json_write(metadata: dict, output_path: str) -> None:
+    """
+    Write badge metadata to a JSON file.
+
+    Args:
+        metadata: Dictionary containing metadata.
+        output_path: Local file path to save the JSON.
+    """
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
+    except (IOError, TypeError) as e:
+        print(f"[X] Failed to write JSON metadata to {output_path}: {e}")
 
 
 def get_score_color_lint(pylint_score: str) -> str:
@@ -23,12 +146,11 @@ def get_score_color_lint(pylint_score: str) -> str:
         score_val: float = float(pylint_score)
         if score_val >= 8.0:
             return "brightgreen"
-        elif score_val >= 6.0:
+        if score_val >= 6.0:
             return "yellow"
-        elif score_val >= 4.0:
+        if score_val >= 4.0:
             return "orange"
-        else:
-            return "red"
+        return "red"
     except ValueError:
         return "gray"
 
@@ -47,14 +169,13 @@ def get_score_color_coverage(coverage_score: str) -> str:
         score_val: float = float(coverage_score)
         if score_val >= 90:
             return "brightgreen"
-        elif score_val >= 80:
+        if score_val >= 80:
             return "green"
-        elif score_val >= 70:
+        if score_val >= 70:
             return "yellow"
-        elif score_val >= 60:
+        if score_val >= 60:
             return "orange"
-        else:
-            return "red"
+        return "red"
     except ValueError:
         return "gray"
 
@@ -109,32 +230,25 @@ def extend_timestamp(short: str) -> str:
     """
     Given a timestamp string from CI/CD in the form of
     20250815_211112_UTC, extend the timestamp to include EST and MST times
-    and return the extended string, so it look like, for example,
-    2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
+    and return the extended string.
 
     Args:
         short: the UTC bash string, for example: 20250815_211112_UTC
 
     Returns:
-        Extended timestamp, for example
-        2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
+        Extended timestamp string.
     """
     # Call the multiline function to get the individual strings
     lines: list[str] = get_multiline_timestamp(short)
 
     # lines[1] is the UTC time, lines[2] is the EST time, lines[3] is the MST time
-    # This is consistent with get_multiline_timestamp's return format
     return f"{lines[1]} ({lines[2]} / {lines[3]})"
 
 
 def get_multiline_timestamp(short: str) -> list[str]:
     """
     Given a timestamp string from CI/CD in the form of
-    20250815_211112_UTC, return a list of strings:
-    - Generated:
-    - YYYY-MM-DD HH:MM:SS UTC
-    - YYYY-MM-DD HH:MM:SS EST
-    - YYYY-MM-DD HH:MM:SS MST
+    20250815_211112_UTC, return a list of strings for multiple timezones.
 
     Args:
         short: the UTC bash string, for example: 20250815_211112_UTC

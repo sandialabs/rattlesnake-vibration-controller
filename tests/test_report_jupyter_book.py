@@ -2,31 +2,29 @@
 Tests for the Jupyter Book metadata reporter.
 """
 
-import argparse
-import sys
-from pathlib import Path
-from typing import Final
 import types
 
-import pytest
+# import pytest  # unused import
 
 from rattlesnake.cicd.report_jupyter_book import (
     generate_footer_md,
     update_myst_file,
     main,
-    parse_arguments,
 )
+from rattlesnake.cicd.utilities import ReportMetadata
 
 
 def test_generate_footer_md():
     """Test the generation of the Markdown footer."""
-    timestamp_raw = "20240324_120000_UTC"
-    run_id = "12345678"
-    ref_name = "main"
-    github_sha = "abc123456789"
-    github_repo = "owner/repo"
+    metadata = ReportMetadata(
+        timestamp="20240324_120000_UTC",
+        run_id="12345678",
+        ref_name="main",
+        github_sha="abc123456789",
+        github_repo="owner/repo",
+    )
 
-    footer = generate_footer_md(timestamp_raw, run_id, ref_name, github_sha, github_repo)
+    footer = generate_footer_md(metadata)
 
     assert "---" in footer
     assert '<div style="font-size: 0.7em;">' in footer
@@ -122,4 +120,3 @@ def test_main_error(monkeypatch, capsys):
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "[X] File Error:" in captured.out
-

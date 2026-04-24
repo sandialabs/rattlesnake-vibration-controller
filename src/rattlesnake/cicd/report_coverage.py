@@ -7,8 +7,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rattlesnake.cicd.utilities import (
+    ReportMetadata,
+    add_common_args,
     extend_timestamp,
     get_score_color_coverage,
+    report_main_runner,
     write_report,
 )
 
@@ -72,39 +75,36 @@ def get_coverage_metric(coverage_file: Path) -> CoverageMetric:
 
 def get_report_html(
     coverage_metric: CoverageMetric,
-    timestamp: str,
-    run_id: str,
-    ref_name: str,
-    github_sha: str,
-    github_repo: str,
+    metadata: ReportMetadata,
 ) -> str:
     """
     Generates an HTML report from the coverage metrics.
 
     Args:
         coverage_metric: CoverageMetric object containing coverage data
-        timestamp: The timestamp from bash when lint ran, in format YYYYMMDD_HHMMSS_UTC
-            e.g., 20250815_211112_UTC
-        run_id: GitHub Actions run ID
-        ref_name: Git reference name (branch)
-        github_sha: GitHub commit SHA
-        github_repo: GitHub repository name
+        metadata: CI/CD metadata (timestamp, run_id, etc.)
 
     Returns:
         Complete HTML report as a string
     """
-    timestamp_ext = extend_timestamp(timestamp)
+    timestamp_ext = extend_timestamp(metadata.timestamp)
     score_color: str = coverage_metric.color
 
     # Programmatically construct the full report URL
     try:
-        owner, repo_name = github_repo.split("/")
+        owner, repo_name = metadata.github_repo.split("/")
         full_report_url = (
             f"https://{owner}.github.io/{repo_name}/reports/coverage/htmlcov/index.html"
         )
     except ValueError:
         # Fallback or default URL in case the repo format is unexpected
         full_report_url = "#"
+
+    # Pre-calculate GitHub URLs to stay under line length limits
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -159,10 +159,14 @@ def get_report_html(
                 <div><strong>Total Lines:</strong> {coverage_metric.lines_valid}</div>
                 <div>&nbsp;</div>
                 <div><strong>Generated:</strong> {timestamp_ext}</div>
-                <div><strong>Run ID:</strong> <a href="https://github.com/{github_repo}/actions/runs/{run_id}"> {run_id}</a></div>
-                <div><strong>Branch:</strong> <a href="https://github.com/{github_repo}/tree/{ref_name}"> {ref_name}</a></div>
-                <div><strong>Commit:</strong> <a href="https://github.com/{github_repo}/commit/{github_sha}"> {github_sha[:7]}</a></div>
-                <div><strong>Repository:</strong> <a href="https://github.com/{github_repo}">{github_repo}</a></div>
+                <div><strong>Run ID:</strong>
+                    <a href="{run_url}">{metadata.run_id}</a></div>
+                <div><strong>Branch:</strong>
+                    <a href="{branch_url}">{metadata.ref_name}</a></div>
+                <div><strong>Commit:</strong>
+                    <a href="{commit_url}">{metadata.github_sha[:7]}</a></div>
+                <div><strong>Repository:</strong>
+                    <a href="{github_url}">{metadata.github_repo}</a></div>
                 <div>&nbsp;</div>
                 <div><strong>Full report:</strong> <a href="{full_report_url}">HTML</a></div>
             </div>
@@ -180,11 +184,7 @@ def get_report_html(
 def run_coverage_report(
     input_file: str,
     output_file: str,
-    timestamp: str,
-    run_id: str,
-    ref_name: str,
-    github_sha: str,
-    github_repo: str,
+    metadata: ReportMetadata,
 ) -> CoverageMetric:
     """
     Main function to create HTML report from coverage output.
@@ -192,12 +192,7 @@ def run_coverage_report(
     Args:
         input_file: Path to the coverage output text file
         output_file: Path for the generated HTML report
-        timestamp: The timestamp from bash when lint ran, in format YYYYMMDD_HHMMSS_UTC
-            e.g., 20250815_211112_UTC
-        run_id: GitHub Actions run ID
-        ref_name: Git reference name (branch)
-        github_sha: GitHub commit SHA
-        github_repo: GitHub repository name
+        metadata: CI/CD metadata
 
     Returns:
         CoverageMetric
@@ -209,15 +204,16 @@ def run_coverage_report(
     # Generate HTML report
     html_content: str = get_report_html(
         coverage_metric,
-        timestamp,
-        run_id,
-        ref_name,
-        github_sha,
-        github_repo,
+        metadata,
     )
 
     # Write the HTML report
     write_report(html_content, output_file)
+
+    print(f"[OK] Coverage HTML report generated: {output_file}")
+    print(f"[I] - valid lines of code: {coverage_metric.lines_valid}")
+    print(f"[I] - lines covered: {coverage_metric.lines_covered}")
+    print(f"[I] - coverage: {coverage_metric.coverage:.2f} percent")
 
     return coverage_metric
 
@@ -232,38 +228,21 @@ def parse_arguments() -> argparse.Namespace:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Generate enhanced HTML report from coverage output",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Example:
-  python coverage_report.py \
-    --input_file coverage.xml \
-    --output_file coverage_report.html \
-    --timestamp 20240101_120000_UTC \
-    --run_id 1234567890 \
-    --ref_name main \
-    --github_sha abc123def456 \
-    --github_repo owner/repo-name
-        """,
     )
 
     parser.add_argument("--input_file", required=True, help="Input coverage output file")
-
     parser.add_argument("--output_file", required=True, help="Output HTML report file")
 
-    parser.add_argument(
-        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
-    )
-
-    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
-
-    parser.add_argument("--ref_name", required=True, help="Git reference name (branch name)")
-
-    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
-
-    parser.add_argument(
-        "--github_repo", required=True, help="GitHub repository name (owner/repo-name)"
-    )
+    add_common_args(parser)
 
     return parser.parse_args()
+
+
+def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
+    """
+    Adapter for report_main_runner.
+    """
+    run_coverage_report(args.input_file, args.output_file, metadata)
 
 
 def main() -> int:
@@ -274,34 +253,7 @@ def main() -> int:
         Exit code (0 for success, 1 for failure)
     """
     args: argparse.Namespace = parse_arguments()
-
-    try:
-        cm: CoverageMetric = run_coverage_report(
-            args.input_file,
-            args.output_file,
-            args.timestamp,
-            args.run_id,
-            args.ref_name,
-            args.github_sha,
-            args.github_repo,
-        )
-
-        print(f"[OK] Coverage HTML report generated: {args.output_file}")
-        print(f"[I] - valid lines of code: {cm.lines_valid}")
-        print(f"[I] - lines covered: {cm.lines_covered}")
-        print(f"[I] - coverage: {cm.coverage} percent")
-
-    except FileNotFoundError:
-        print(f"[X] Error: The input file '{args.input_file}' was not found.")
-        return 1
-    except IOError as e:
-        print(f"[X] I/O error occurred: {e}")
-        return 1
-    except ValueError as e:
-        print(f"[X] Input Error : {e}")
-        return 1
-
-    return 0  # Success exit code
+    return report_main_runner(generate_report, args)
 
 
 if __name__ == "__main__":
