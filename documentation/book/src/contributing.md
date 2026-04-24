@@ -5,6 +5,19 @@ numbering:
 (sec:contributing)=
 # Contributing
 
+Users may contribute to the Rattlesnake project by [cloning](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forking](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the source code,
+making sure their updates all quality tests contained within Rattlesnake's Continous Integration (CI) framework, then submitting a [pull request](https://github.com/sandialabs/rattlesnake-vibration-controller/pulls).
+
+## Getting the Source Code
+
+**Collaborators and team members** should **clone** the repository:
+
+```bash
+git clone git@github.com:sandialabs/rattlesnake-vibration-controller.git
+```
+
+Others should create a **fork** of the repository to populate a copy of the source code in their own GitHub repository.
+
 ## Installation
 
 A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is **highly** recommended.
@@ -66,8 +79,6 @@ deactivate
 ```
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
-
-Now that you have a virtual environment, you are ready to populate it with libraries specific to the project.
 
 ## Documentation
 
@@ -247,8 +258,10 @@ Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 * Enter the following details:
   * Owner: sandialabs
   * Repository name: rattlesnake-vibration-controller
-  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory))
-  * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used `pypi` for live publishing to the PyPI site, and `testpypi` for test publishing to the TestPyPI site.
+  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory)
+  * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used 
+    * `pypi` for live publishing to the PyPI site, and
+    * `testpypi` for test publishing to the TestPyPI site.
   * Click the **Add** button
 
 We follow PEP 440 (the Python standard for versioning), which requires version strings to follow this specific structure:
