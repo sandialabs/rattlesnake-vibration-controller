@@ -212,7 +212,32 @@ In `release.yml` we have removed the manual `-p ${{ secrets.PYPI_TOKEN }}`.  The
 
 To configure Trusted Publishing, you tell PyPI, "Trust any code from this specific GitHub repository and workflow."  This removes the need to mange long-lived API tokens or passwords in your secrets.
 
-Step:
+Steps:
+
+* In `release.yml`, the environment must be set to either `pypi` or `testpypi` depending on the version string.  Hence the logic in `release.yml`:
+
+```bash
+environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains 'rc' or 'dev', use the 'testpypi' environment, otherwise use 'pypi'
+```
+
+The GitHub repository itself must have both a `pypi` and a `testpypi` environment:
+
+On the GitHub repo:
+
+* Click on the **Settings** tab (usually the last tab on the right in the top navigation bar).
+* On the left-hand sidebar, look for the **Environments** link (it's under the "Code and automation" section).
+  * If the environment doesn't exist yet:
+    * Click the **New environment** button.
+    * Name the environment `pypi` (and then make a second item called `testpypi`) and click **Configure environment**.
+  * If it does exist but is named differently, you can click on it to rename it or delete it and create a new one.
+* For a basic setup using Trusted Publishing, you don't actually need to add any secrets or configuration on this page. Just having the environment named testpypi exist is enough to link it to your workflow.
+* Optionally, we add the following protections:
+  * Under the **Deployment branches and tags**, under the **No Restriction** button, select **Selected branches and tags**.
+  * Click **Add deployment branch or tage rule**.
+  * Select **Ref type: Tag**.
+  * Set the **Name Pattern:** to 'v*'.  This ensures that *only* version tags can ever use this environment, adding a layer of security.
+
+Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 
 * Log into your [PyPI](https://pypi.org) (or [Test PyPI](https://test.pypi.org)) account
 * Go your project's **Manage** page (or your accounts **Publishing** settings if you are setting it up for the first time.)

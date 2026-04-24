@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     # environment: pypi
     # Set the environment based on the tag name
-    environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains '-test', use the 'test-pypi' environment, otherwise use 'pypi'
+    environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains 'rc' or 'dev', use the 'testpypi' environment, otherwise use 'pypi'
     # Optional: Use environment protection rule for manual approval before publishing
     permissions:
       id-token: write # Needed for authentication with PyPI using GitHub Actions
