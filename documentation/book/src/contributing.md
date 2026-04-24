@@ -203,3 +203,45 @@ The separate the concerns of **test**, **build**, **release**, and **publish** a
      * **Purpose:** To make the software easily available to the global ecosystem.
      * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
      * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
+
+### Trusted Publishing
+
+In `release.yml` we have removed the manual `-p ${{ secrets.PYPI_TOKEN }}`.  The industry standard is now [**Trusted Publishing**](https://docs.pypi.org/trusted-publishers/) (also called OpenID Connect or OIDC).  You configure this in your PyPI project settings once, and GitHub Actions authenticates securely without you needing to store and rotate secrets.
+
+> OpenID Connect (OIDC) provides a flexible, credential-free mechanism for delegating publishing authority for a PyPI package to a trusted third party service, like GitHub Actions.  PyPI users and projects can use trusted publishers to automate their release processes, without needing to use API tokens or passwords.
+
+To configure Trusted Publishing, you tell PyPI, "Trust any code from this specific GitHub repository and workflow."  This removes the need to mange long-lived API tokens or passwords in your secrets.
+
+Step:
+
+* Log into your [PyPI](https://pypi.org) (or [Test PyPI](https://test.pypi.org)) account
+* Go your project's **Manage** page (or your accounts **Publishing** settings if you are setting it up for the first time.)
+* Look for the **Publishing** tab
+* Click **Add new publisher**
+* Select **GitHub** as the source
+* Enter the following details:
+  * Owner: sandialabs
+  * Repository name: rattlesnake-vibration-controller
+  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory))
+  * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used `pypi` for live publishing to the PyPI site, and `testpypi` for test publishing to the TestPyPI site.
+  * Click the **Add** button
+
+To create a release:
+
+* Merge the `dev` branch into the `main` branch.
+* On the `main` branch, `git tag` and push to `main`, e.g., 
+
+```sh
+# Ensure you are on the main branch
+git checkout main
+git pull
+
+# View existing tags, if any
+git tag
+
+# Create the new tag, e.g.,
+git tag -a v1.0.0 -m "Release version 1.0.0"
+
+# On the main branch, push the tag to GitHub
+git push origin v1.0.0
+```
