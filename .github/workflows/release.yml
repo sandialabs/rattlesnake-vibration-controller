@@ -23,6 +23,7 @@ jobs:
 
   # 2. BUILD: Only runs if 'test' passes
   build:
+    name: Build Distribution and Generate Attestation
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -78,12 +79,13 @@ jobs:
           prerelease: false # Set to true if this is a pre-release (e.g., alpha, beta)
 
   # 4. PUBLISH: Only runs if 'build' passes
-  publish:
+  publish-to-pypi-or-testpypi:
+    name: Publish to PyPI or TestPyPIj
     needs: [build, github-release] # Ensure both build and GitHub release steps succeed before publishing
     runs-on: ubuntu-latest
     # environment: pypi
     # Set the environment based on the tag name
-    environment: ${{ contains(github.ref, '-test') && 'test-pypi' || 'pypi' }} # If the tag contains '-test', use the 'test-pypi' environment, otherwise use 'pypi'
+    environment: ${{ contains(github.ref, '-test') && 'testpypi' || 'pypi' }} # If the tag contains '-test', use the 'test-pypi' environment, otherwise use 'pypi'
     # Optional: Use environment protection rule for manual approval before publishing
     permissions:
       id-token: write # Needed for authentication with PyPI using GitHub Actions
@@ -94,7 +96,7 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Publish to TestPyPI or PyPI
+      - name: Trusted Publish to TestPyPI or PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         # No password needed with Trusted Publishing configured on PyPI.
         with:
