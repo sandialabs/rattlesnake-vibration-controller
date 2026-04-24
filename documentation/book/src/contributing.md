@@ -226,10 +226,30 @@ Step:
   * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used `pypi` for live publishing to the PyPI site, and `testpypi` for test publishing to the TestPyPI site.
   * Click the **Add** button
 
-To create a release:
+We follow PEP 440 (the Python standard for versioning), which requires version strings to follow this specific structure:
+
+```
+bashN.N.N[{a|b|rc}N][.postN][.devN]
+```
+
+To create a prerelease on TestPyPI:
+
+* On any development, e.g., `dev-cicd-docs`, `git tag` and push, e.g.,
+
+# View existing tags, if any
+git tag
+
+# Create the new tag, e.g.,
+git tag -a v1.0.0rc1 -m "Test of prerelease version 1.0.0, release candidate 1"
+
+# On the main branch, push the tag to GitHub
+git push origin v1.0.0rc1
+```
+
+To create a release on PyPI:
 
 * Merge the `dev` branch into the `main` branch.
-* On the `main` branch, `git tag` and push to `main`, e.g., 
+* On the `main` branch, `git tag` and push to `main`, e.g.,
 
 ```sh
 # Ensure you are on the main branch
