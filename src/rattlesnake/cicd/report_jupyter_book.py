@@ -9,8 +9,10 @@ CI/CD metadata (timestamp, branch, commit hash).
 import argparse
 import sys
 from rattlesnake.cicd.utilities import (
-    get_multiline_timestamp,
     ReportMetadata,
+    add_common_args,
+    get_multiline_timestamp,
+    report_main_runner,
 )
 
 
@@ -81,6 +83,19 @@ def update_myst_file(file_path: str, footer_md: str) -> None:
         raise IOError(f'Error updating file "{file_path}": {e}') from e
 
 
+def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
+    """
+    Orchestrate report generation.
+
+    Args:
+        args: Parsed command line arguments
+        metadata: CI/CD metadata
+    """
+    footer_md: str = generate_footer_md(metadata)
+    update_myst_file(args.myst_file, footer_md)
+    print(f"[OK] Successfully updated Jupyter Book metadata in {args.myst_file}")
+
+
 def parse_arguments() -> argparse.Namespace:
     """
     Parse command line arguments.
@@ -92,13 +107,8 @@ def parse_arguments() -> argparse.Namespace:
         description="Inject CI/CD metadata into myst.yml",
     )
     parser.add_argument("--myst_file", required=True, help="Path to myst.yml")
-    parser.add_argument(
-        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
-    )
-    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
-    parser.add_argument("--ref_name", required=True, help="Git branch name")
-    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
-    parser.add_argument("--github_repo", required=True, help="GitHub repository name")
+
+    add_common_args(parser)
 
     return parser.parse_args()
 
@@ -106,26 +116,7 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> int:
     """Main entry point."""
     args: argparse.Namespace = parse_arguments()
-
-    metadata = ReportMetadata(
-        timestamp=args.timestamp,
-        run_id=args.run_id,
-        ref_name=args.ref_name,
-        github_sha=args.github_sha,
-        github_repo=args.github_repo,
-    )
-
-    try:
-        footer_md: str = generate_footer_md(metadata)
-        update_myst_file(args.myst_file, footer_md)
-        print(f"[OK] Successfully updated Jupyter Book metadata in {args.myst_file}")
-    except (FileNotFoundError, IOError) as e:
-        print(f"[X] File Error: {e}")
-        return 1
-    except ValueError as e:  # Catch potential parsing errors
-        print(f"[X] Input Error: {e}")
-        return 1
-    return 0
+    return report_main_runner(generate_report, args)
 
 
 if __name__ == "__main__":

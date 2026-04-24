@@ -7,9 +7,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rattlesnake.cicd.utilities import (
+    ReportMetadata,
+    add_common_args,
     extend_timestamp,
     get_score_color_coverage,
-    ReportMetadata,
+    report_main_runner,
     write_report,
 )
 
@@ -208,6 +210,11 @@ def run_coverage_report(
     # Write the HTML report
     write_report(html_content, output_file)
 
+    print(f"[OK] Coverage HTML report generated: {output_file}")
+    print(f"[I] - valid lines of code: {coverage_metric.lines_valid}")
+    print(f"[I] - lines covered: {coverage_metric.lines_covered}")
+    print(f"[I] - coverage: {coverage_metric.coverage:.2f} percent")
+
     return coverage_metric
 
 
@@ -221,38 +228,21 @@ def parse_arguments() -> argparse.Namespace:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Generate enhanced HTML report from coverage output",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Example:
-  python coverage_report.py \
-    --input_file coverage.xml \
-    --output_file coverage_report.html \
-    --timestamp 20240101_120000_UTC \
-    --run_id 1234567890 \
-    --ref_name main \
-    --github_sha abc123def456 \
-    --github_repo owner/repo-name
-        """,
     )
 
     parser.add_argument("--input_file", required=True, help="Input coverage output file")
-
     parser.add_argument("--output_file", required=True, help="Output HTML report file")
 
-    parser.add_argument(
-        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
-    )
-
-    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
-
-    parser.add_argument("--ref_name", required=True, help="Git reference name (branch name)")
-
-    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
-
-    parser.add_argument(
-        "--github_repo", required=True, help="GitHub repository name (owner/repo-name)"
-    )
+    add_common_args(parser)
 
     return parser.parse_args()
+
+
+def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
+    """
+    Adapter for report_main_runner.
+    """
+    run_coverage_report(args.input_file, args.output_file, metadata)
 
 
 def main() -> int:
@@ -263,38 +253,7 @@ def main() -> int:
         Exit code (0 for success, 1 for failure)
     """
     args: argparse.Namespace = parse_arguments()
-
-    metadata = ReportMetadata(
-        timestamp=args.timestamp,
-        run_id=args.run_id,
-        ref_name=args.ref_name,
-        github_sha=args.github_sha,
-        github_repo=args.github_repo,
-    )
-
-    try:
-        cm: CoverageMetric = run_coverage_report(
-            args.input_file,
-            args.output_file,
-            metadata,
-        )
-
-        print(f"[OK] Coverage HTML report generated: {args.output_file}")
-        print(f"[I] - valid lines of code: {cm.lines_valid}")
-        print(f"[I] - lines covered: {cm.lines_covered}")
-        print(f"[I] - coverage: {cm.coverage} percent")
-
-    except FileNotFoundError:
-        print(f"[X] Error: The input file '{args.input_file}' was not found.")
-        return 1
-    except IOError as e:
-        print(f"[X] I/O error occurred: {e}")
-        return 1
-    except ValueError as e:
-        print(f"[X] Input Error : {e}")
-        return 1
-
-    return 0  # Success exit code
+    return report_main_runner(generate_report, args)
 
 
 if __name__ == "__main__":

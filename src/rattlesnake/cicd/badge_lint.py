@@ -3,16 +3,16 @@ Generates the Lint badge (SVG) and metadata (JSON) for CI/CD.
 """
 
 import argparse
-import json
 import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
 from rattlesnake.cicd.utilities import (
     add_badge_args,
+    badge_image_download,
+    badge_metadata_json_write,
     get_score_color_lint,
 )
 
@@ -73,14 +73,9 @@ def main():
 
         # Download SVG badge
         badge_url = f"https://img.shields.io/badge/lint-{score}-{color}.svg"
-        try:
-            response = requests.get(badge_url, timeout=10)
-            response.raise_for_status()
-            with open(Path(args.output_dir) / "lint.svg", "wb") as f:
-                f.write(response.content)
+        output_svg = str(Path(args.output_dir) / "lint.svg")
+        if badge_image_download(url=badge_url, output_path=output_svg):
             print(f"[OK] Lint SVG badge saved to {args.output_dir}")
-        except requests.RequestException as e:
-            print(f"[X] Failed to download badge: {e}")
 
         # Generate JSON metadata if other required args are present
         if all([args.github_repo, args.deploy_subdir, args.run_id]):
@@ -97,8 +92,8 @@ def main():
                 "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
 
-            with open(Path(args.output_dir) / "lint-info.json", "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2)
+            output_json = str(Path(args.output_dir) / "lint-info.json")
+            badge_metadata_json_write(metadata=metadata, output_path=output_json)
             print(f"[OK] Lint JSON metadata saved to {args.output_dir}")
 
     print(f"Lint badge processing complete: Score={score}, Color={color}")

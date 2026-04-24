@@ -3,16 +3,16 @@ Generates the Coverage badge (SVG) and metadata (JSON) for CI/CD.
 """
 
 import argparse
-import json
 import os
 import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
 from rattlesnake.cicd.utilities import (
     add_badge_args,
+    badge_image_download,
+    badge_metadata_json_write,
     get_score_color_coverage,
 )
 
@@ -74,14 +74,9 @@ def main():
         # Download SVG badge
         # Percentage is formatted to 1 decimal place for the badge
         badge_url = f"https://img.shields.io/badge/coverage-{coverage:.1f}%25-{color}.svg"
-        try:
-            response = requests.get(badge_url, timeout=10)
-            response.raise_for_status()
-            with open(Path(args.output_dir) / "coverage.svg", "wb") as f:
-                f.write(response.content)
+        output_svg = str(Path(args.output_dir) / "coverage.svg")
+        if badge_image_download(url=badge_url, output_path=output_svg):
             print(f"[OK] Coverage SVG badge saved to {args.output_dir}")
-        except requests.RequestException as e:
-            print(f"[X] Failed to download badge: {e}")
 
         # Generate JSON metadata if other required args are present
         if all([args.github_repo, args.deploy_subdir, args.run_id]):
@@ -105,12 +100,8 @@ def main():
                 "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
 
-            with open(
-                Path(args.output_dir) / "coverage-info.json",
-                "w",
-                encoding="utf-8",
-            ) as f:
-                json.dump(metadata, f, indent=2)
+            output_json = str(Path(args.output_dir) / "coverage-info.json")
+            badge_metadata_json_write(metadata=metadata, output_path=output_json)
             print(f"[OK] Coverage JSON metadata saved to {args.output_dir}")
 
     print(f"Coverage badge processing complete: {coverage:.1f}% ({color})")

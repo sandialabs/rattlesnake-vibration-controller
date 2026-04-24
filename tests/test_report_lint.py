@@ -61,7 +61,7 @@ def test_get_score_from_summary_not_found():
 
 def test_get_html_header():
     """Test generating the HTML header."""
-    header = get_html_header("9.00", "20240101_120000_UTC")
+    header = get_html_header("9.00")
     assert "<title>Lint Report</title>" in header
     assert "9.00/10" in header
 

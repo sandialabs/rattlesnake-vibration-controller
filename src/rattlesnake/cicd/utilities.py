@@ -4,11 +4,13 @@ Utilities for CICD processes.
 """
 
 import argparse
+import json
 import re
 from datetime import datetime
 from typing import NamedTuple
 
 import pytz
+import requests
 
 
 class ReportMetadata(NamedTuple):
@@ -48,6 +50,86 @@ def add_badge_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--deploy_subdir", help="main or dev")
     parser.add_argument("--run_id", help="GitHub Run ID")
     parser.add_argument("--github_server_url", default="https://github.com")
+
+
+def report_metadata_creation(args: argparse.Namespace) -> ReportMetadata:
+    """
+    Create ReportMetadata from parsed arguments.
+
+    Args:
+        args: Parsed command line arguments.
+
+    Returns:
+        ReportMetadata instance.
+    """
+    return ReportMetadata(
+        timestamp=args.timestamp,
+        run_id=args.run_id,
+        ref_name=args.ref_name,
+        github_sha=args.github_sha,
+        github_repo=args.github_repo,
+    )
+
+
+def report_main_runner(main_func, args: argparse.Namespace) -> int:
+    """
+    Common execution loop for report generation scripts.
+
+    Args:
+        main_func: Function that takes (args, metadata) and returns None.
+        args: Parsed command line arguments.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    metadata: ReportMetadata = report_metadata_creation(args)
+
+    try:
+        main_func(args, metadata)
+    except (FileNotFoundError, IOError) as e:
+        print(f"[X] File Error: {e}")
+        return 1
+    except ValueError as e:
+        print(f"[X] Input Error: {e}")
+        return 1
+    return 0
+
+
+def badge_image_download(url: str, output_path: str) -> bool:
+    """
+    Download a badge SVG from a URL.
+
+    Args:
+        url: The URL of the badge.
+        output_path: Local file path to save the SVG.
+
+    Returns:
+        True if successful, False otherwise.
+    """
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+        return True
+    except requests.RequestException as e:
+        print(f"[X] Failed to download badge from {url}: {e}")
+        return False
+
+
+def badge_metadata_json_write(metadata: dict, output_path: str) -> None:
+    """
+    Write badge metadata to a JSON file.
+
+    Args:
+        metadata: Dictionary containing metadata.
+        output_path: Local file path to save the JSON.
+    """
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
+    except (IOError, TypeError) as e:
+        print(f"[X] Failed to write JSON metadata to {output_path}: {e}")
 
 
 def get_score_color_lint(pylint_score: str) -> str:
