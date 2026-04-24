@@ -61,9 +61,17 @@ def test_get_score_from_summary_not_found():
 
 def test_get_html_header():
     """Test generating the HTML header."""
-    header = get_html_header("9.00")
+    metadata = ReportMetadata(
+        timestamp="20240101_120000_UTC",
+        run_id="run123",
+        ref_name="main",
+        github_sha="sha",
+        github_repo="owner/repo",
+    )
+    header = get_html_header("9.00", metadata)
     assert "<title>Lint Report</title>" in header
     assert "9.00/10" in header
+    assert "run123" in header
 
 
 def test_get_html_issues_table_empty():
@@ -97,16 +105,8 @@ def test_get_html_issues_table_with_data():
 
 def test_get_html_footer():
     """Test generating the HTML footer."""
-    metadata = ReportMetadata(
-        timestamp="20240101_120000_UTC",
-        run_id="run123",
-        ref_name="main",
-        github_sha="sha",
-        github_repo="owner/repo",
-    )
-    footer = get_html_footer(metadata)
-    assert "run123" in footer
-    assert "main" in footer
+    footer = get_html_footer()
+    assert "GitHub Actions" in footer
 
 
 def test_main_success(monkeypatch, capsys, tmp_path):
