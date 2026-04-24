@@ -74,4 +74,5 @@ testpaths = ["tests/"]
 pythonpath = ["src", "tests"]
 
 [tool.ruff]
-line-length = 100
+# line-length = 100
+line-length = 88  # The Ruff default is 88 characters, which is also the Black default. Setting it to 88 ensures consistency between Ruff and Black formatting, and is explicit.

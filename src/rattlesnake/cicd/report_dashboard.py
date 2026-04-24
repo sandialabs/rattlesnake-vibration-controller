@@ -17,9 +17,6 @@ def generate_dashboard_html(github_repo: str) -> str:
     Returns:
         HTML string
     """
-    # Using Sandia Blue as the primary accent to match Jupyter Book theme
-    sandia_blue = "#005376"
-
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,9 +28,6 @@ def generate_dashboard_html(github_repo: str) -> str:
           rel="stylesheet">
     <style>
         body {{ font-family: 'Inter', sans-serif; }}
-        .text-sandia {{ color: {sandia_blue}; }}
-        .bg-sandia {{ background-color: {sandia_blue}; }}
-        .border-sandia {{ border-color: {sandia_blue}; }}
         .hover-card:hover {{ transform: translateY(-2px); transition: all 0.2s ease; }}
     </style>
     </head>
@@ -43,10 +37,10 @@ def generate_dashboard_html(github_repo: str) -> str:
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <span class="text-2xl">🐍</span>
-                <span class="text-xl font-bold tracking-tight text-sandia">Rattlesnake</span>
+                <span class="text-xl font-bold tracking-tight text-blue-600">Rattlesnake</span>
             </div>
             <a href="https://github.com/{github_repo}"
-               class="text-sm font-medium hover:text-sandia transition">GitHub Repository</a>
+               class="text-sm font-medium hover:text-blue-600 transition">GitHub Repository</a>
         </div>
     </nav>
 
@@ -74,10 +68,10 @@ def generate_dashboard_html(github_repo: str) -> str:
                 <div class="space-y-4">
                     <a href="main/book/jupyter/index.html"
                        class="hover-card block p-5 bg-white rounded-xl shadow-sm border
-                              border-slate-200 hover:border-sandia group">
+                              border-slate-200 hover:border-blue-600 group">
                         <div class="flex justify-between items-start">
                             <div>
-                                <h3 class="font-bold text-lg group-hover:text-sandia">
+                                <h3 class="font-bold text-lg group-hover:text-blue-600">
                                     User's Manual</h3>
                                 <p class="text-sm text-slate-500 mt-1">
                                     Stable documentation for end-users.</p>
@@ -91,14 +85,14 @@ def generate_dashboard_html(github_repo: str) -> str:
                     <div class="grid grid-cols-2 gap-4">
                         <a href="main/reports/lint/index.html"
                            class="hover-card p-4 bg-white rounded-xl shadow-sm border
-                                  border-slate-200 hover:border-sandia">
+                                  border-slate-200 hover:border-blue-600">
                             <span class="block text-xs font-bold text-slate-400
                                          uppercase mb-2">Code Quality</span>
                             <img src="main/badges/lint.svg" alt="Lint Score" class="h-5">
                         </a>
                         <a href="main/reports/coverage/index.html"
                            class="hover-card p-4 bg-white rounded-xl shadow-sm border
-                                  border-slate-200 hover:border-sandia">
+                                  border-slate-200 hover:border-blue-600">
                             <span class="block text-xs font-bold text-slate-400
                                          uppercase mb-2">Test Coverage</span>
                             <img src="main/badges/coverage.svg" alt="Coverage" class="h-5">
@@ -170,8 +164,12 @@ def generate_dashboard_html(github_repo: str) -> str:
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="Generate Project Dashboard index.html")
-    parser.add_argument("--github_repo", required=True, help="GitHub repository (owner/repo)")
+    parser = argparse.ArgumentParser(
+        description="Generate Project Dashboard index.html"
+    )
+    parser.add_argument(
+        "--github_repo", required=True, help="GitHub repository (owner/repo)"
+    )
     parser.add_argument("--output_file", required=True, help="Output HTML file path")
     args = parser.parse_args()
 
