@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
-from rattlesnake.cicd.utilities import get_score_color_coverage
+from rattlesnake.cicd.utilities import (
+    add_badge_args,
+    get_score_color_coverage,
+)
 
 
 def extract_coverage(input_file: str) -> float:
@@ -42,12 +45,10 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Coverage badge and metadata.")
     parser.add_argument("--input_file", help="coverage.xml file (to extract percentage)")
     parser.add_argument("--coverage", type=float, help="Coverage percentage (direct input)")
-    parser.add_argument("--output_dir", help="Directory to save badges")
-    parser.add_argument("--github_repo", help="owner/repo")
-    parser.add_argument("--deploy_subdir", help="main or dev")
-    parser.add_argument("--run_id", help="GitHub Run ID")
-    parser.add_argument("--github_server_url", default="https://github.com")
     parser.add_argument("--export_env", action="store_true", help="Export to GITHUB_ENV")
+
+    # Add common badge arguments from utilities
+    add_badge_args(parser)
 
     args = parser.parse_args()
 

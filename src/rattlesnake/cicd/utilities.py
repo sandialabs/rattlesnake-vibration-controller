@@ -3,6 +3,7 @@
 Utilities for CICD processes.
 """
 
+import argparse
 import re
 from datetime import datetime
 from typing import NamedTuple
@@ -17,6 +18,36 @@ class ReportMetadata(NamedTuple):
     ref_name: str
     github_sha: str
     github_repo: str
+
+
+def add_common_args(parser: argparse.ArgumentParser) -> None:
+    """
+    Add shared CI/CD arguments to an argument parser.
+
+    Args:
+        parser: The argparse.ArgumentParser to update.
+    """
+    parser.add_argument(
+        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
+    )
+    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
+    parser.add_argument("--ref_name", required=True, help="Git reference name (branch)")
+    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
+    parser.add_argument("--github_repo", required=True, help="GitHub repository name")
+
+
+def add_badge_args(parser: argparse.ArgumentParser) -> None:
+    """
+    Add shared arguments for badge generation scripts.
+
+    Args:
+        parser: The argparse.ArgumentParser to update.
+    """
+    parser.add_argument("--output_dir", help="Directory to save badges")
+    parser.add_argument("--github_repo", help="owner/repo")
+    parser.add_argument("--deploy_subdir", help="main or dev")
+    parser.add_argument("--run_id", help="GitHub Run ID")
+    parser.add_argument("--github_server_url", default="https://github.com")
 
 
 def get_score_color_lint(pylint_score: str) -> str:
@@ -117,32 +148,25 @@ def extend_timestamp(short: str) -> str:
     """
     Given a timestamp string from CI/CD in the form of
     20250815_211112_UTC, extend the timestamp to include EST and MST times
-    and return the extended string, so it look like, for example,
-    2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
+    and return the extended string.
 
     Args:
         short: the UTC bash string, for example: 20250815_211112_UTC
 
     Returns:
-        Extended timestamp, for example
-        2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
+        Extended timestamp string.
     """
     # Call the multiline function to get the individual strings
     lines: list[str] = get_multiline_timestamp(short)
 
     # lines[1] is the UTC time, lines[2] is the EST time, lines[3] is the MST time
-    # This is consistent with get_multiline_timestamp's return format
     return f"{lines[1]} ({lines[2]} / {lines[3]})"
 
 
 def get_multiline_timestamp(short: str) -> list[str]:
     """
     Given a timestamp string from CI/CD in the form of
-    20250815_211112_UTC, return a list of strings:
-    - Generated:
-    - YYYY-MM-DD HH:MM:SS UTC
-    - YYYY-MM-DD HH:MM:SS EST
-    - YYYY-MM-DD HH:MM:SS MST
+    20250815_211112_UTC, return a list of strings for multiple timezones.
 
     Args:
         short: the UTC bash string, for example: 20250815_211112_UTC

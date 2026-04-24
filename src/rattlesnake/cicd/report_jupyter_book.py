@@ -8,33 +8,33 @@ CI/CD metadata (timestamp, branch, commit hash).
 
 import argparse
 import sys
-from rattlesnake.cicd.utilities import get_multiline_timestamp
+from rattlesnake.cicd.utilities import (
+    get_multiline_timestamp,
+    ReportMetadata,
+)
 
 
 def generate_footer_md(
-    timestamp_raw: str, run_id: str, ref_name: str, github_sha: str, github_repo: str
+    metadata: ReportMetadata,
 ) -> str:
     """
     Generate a Markdown snippet with CI/CD metadata.
 
     Args:
-        timestamp_raw: Raw UTC timestamp string from CI/CD
-        run_id: GitHub Actions run ID
-        ref_name: Git reference name (branch)
-        github_sha: GitHub commit SHA
-        github_repo: GitHub repository name
+        metadata: CI/CD metadata
 
     Returns:
         Markdown string formatted for the primary_sidebar_footer block
     """
     # Use 6-space indentation as found in myst.yml for the block content
     indent: str = "      "
-    ts_lines = get_multiline_timestamp(timestamp_raw)
+    ts_lines = get_multiline_timestamp(metadata.timestamp)
 
     # Use HTML links instead of Markdown links since we are inside a <div>
-    run_url = f"https://github.com/{github_repo}/actions/runs/{run_id}"
-    branch_url = f"https://github.com/{github_repo}/tree/{ref_name}"
-    commit_url = f"https://github.com/{github_repo}/commit/{github_sha}"
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
 
     return (
         f"\n"
@@ -44,9 +44,9 @@ def generate_footer_md(
         f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[2]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
-        f'{indent}Run ID: <a href="{run_url}">{run_id}</a><br>\n'
-        f'{indent}Branch: <a href="{branch_url}">{ref_name}</a><br>\n'
-        f'{indent}Commit: <a href="{commit_url}">{github_sha[:7]}</a><br>\n'
+        f'{indent}Run ID: <a href="{run_url}">{metadata.run_id}</a><br>\n'
+        f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
+        f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
     )
 
@@ -106,14 +106,17 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> int:
     """Main entry point."""
     args: argparse.Namespace = parse_arguments()
+
+    metadata = ReportMetadata(
+        timestamp=args.timestamp,
+        run_id=args.run_id,
+        ref_name=args.ref_name,
+        github_sha=args.github_sha,
+        github_repo=args.github_repo,
+    )
+
     try:
-        footer_md: str = generate_footer_md(
-            args.timestamp,
-            args.run_id,
-            args.ref_name,
-            args.github_sha,
-            args.github_repo,
-        )
+        footer_md: str = generate_footer_md(metadata)
         update_myst_file(args.myst_file, footer_md)
         print(f"[OK] Successfully updated Jupyter Book metadata in {args.myst_file}")
     except (FileNotFoundError, IOError) as e:
