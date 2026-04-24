@@ -116,6 +116,22 @@ def get_html_header(score: str, timestamp_short: str) -> str:
         .type-refactor {{ color: #8e44ad; font-weight: bold; }}
         .file-link {{ color: #3498db; text-decoration: none; }}
         .file-link:hover {{ text-decoration: underline; }}
+        .code-callout {{
+            background: #f1f2f6;
+            border-left: 5px solid #2f3542;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 0 4px 4px 0;
+        }}
+        .code-callout code {{
+            display: block;
+            background: #2f3542;
+            color: #ffffff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', Courier, monospace;
+        }}
     </style>
 </head>
 <body>
@@ -135,6 +151,11 @@ def get_html_header(score: str, timestamp_short: str) -> str:
             <div>Global Score</div>
             <div class="score-value">{score}/10</div>
         </div>
+    </div>
+
+    <div class="code-callout">
+        Want to compare your local pylint score?
+        <code>pylint src/rattlesnake</code>
     </div>
 """
 
