@@ -228,7 +228,7 @@ Step:
 
 We follow PEP 440 (the Python standard for versioning), which requires version strings to follow this specific structure:
 
-```
+```bash
 bashN.N.N[{a|b|rc}N][.postN][.devN]
 ```
 

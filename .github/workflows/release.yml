@@ -80,12 +80,12 @@ jobs:
 
   # 4. PUBLISH: Only runs if 'build' passes
   publish-to-pypi-or-testpypi:
-    name: Publish to PyPI or TestPyPIj
+    name: Publish to PyPI or TestPyPI
     needs: [build, github-release] # Ensure both build and GitHub release steps succeed before publishing
     runs-on: ubuntu-latest
     # environment: pypi
     # Set the environment based on the tag name
-    environment: ${{ contains(github.ref, '-test') && 'testpypi' || 'pypi' }} # If the tag contains '-test', use the 'test-pypi' environment, otherwise use 'pypi'
+    environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains '-test', use the 'test-pypi' environment, otherwise use 'pypi'
     # Optional: Use environment protection rule for manual approval before publishing
     permissions:
       id-token: write # Needed for authentication with PyPI using GitHub Actions
@@ -101,4 +101,4 @@ jobs:
         # No password needed with Trusted Publishing configured on PyPI.
         with:
           # If the tag contains '-test', use the TestPyPI URL; otherwise, use the default PyPI URL
-          repository-url: ${{ contains(github.ref, '-test') && 'https://test.pypi.org/legacy/' || '' }}  # Production PyPI uses the default URL, so the empty string will cause it to default to the standard PyPI repository. TestPyPI will use the specified URL. 
+          repository-url: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'https://test.pypi.org/legacy/' || '' }}  # Production PyPI uses the default URL, so the empty string will cause it to default to the standard PyPI repository. TestPyPI will use the specified URL. 
