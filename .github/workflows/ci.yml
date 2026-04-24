@@ -357,6 +357,10 @@ jobs:
           # Create a root index.html using the Python script
           uv run python src/rattlesnake/cicd/report_dashboard.py \
             --github_repo ${{ github.repository }} \
+            --timestamp "$(date +"%Y%m%d_%H%M%S_%Z")" \
+            --run_id ${{ github.run_id }} \
+            --ref_name ${{ github.ref_name }} \
+            --github_sha ${{ github.sha }} \
             --output_file pages/index.html
 
       - name: Deploy to GitHub Pages
