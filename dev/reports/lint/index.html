@@ -1,539 +1,282 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lint Report</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .summary-card { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .score-box { text-align: center; }
-        .score-value { font-size: 48px; font-weight: bold; color: brightgreen; }
-        .timestamp { color: #666; font-size: 0.9em; }
-        .issue-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .issue-table th, .issue-table td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        .issue-table th { background: #f2f2f2; }
-        .type-error { color: #c0392b; font-weight: bold; }
-        .type-warning { color: #f39c12; font-weight: bold; }
-        .type-convention { color: #2980b9; font-weight: bold; }
-        .type-refactor { color: #8e44ad; font-weight: bold; }
-        .file-link { color: #3498db; text-decoration: none; }
-        .file-link:hover { text-decoration: underline; }
-        .code-callout {
-            background: #f1f2f6;
-            border-left: 5px solid #2f3542;
-            padding: 15px;
-            margin-bottom: 30px;
-            border-radius: 0 4px 4px 0;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                         Helvetica, Arial, sans-serif;
+            line-height: 1.5; color: #24292e; background-color: #f6f8fa;
+            margin: 0; padding: 20px;
         }
-        .code-callout code {
-            display: block;
-            background: #2f3542;
-            color: #ffffff;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            font-family: 'Courier New', Courier, monospace;
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: #fff; padding: 24px; border: 1px solid #e1e4e8;
+            border-radius: 6px; margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(27,31,35,0.12);
         }
+        .score { font-size: 32px; font-weight: 600; color: red; }
+        .metadata { font-size: 14px; color: #586069; margin-top: 8px; }
+        .nav { margin-bottom: 24px; }
+        .nav a {
+            display: inline-block; padding: 8px 16px;
+            background-color: #0366d6; color: #fff;
+            text-decoration: none; border-radius: 6px;
+            margin-right: 8px; font-weight: 500;
+        }
+        .nav a:hover { background-color: #0357b6; }
+        table {
+            width: 100%; border-collapse: collapse; background: #fff;
+            border: 1px solid #e1e4e8; border-radius: 6px;
+        }
+        th {
+            text-align: left; padding: 12px; background: #f6f8fa;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        td { padding: 12px; border-bottom: 1px solid #e1e4e8; font-size: 14px; }
     </style>
 </head>
 <body>
-    <h1>Lint Analysis Report</h1>
-    
-    <div class="summary-card">
-        <div>
-            <h2>Summary</h2>
-            <div class="timestamp">
-                Generated:<br>
-                &nbsp;&nbsp;2026-04-24 20:48:20 UTC<br>
-                &nbsp;&nbsp;2026-04-24 16:48:20 EST<br>
-                &nbsp;&nbsp;2026-04-24 14:48:20 MST
+    <div class="container">
+        <div class="header">
+            <div class="score">Pylint Score: 0.00/10</div>
+        </div>
+        <div class="nav">
+            <a href="../../index.html">← Back to Dashboard</a>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Line:Col</th>
+                    <th>Type</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L37">src/rattlesnake/main.py</a></td>
+                    <td>37:0</td>
+                    <td>Refactor</td>
+                    <td>Too many local variables (31/15) (too-many-locals)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L37">src/rattlesnake/main.py</a></td>
+                    <td>37:0</td>
+                    <td>Refactor</td>
+                    <td>Too many branches (14/12) (too-many-branches)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L37">src/rattlesnake/main.py</a></td>
+                    <td>37:0</td>
+                    <td>Refactor</td>
+                    <td>Too many statements (82/50) (too-many-statements)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L31">src/rattlesnake/main.py</a></td>
+                    <td>31:0</td>
+                    <td>Convention</td>
+                    <td>standard import "datetime" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L32">src/rattlesnake/main.py</a></td>
+                    <td>32:0</td>
+                    <td>Convention</td>
+                    <td>standard import "multiprocessing" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L33">src/rattlesnake/main.py</a></td>
+                    <td>33:0</td>
+                    <td>Convention</td>
+                    <td>standard import "sys" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/main.py#L34">src/rattlesnake/main.py</a></td>
+                    <td>34:0</td>
+                    <td>Convention</td>
+                    <td>third party import "qtpy.QtWidgets" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1">src/rattlesnake/utilities.py</a></td>
+                    <td>1:0</td>
+                    <td>Convention</td>
+                    <td>Too many lines in module (1271/1000) (too-many-lines)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L242">src/rattlesnake/utilities.py</a></td>
+                    <td>242:30</td>
+                    <td>Refactor</td>
+                    <td>The if expression can be replaced with 'not test' (simplifiable-if-expression)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L247">src/rattlesnake/utilities.py</a></td>
+                    <td>247:44</td>
+                    <td>Refactor</td>
+                    <td>The if expression can be replaced with 'not test' (simplifiable-if-expression)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L253">src/rattlesnake/utilities.py</a></td>
+                    <td>253:0</td>
+                    <td>Refactor</td>
+                    <td>Too many instance attributes (11/7) (too-many-instance-attributes)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L256">src/rattlesnake/utilities.py</a></td>
+                    <td>256:4</td>
+                    <td>Refactor</td>
+                    <td>Too many arguments (12/5) (too-many-arguments)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L256">src/rattlesnake/utilities.py</a></td>
+                    <td>256:4</td>
+                    <td>Refactor</td>
+                    <td>Too many positional arguments (12/5) (too-many-positional-arguments)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L253">src/rattlesnake/utilities.py</a></td>
+                    <td>253:0</td>
+                    <td>Refactor</td>
+                    <td>Too few public methods (0/2) (too-few-public-methods)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L327">src/rattlesnake/utilities.py</a></td>
+                    <td>327:0</td>
+                    <td>Refactor</td>
+                    <td>Too many instance attributes (22/7) (too-many-instance-attributes)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L330">src/rattlesnake/utilities.py</a></td>
+                    <td>330:4</td>
+                    <td>Refactor</td>
+                    <td>Too many arguments (23/5) (too-many-arguments)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L330">src/rattlesnake/utilities.py</a></td>
+                    <td>330:4</td>
+                    <td>Refactor</td>
+                    <td>Too many positional arguments (23/5) (too-many-positional-arguments)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L330">src/rattlesnake/utilities.py</a></td>
+                    <td>330:4</td>
+                    <td>Refactor</td>
+                    <td>Too many local variables (23/15) (too-many-locals)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L429">src/rattlesnake/utilities.py</a></td>
+                    <td>429:4</td>
+                    <td>Refactor</td>
+                    <td>Too many local variables (25/15) (too-many-locals)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L327">src/rattlesnake/utilities.py</a></td>
+                    <td>327:0</td>
+                    <td>Refactor</td>
+                    <td>Too few public methods (1/2) (too-few-public-methods)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L496">src/rattlesnake/utilities.py</a></td>
+                    <td>496:0</td>
+                    <td>Refactor</td>
+                    <td>Too many instance attributes (10/7) (too-many-instance-attributes)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L499">src/rattlesnake/utilities.py</a></td>
+                    <td>499:4</td>
+                    <td>Refactor</td>
+                    <td>Too many arguments (10/5) (too-many-arguments)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L499">src/rattlesnake/utilities.py</a></td>
+                    <td>499:4</td>
+                    <td>Refactor</td>
+                    <td>Too many positional arguments (10/5) (too-many-positional-arguments)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L670">src/rattlesnake/utilities.py</a></td>
+                    <td>670:4</td>
+                    <td>Refactor</td>
+                    <td>Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L737">src/rattlesnake/utilities.py</a></td>
+                    <td>737:0</td>
+                    <td>Refactor</td>
+                    <td>Too many local variables (17/15) (too-many-locals)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1035">src/rattlesnake/utilities.py</a></td>
+                    <td>1035:0</td>
+                    <td>Refactor</td>
+                    <td>Too many local variables (17/15) (too-many-locals)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1189">src/rattlesnake/utilities.py</a></td>
+                    <td>1189:21</td>
+                    <td>Refactor</td>
+                    <td>Consider using a generator instead 'tuple(slice(-self.buffer_data.shape[self.buffer_axis], None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))' (consider-using-generator)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1202">src/rattlesnake/utilities.py</a></td>
+                    <td>1202:25</td>
+                    <td>Refactor</td>
+                    <td>Consider using a generator instead 'tuple(slice(new_data_size, None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))' (consider-using-generator)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1228">src/rattlesnake/utilities.py</a></td>
+                    <td>1228:21</td>
+                    <td>Refactor</td>
+                    <td>Consider using a generator instead 'tuple(slice(data_start, None if data_end == 0 else data_end) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))' (consider-using-generator)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1252">src/rattlesnake/utilities.py</a></td>
+                    <td>1252:8</td>
+                    <td>Refactor</td>
+                    <td>Consider using 'self._buffer_position = max(self._buffer_position, 0)' instead of unnecessary if block (consider-using-max-builtin)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1254">src/rattlesnake/utilities.py</a></td>
+                    <td>1254:8</td>
+                    <td>Refactor</td>
+                    <td>Consider using 'self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])' instead of unnecessary if block (consider-using-min-builtin)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1260">src/rattlesnake/utilities.py</a></td>
+                    <td>1260:8</td>
+                    <td>Refactor</td>
+                    <td>Consider using 'self._buffer_position = max(self._buffer_position, 0)' instead of unnecessary if block (consider-using-max-builtin)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/utilities.py#L1262">src/rattlesnake/utilities.py</a></td>
+                    <td>1262:8</td>
+                    <td>Refactor</td>
+                    <td>Consider using 'self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])' instead of unnecessary if block (consider-using-min-builtin)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/cicd/report_dashboard.py#L1">src/rattlesnake/cicd/report_dashboard.py</a></td>
+                    <td>1:0</td>
+                    <td>Refactor</td>
+                    <td>Similar lines in 2 files</td>
+                </tr>
+                <tr>
+                    <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/00966149797866ad0f482eaf1b088fa2f038491a/src/rattlesnake/cicd/report_dashboard.py#L1">src/rattlesnake/cicd/report_dashboard.py</a></td>
+                    <td>1:0</td>
+                    <td>Refactor</td>
+                    <td>Similar lines in 2 files</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="header" style="margin-top: 24px;">
+            <div class="metadata">
+                Generated: 2026-04-24 21:55:57 UTC (2026-04-24 17:55:57 EST / 2026-04-24 15:55:57 MST)<br>
+                Repo: <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">sandialabs/rattlesnake-vibration-controller</a> |
+                Branch: <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev">dev</a> |
+                Run: <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/24913652043">24913652043</a> |
+                Commit: <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/commit/00966149797866ad0f482eaf1b088fa2f038491a">0096614</a>
             </div>
         </div>
-        <div class="score-box">
-            <div>Global Score</div>
-            <div class="score-value">9.27/10</div>
-        </div>
-    </div>
-
-    <div class="code-callout">
-        Want to compare your local pylint score?
-        <code>pylint src/rattlesnake</code>
-    </div>
-
-    <h2>Detailed Issues</h2>
-    <table class="issue-table">
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>File</th>
-                <th>Line</th>
-                <th>Message</th>
-            </tr>
-        </thead>
-        <tbody>
-    
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L37" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>37</td>
-                <td>Too many local variables (31/15) (too-many-locals)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L37" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>37</td>
-                <td>Too many branches (14/12) (too-many-branches)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L37" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>37</td>
-                <td>Too many statements (82/50) (too-many-statements)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L31" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>31</td>
-                <td>standard import "datetime" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L32" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>32</td>
-                <td>standard import "multiprocessing" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L33" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>33</td>
-                <td>standard import "sys" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/main.py#L34" class="file-link">src/rattlesnake/main.py</a></td>
-                <td>34</td>
-                <td>third party import "qtpy.QtWidgets" should be placed before first party imports "rattlesnake.user_interface.ui_utilities.ControlSelect", "rattlesnake.user_interface.ui_registry.EnvironmentSelect", "rattlesnake.user_interface.user_interface.Ui" (...) "rattlesnake.process.output.output_process", "rattlesnake.environment.environment_registry.ENVIRONMENT_PROCESS", "rattlesnake.process.streaming.streaming_process"  (wrong-import-order)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1</td>
-                <td>Too many lines in module (1271/1000) (too-many-lines)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L242" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>242</td>
-                <td>The if expression can be replaced with 'not test' (simplifiable-if-expression)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L247" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>247</td>
-                <td>The if expression can be replaced with 'not test' (simplifiable-if-expression)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L253" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>253</td>
-                <td>Too many instance attributes (11/7) (too-many-instance-attributes)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L256" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>256</td>
-                <td>Too many arguments (12/5) (too-many-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L256" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>256</td>
-                <td>Too many positional arguments (12/5) (too-many-positional-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L253" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>253</td>
-                <td>Too few public methods (0/2) (too-few-public-methods)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L327" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>327</td>
-                <td>Too many instance attributes (22/7) (too-many-instance-attributes)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L330" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>330</td>
-                <td>Too many arguments (23/5) (too-many-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L330" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>330</td>
-                <td>Too many positional arguments (23/5) (too-many-positional-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L330" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>330</td>
-                <td>Too many local variables (23/15) (too-many-locals)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L429" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>429</td>
-                <td>Too many local variables (25/15) (too-many-locals)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L327" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>327</td>
-                <td>Too few public methods (1/2) (too-few-public-methods)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L496" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>496</td>
-                <td>Too many instance attributes (10/7) (too-many-instance-attributes)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L499" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>499</td>
-                <td>Too many arguments (10/5) (too-many-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L499" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>499</td>
-                <td>Too many positional arguments (10/5) (too-many-positional-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L670" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>670</td>
-                <td>Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L737" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>737</td>
-                <td>Too many local variables (17/15) (too-many-locals)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1035" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1035</td>
-                <td>Too many local variables (17/15) (too-many-locals)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1189" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1189</td>
-                <td>Consider using a generator instead 'tuple(slice(-self.buffer_data.shape[self.buffer_axis], None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))' (consider-using-generator)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1202" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1202</td>
-                <td>Consider using a generator instead 'tuple(slice(new_data_size, None) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))' (consider-using-generator)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1228" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1228</td>
-                <td>Consider using a generator instead 'tuple(slice(data_start, None if data_end == 0 else data_end) if i == self.buffer_axis else slice(None) for i in range(self.buffer_data.ndim))' (consider-using-generator)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1252" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1252</td>
-                <td>Consider using 'self._buffer_position = max(self._buffer_position, 0)' instead of unnecessary if block (consider-using-max-builtin)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1254" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1254</td>
-                <td>Consider using 'self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])' instead of unnecessary if block (consider-using-min-builtin)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1260" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1260</td>
-                <td>Consider using 'self._buffer_position = max(self._buffer_position, 0)' instead of unnecessary if block (consider-using-max-builtin)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/utilities.py#L1262" class="file-link">src/rattlesnake/utilities.py</a></td>
-                <td>1262</td>
-                <td>Consider using 'self._buffer_position = min(self._buffer_position, self.buffer_data.shape[self.buffer_axis])' instead of unnecessary if block (consider-using-min-builtin)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L162" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>162</td>
-                <td>Line too long (130/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L163" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>163</td>
-                <td>Line too long (126/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L164" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>164</td>
-                <td>Line too long (136/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L165" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>165</td>
-                <td>Line too long (116/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L73" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>73</td>
-                <td>Too many arguments (6/5) (too-many-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L73" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>73</td>
-                <td>Too many positional arguments (6/5) (too-many-positional-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L180" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>180</td>
-                <td>Too many arguments (7/5) (too-many-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_coverage.py#L180" class="file-link">src/rattlesnake/cicd/report_coverage.py</a></td>
-                <td>180</td>
-                <td>Too many positional arguments (7/5) (too-many-positional-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_lint.py#L91" class="file-link">src/rattlesnake/cicd/badge_lint.py</a></td>
-                <td>91</td>
-                <td>Line too long (104/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-warning">Warning</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_lint.py#L26" class="file-link">src/rattlesnake/cicd/badge_lint.py</a></td>
-                <td>26</td>
-                <td>Catching too general exception Exception (broad-exception-caught)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-warning">Warning</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_lint.py#L81" class="file-link">src/rattlesnake/cicd/badge_lint.py</a></td>
-                <td>81</td>
-                <td>Catching too general exception Exception (broad-exception-caught)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/utilities.py#L24" class="file-link">src/rattlesnake/cicd/utilities.py</a></td>
-                <td>24</td>
-                <td>Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/utilities.py#L48" class="file-link">src/rattlesnake/cicd/utilities.py</a></td>
-                <td>48</td>
-                <td>Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_coverage.py#L91" class="file-link">src/rattlesnake/cicd/badge_coverage.py</a></td>
-                <td>91</td>
-                <td>Line too long (104/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_coverage.py#L92" class="file-link">src/rattlesnake/cicd/badge_coverage.py</a></td>
-                <td>92</td>
-                <td>Line too long (104/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_coverage.py#L94" class="file-link">src/rattlesnake/cicd/badge_coverage.py</a></td>
-                <td>94</td>
-                <td>Line too long (106/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-warning">Warning</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_coverage.py#L25" class="file-link">src/rattlesnake/cicd/badge_coverage.py</a></td>
-                <td>25</td>
-                <td>Catching too general exception Exception (broad-exception-caught)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-warning">Warning</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/badge_coverage.py#L82" class="file-link">src/rattlesnake/cicd/badge_coverage.py</a></td>
-                <td>82</td>
-                <td>Catching too general exception Exception (broad-exception-caught)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L104" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>104</td>
-                <td>Line too long (197/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L106" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>106</td>
-                <td>Line too long (211/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L111" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>111</td>
-                <td>Line too long (110/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L139" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>139</td>
-                <td>Trailing whitespace (trailing-whitespace)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L195" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>195</td>
-                <td>Line too long (102/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L254" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>254</td>
-                <td>Too many arguments (7/5) (too-many-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_lint.py#L254" class="file-link">src/rattlesnake/cicd/report_lint.py</a></td>
-                <td>254</td>
-                <td>Too many positional arguments (7/5) (too-many-positional-arguments)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L47" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>47</td>
-                <td>Line too long (133/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L66" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>66</td>
-                <td>Line too long (181/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-convention">Convention</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L98" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>98</td>
-                <td>Line too long (184/100) (line-too-long)</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L1" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>1</td>
-                <td>Similar lines in 2 files</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L1" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>1</td>
-                <td>Similar lines in 2 files</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L1" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>1</td>
-                <td>Similar lines in 2 files</td>
-            </tr>
-            
-            <tr>
-                <td><span class="type-refactor">Refactor</span></td>
-                <td><a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/0cf3acd2497b74a7c9b840ce27fc782bbaed9e25/src/rattlesnake/cicd/report_dashboard.py#L1" class="file-link">src/rattlesnake/cicd/report_dashboard.py</a></td>
-                <td>1</td>
-                <td>Similar lines in 2 files</td>
-            </tr>
-                    </tbody>
-    </table>
-    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 0.8em;">
-        <p>Generated by GitHub Actions Workflow<br>
-        Run ID: <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/24911154934">24911154934</a> | Branch: dev</p>
     </div>
 </body>
 </html>

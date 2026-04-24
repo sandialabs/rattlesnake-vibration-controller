@@ -1,0 +1,26 @@
+# Import SDynPy and Numpy
+import sdynpy as sdpy
+import numpy as np
+
+# Read a rattlesnake file using `read_modal_data`
+time_data, frfs, coherence, channel_table = sdpy.rattlesnake.read_modal_data(
+    'beam_shaker_burst.nc4')
+
+frfs.plot(one_axis=False,subplots_kwargs={'layout':'constrained'})
+
+nodes = sdpy.node_array(id = [2,13,19,24],
+                        coordinate = [[1,0,0],
+                                      [12,0,0],
+                                      [18,0,0],
+                                      [23,0,0]])
+print(nodes)
+
+css = sdpy.coordinate_system_array(id=1,name='global')
+print(css)
+
+geometry = sdpy.Geometry(nodes,css)
+geometry.add_traceline([2,13,19,24])
+geometry.plot()
+
+ppgui = sdpy.PolyPy_GUI(frfs)
+ppgui.geometry = geometry

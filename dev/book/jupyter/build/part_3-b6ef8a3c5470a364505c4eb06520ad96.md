@@ -1,0 +1,8 @@
+(sec:rattlesnake_environments)=
+# Part 3: Rattlesnake Environments
+
+The key to Rattlesnake's flexibility is its implementation of various environment types.  These environments can be run stand-alone or in combination with other environments.  A general environment will receive response data from the controller and then perform some analysis on that data to create the next set of output signals that will be required by the controller.  This Part will describe the existing environments in the controller and provide information required to implement additional environments.
+
+@sec:mimo_random describes the MIMO Random Vibration environment where users will control to vibration spectra in the form of CPSD matrices.  @sec:mimo_transient describes the MIMO Transient Vibration environment, where users will control directly to time responses.  @sec:mimo_time describes the Time History Generator environment, which allows users to specify the signal played to the excitation devices.  @sec:modal describes the Modal environment, where users can perform dynamic characterization tests using shaker or impact hammer excitation.  @sec:combined_environments describes the Combined Environments functionality in Rattlesnake which allows users to run multiple environments simultaneously.
+
+@sec:new_environment describes the general process to implement new environments.  Implementing new environments in Rattlesnake is a very involved process that requires a good amount of knowledge of the Rattlesnake software architecture, as well as advanced programming concepts including object-oriented programming and inheritance, multiprocessing, and GUI design and implementation.
