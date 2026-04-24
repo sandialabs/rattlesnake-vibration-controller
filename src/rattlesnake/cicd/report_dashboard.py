@@ -6,17 +6,32 @@ Generates the root index.html Project Dashboard for GitHub Pages.
 import argparse
 import os
 
+from rattlesnake.cicd.utilities import (
+    ReportMetadata,
+    add_common_args,
+    extend_timestamp,
+    report_metadata_creation,
+)
 
-def generate_dashboard_html(github_repo: str) -> str:
+
+def generate_dashboard_html(metadata: ReportMetadata) -> str:
     """
     Generate the HTML content for the Project Dashboard using a two-column layout.
 
     Args:
-        github_repo: GitHub repository name (owner/repo)
+        metadata: CI/CD metadata
 
     Returns:
         HTML string
     """
+    timestamp_ext = extend_timestamp(metadata.timestamp)
+
+    # Pre-calculate GitHub URLs to stay under line length limits
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -32,13 +47,13 @@ def generate_dashboard_html(github_repo: str) -> str:
     </style>
     </head>
     <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+<nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <span class="text-xl font-bold tracking-tight text-blue-600">Rattlesnake</span>
+        </div>
 
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <span class="text-xl font-bold tracking-tight text-blue-600">Rattlesnake</span>
-            </div>
-            <a href="https://github.com/{github_repo}"
+            <a href="{github_url}"
                class="text-sm font-medium hover:text-blue-600 transition">GitHub Repository</a>
         </div>
     </nav>
@@ -59,7 +74,7 @@ def generate_dashboard_html(github_repo: str) -> str:
                     <h2 class="text-2xl font-bold flex items-center gap-2">
                         🚀 Released
                     </h2>
-                    <a href="https://github.com/{github_repo}/tree/main"
+                    <a href="{github_url}/tree/main"
                        class="text-xs font-semibold bg-blue-100 text-blue-700
                               px-2 py-1 rounded hover:bg-slate-300">main branch</a>
                 </div>
@@ -105,7 +120,7 @@ def generate_dashboard_html(github_repo: str) -> str:
                     <h2 class="text-2xl font-bold flex items-center gap-2">
                         🛠️ Development
                     </h2>
-                    <a href="https://github.com/{github_repo}/tree/dev"
+                    <a href="{github_url}/tree/dev"
                        class="text-xs font-semibold bg-orange-100 text-orange-700
                               px-2 py-1 rounded hover:bg-orange-200">dev branch</a>
                 </div>
@@ -147,6 +162,31 @@ def generate_dashboard_html(github_repo: str) -> str:
             </section>
 
         </div>
+
+        <section class="mt-16 bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-xl font-bold mb-6 border-b pb-2">Build Metadata</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 text-sm text-slate-600">
+                <div>
+                    <span class="font-semibold">Generated:</span> {timestamp_ext}
+                </div>
+                <div>
+                    <span class="font-semibold">Run ID:</span>
+                    <a href="{run_url}" class="text-blue-600 hover:underline">{metadata.run_id}</a>
+                </div>
+                <div>
+                    <span class="font-semibold">Branch:</span>
+                    <a href="{branch_url}" class="text-blue-600 hover:underline">{metadata.ref_name}</a>
+                </div>
+                <div>
+                    <span class="font-semibold">Commit:</span>
+                    <a href="{commit_url}" class="text-blue-600 hover:underline">{metadata.github_sha[:7]}</a>
+                </div>
+                <div>
+                    <span class="font-semibold">Repository:</span>
+                    <a href="{github_url}" class="text-blue-600 hover:underline">{metadata.github_repo}</a>
+                </div>
+            </div>
+        </section>
     </main>
 
     <footer class="mt-20 py-10 border-t border-slate-200 bg-white">
@@ -166,13 +206,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate Project Dashboard index.html"
     )
-    parser.add_argument(
-        "--github_repo", required=True, help="GitHub repository (owner/repo)"
-    )
     parser.add_argument("--output_file", required=True, help="Output HTML file path")
+
+    add_common_args(parser)
+
     args = parser.parse_args()
 
-    html = generate_dashboard_html(args.github_repo)
+    metadata = report_metadata_creation(args)
+
+    html = generate_dashboard_html(metadata)
 
     output_dir = os.path.dirname(args.output_file)
     if output_dir:

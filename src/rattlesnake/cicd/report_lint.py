@@ -12,7 +12,7 @@ import sys
 from rattlesnake.cicd.utilities import (
     ReportMetadata,
     add_common_args,
-    get_multiline_timestamp,
+    extend_timestamp,
     get_score_color_lint,
     report_main_runner,
 )
@@ -69,45 +69,67 @@ def get_score_from_summary(summary_lines: list[str]) -> str:
     return "0.00"
 
 
-def get_html_header(score: str) -> str:
+def get_html_header(score: str, metadata: ReportMetadata) -> str:
     """
     Generate the HTML header.
 
     Args:
         score: The pylint score
+        metadata: CI/CD metadata
 
     Returns:
         HTML header string
     """
     score_color = get_score_color_lint(score)
+    timestamp_ext = extend_timestamp(metadata.timestamp)
+
+    # Pre-calculate GitHub URLs
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lint Report</title>
     <style>
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                         Helvetica, Arial, sans-serif;
-            line-height: 1.5; color: #24292e; background-color: #f6f8fa;
-            margin: 0; padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; padding: 20px; background: #f6f8fa; line-height: 1.6;
+            background: lightgray;
         }}
-        .container {{ max-width: 1200px; margin: 0 auto; }}
+        .container {{
+            max-width: 1200px; margin: 0 auto;
+        }}
         .header {{
-            background: #fff; padding: 24px; border: 1px solid #e1e4e8;
-            border-radius: 6px; margin-bottom: 24px;
-            box-shadow: 0 1px 3px rgba(27,31,35,0.12);
+            background: white; padding: 30px; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
         }}
-        .score {{ font-size: 32px; font-weight: 600; color: {score_color}; }}
-        .metadata {{ font-size: 14px; color: #586069; margin-top: 8px; }}
-        .nav {{ margin-bottom: 24px; }}
+        .score {{
+            font-size: 2.5em; font-weight: bold; color: {score_color};
+        }}
+        .metadata {{
+            color: #6a737d; font-size: 0.9em; margin-top: 10px;
+        }}
+        .nav {{
+            background: white; padding: 20px; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }}
         .nav a {{
-            display: inline-block; padding: 8px 16px;
-            background-color: #0366d6; color: #fff;
-            text-decoration: none; border-radius: 6px;
-            margin-right: 8px; font-weight: 500;
+            background: #0366d6; color: white; padding: 10px 20px;
+            text-decoration: none; border-radius: 6px; margin-right: 10px;
+            display: inline-block; margin-bottom: 5px;
         }}
-        .nav a:hover {{ background-color: #0357b6; }}
+        .nav a:hover {{
+            background: #0256cc;
+        }}
+        .section {{
+            background: white; padding: 20px; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }}
         table {{
             width: 100%; border-collapse: collapse; background: #fff;
             border: 1px solid #e1e4e8; border-radius: 6px;
@@ -122,8 +144,22 @@ def get_html_header(score: str) -> str:
 <body>
     <div class="container">
         <div class="header">
+            <h1>Lint Report</h1>
             <div class="score">Pylint Score: {score}/10</div>
+            <div class="metadata">
+                <div>&nbsp;</div>
+                <div><strong>Generated:</strong> {timestamp_ext}</div>
+                <div><strong>Run ID:</strong>
+                    <a href="{run_url}">{metadata.run_id}</a></div>
+                <div><strong>Branch:</strong>
+                    <a href="{branch_url}">{metadata.ref_name}</a></div>
+                <div><strong>Commit:</strong>
+                    <a href="{commit_url}">{metadata.github_sha[:7]}</a></div>
+                <div><strong>Repository:</strong>
+                    <a href="{github_url}">{metadata.github_repo}</a></div>
+            </div>
         </div>
+
         <div class="nav">
             <a href="../../index.html">← Back to Dashboard</a>
         </div>
@@ -142,9 +178,10 @@ def get_html_issues_table(issues: list[str], metadata: ReportMetadata) -> str:
         HTML table string
     """
     if not issues:
-        return "<p>No issues found! Great job.</p>"
+        return '<div class="section"><p>No issues found! Great job.</p></div>'
 
     table_html = """
+        <div class="section">
         <table>
             <thead>
                 <tr>
@@ -180,7 +217,6 @@ def get_html_issues_table(issues: list[str], metadata: ReportMetadata) -> str:
             )
 
             row_color = ""
-
             if type_code == "E":
                 row_color = ' style="background-color: #ffeef0"'
             elif type_code == "W":
@@ -196,39 +232,23 @@ def get_html_issues_table(issues: list[str], metadata: ReportMetadata) -> str:
 
     table_html += """
             </tbody>
-        </table>"""
+        </table>
+        </div>"""
     return table_html
 
 
-def get_html_footer(metadata: ReportMetadata) -> str:
+def get_html_footer() -> str:
     """
     Generate the HTML footer.
-
-    Args:
-        metadata: CI/CD metadata
 
     Returns:
         HTML footer string
     """
-    timestamp_lines = get_multiline_timestamp(metadata.timestamp)
-    ts_ext = f"{timestamp_lines[1]} ({timestamp_lines[2]} / {timestamp_lines[3]})"
-
-    github_url = f"https://github.com/{metadata.github_repo}"
-    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
-    branch_url = f"{github_url}/tree/{metadata.ref_name}"
-    commit_url = f"{github_url}/commit/{metadata.github_sha}"
-
-    return f"""
-        <div class="header" style="margin-top: 24px;">
-            <div class="metadata">
-                Generated: {ts_ext}<br>
-                Repo: <a href="{github_url}">{metadata.github_repo}</a> |
-                Branch: <a href="{branch_url}">{metadata.ref_name}</a> |
-                Run: <a href="{run_url}">{metadata.run_id}</a> |
-                Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a>
-            </div>
-        </div>
+    return """
     </div>
+    <footer style="text-align: center; margin: 40px 0; color: #6a737d;">
+        <p>Generated by GitHub Actions</p>
+    </footer>
 </body>
 </html>"""
 
@@ -245,9 +265,9 @@ def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
     issues, summary = get_lint_sections(content)
     score = get_score_from_summary(summary)
 
-    html = get_html_header(score)
+    html = get_html_header(score, metadata)
     html += get_html_issues_table(issues, metadata)
-    html += get_html_footer(metadata)
+    html += get_html_footer()
 
     with open(args.output_file, "w", encoding="utf-8") as f:
         f.write(html)
