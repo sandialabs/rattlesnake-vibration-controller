@@ -159,10 +159,17 @@ def get_report_html(
                 <div><strong>Total Lines:</strong> {coverage_metric.lines_valid}</div>
                 <div>&nbsp;</div>
                 <div><strong>Generated:</strong> {timestamp_ext}</div>
-                <div><strong>Run ID:</strong> <a href="https://github.com/{github_repo}/actions/runs/{run_id}"> {run_id}</a></div>
-                <div><strong>Branch:</strong> <a href="https://github.com/{github_repo}/tree/{ref_name}"> {ref_name}</a></div>
-                <div><strong>Commit:</strong> <a href="https://github.com/{github_repo}/commit/{github_sha}"> {github_sha[:7]}</a></div>
-                <div><strong>Repository:</strong> <a href="https://github.com/{github_repo}">{github_repo}</a></div>
+                <div><strong>Run ID:</strong>
+                    <a href="https://github.com/{github_repo}/actions/runs/{run_id}">
+                        {run_id}</a></div>
+                <div><strong>Branch:</strong>
+                    <a href="https://github.com/{github_repo}/tree/{ref_name}">
+                        {ref_name}</a></div>
+                <div><strong>Commit:</strong>
+                    <a href="https://github.com/{github_repo}/commit/{github_sha}">
+                        {github_sha[:7]}</a></div>
+                <div><strong>Repository:</strong>
+                    <a href="https://github.com/{github_repo}">{github_repo}</a></div>
                 <div>&nbsp;</div>
                 <div><strong>Full report:</strong> <a href="{full_report_url}">HTML</a></div>
             </div>

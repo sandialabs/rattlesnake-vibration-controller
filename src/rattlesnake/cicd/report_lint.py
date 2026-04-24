@@ -8,9 +8,18 @@ import argparse
 import os
 import re
 import sys
-from typing import List, Tuple
+from typing import List, NamedTuple, Tuple
 
 from rattlesnake.cicd.utilities import get_multiline_timestamp, get_score_color_lint
+
+
+class ReportMetadata(NamedTuple):
+    """Container for CI/CD metadata used in reports."""
+    timestamp: str
+    run_id: str
+    ref_name: str
+    github_sha: str
+    github_repo: str
 
 
 def get_lint_content(input_file: str) -> str:
@@ -101,15 +110,25 @@ def get_html_header(score: str, timestamp_short: str) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lint Report</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                         Helvetica, Arial, sans-serif;
+            line-height: 1.6; color: #333; max-width: 1200px;
+            margin: 0 auto; padding: 20px;
+        }}
         h1, h2 {{ color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }}
-        .summary-card {{ background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }}
+        .summary-card {{
+            background: #f8f9fa; border-radius: 8px; padding: 20px;
+            margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }}
         .score-box {{ text-align: center; }}
         .score-value {{ font-size: 48px; font-weight: bold; color: {color}; }}
         .timestamp {{ color: #666; font-size: 0.9em; }}
         .issue-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-        .issue-table th, .issue-table td {{ text-align: left; padding: 12px; border-bottom: 1px solid #eee; }}
-        .issue-table th {{ background: #f2f2f2; }}
+        .issue-table th, .issue-table td {{
+            text-align: left; padding: 12px; border-bottom: 1px solid #eee;
+        }}
         .type-error {{ color: #c0392b; font-weight: bold; }}
         .type-warning {{ color: #f39c12; font-weight: bold; }}
         .type-convention {{ color: #2980b9; font-weight: bold; }}
@@ -136,7 +155,7 @@ def get_html_header(score: str, timestamp_short: str) -> str:
 </head>
 <body>
     <h1>Lint Analysis Report</h1>
-    
+
     <div class="summary-card">
         <div>
             <h2>Summary</h2>
@@ -160,14 +179,13 @@ def get_html_header(score: str, timestamp_short: str) -> str:
 """
 
 
-def get_html_issues_table(issues: List[str], github_repo: str, github_sha: str) -> str:
+def get_html_issues_table(issues: List[str], metadata: ReportMetadata) -> str:
     """
     Generate the HTML table for lint issues.
 
     Args:
         issues: List of raw lint issue lines
-        github_repo: GitHub repository name (owner/repo)
-        github_sha: Full git commit SHA
+        metadata: Report metadata containing repo and sha
 
     Returns:
         HTML string for the issues table
@@ -192,8 +210,7 @@ def get_html_issues_table(issues: List[str], github_repo: str, github_sha: str) 
     ]
 
     for issue in issues:
-        # Format: path/to/file.py:line:col: C0114: Missing module docstring (missing-module-docstring)
-        # pylint: disable=line-too-long
+        # Format: path/to/file.py:line:col: C0114: ...
         match = re.match(r"^([^:]+):(\d+):(\d+): ([A-Z])\d+: (.*)$", issue)
         if match:
             file_path, line, _, category_code, message = match.groups()
@@ -209,9 +226,8 @@ def get_html_issues_table(issues: List[str], github_repo: str, github_sha: str) 
 
             # Create GitHub link
             # Note: We assume the file_path from lint is relative to repo root
-            github_url: str = (
-                f"https://github.com/{github_repo}/blob/{github_sha}/{file_path}#L{line}"
-            )
+            github_base = f"https://github.com/{metadata.github_repo}/blob"
+            github_url = f"{github_base}/{metadata.github_sha}/{file_path}#L{line}"
 
             html.append(
                 f"""
@@ -228,23 +244,21 @@ def get_html_issues_table(issues: List[str], github_repo: str, github_sha: str) 
     return "".join(html)
 
 
-def get_html_footer(run_id: str, ref_name: str, github_repo: str) -> str:
+def get_html_footer(metadata: ReportMetadata) -> str:
     """
     Generate the HTML footer with CI/CD metadata.
 
     Args:
-        run_id: GitHub actions run ID
-        ref_name: Branch/tag name
-        github_repo: Repository name
+        metadata: Report metadata containing run_id and ref_name
 
     Returns:
         HTML string for the footer
     """
-    run_url: str = f"https://github.com/{github_repo}/actions/runs/{run_id}"
+    run_url: str = f"https://github.com/{metadata.github_repo}/actions/runs/{metadata.run_id}"
     return f"""
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 0.8em;">
         <p>Generated by GitHub Actions Workflow<br>
-        Run ID: <a href="{run_url}">{run_id}</a> | Branch: {ref_name}</p>
+        Run ID: <a href="{run_url}">{metadata.run_id}</a> | Branch: {metadata.ref_name}</p>
     </div>
 </body>
 </html>
@@ -254,11 +268,7 @@ def get_html_footer(run_id: str, ref_name: str, github_repo: str) -> str:
 def generate_report(
     input_file: str,
     output_file: str,
-    timestamp: str,
-    run_id: str,
-    ref_name: str,
-    github_sha: str,
-    github_repo: str,
+    metadata: ReportMetadata,
 ) -> None:
     """
     Main function to orchestrate report generation.
@@ -266,20 +276,16 @@ def generate_report(
     Args:
         input_file: Path to lint output
         output_file: Path for the generated HTML
-        timestamp: Build timestamp
-        run_id: GitHub run ID
-        ref_name: Branch name
-        github_sha: Commit SHA
-        github_repo: Repo name (owner/repo)
+        metadata: CI/CD metadata
     """
     content: str = get_lint_content(input_file)
     issues, summary = get_lint_sections(content)
     score: str = get_score_from_summary(summary)
 
     html: str = (
-        get_html_header(score, timestamp)
-        + get_html_issues_table(issues, github_repo, github_sha)
-        + get_html_footer(run_id, ref_name, github_repo)
+        get_html_header(score, metadata.timestamp)
+        + get_html_issues_table(issues, metadata)
+        + get_html_footer(metadata)
     )
 
     with open(output_file, "w", encoding="utf-8") as f:
@@ -310,15 +316,20 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> int:
     """Main entry point."""
     args: argparse.Namespace = parse_arguments()
+
+    metadata = ReportMetadata(
+        timestamp=args.timestamp,
+        run_id=args.run_id,
+        ref_name=args.ref_name,
+        github_sha=args.github_sha,
+        github_repo=args.github_repo,
+    )
+
     try:
         generate_report(
             args.input_file,
             args.output_file,
-            args.timestamp,
-            args.run_id,
-            args.ref_name,
-            args.github_sha,
-            args.github_repo,
+            metadata,
         )
         print(f"[OK] Lint report generated: {args.output_file}")
     except (FileNotFoundError, IOError) as e:

@@ -8,7 +8,7 @@ coverage.xml output and generate a custom HTML report.
 import types
 from pathlib import Path
 
-import pytest
+# import pytest  # unused import
 from rattlesnake.cicd.report_coverage import (
     CoverageMetric,
     get_coverage_metric,

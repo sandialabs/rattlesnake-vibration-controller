@@ -23,12 +23,11 @@ def get_score_color_lint(pylint_score: str) -> str:
         score_val: float = float(pylint_score)
         if score_val >= 8.0:
             return "brightgreen"
-        elif score_val >= 6.0:
+        if score_val >= 6.0:
             return "yellow"
-        elif score_val >= 4.0:
+        if score_val >= 4.0:
             return "orange"
-        else:
-            return "red"
+        return "red"
     except ValueError:
         return "gray"
 
@@ -47,14 +46,13 @@ def get_score_color_coverage(coverage_score: str) -> str:
         score_val: float = float(coverage_score)
         if score_val >= 90:
             return "brightgreen"
-        elif score_val >= 80:
+        if score_val >= 80:
             return "green"
-        elif score_val >= 70:
+        if score_val >= 70:
             return "yellow"
-        elif score_val >= 60:
+        if score_val >= 60:
             return "orange"
-        else:
-            return "red"
+        return "red"
     except ValueError:
         return "gray"
 

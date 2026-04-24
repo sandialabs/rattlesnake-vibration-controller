@@ -22,7 +22,7 @@ def extract_coverage(input_file: str) -> float:
         # line-rate is a decimal (e.g., 0.925), so multiply by 100
         coverage = float(root.attrib["line-rate"]) * 100
         return coverage
-    except Exception as e:
+    except (ET.ParseError, KeyError, FileNotFoundError, ValueError) as e:
         print(f"[!] Error parsing coverage.xml: {e}")
         return 0.0
 
@@ -79,7 +79,7 @@ def main():
             with open(Path(args.output_dir) / "coverage.svg", "wb") as f:
                 f.write(response.content)
             print(f"[OK] Coverage SVG badge saved to {args.output_dir}")
-        except Exception as e:
+        except requests.RequestException as e:
             print(f"[X] Failed to download badge: {e}")
 
         # Generate JSON metadata if other required args are present
@@ -88,10 +88,19 @@ def main():
             metadata = {
                 "coverage": f"{coverage:.1f}",
                 "color": color,
-                "pages_url": f"https://{owner}.github.io/{repo}/{args.deploy_subdir}/reports/coverage/",
-                "workflow_url": f"{args.github_server_url}/{args.github_repo}/actions/workflows/ci.yml",
+                "pages_url": (
+                    f"https://{owner}.github.io/{repo}/"
+                    f"{args.deploy_subdir}/reports/coverage/"
+                ),
+                "workflow_url": (
+                    f"{args.github_server_url}/{args.github_repo}/"
+                    "actions/workflows/ci.yml"
+                ),
                 "run_id": args.run_id,
-                "artifact_url": f"{args.github_server_url}/{args.github_repo}/actions/runs/{args.run_id}",
+                "artifact_url": (
+                    f"{args.github_server_url}/{args.github_repo}/"
+                    f"actions/runs/{args.run_id}"
+                ),
                 "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
 
