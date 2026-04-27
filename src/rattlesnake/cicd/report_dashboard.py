@@ -165,7 +165,7 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
 
         <section class="mt-16 bg-white p-8 rounded-xl shadow-sm border border-slate-200">
             <h2 class="text-xl font-bold mb-6 border-b pb-2">Build Metadata</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 text-sm text-slate-600">
+            <div class="flex flex-col gap-0 text-sm leading-tight text-slate-600">
                 <div>
                     <span class="font-semibold">Generated:</span> {timestamp_ext}
                 </div>
@@ -192,7 +192,7 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
     <footer class="mt-20 py-10 border-t border-slate-200 bg-white">
         <div class="max-w-7xl mx-auto px-4 text-center">
             <p class="text-sm text-slate-400">
-                &copy; 2026 Sandia National Laboratories | Released under GPL-3.0
+                &copy; 2026 Sandia National Laboratories | Released under <a href="{github_url}/blob/main/LICENSE" class="text-blue-600 hover:underline">GPL-3.0</a>
             </p>
         </div>
     </footer>
