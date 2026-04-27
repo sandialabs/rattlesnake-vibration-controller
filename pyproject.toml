@@ -23,19 +23,20 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
     ]
 dependencies = [
-    "kaitaistruct",
-    "netCDF4",
-    "nidaqmx",
-    "numpy",
-    "openpyxl",
-    "packaging",
-    "PyQt5; sys_platform!='darwin'",
-    "PyQt6; sys_platform=='darwin'",
-    "pyqtgraph",
-    "qtpy",
-    "requests",
-    "scipy",
-    ]
+  "kaitaistruct",
+  "netCDF4",
+  "nidaqmx",
+  "numpy",
+  "openpyxl",
+  "packaging",
+  "PyQt5; sys_platform!='darwin'",
+  "PyQt6; sys_platform=='darwin'",
+  "pyqtgraph",
+  "pytz",
+  "qtpy",
+  "requests",
+  "scipy",
+  ]
 
 [project.optional-dependencies]
 dev = [
@@ -47,7 +48,6 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-qt==4.4.0",
-  "pytz",
   "ruff",
 ]
 
