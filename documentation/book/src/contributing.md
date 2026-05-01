@@ -215,13 +215,34 @@ The separate the concerns of **test**, **build**, **release**, and **publish** a
      * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
      * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
 
+### Test
+
+Tests are grouped by the amount of time required to run the tests.  The current
+groups are
+
+```bash
+tests/
+tests/long/
+tests/short/
+```
+
+Whenever there is a push or pull request to `main` or `dev`, **all tests** will run (which includes **long** tests). For pushes to branches other than `main` or `dev`, only tests in `tests/` and `tests/short` are run.
+
+Developers can *force* a full test, which includes `tests/long` in addition to `tests/` and `tests/short`, by adding the string `[all tests]` to the commit message.  For example, on the `dev-cicd-docs` branch
+
+```bash
+(dev-cicd-docs) > git commit -m 'test feature foo with [all tests]'
+```
+
+will trigger all tests to be run.
+
 ### Trusted Publishing
 
 In `release.yml` we have removed the manual `-p ${{ secrets.PYPI_TOKEN }}`.  The industry standard is now [**Trusted Publishing**](https://docs.pypi.org/trusted-publishers/) (also called OpenID Connect or OIDC).  You configure this in your PyPI project settings once, and GitHub Actions authenticates securely without you needing to store and rotate secrets.
 
 > OpenID Connect (OIDC) provides a flexible, credential-free mechanism for delegating publishing authority for a PyPI package to a trusted third party service, like GitHub Actions.  PyPI users and projects can use trusted publishers to automate their release processes, without needing to use API tokens or passwords.
 
-To configure Trusted Publishing, you tell PyPI, "Trust any code from this specific GitHub repository and workflow."  This removes the need to mange long-lived API tokens or passwords in your secrets.
+To configure Trusted Publishing, you tell PyPI, "Trust any code from this specific GitHub repository and workflow."  This removes the need to manage long-lived API tokens or passwords in your secrets.
 
 Steps:
 
@@ -264,16 +285,52 @@ Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
     * `testpypi` for test publishing to the TestPyPI site.
   * Click the **Add** button
 
-We follow PEP 440 (the Python standard for versioning), which requires version strings to follow this specific structure:
+### Tags and Semantic Versioning
+
+We follow [PEP 440](https://peps.python.org/pep-0440/) (the Python standard for versioning), which requires version strings to follow this specific structure:
 
 ```bash
-bashN.N.N[{a|b|rc}N][.postN][.devN]
+N.N.N[{a|b|rc}N][.postN][.devN]
 ```
+
+#### Example Tags
+
+Following are **prerelease tags**:
+
+tag | description
+--- | ---
+`v1.1.0a1` | The first **alpha** for version 1.1.0
+`v1.1.0b2` | The second **beta** for version 1.1.0
+`v1.1.0rc1` | The first **release candidate** for version 1.1.0
+
+A **release candidate** is made during the final testing stage before a full release.
+
+Following are **stable release tags** (e.g, starting from the `v1.0.0` release):
+
+tag | description
+--- | ----
+`v1.0.1` | **Patch Release**: Backwards-compatible bug fixes
+`v1.1.0` | **Minor Release**: New features that are backwards-compatible
+`v2.0.0` | **Major Release**: Significant changes or breaking API updates
+
+Following are **Development** and **Post-Release** tags:
+
+tag | description
+--- | ---
+`v1.1.0.dev1` | A version currently under development
+`v1.0.0.post1` | Fix a minor error in the release process, such as a fix of a typo in the documentation, without changing the code
+
+### Release on Tag
+
+Following is an example of creating a release with a tag.
+
+#### Create a Prerelease
 
 To create a prerelease on TestPyPI:
 
-* On any development, e.g., `dev-cicd-docs`, `git tag` and push, e.g.,
+* On any development branch, e.g., `dev-cicd-docs`, create a tag and then push, e.g.,
 
+```sh
 # View existing tags, if any
 git tag
 
