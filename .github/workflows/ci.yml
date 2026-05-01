@@ -116,14 +116,6 @@ jobs:
             echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
           fi
 
-          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || [[ "${{ github.event.inputs.test_level }}" == "full" ]]; then
-            echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
-            # In full mode, just run the whole tests directory
-            TEST_PATHS="tests"
-          else
-            echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
-          fi
-          
           # Execute pytest on selected directories
           python -m pytest -vs $TEST_PATHS
 
