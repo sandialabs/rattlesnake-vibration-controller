@@ -143,7 +143,6 @@ jobs:
           # Execute pytest on selected directories
           python -m pytest -vs $TEST_PATHS
 
-
   lint:
     needs: changes
     # Run if code changed OR if we're on a primary branch
