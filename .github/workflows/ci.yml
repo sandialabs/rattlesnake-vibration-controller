@@ -6,26 +6,6 @@ on:
   push:
     branches:
       - '**'
-      #- main
-      #- "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-    # Only trigger if files in these paths change
-    # paths:
-    #   - 'src/**'                    # Any source code changes
-    #   - 'pyproject.toml'            # Any dependency changes
-    #   - 'uv.lock'                   # Any locked version changes
-    #   - '.github/workflows/ci.yml'  # Changes to the workflow itself
-    #   - 'src/rattlesnake/cicd/**'   # Changes to your reporting scripts
-  #pull_request:
-  #  branches:
-  #    - main
-  #    - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-  #  # Only trigger if files in these paths change
-  #  # paths:
-  #  #   - 'src/**'
-  #  #   - 'pyproject.toml'
-  #  #   - 'uv.lock'
-  #  #   - '.github/workflows/ci.yml'
-  #  #   - 'src/rattlesnake/cicd/**'
   workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
   # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
   workflow_dispatch:
@@ -55,11 +35,54 @@ env:
 
 jobs:
 
+  # Detect what files changed to optimize the workflow
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_changed: ${{ steps.filter.outputs.docs }}
+      code_changed: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Filter changes
+        uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          list-files: shell
+          base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
+          filters: |
+            docs:
+              - 'documentation/**'
+              - '*.md'  # Include markdown files at the root, which might be docs-related (e.g., README.md)
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/workflows/**'
+
+      # Log the results to the GitHub Actions console
+      - name: Log change status
+        run: |
+          echo "📂 Docs changed: ${{ steps.filter.outputs.docs }}"
+          echo "📂 Docs files: ${{ steps.filter.outputs.docs_files }}"
+          echo "💻 Code changed: ${{ steps.filter.outputs.code }}"
+          echo "💻 Code files: ${{ steps.filter.outputs.code_files }}"
+
   # 2026-03-13: We cannot use uv with the test matrix because of Qt.  There is
   # a known challenge with PyQt5 on modern macOS (particularly M1/M2/M3 Silicon)
   # and some Windows environments.  PyQt does not have pre-built wheels for every
   # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -121,6 +144,12 @@ jobs:
           python -m pytest -vs $TEST_PATHS
 
   lint:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -181,6 +210,12 @@ jobs:
           lint_output_*.txt
 
   coverage:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -244,6 +279,12 @@ jobs:
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.docs_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -286,9 +327,11 @@ jobs:
           path: documentation/_build/html
 
   deploy:
-    needs: [pytest_matrix, lint, coverage, docs_jupyter_book]
+    needs: [changes, pytest_matrix, lint, coverage, docs_jupyter_book]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    # Run only on main/dev AND only if no previous jobs actually failed
+    if: |
+      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
 
     steps:
       - name: Checkout code

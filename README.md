@@ -34,7 +34,7 @@ See the documentation for more information:
 ### Flexible
 
 The controller can currently run using National Instruments hardware using the [NI-DAQmx](https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z000000P8baSAC&l=en-US)
-interface or [B+K LAN-XI](https://www.bksv.com/en/instruments/daq-data-acquisition/lan-xi-daq-system) hardware using their OpenAPI.
+interface or [B+K LAN-XI](https://www.bksv.com/en/instruments/daq-data-acquisition/lan-xi-daq-system) hardware using their OpenAPI.  
 It can also run synthetic control problems using finite element results or State Space Matrices.  Advanced users can implement new hardware devices in Rattlesnake.
 
 ### Capable
