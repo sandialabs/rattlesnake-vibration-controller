@@ -42,10 +42,16 @@ jobs:
       docs_changed: ${{ steps.filter.outputs.docs }}
       code_changed: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v4
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Filter changes
+        uses: dorny/paths-filter@v4
         id: filter
         with:
+          list-files: shell
           filters: |
             docs:
               - 'documentation/**'
@@ -55,8 +61,8 @@ jobs:
               - 'tests/**'
               - 'pyproject.toml'
               - 'uv.lock'
-              - '.github/workflows/ci.yml'
-              - '.github/workflows/release.yml'
+              - '.github/workflows/**'
+
       # Log the results to the GitHub Actions console
       - name: Log change status
         run: |
