@@ -97,9 +97,24 @@ jobs:
         run: |
           # Detect message from Push OR Pull Request
           COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          BRANCH_NAME="${{ github.ref_name }}"
           
           # Root tests + short tests should likely be the default "small" suite
           TEST_PATHS="tests/*.py tests/short"
+
+          # Trigger full suite if:
+          # 1. Commit message contains [all tests]
+          # 2. Manual dispatch 'test_level' is 'full'
+          # 3. Current branch is exactly 'main' or 'dev'
+          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+             [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
+             [[ "$BRANCH_NAME" == "main" ]] || \
+             [[ "$BRANCH_NAME" == "dev" ]]; then
+            echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+            TEST_PATHS="tests"
+          else
+            echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+          fi
 
           if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || [[ "${{ github.event.inputs.test_level }}" == "full" ]]; then
             echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
@@ -198,12 +213,16 @@ jobs:
           # Match logic from pytest_matrix
           COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
           TEST_PATHS="tests/*.py tests/short"
-          
-          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || [[ "${{ github.event.inputs.test_level }}" == "full" ]]; then
-            echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations for coverage"
-            TEST_PATHS="tests"
+          BRANCH_NAME="${{ github.ref_name }}"
+
+          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+               [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
+               [[ "$BRANCH_NAME" == "main" ]] || \
+               [[ "$BRANCH_NAME" == "dev" ]]; then
+              echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+              TEST_PATHS="tests"
           else
-            echo "🚀 FAST TEST MODE: Running core tests and tests/short for coverage"
+              echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
           fi
 
           uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
