@@ -215,6 +215,27 @@ The separate the concerns of **test**, **build**, **release**, and **publish** a
      * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
      * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
 
+### Test
+
+Tests are grouped by the amount of time required to run the tests.  The current
+groups are
+
+```bash
+tests/
+tests/long/
+tests/short/
+```
+
+Whenever there is a push or pull request to  `main` or `dev`, **all tests** will run (which includes **long** tests). For pushes to other branches, only tests in `tests/` and `tests/short` are run.
+
+Developers can *force* a full test, which includes `tests/long` in addition to `tests/` and `tests/short`, by adding the string `[all tests]` to the commit message.  For example, on the `dev-cicd-docs` branch
+
+```bash
+(dev-cicd-docs) > git commit -m 'test feature foo with [all tests]'
+```
+
+will trigger all tests to be run.
+
 ### Trusted Publishing
 
 In `release.yml` we have removed the manual `-p ${{ secrets.PYPI_TOKEN }}`.  The industry standard is now [**Trusted Publishing**](https://docs.pypi.org/trusted-publishers/) (also called OpenID Connect or OIDC).  You configure this in your PyPI project settings once, and GitHub Actions authenticates securely without you needing to store and rotate secrets.
