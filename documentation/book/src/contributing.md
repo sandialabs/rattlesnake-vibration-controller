@@ -226,7 +226,7 @@ tests/long/
 tests/short/
 ```
 
-Whenever there is a push or pull request to  `main` or `dev`, **all tests** will run (which includes **long** tests). For pushes to other branches, only tests in `tests/` and `tests/short` are run.
+Whenever there is a push or pull request to `main` or `dev`, **all tests** will run (which includes **long** tests). For pushes to branches other than `main` or `dev`, only tests in `tests/` and `tests/short` are run.
 
 Developers can *force* a full test, which includes `tests/long` in addition to `tests/` and `tests/short`, by adding the string `[all tests]` to the commit message.  For example, on the `dev-cicd-docs` branch
 
