@@ -274,6 +274,7 @@ To create a prerelease on TestPyPI:
 
 * On any development, e.g., `dev-cicd-docs`, `git tag` and push, e.g.,
 
+```sh
 # View existing tags, if any
 git tag
 
