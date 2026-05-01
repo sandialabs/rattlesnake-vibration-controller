@@ -52,6 +52,7 @@ jobs:
         id: filter
         with:
           list-files: shell
+          base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
           filters: |
             docs:
               - 'documentation/**'
