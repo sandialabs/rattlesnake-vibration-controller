@@ -49,7 +49,7 @@ jobs:
           filters: |
             docs:
               - 'documentation/**'
-              - '**/*.md'
+              - '*.md'  # Include markdown files at the root, which might be docs-related (e.g., README.md)
             code:
               - 'src/**'
               - 'tests/**'
