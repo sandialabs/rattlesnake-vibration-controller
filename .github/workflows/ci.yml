@@ -5,8 +5,9 @@ name: ci.yml
 on:
   push:
     branches:
-      - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+      - '**'
+      #- main
+      #- "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
     # Only trigger if files in these paths change
     # paths:
     #   - 'src/**'                    # Any source code changes
@@ -14,17 +15,17 @@ on:
     #   - 'uv.lock'                   # Any locked version changes
     #   - '.github/workflows/ci.yml'  # Changes to the workflow itself
     #   - 'src/rattlesnake/cicd/**'   # Changes to your reporting scripts
-  pull_request:
-    branches:
-      - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-    # Only trigger if files in these paths change
-    # paths:
-    #   - 'src/**'
-    #   - 'pyproject.toml'
-    #   - 'uv.lock'
-    #   - '.github/workflows/ci.yml'
-    #   - 'src/rattlesnake/cicd/**'
+  #pull_request:
+  #  branches:
+  #    - main
+  #    - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+  #  # Only trigger if files in these paths change
+  #  # paths:
+  #  #   - 'src/**'
+  #  #   - 'pyproject.toml'
+  #  #   - 'uv.lock'
+  #  #   - '.github/workflows/ci.yml'
+  #  #   - 'src/rattlesnake/cicd/**'
   workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
   # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
   workflow_dispatch:
