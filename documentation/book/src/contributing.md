@@ -251,6 +251,13 @@ the job makes this determination:
 In this scenario, only jobs that rely on updates to documentation file
 types are run.  This avoids running unnecessary tests that *don't* rely on documentation updates.
 
+:::{figure} figures/cicd_doc_change_only.svg
+:name: fig-docs-only
+:align: center
+
+CI/CD workflow execution for documentation-only changes.
+:::
+
 ![cicd_doc_change_only](figures/cicd_doc_change_only.svg)
 
 #### `code` only
@@ -269,6 +276,13 @@ the job makes this determination:
 
 Regardless of the file type, if either the `main` or the `dev` branch is target
 of an update, *all tests* are run, for example,
+
+:::{figure} figures/cicd_all_jobs.svg
+:name: fig-all-jobs
+:align: center
+
+Full suite of CI/CD jobs triggered for main or dev branch updates.
+:::
 
 ![cicd_all_jobs](figures/cicd_all_jobs.svg)
 
