@@ -44,8 +44,30 @@ def test_get_lint_sections():
     issues, summary = get_lint_sections(lint_output)
     assert len(issues) == 1
     assert "C0114" in issues[0]
-    assert len(summary) == 2
-    assert "Your code has been rated at 9.50/10" in summary[1]
+    # summary includes everything after the first separator
+    assert any("Your code has been rated at 9.50/10" in line for line in summary)
+
+
+def test_get_lint_sections_long_dashes():
+    """Test parsing lint output with longer dash separators (reproduction of bug)."""
+    lint_output = (
+        "path/to/file.py:10:5: C0114: Missing module docstring\n"
+        "-----------------------------------\n"
+        "Your code has been rated at 9.51/10"
+    )
+    issues, summary = get_lint_sections(lint_output)
+    assert len(issues) == 1
+    assert "C0114" in issues[0]
+    assert any("Your code has been rated at 9.51/10" in line for line in summary)
+    assert get_score_from_summary(summary) == "9.51"
+
+
+def test_get_lint_sections_no_separator():
+    """Test parsing lint output with no separators."""
+    lint_output = "Your code has been rated at 10.00/10"
+    issues, summary = get_lint_sections(lint_output)
+    assert any("Your code has been rated at 10.00/10" in line for line in summary)
+    assert get_score_from_summary(summary) == "10.00"
 
 
 def test_get_score_from_summary():

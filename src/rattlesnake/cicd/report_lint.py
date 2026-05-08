@@ -44,10 +44,22 @@ def get_lint_sections(content: str) -> tuple[list[str], list[str]]:
     Returns:
         A tuple of (issues, summary_lines)
     """
-    sections = content.split("-------------------")
+    # Split by any sequence of 10 or more dashes (common in pylint output)
+    sections = re.split(r"-{10,}", content)
+
+    # Issues are almost always before the first separator
     issues = sections[0].strip().split("\n")
     issues = [i for i in issues if i.strip()]
-    summary = sections[1].split("\n") if len(sections) > 1 else []
+
+    # If there are no separators, the whole file might be issues or just a score
+    if len(sections) == 1:
+        lines = content.split("\n")
+        return lines, lines
+
+    # For summary, take everything after the first separator
+    summary_text: str = "\n".join(sections[1:])
+    summary = summary_text.split("\n")
+
     return issues, summary
 
 
