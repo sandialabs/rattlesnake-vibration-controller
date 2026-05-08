@@ -202,7 +202,7 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
 
 
 def main():
-    """The main entry point."""
+    """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Generate Project Dashboard index.html"
     )
