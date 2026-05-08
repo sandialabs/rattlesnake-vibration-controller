@@ -63,7 +63,7 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
             <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 mb-4">
                 <b>Project Dashboard</b></h1>
             <p class="text-lg text-slate-600 max-w-2xl mx-auto">
-                Access documentation and quality reports for the Rattlesnake Vibration Controller.
+                Documentation and quality reports for the Rattlesnake Vibration Controller.
             </p>
         </header>
 

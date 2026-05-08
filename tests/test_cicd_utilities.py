@@ -86,11 +86,12 @@ def test_get_timestamp_format():
     """Test that the get_timestamp function returns a string with the correct format."""
     timestamp_str: str = get_timestamp()
     # The regex pattern matches the expected format:
-    # YYYY-MM-DD HH:MM:SS UTC (YYYY-MM-DD HH:MM:SS EST / YYYY-MM-DD HH:MM:SS MST)
+    # YYYY-MM-DD HH:MM:SS UTC (YYYY-MM-DD HH:MM:SS EST / YYYY-MM-DD HH:MM:SS MST / YYYY-MM-DD HH:MM:SS PST)
     pattern: str = (
         r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC "
         r"\(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} EST / "
-        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} MST\)$"
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} MST / "
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} PST\)$"
     )
     assert re.match(pattern, timestamp_str) is not None
 
@@ -99,7 +100,7 @@ def test_get_timestamp_timezone_offsets():
     """Test that the timezone offsets in the timestamp are correct."""
     timestamp_str: str = get_timestamp()
 
-    # Extract UTC, EST, and MST timestamps from the string
+    # Extract UTC, EST, MST, and PST timestamps from the string
     utc_str_part: str = timestamp_str.split(" UTC")[0]
     est_str_part: str = re.search(
         r"\((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) EST", timestamp_str
@@ -107,20 +108,26 @@ def test_get_timestamp_timezone_offsets():
     mst_str_part: str = re.search(
         r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) MST", timestamp_str
     ).group(1)
+    pst_str_part: str = re.search(
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) PST", timestamp_str
+    ).group(1)
 
     # Convert string parts to datetime objects
     utc_time: datetime = datetime.strptime(utc_str_part, "%Y-%m-%d %H:%M:%S")
     est_time: datetime = datetime.strptime(est_str_part, "%Y-%m-%d %H:%M:%S")
     mst_time: datetime = datetime.strptime(mst_str_part, "%Y-%m-%d %H:%M:%S")
+    pst_time: datetime = datetime.strptime(pst_str_part, "%Y-%m-%d %H:%M:%S")
 
     # Check the differences
     utc_est_diff_hours: int = int((utc_time - est_time).total_seconds() / 3600)
     utc_mst_diff_hours: int = int((utc_time - mst_time).total_seconds() / 3600)
+    utc_pst_diff_hours: int = int((utc_time - pst_time).total_seconds() / 3600)
 
-    # EST is typically UTC-4, and MST is UTC-6 during Daylight Saving Time.
+    # EST is typically UTC-4, MST is UTC-6, and PST is UTC-7 during Daylight Saving Time.
     # Note: These values can change with daylight saving, so we test for common offsets.
     assert utc_est_diff_hours in [4, 5]
     assert utc_mst_diff_hours in [6, 7]
+    assert utc_pst_diff_hours in [7, 8]
 
 
 # endregion
@@ -137,7 +144,7 @@ def test_extend_timestamp():
     # Example from the docstring:
     short_ts: str = "20250815_211112_UTC"
     expected_extended_ts: str = (
-        "2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)"
+        "2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST / 2025-08-15 14:11:12 PST)"
     )
 
     # For a robust test, we can check the time component
@@ -148,13 +155,12 @@ def test_extend_timestamp():
 
     # Now, test with a different time
     short_ts2: str = "20241027_100000_UTC"
-    # UTC 10:00:00 is EST 06:00:00 (due to DST) and MST 04:00:00 (due to DST)
-    # Note: On 27 Oct 2024, EST is still UTC-4 and MST is still UTC-6.
+    # UTC 10:00:00 is EST 06:00:00 (due to DST), MST 04:00:00 (due to DST), and PST 03:00:00 (due to DST)
+    # Note: On 27 Oct 2024, EST is still UTC-4, MST is still UTC-6, and PST is still UTC-7.
     expected_extended_ts2: str = (
-        "2024-10-27 10:00:00 UTC (2024-10-27 06:00:00 EST / 2024-10-27 04:00:00 MST)"
+        "2024-10-27 10:00:00 UTC (2024-10-27 06:00:00 EST / 2024-10-27 04:00:00 MST / 2024-10-27 03:00:00 PST)"
     )
-    # The timezone abbreviations change depending on DST.
-    # We should adjust the test to be less fragile to this.
+    assert extend_timestamp(short_ts2) == expected_extended_ts2
 
     # Simpler and more robust test: check for timezone offsets.
     extended_ts: str = extend_timestamp("20250815_211112_UTC")
@@ -163,20 +169,25 @@ def test_extend_timestamp():
     utc_part: str = extended_ts.split(" UTC")[0]
     utc_dt: datetime = datetime.strptime(utc_part, "%Y-%m-%d %H:%M:%S")
 
-    # Extract EST and MST times from the result
+    # Extract EST, MST, and PST times from the result
     est_part: str = re.search(
         r"\((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", extended_ts
     ).group(1)
     mst_part: str = re.search(
-        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) MST\)", extended_ts
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) MST", extended_ts
+    ).group(1)
+    pst_part: str = re.search(
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) PST", extended_ts
     ).group(1)
 
     est_dt: datetime = datetime.strptime(est_part, "%Y-%m-%d %H:%M:%S")
     mst_dt: datetime = datetime.strptime(mst_part, "%Y-%m-%d %H:%M:%S")
+    pst_dt: datetime = datetime.strptime(pst_part, "%Y-%m-%d %H:%M:%S")
 
     # Test time differences
     assert (utc_dt - est_dt).total_seconds() / 3600 in [4, 5]
     assert (utc_dt - mst_dt).total_seconds() / 3600 in [6, 7]
+    assert (utc_dt - pst_dt).total_seconds() / 3600 in [7, 8]
 
 
 def test_extend_timestamp_invalid_format():
@@ -198,26 +209,28 @@ def test_get_multiline_timestamp():
     short_ts = "20240324_204412_UTC"
     lines = get_multiline_timestamp(short_ts)
 
-    assert len(lines) == 4
+    assert len(lines) == 5
     assert lines[0] == "Generated:"
     assert lines[1] == "2024-03-24 20:44:12 UTC"
-    # On March 24, it is Daylight Saving Time (EDT and MDT).
-    # EST/MST are used as fixed strings in the utility function for now as requested.
+    # On March 24, it is Daylight Saving Time (EDT, MDT, and PDT).
+    # EST/MST/PST are used as fixed strings in the utility function for now as requested.
     assert lines[2] == "2024-03-24 16:44:12 EST"
     assert lines[3] == "2024-03-24 14:44:12 MST"
+    assert lines[4] == "2024-03-24 13:44:12 PST"
 
 
 def test_get_multiline_timestamp_rollover():
     """Test date rollover across timezones."""
-    # 2:44 AM UTC on March 25 is 10:44 PM EST and 8:44 PM MST on March 24
+    # 2:44 AM UTC on March 25 is 10:44 PM EST, 8:44 PM MST, and 7:44 PM PST on March 24
     short_ts = "20240325_024412_UTC"
     lines = get_multiline_timestamp(short_ts)
 
-    assert len(lines) == 4
+    assert len(lines) == 5
     assert lines[0] == "Generated:"
     assert lines[1] == "2024-03-25 02:44:12 UTC"
     assert lines[2] == "2024-03-24 22:44:12 EST"
     assert lines[3] == "2024-03-24 20:44:12 MST"
+    assert lines[4] == "2024-03-24 19:44:12 PST"
 
 
 def test_get_multiline_timestamp_invalid():
