@@ -146,7 +146,7 @@ To view the Jupyter Book output locally:
 jupyter book start
 ```
 
-The ouput will be similar to:
+The output will be similar to:
 
 ```sh
 📚 Built 32 pages for project in 974 ms.
@@ -202,15 +202,15 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
-The separate the concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
+The separate concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
 
 * **Continuous Integration (CI)**
   * **Test (Verification)**
     * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
     * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
-    * **What happens:** Automated tool run unit tests, integration tests, and code quality assessments are performed.
+    * **What happens:** Automated unit tests, integration tests, and code quality assessments are performed.
       * **Testing** (e.g., [pytest](https://docs.pytest.org/en/stable/)) runs your unit and integration tests.
-      * **Code coverage** (e.g., pytest with a coverage report) assesses number of lines of code covered by tests.
+      * **Code coverage** (e.g., pytest with a coverage report) assesses the number of lines of code covered by tests.
       * **Linting** (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and 
       * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks ensure code consistency.
       *  **Documentation** may also be assembled and compiled.  This is particularly important for interactive documentation that has examples that depend on source code functionality.
@@ -279,14 +279,14 @@ On the GitHub repo:
 * For a basic setup using Trusted Publishing, you don't actually need to add any secrets or configuration on this page. Just having the environment named testpypi exist is enough to link it to your workflow.
 * Optionally, we add the following protections:
   * Under the **Deployment branches and tags**, under the **No Restriction** button, select **Selected branches and tags**.
-  * Click **Add deployment branch or tage rule**.
+  * Click **Add deployment branch or tag rule**.
   * Select **Ref type: Tag**.
   * Set the **Name Pattern:** to 'v*'.  This ensures that *only* version tags can ever use this environment, adding a layer of security.
 
 Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 
 * Log into your [PyPI](https://pypi.org) (or [Test PyPI](https://test.pypi.org)) account
-* Go your project's **Manage** page (or your accounts **Publishing** settings if you are setting it up for the first time.)
+* Go to your project's **Manage** page (or your account's **Publishing** settings if you are setting it up for the first time.)
 * Look for the **Publishing** tab
 * Click **Add new publisher**
 * Select **GitHub** as the source
@@ -319,7 +319,7 @@ tag | description
 
 A **release candidate** is made during the final testing stage before a full release.
 
-Following are **stable release tags** (e.g, starting from the `v1.0.0` release):
+Following are **stable release tags** (e.g., starting from the `v1.0.0` release):
 
 tag | description
 --- | ----
