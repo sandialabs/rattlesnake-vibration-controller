@@ -279,7 +279,7 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> int:
-    """The main entry point."""
+    """Main entry point."""
     args: argparse.Namespace = parse_arguments()
     return report_main_runner(generate_report, args)
 

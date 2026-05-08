@@ -234,8 +234,12 @@ The separate concerns of **test**, **build**, **release**, and **publish** are c
 When a user pushes to the repository, the `changes` job in the main workflow
 determines the **types** of the files that were committed.  The job determines
 if only `docs` (documentation) files changed, only `code` (source code, project code)
-files changed, or both.  For example, upon pushing updates only to markdown (i.e., `*.md`)
-files, the workflow makes this determination:
+files changed, or both.  
+
+#### `docs` only
+
+For example, upon pushing updates only to a markdown file (i.e., `*.md`),
+the job makes this determination:
 
 ```bash
 📂 Docs changed: true
@@ -244,15 +248,31 @@ files, the workflow makes this determination:
 💻 Code files:
 ```
 
-The result is that only artifacts that rely on updates to documentation file
-types are run, avoiding running unnecessary tests that *don't* rely on documentation.
+In this scenario, only jobs that rely on updates to documentation file
+types are run.  This avoids running unnecessary tests that *don't* rely on documentation updates.
 
 ![cicd_doc_change_only](figures/cicd_doc_change_only.svg)
 
-Regardless of the file type, if the `main` or `dev` branch is target
+#### `code` only
+
+For example, update pushing updates to source code (.e.g., `*.py`),
+the job makes this determination:
+
+```bash
+📂 Docs changed: false
+📂 Docs files: 
+💻 Code changed: true
+💻 Code files: src/rattlesnake/cicd/report_dashboard.py src/rattlesnake/cicd/report_jupyter_book.py src/rattlesnake/cicd/report_lint.py tests/test_cicd_utilities.py
+```
+
+#### All test
+
+Regardless of the file type, if either the `main` or the `dev` branch is target
 of an update, *all tests* are run, for example,
 
 ![cicd_all_jobs](figures/cicd_all_jobs.svg)
+
+Running the full suite is significantly more time-consuming than executing only the specific tests relevant to the modified files.
 
 ### Test
 
