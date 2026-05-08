@@ -236,7 +236,7 @@ determines the **types** of the files that were committed.  The job determines
 if only `docs` (documentation) files changed, only `code` (source code, project code)
 files changed, or both.  
 
-#### `docs` only
+#### Updates to `docs` only
 
 For example, upon pushing updates only to a markdown file (i.e., `*.md`),
 the job makes this determination:
@@ -258,9 +258,7 @@ types are run.  This avoids running unnecessary tests that *don't* rely on docum
 CI/CD workflow execution for documentation-only changes.
 :::
 
-![cicd_doc_change_only](figures/cicd_doc_change_only.svg)
-
-#### `code` only
+#### Updates to `code` only
 
 For example, update pushing updates to source code (.e.g., `*.py`),
 the job makes this determination:
@@ -271,6 +269,8 @@ the job makes this determination:
 💻 Code changed: true
 💻 Code files: src/rattlesnake/cicd/report_dashboard.py src/rattlesnake/cicd/report_jupyter_book.py src/rattlesnake/cicd/report_lint.py tests/test_cicd_utilities.py
 ```
+
+Only the `pytest_matrix`, `lint`, and `coverage` jobs will be run.  The `docs_jupyter_book` and `deploy` jobs will be skipped.
 
 #### All test
 
@@ -283,8 +283,6 @@ of an update, *all tests* are run, for example,
 
 Full suite of CI/CD jobs triggered for main or dev branch updates.
 :::
-
-![cicd_all_jobs](figures/cicd_all_jobs.svg)
 
 Running the full suite is significantly more time-consuming than executing only the specific tests relevant to the modified files.
 
