@@ -1,5 +1,5 @@
 """
-Unit tests for utilities.py — CICD Utilities.
+Unit tests for utilities.py CICD Utilities.
 
 This test suite verifies the correctness of the utility functions
 used in the CI/CD processes, such as timestamp generation and score
@@ -11,20 +11,19 @@ Example use:
     pytest tests/test_utilities.py::test_get_score_color_brightgreen -v
 """
 
-from datetime import datetime
 import re
+from datetime import datetime
 
 import pytest
 
 # Assuming the utilities.py module is in a sibling directory to tests
 from rattlesnake.cicd.utilities import (
+    extend_timestamp,
+    get_multiline_timestamp,
     get_score_color_coverage,
     get_score_color_lint,
     get_timestamp,
-    extend_timestamp,
-    get_multiline_timestamp,
 )
-
 
 # region: Test get_score_color_lint
 
@@ -143,9 +142,7 @@ def test_extend_timestamp():
     """
     # Example from the docstring:
     short_ts: str = "20250815_211112_UTC"
-    expected_extended_ts: str = (
-        "2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST / 2025-08-15 14:11:12 PST)"
-    )
+    expected_extended_ts: str = "2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST / 2025-08-15 14:11:12 PST)"
 
     # For a robust test, we can check the time component
     # directly.
@@ -157,9 +154,7 @@ def test_extend_timestamp():
     short_ts2: str = "20241027_100000_UTC"
     # UTC 10:00:00 is EST 06:00:00 (due to DST), MST 04:00:00 (due to DST), and PST 03:00:00 (due to DST)
     # Note: On 27 Oct 2024, EST is still UTC-4, MST is still UTC-6, and PST is still UTC-7.
-    expected_extended_ts2: str = (
-        "2024-10-27 10:00:00 UTC (2024-10-27 06:00:00 EST / 2024-10-27 04:00:00 MST / 2024-10-27 03:00:00 PST)"
-    )
+    expected_extended_ts2: str = "2024-10-27 10:00:00 UTC (2024-10-27 06:00:00 EST / 2024-10-27 04:00:00 MST / 2024-10-27 03:00:00 PST)"
     assert extend_timestamp(short_ts2) == expected_extended_ts2
 
     # Simpler and more robust test: check for timezone offsets.
