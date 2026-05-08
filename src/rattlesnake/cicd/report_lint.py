@@ -114,18 +114,6 @@ def get_html_header(score: str, metadata: ReportMetadata) -> str:
         .metadata {{
             color: #6a737d; font-size: 0.9em; margin-top: 10px;
         }}
-        .nav {{
-            background: white; padding: 20px; border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
-        }}
-        .nav a {{
-            background: #0366d6; color: white; padding: 10px 20px;
-            text-decoration: none; border-radius: 6px; margin-right: 10px;
-            display: inline-block; margin-bottom: 5px;
-        }}
-        .nav a:hover {{
-            background: #0256cc;
-        }}
         .section {{
             background: white; padding: 20px; border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
@@ -158,10 +146,6 @@ def get_html_header(score: str, metadata: ReportMetadata) -> str:
                 <div><strong>Repository:</strong>
                     <a href="{github_url}">{metadata.github_repo}</a></div>
             </div>
-        </div>
-
-        <div class="nav">
-            <a href="../../index.html">← Back to Dashboard</a>
         </div>
 """
 

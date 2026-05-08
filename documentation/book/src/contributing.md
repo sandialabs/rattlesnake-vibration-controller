@@ -229,6 +229,31 @@ The separate concerns of **test**, **build**, **release**, and **publish** are c
      * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
      * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
 
+### Efficiency
+
+When a user pushes to the repository, the `changes` job in the main workflow
+determines the **types** of the files that were committed.  The job determines
+if only `docs` (documentation) files changed, only `code` (source code, project code)
+files changed, or both.  For example, upon pushing updates only to markdown (i.e., `*.md`)
+files, the workflow makes this determination:
+
+```bash
+📂 Docs changed: true
+📂 Docs files: documentation/book/src/contributing.md
+💻 Code changed: false
+💻 Code files:
+```
+
+The result is that only artifacts that rely on updates to documentation file
+types are run, avoiding running unnecessary tests that *don't* rely on documentation.
+
+![cicd_doc_change_only](figures/cicd_doc_change_only.svg)
+
+Regardless of the file type, if the `main` or `dev` branch is target
+of an update, *all tests* are run, for example,
+
+![cicd_all_jobs](figures/cicd_all_jobs.svg)
+
 ### Test
 
 Tests are grouped by the amount of time required to run the tests.  The current

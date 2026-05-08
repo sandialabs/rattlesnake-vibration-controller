@@ -46,6 +46,7 @@ def generate_footer_md(
         f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[2]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[4]}<br>\n"
         f'{indent}Run ID: <a href="{run_url}">{metadata.run_id}</a><br>\n'
         f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
         f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
