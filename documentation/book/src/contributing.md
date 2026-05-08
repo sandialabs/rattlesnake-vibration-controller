@@ -5,8 +5,22 @@ numbering:
 (sec:contributing)=
 # Contributing
 
-Users may contribute to the Rattlesnake project by [cloning](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forking](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the source code,
-making sure their updates all quality tests contained within Rattlesnake's Continous Integration (CI) framework, then submitting a [pull request](https://github.com/sandialabs/rattlesnake-vibration-controller/pulls).
+Users may contribute to the Rattlesnake project by [cloning](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forking](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the Rattlesnake [repository](https://github.com/sandialabs/rattlesnake-vibration-controller).
+
+Direct **cloning** is reserved for authorized collaborators of the Rattlesnake repository; however, because the project is open-source, all other contributors can obtain their own copy by **forking** the repository.
+
+## Cloning
+
+* Cloning is a Git action.
+* It creates a copy of a repository on **your physical computer**.
+* It allows you to edit files and run code locally. Collaborators "clone" the original repository directly because they have permission to "push" (save) their changes directly back to the main project.
+* External contributors usually "clone" *their own fork*.
+
+## Forking
+
+* Forking is a GitHub action.
+* It is a personal copy of the entire project on **your own GitHub account**.
+* It acts as a bridge for external contributors. You can make any changes you want to your fork without affecting the original project. When you are ready to share those changes, you submit a [**Pull Request**](https://github.com/sandialabs/rattlesnake-vibration-controller/pulls) to the original repository.
 
 ## Getting the Source Code
 
@@ -16,7 +30,7 @@ making sure their updates all quality tests contained within Rattlesnake's Conti
 git clone git@github.com:sandialabs/rattlesnake-vibration-controller.git
 ```
 
-Others should create a **fork** of the repository to populate a copy of the source code in their own GitHub repository.
+Others should first **fork** the repository to their own GitHub account. Once forked, you can then clone your personal version of the repo to work on it locally.
 
 ## Installation
 
