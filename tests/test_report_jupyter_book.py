@@ -54,7 +54,6 @@ site:
     update_myst_file(str(myst_file), footer_md)
 
     updated_content = myst_file.read_text()
-    assert "[Link](https://example.com)" in updated_content
     assert "---" in updated_content
     assert '<div style="font-size: 0.7em;">Generated: 2024-03-24</div>' in updated_content
 

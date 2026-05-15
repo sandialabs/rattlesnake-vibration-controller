@@ -45,7 +45,9 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Lint badge and metadata.")
     parser.add_argument("--input_file", help="Lint text output file (to extract score)")
     parser.add_argument("--score", type=float, help="Lint score (direct input)")
-    parser.add_argument("--export_env", action="store_true", help="Export color to GITHUB_ENV")
+    parser.add_argument(
+        "--export_env", action="store_true", help="Export color to GITHUB_ENV"
+    )
 
     # Add common badge arguments from utilities
     add_badge_args(parser)

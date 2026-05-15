@@ -17,11 +17,86 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # GitHub will swtich on 02 June 2026 to Node.js 24 as the default for JavaScript actions, but until then, this ensures all actions use Node.js 24 to avoid any issues with older versions. After 02 June 2026, this line can be safely removed.
 
 jobs:
-  # 1. TEST JOB: Runs Pytest
+  # 1. VALIDATE: Ensure the tag was created on main or dev
+  validate_tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main or dev branch
+        run: |
+          TAG="${{ github.ref_name }}"
+          BRANCHES=$(git branch -r --contains "refs/tags/$TAG" | grep -E '^\s*origin/(main|dev)\s*$' || true)
+          if [ -z "$BRANCHES" ]; then
+            echo "ERROR: Tag '$TAG' must be created on the 'main' or 'dev' branch."
+            echo "Tag is reachable from:"
+            git branch -r --contains "refs/tags/$TAG" || echo "  (no remote branches)"
+            exit 1
+          fi
+          echo "OK: Tag '$TAG' is on:$BRANCHES"
+
+      - name: Verify tag conforms to PEP 440
+        run: |
+          pip install packaging --quiet
+          python - <<'EOF'
+          import sys
+          from packaging.version import Version, InvalidVersion
+          tag = "${{ github.ref_name }}"
+          version_str = tag.lstrip("v")
+          try:
+              Version(version_str)
+              print(f"OK: '{tag}' is a valid PEP 440 version.")
+          except InvalidVersion:
+              print(f"ERROR: '{tag}' is not a valid PEP 440 version.")
+              print( "       Valid examples: v1.0.0  v1.1.0a1  v1.1.0rc1  v1.0.0.post1  v1.1.0.dev1")
+              sys.exit(1)
+          EOF
+
+      - name: Verify tag is newer than all existing tags
+        run: |
+          python - <<'EOF'
+          import sys
+          import subprocess
+          from packaging.version import Version, InvalidVersion
+          new_tag = "${{ github.ref_name }}"
+          new_version = Version(new_tag.lstrip("v"))
+
+          result = subprocess.run(
+              ["git", "tag"],
+              capture_output=True, text=True
+          )
+          existing_versions = []
+          for tag in result.stdout.strip().splitlines():
+              tag = tag.strip()
+              if tag == new_tag:
+                  continue  # exclude the tag being validated
+              try:
+                  existing_versions.append((Version(tag.lstrip("v")), tag))
+              except InvalidVersion:
+                  pass  # skip tags that don't conform to PEP 440
+
+          if not existing_versions:
+              print(f"OK: No existing tags to compare against. '{new_tag}' is the first release.")
+              sys.exit(0)
+
+          latest_version, latest_tag = max(existing_versions, key=lambda x: x[0])
+          if new_version <= latest_version:
+              print(f"ERROR: '{new_tag}' ({new_version}) is not newer than the existing tag '{latest_tag}' ({latest_version}).")
+              print(f"       The new tag must be strictly greater than {latest_version}.")
+              sys.exit(1)
+
+          print(f"OK: '{new_tag}' ({new_version}) is newer than the latest existing tag '{latest_tag}' ({latest_version}).")
+          EOF
+
+  # 2. TEST JOB: Runs Pytest
   test:
+    needs: validate_tag
     uses: ./.github/workflows/ci.yml
 
-  # 2. BUILD: Only runs if 'test' passes
+  # 3. BUILD: Only runs if 'test' passes
   build:
     name: Build Distribution and Generate Attestation
     needs: test
@@ -55,7 +130,7 @@ jobs:
           name: dist
           path: dist/
 
-  # 3. GITHUB RELEASE: Creates the release on GitHub and attaches the build files
+  # 4. GITHUB RELEASE: Creates the release on GitHub and attaches the build files
   github-release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/') # Only release on actual tags, redundant to on: push: tags: - 'v*', but safeguards against any other trigger that might be added later.
@@ -76,17 +151,17 @@ jobs:
           files: dist/*
           generate_release_notes: true # Automatically generate release notes based on commits since the last release
           draft: false # Set to true if you want to create a draft release instead of publishing immediately
-          prerelease: false # Set to true if this is a pre-release (e.g., alpha, beta)
+          prerelease: ${{ contains(github.ref, 'rc') || contains(github.ref, 'dev') || contains(github.ref, 'a') || contains(github.ref, 'b') }} # Mark as pre-release if tag contains rc, dev, a, or b
 
-  # 4. PUBLISH: Only runs if 'build' passes
-  publish-to-pypi-or-testpypi:
+  # 5. PUBLISH: Only runs if 'build' passes
+  publish:
     name: Publish to PyPI or TestPyPI
     needs: [build, github-release] # Ensure both build and GitHub release steps succeed before publishing
     runs-on: ubuntu-latest
     # environment: pypi
     # Set the environment based on the tag name
     environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains 'rc' or 'dev', use the 'testpypi' environment, otherwise use 'pypi'
-    # Optional: Use environment protection rule for manual approval before publishing
+    # Manual approval gate is configured on the 'pypi' GitHub environment (Settings → Environments → pypi → Required reviewers)
     permissions:
       id-token: write # Needed for authentication with PyPI using GitHub Actions
     steps:
@@ -100,5 +175,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         # No password needed with Trusted Publishing configured on PyPI.
         with:
-          # If the tag contains '-test', use the TestPyPI URL; otherwise, use the default PyPI URL
+          # If the tag contains 'rc' or 'dev', use the TestPyPI URL; otherwise, use the default PyPI URL
           repository-url: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'https://test.pypi.org/legacy/' || '' }}  # Production PyPI uses the default URL, so the empty string will cause it to default to the standard PyPI repository. TestPyPI will use the specified URL. 
