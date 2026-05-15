@@ -202,11 +202,11 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
-### Synopsys
+### Synopsis
 
 `ci.yml` — Continuous Integration
 
-Triggered on every push to *any* branch, plus manual dispatch. Five jobs:
+Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
 
 1. **changes** 
    * Uses dorny/paths-filter to detect whether docs or code files changed. Downstream jobs use this to skip
@@ -230,7 +230,7 @@ Triggered on every push to *any* branch, plus manual dispatch. Five jobs:
 Triggered only on `v*` tags. Five sequential jobs:
 
 1. **validate_tag**
-   * Verifies the tag was created on the `main` or `dev` branch, and that it conforms to PEP 440.
+   * Verifies the tag was created on the `main` or `dev` branch, that it conforms to PEP 440, and that it is strictly newer than all existing tags.
 2. **test**
    * Calls `ci.yml` as a reusable workflow (workflow_call).
 3. **build**
@@ -257,7 +257,7 @@ The separate concerns of **test**, **build**, **release**, and **publish** are c
     * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
   * **Build (Packaging)**
     * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
-    * **What happens:** Tools (like `python -m build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
+    * **What happens:** Tools (like `uv build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
      * **Key Outcome:** Portability. You now have a single file (an "artifact") that contains everything needed to install your library on any compatible system.
   * **Release (Documentation & Tagging)**
      * **Purpose:** To create an official "point-in-time" snapshot of the project for project management and users. It uses an immutable Git tag and GitHub Release page.
@@ -300,7 +300,7 @@ CI/CD workflow execution for documentation-only changes.
 
 #### Updates to `code` only
 
-For example, update pushing updates to source code (.e.g., `*.py`),
+For example, upon pushing updates to source code (e.g., `*.py`),
 the job makes this determination:
 
 ```bash
@@ -404,9 +404,9 @@ We follow [PEP 440](https://peps.python.org/pep-0440/) (the Python standard for 
 N.N.N[{a|b|rc}N][.postN][.devN]
 ```
 
-The `validate_tag` job in `release.yml` enforces that a tag can be added only when the 
-branch is `main` or `dev`.  If a tag is added, the `validate_tag` job also enforces
-that the tag follow PEP 440.
+The `validate_tag` job in `release.yml` enforces that a tag can be added only when the
+branch is `main` or `dev`, that the tag follows PEP 440, and that the version is
+strictly newer than all existing tags.
 
 #### Example Tags
 
@@ -465,7 +465,7 @@ git push origin v1.0.0rc1
 To create a release on PyPI:
 
 * Merge the `dev` branch into the `main` branch.
-* On the `main` branch, `git tag` and push to `main`, e.g.,
+* On the `main` branch, create a tag using `git tag` and push it to the `main` branch on GitHub, e.g.,
 
 ```sh
 # Ensure you are on the main branch
@@ -481,3 +481,27 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 # On the main branch, push the tag to GitHub
 git push origin v1.0.0
 ```
+
+### Manual Approval Gate
+
+By default, a tag push triggers the full release pipeline automatically — including the final publish to PyPI — with no human checkpoint. The **manual approval gate** pauses the `publish` job and requires a named reviewer to explicitly approve before the package is uploaded to PyPI.
+
+This is an industry-standard safeguard for production releases. It gives a release manager a final opportunity to confirm that the correct tag is being published, the changelog looks right, and no last-minute issues have been flagged.
+
+The approval gate applies only to the production `pypi` environment. The `testpypi` environment (used for prereleases) does not require approval, since prereleases are low-risk by design.
+
+#### Setup (GitHub Settings UI)
+
+No changes to `release.yml` are required. The `publish` job dynamically selects `environment: pypi` for stable releases or `environment: testpypi` for prereleases — GitHub uses this environment name as the hook to enforce the approval rule.
+
+1. Navigate to the repository on GitHub.
+2. Click the **Settings** tab.
+3. In the left sidebar under **Code and automation**, click **Environments**.
+4. Click on the **pypi** environment.
+5. Under **Deployment protection rules**, check the box next to **Required reviewers**.
+6. In the text field that appears, type the GitHub username(s) or team name(s) who are authorized to approve a PyPI release. Add up to 6 reviewers.
+7. Click **Save protection rules**.
+
+When a release tag is pushed, the pipeline will run `validate_tag`, `test`, `build`, and `github-release` automatically. The `publish` job will then pause with status **Waiting**. The designated reviewer(s) will receive a GitHub notification and must click **Review deployments → Approve and deploy** before the package is uploaded to PyPI.
+
+If no reviewer approves within 30 days, the deployment times out and must be re-triggered.
