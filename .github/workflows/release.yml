@@ -17,8 +17,30 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # GitHub will swtich on 02 June 2026 to Node.js 24 as the default for JavaScript actions, but until then, this ensures all actions use Node.js 24 to avoid any issues with older versions. After 02 June 2026, this line can be safely removed.
 
 jobs:
-  # 1. TEST JOB: Runs Pytest
+  # 1. VALIDATE: Ensure the tag was created on main or dev
+  validate_tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main or dev branch
+        run: |
+          TAG="${{ github.ref_name }}"
+          BRANCHES=$(git branch -r --contains "refs/tags/$TAG" | grep -E '^\s*origin/(main|dev)\s*$' || true)
+          if [ -z "$BRANCHES" ]; then
+            echo "ERROR: Tag '$TAG' must be created on the 'main' or 'dev' branch."
+            echo "Tag is reachable from:"
+            git branch -r --contains "refs/tags/$TAG" || echo "  (no remote branches)"
+            exit 1
+          fi
+          echo "OK: Tag '$TAG' is on:$BRANCHES"
+
+  # 2. TEST JOB: Runs Pytest
   test:
+    needs: validate_tag
     uses: ./.github/workflows/ci.yml
 
   # 2. BUILD: Only runs if 'test' passes
