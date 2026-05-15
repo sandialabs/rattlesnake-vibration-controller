@@ -55,6 +55,42 @@ jobs:
               sys.exit(1)
           EOF
 
+      - name: Verify tag is newer than all existing tags
+        run: |
+          python - <<'EOF'
+          import sys
+          import subprocess
+          from packaging.version import Version, InvalidVersion
+          new_tag = "${{ github.ref_name }}"
+          new_version = Version(new_tag.lstrip("v"))
+
+          result = subprocess.run(
+              ["git", "tag"],
+              capture_output=True, text=True
+          )
+          existing_versions = []
+          for tag in result.stdout.strip().splitlines():
+              tag = tag.strip()
+              if tag == new_tag:
+                  continue  # exclude the tag being validated
+              try:
+                  existing_versions.append((Version(tag.lstrip("v")), tag))
+              except InvalidVersion:
+                  pass  # skip tags that don't conform to PEP 440
+
+          if not existing_versions:
+              print(f"OK: No existing tags to compare against. '{new_tag}' is the first release.")
+              sys.exit(0)
+
+          latest_version, latest_tag = max(existing_versions, key=lambda x: x[0])
+          if new_version <= latest_version:
+              print(f"ERROR: '{new_tag}' ({new_version}) is not newer than the existing tag '{latest_tag}' ({latest_version}).")
+              print(f"       The new tag must be strictly greater than {latest_version}.")
+              sys.exit(1)
+
+          print(f"OK: '{new_tag}' ({new_version}) is newer than the latest existing tag '{latest_tag}' ({latest_version}).")
+          EOF
+
   # 2. TEST JOB: Runs Pytest
   test:
     needs: validate_tag
