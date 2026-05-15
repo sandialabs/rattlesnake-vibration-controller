@@ -227,15 +227,17 @@ Triggered on every push to *any* branch, plus manual dispatch. Five jobs:
 
 `release.yml` — Release Pipeline
 
-Triggered only on `v*` tags. Four sequential jobs:
+Triggered only on `v*` tags. Five sequential jobs:
 
-1. **test**
+1. **validate_tag**
+   * Verifies the tag was created on the `main` or `dev` branch, and that it conforms to PEP 440.
+2. **test**
    * Calls `ci.yml` as a reusable workflow (workflow_call).
-2. **build**
+3. **build**
    * Runs `uv build` and generates a Supply chain Levels for Software Artifacts (SLSA, aka "salsa") provenance attestation for the dist artifacts.
-3. **github-release**
+4. **github-release**
    * Creates a GitHub Release with auto-generated notes and attaches the `dist` files.
-4. **publish**
+5. **publish**
    * Publishes to PyPI or TestPyPI via Trusted Publishing. Tags containing `rc` or `dev` go to TestPyPI; all others go to production PyPI.
 
 ### Details
@@ -402,7 +404,9 @@ We follow [PEP 440](https://peps.python.org/pep-0440/) (the Python standard for 
 N.N.N[{a|b|rc}N][.postN][.devN]
 ```
 
-Tags can only be created on the `main` or `dev` branches.
+The `validate_tag` job in `release.yml` enforces that a tag can be added only when the 
+branch is `main` or `dev`.  If a tag is added, the `validate_tag` job also enforces
+that the tag follow PEP 440.
 
 #### Example Tags
 

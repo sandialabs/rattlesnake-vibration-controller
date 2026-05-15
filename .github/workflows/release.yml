@@ -38,6 +38,23 @@ jobs:
           fi
           echo "OK: Tag '$TAG' is on:$BRANCHES"
 
+      - name: Verify tag conforms to PEP 440
+        run: |
+          pip install packaging --quiet
+          python - <<'EOF'
+          import sys
+          from packaging.version import Version, InvalidVersion
+          tag = "${{ github.ref_name }}"
+          version_str = tag.lstrip("v")
+          try:
+              Version(version_str)
+              print(f"OK: '{tag}' is a valid PEP 440 version.")
+          except InvalidVersion:
+              print(f"ERROR: '{tag}' is not a valid PEP 440 version.")
+              print( "       Valid examples: v1.0.0  v1.1.0a1  v1.1.0rc1  v1.0.0.post1  v1.1.0.dev1")
+              sys.exit(1)
+          EOF
+
   # 2. TEST JOB: Runs Pytest
   test:
     needs: validate_tag
