@@ -81,7 +81,7 @@ def update_myst_file(myst_file: str, footer_md: str) -> None:
     else:
         with open(myst_file, "w", encoding="utf-8") as f:
             f.writelines(new_lines)
-        print(f"[OK] Successfully updated Jupyter Book metadata")
+        print("[OK] Successfully updated Jupyter Book metadata")
 
 
 def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:

@@ -347,6 +347,49 @@ Developers can *force* a full test, which includes `tests/long` in addition to `
 
 will trigger all tests to be run.
 
+### Preflight
+
+The `preflight` command is a local CI/CD readiness check. It mirrors the checks that GitHub Actions would run on a push, allowing developers to catch errors before they reach the pipeline.
+
+`preflight` is a command line entry point installed with the `rattlesnake-vibration-controller` package. The package must be installed in the active environment before the command is available:
+
+```sh
+uv pip install -e .[dev]
+```
+
+Once installed, run it from the repository root:
+
+```sh
+uv run preflight
+```
+
+#### Modes and options
+
+By default, `preflight` matches CI's scope on non-`main`/`dev` branches: full pylint on `src/rattlesnake/`, ruff format check, and pytest on `tests/*.py` and `tests/short/`.
+
+option | description
+--- | ---
+*(none)* | Default scope: matches CI on a feature branch
+`--all-tests` | Full suite including `tests/long/`; matches CI on `main`/`dev`
+`--coverage` | Adds `--cov=rattlesnake --cov-report=term-missing` to the pytest run
+`--tag TAG` | Validates `TAG` before pushing a release: checks current branch is `main` or `dev`, that the tag conforms to PEP 440, and that it is strictly newer than all existing tags. Runs before lint and tests.
+`--docs` | Builds the Jupyter Book with `--strict`; matches the `docs_jupyter_book` CI job. Requires network access to `api.mystmd.org`.
+`--no-sync` | Skips `uv sync` (useful when offline or behind a firewall)
+`--skip-network-check` | Skips the initial PyPI connectivity check
+`--force` | Continues even if the network or sync checks fail
+
+#### Examples
+
+```sh
+uv run preflight                          # default scope
+uv run preflight --all-tests              # full suite
+uv run preflight --coverage               # default scope + coverage report
+uv run preflight --all-tests --coverage   # full suite + coverage report
+uv run preflight --tag v1.0.0rc1          # validate tag, then default scope
+uv run preflight --docs                   # build Jupyter Book
+uv run preflight --no-sync                # skip dependency sync
+```
+
 ### Trusted Publishing
 
 In `release.yml` we have removed the manual `-p ${{ secrets.PYPI_TOKEN }}`.  The industry standard is now [**Trusted Publishing**](https://docs.pypi.org/trusted-publishers/) (also called OpenID Connect or OIDC).  You configure this in your PyPI project settings once, and GitHub Actions authenticates securely without you needing to store and rotate secrets.

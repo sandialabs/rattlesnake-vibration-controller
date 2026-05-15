@@ -292,6 +292,11 @@ def test_acquisition_process_stop_streaming(acquisition_process_obj):
     assert acquisition_process_obj.streaming is False
 
 
+# TODO: CBH to discuss with Dan -- acquire_signal has a while True startup loop with a
+# 30-second blocking wait on input_output_sync_queue.get_nowait(). If the
+# mp.queues.Queue.get_nowait mock fails to intercept the call, the test hangs for 30 seconds.
+# The timeout below caps that at 10 seconds and converts the hang to a test failure.
+@pytest.mark.timeout(10)
 @mock.patch("rattlesnake.process.acquisition.align_signals")
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.add_data_to_buffer")
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.get_first_output_data")
