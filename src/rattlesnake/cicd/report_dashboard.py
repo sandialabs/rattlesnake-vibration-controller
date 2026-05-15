@@ -7,11 +7,29 @@ import argparse
 import os
 
 from rattlesnake.cicd.utilities import (
+    HTML_PREAMBLE,
     ReportMetadata,
     add_common_args,
     extend_timestamp,
-    report_metadata_creation,
+    report_cli_entrypoint,
 )
+
+
+def get_github_urls(metadata: ReportMetadata) -> tuple[str, str, str, str]:
+    """
+    Calculate GitHub URLs for reports.
+
+    Args:
+        metadata: CI/CD metadata
+
+    Returns:
+        tuple: (github_url, run_url, branch_url, commit_url)
+    """
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
+    return github_url, run_url, branch_url, commit_url
 
 
 def generate_dashboard_html(metadata: ReportMetadata) -> str:
@@ -25,18 +43,10 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
         HTML string
     """
     timestamp_ext = extend_timestamp(metadata.timestamp)
+    # Pre-calculate GitHub URLs for use in the template
+    github_url, run_url, branch_url, commit_url = get_github_urls(metadata)
 
-    # Pre-calculate GitHub URLs to stay under line length limits
-    github_url = f"https://github.com/{metadata.github_repo}"
-    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
-    branch_url = f"{github_url}/tree/{metadata.ref_name}"
-    commit_url = f"{github_url}/commit/{metadata.github_sha}"
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    return f"""{HTML_PREAMBLE}
     <title>Rattlesnake | Project Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
@@ -171,19 +181,23 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
                 </div>
                 <div>
                     <span class="font-semibold">Run ID:</span>
-                    <a href="{run_url}" class="text-blue-600 hover:underline">{metadata.run_id}</a>
+                    <a href="{run_url}" class="text-blue-600 hover:underline">
+                        {metadata.run_id}</a>
                 </div>
                 <div>
                     <span class="font-semibold">Branch:</span>
-                    <a href="{branch_url}" class="text-blue-600 hover:underline">{metadata.ref_name}</a>
+                    <a href="{branch_url}" class="text-blue-600 hover:underline">
+                        {metadata.ref_name}</a>
                 </div>
                 <div>
                     <span class="font-semibold">Commit:</span>
-                    <a href="{commit_url}" class="text-blue-600 hover:underline">{metadata.github_sha[:7]}</a>
+                    <a href="{commit_url}" class="text-blue-600 hover:underline">
+                        {metadata.github_sha[:7]}</a>
                 </div>
                 <div>
                     <span class="font-semibold">Repository:</span>
-                    <a href="{github_url}" class="text-blue-600 hover:underline">{metadata.github_repo}</a>
+                    <a href="{github_url}" class="text-blue-600 hover:underline">
+                        {metadata.github_repo}</a>
                 </div>
             </div>
         </section>
@@ -192,7 +206,9 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
     <footer class="mt-20 py-10 border-t border-slate-200 bg-white">
         <div class="max-w-7xl mx-auto px-4 text-center">
             <p class="text-sm text-slate-400">
-                &copy; 2026 Sandia National Laboratories | Released under <a href="{github_url}/blob/main/LICENSE" class="text-blue-600 hover:underline">GPL-3.0</a>
+                &copy; 2026 Sandia National Laboratories | Released under
+                <a href="{github_url}/blob/main/LICENSE"
+                   class="text-blue-600 hover:underline">GPL-3.0</a>
             </p>
         </div>
     </footer>
@@ -201,19 +217,10 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
 </html>"""
 
 
-def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Generate Project Dashboard index.html"
-    )
-    parser.add_argument("--output_file", required=True, help="Output HTML file path")
-
-    add_common_args(parser)
-
-    args = parser.parse_args()
-
-    metadata = report_metadata_creation(args)
-
+def generate_dashboard(args: argparse.Namespace, metadata: ReportMetadata) -> None:
+    """
+    Orchestrate dashboard generation.
+    """
     html = generate_dashboard_html(metadata)
 
     output_dir = os.path.dirname(args.output_file)
@@ -224,6 +231,24 @@ def main():
         f.write(html)
 
     print(f"[OK] Project Dashboard generated: {args.output_file}")
+
+
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Generate Project Dashboard index.html"
+    )
+    parser.add_argument("--output_file", required=True, help="Output HTML file path")
+
+    add_common_args(parser)
+    return parser.parse_args()
+
+
+def main() -> int:
+    """Main entry point."""
+    return report_cli_entrypoint(
+        parse_arguments, generate_dashboard, exit_on_error=False
+    )
 
 
 if __name__ == "__main__":

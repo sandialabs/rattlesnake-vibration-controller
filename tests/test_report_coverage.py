@@ -59,7 +59,7 @@ def test_get_report_html():
         github_repo="owner/repo",
     )
     html = get_report_html(cm, metadata)
-    assert "<h1>Coverage Report</h1>" in html
+    assert "<title>Coverage Report</title>" in html
     assert "Coverage: 95.00%" in html
     assert "run1" in html
     assert "sha1234" in html

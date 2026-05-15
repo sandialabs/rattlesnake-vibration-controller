@@ -9,15 +9,12 @@ import types
 
 import pytest
 from rattlesnake.cicd.report_lint import (
-    get_html_footer,
-    get_html_header,
-    get_html_issues_table,
     get_lint_content,
     get_lint_sections,
     get_score_from_summary,
     main,
 )
-from rattlesnake.cicd.utilities import ReportMetadata
+from rattlesnake.cicd.utilities import ReportMetadata, get_html_report_footer, get_html_report_header
 
 
 def test_get_lint_content_success(tmp_path):
@@ -90,44 +87,15 @@ def test_get_html_header():
         github_sha="sha",
         github_repo="owner/repo",
     )
-    header = get_html_header("9.00", metadata)
-    assert "<title>Lint Report</title>" in header
-    assert "9.00/10" in header
+    header = get_html_report_header("Title", "Label", "9.00", "green", metadata)
+    assert "<title>Title</title>" in header
+    assert "9.00" in header
     assert "run123" in header
-
-
-def test_get_html_issues_table_empty():
-    """Test generating issues table when there are no issues."""
-    metadata = ReportMetadata(
-        timestamp="20240101_120000_UTC",
-        run_id="run123",
-        ref_name="main",
-        github_sha="sha",
-        github_repo="owner/repo",
-    )
-    assert "No issues found" in get_html_issues_table([], metadata)
-
-
-def test_get_html_issues_table_with_data():
-    """Test generating issues table with multiple issues."""
-    issues = ["path/to/file.py:10:1: C0103: Invalid name", "other/file.py:5:1: E0602: Undefined variable"]
-    metadata = ReportMetadata(
-        timestamp="20240101_120000_UTC",
-        run_id="run123",
-        ref_name="main",
-        github_sha="sha",
-        github_repo="owner/repo",
-    )
-    html = get_html_issues_table(issues, metadata)
-    assert "path/to/file.py" in html
-    assert "Convention" in html
-    assert "Error" in html
-    assert "https://github.com/owner/repo/blob/sha/path/to/file.py#L10" in html
 
 
 def test_get_html_footer():
     """Test generating the HTML footer."""
-    footer = get_html_footer()
+    footer = get_html_report_footer()
     assert "GitHub Actions" in footer
 
 

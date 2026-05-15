@@ -42,10 +42,18 @@ def export_to_github_env(coverage: float, color: str):
 
 def main():
     """Main method for creating the badge."""
-    parser = argparse.ArgumentParser(description="Generate Coverage badge and metadata.")
-    parser.add_argument("--input_file", help="coverage.xml file (to extract percentage)")
-    parser.add_argument("--coverage", type=float, help="Coverage percentage (direct input)")
-    parser.add_argument("--export_env", action="store_true", help="Export to GITHUB_ENV")
+    parser = argparse.ArgumentParser(
+        description="Generate Coverage badge and metadata."
+    )
+    parser.add_argument(
+        "--input_file", help="coverage.xml file (to extract percentage)"
+    )
+    parser.add_argument(
+        "--coverage", type=float, help="Coverage percentage (direct input)"
+    )
+    parser.add_argument(
+        "--export_env", action="store_true", help="Export to GITHUB_ENV"
+    )
 
     # Add common badge arguments from utilities
     add_badge_args(parser)
@@ -73,7 +81,9 @@ def main():
 
         # Download SVG badge
         # Percentage is formatted to 1 decimal place for the badge
-        badge_url = f"https://img.shields.io/badge/coverage-{coverage:.1f}%25-{color}.svg"
+        badge_url = (
+            f"https://img.shields.io/badge/coverage-{coverage:.1f}%25-{color}.svg"
+        )
         output_svg = str(Path(args.output_dir) / "coverage.svg")
         if badge_image_download(url=badge_url, output_path=output_svg):
             print(f"[OK] Coverage SVG badge saved to {args.output_dir}")

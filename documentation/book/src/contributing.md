@@ -202,6 +202,44 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
+### Synopsys
+
+`ci.yml` — Continuous Integration
+
+Triggered on every push to *any* branch, plus manual dispatch. Five jobs:
+
+1. **changes** 
+   * Uses dorny/paths-filter to detect whether docs or code files changed. Downstream jobs use this to skip
+  unnecessary work.
+2. **pytest_matrix**
+   * Runs tests on all combinations of [macos, ubuntu, windows] × [3.11, 3.12] using `pip install .[dev]` (not `uv`) for PyQt wheel compatibility. Test scope is adaptive:
+     *  Default: `tests/*.py tests/short`
+     * Full suite triggered by: commit message containing `[all tests]`, manual dispatch with `test_level=full`, or branch is `main` or `dev`
+3. **lint**
+   * Runs `pylint src/rattlesnake` via `uv`, captures output, then calls `report_lint.py` to generate an HTML lint report
+  artifact.
+4. **coverage**
+   * Runs `pytest --cov` via `uv` with the same adaptive test scope, then calls `report_coverage.py` to generate an HTML coverage report artifact.
+5. **docs_jupyter_book**
+   * Updates `myst.yml` metadata via `report_jupyter_book.py,` then builds the Jupyter Book. Only runs when docs changed (or on `main`/`dev`).
+6. **deploy**
+   * Runs only on `main/dev`, assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, and deploys to GitHub Pages via peaceiris/actions-gh-pages.
+
+`release.yml` — Release Pipeline
+
+Triggered only on `v*` tags. Four sequential jobs:
+
+1. **test**
+   * Calls `ci.yml` as a reusable workflow (workflow_call).
+2. **build**
+   * Runs `uv build` and generates a Supply chain Levels for Software Artifacts (SLSA, aka "salsa") provenance attestation for the dist artifacts.
+3. **github-release**
+   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files.
+4. **publish**
+   * Publishes to PyPI or TestPyPI via Trusted Publishing. Tags containing `rc` or `dev` go to TestPyPI; all others go to production PyPI.
+
+### Details
+
 The separate concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
 
 * **Continuous Integration (CI)**
@@ -364,6 +402,8 @@ We follow [PEP 440](https://peps.python.org/pep-0440/) (the Python standard for 
 N.N.N[{a|b|rc}N][.postN][.devN]
 ```
 
+Tags can only be created on the `main` or `dev` branches.
+
 #### Example Tags
 
 Following are **prerelease tags**:
@@ -399,16 +439,20 @@ Following is an example of creating a release with a tag.
 
 To create a prerelease on TestPyPI:
 
-* On any development branch, e.g., `dev-cicd-docs`, create a tag and then push, e.g.,
+* On the `dev` branch, create a tag and then push, e.g.,
 
 ```sh
+# Ensure you are on the dev branch
+git checkout dev
+git pull
+
 # View existing tags, if any
 git tag
 
 # Create the new tag, e.g.,
 git tag -a v1.0.0rc1 -m "Test of prerelease version 1.0.0, release candidate 1"
 
-# On the main branch, push the tag to GitHub
+# Push the tag to GitHub
 git push origin v1.0.0rc1
 ```
 
