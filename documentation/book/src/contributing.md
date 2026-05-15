@@ -412,6 +412,8 @@ git tag -a v1.0.0rc1 -m "Test of prerelease version 1.0.0, release candidate 1"
 git push origin v1.0.0rc1
 ```
 
+#### Create a Release
+
 To create a release on PyPI:
 
 * Merge the `dev` branch into the `main` branch.
