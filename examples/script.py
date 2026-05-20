@@ -24,7 +24,9 @@ from rattlesnake.environment.sine_sys_id_environment import (
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 
-BUFFER_SIZE = 0.05
+BASE_DIR = "C:/Users/cmlangs/Desktop/ExampleFiles/"
+
+BUFFER_SIZE = 0.15
 TIME_ENVIRONMENT_NAME = "My Time"
 MODAL_ENVIRONMENT_NAME = "My Modal"
 SINE_ENVIRONMENT_NAME = "My Sine"
@@ -72,6 +74,7 @@ def make_sdynpy_system_metadata():
     force_3.channel_type = "Force"
     force_3.feedback_device = "Virtual"
     channel_list = [excitation_1, excitation_2, excitation_3, force_1, force_2, force_3]
+    hardware_file = BASE_DIR + "sample_system.npz"
 
     hardware_metadata = SDynPySystemMetadata(
         channel_list,
@@ -79,14 +82,14 @@ def make_sdynpy_system_metadata():
         time_per_read=BUFFER_SIZE,
         time_per_write=BUFFER_SIZE,
         output_oversample=1,
-        hardware_file="E:/Rattlesnake/SampleData/sample_system.npz",
+        hardware_file=hardware_file,
     )
     return hardware_metadata
 
 
 def make_stream_metadata(environment_name=TIME_ENVIRONMENT_NAME):
     stream_type = StreamType.IMMEDIATELY
-    stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
+    stream_file = BASE_DIR + "streaming4.nc4"
     test_level_environment_name = environment_name
     stream_metadata = StreamMetadata(
         stream_type, stream_file, test_level_environment_name
@@ -242,6 +245,7 @@ def make_modal_environment_instructions(environment_name=MODAL_ENVIRONMENT_NAME)
     return modal_instructions
 
 
+# region Sine
 def make_sine_environment_metadata(
     hardware_metadata, environment_name=SINE_ENVIRONMENT_NAME
 ):
@@ -421,7 +425,6 @@ def build_sine_environment():
 
     return rattlesnake
 
-
 def build_transient_environment():
     rattlesnake = RattlesnakeController(threaded=True, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
@@ -429,6 +432,15 @@ def build_transient_environment():
     rattlesnake.initialize_hardware(hardware_metadata)
 
     return rattlesnake
+
+def build_random_environment():
+    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    hardware_metadata = make_sdynpy_system_metadata()
+
+    rattlesnake.initialize_hardware(hardware_metadata)
+
+    return rattlesnake
+
 
 
 # endregion
@@ -438,7 +450,8 @@ if __name__ == "__main__":
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
     # rattlesnake = build_sine_environment()
-    rattlesnake = build_transient_environment()
+    # rattlesnake = build_transient_environment()
+    rattlesnake = build_random_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

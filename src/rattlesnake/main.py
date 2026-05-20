@@ -24,7 +24,7 @@ import sys
 
 from qtpy import QtWidgets, QtCore
 
-from rattlesnake.process.streaming import streaming_process
+# from rattlesnake.process.streaming import streaming_process
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.user_interface import RattlesnakeUI
 

@@ -31,12 +31,15 @@ import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import time
 from enum import Enum
 from multiprocessing.queues import Queue
+from typing import List
 
 import netCDF4 as nc4
 import numpy as np
+import openpyxl
 
 from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.environment.abstract_environment import EnvironmentInstructions
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions, EnvironmentCommands
 from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironment,
     SysIdEnvironmentMetadata,
@@ -75,7 +78,7 @@ CONTROL_TYPE = EnvironmentType.RANDOM
 
 
 # region Commands
-class RandomVibrationCommands(Enum):
+class RandomVibrationCommands(EnvironmentCommands):
     """Valid random vibration commands"""
 
     ADJUST_TEST_LEVEL = 0
@@ -84,6 +87,12 @@ class RandomVibrationCommands(Enum):
     CHECK_FOR_COMPLETE_SHUTDOWN = 3
     RECOMPUTE_PREDICTION = 4
     # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
+
+    VALID_PROFILE_COMMANDS = ()
+    VALID_DATA = {
+        START_CONTROL: type(None),
+        STOP_CONTROL: type(None),
+    }
 
 
 class RandomVibrationUICommands(Enum):
@@ -240,7 +249,16 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             )
         )
 
-    def store_to_netcdf(
+    # endregion
+
+    # region Validation
+    def validate(self, hardware_metadata):
+        return super().validate(hardware_metadata)
+
+    # endregion
+
+    # region Loading
+    def save_metadata_to_netcdf(
         self,
         netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
@@ -360,11 +378,332 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         )
         var[...] = self.control_channel_indices
 
+    @classmethod
+    def load_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        pass
+
+    @staticmethod
+    def create_blank_worksheet_template(worksheet):
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 2, "Random")
+        worksheet.cell(2, 1, "Samples Per Frame:")
+        worksheet.cell(2, 2, "# Number of Samples per Measurement Frame")
+        worksheet.cell(3, 1, "Test Level Ramp Time:")
+        worksheet.cell(3, 2, "# Time taken to Ramp between test levels")
+        worksheet.cell(4, 1, "COLA Window:")
+        worksheet.cell(4, 2, "# Window used for Constant Overlap and Add process")
+        worksheet.cell(5, 1, "COLA Overlap %:")
+        worksheet.cell(5, 2, "# Overlap used in Constant Overlap and Add process")
+        worksheet.cell(6, 1, "COLA Window Exponent:")
+        worksheet.cell(
+            6,
+            2,
+            "# Exponent Applied to the COLA Window (use 0.5 unless you "
+            "are sure you don't want to!)",
+        )
+        worksheet.cell(7, 1, "Update System ID During Control:")
+        worksheet.cell(
+            7,
+            2,
+            "# Continue updating transfer function while the controller is controlling (Y/N)",
+        )
+        worksheet.cell(8, 1, "Frames in CPSD:")
+        worksheet.cell(8, 2, "# Frames used to compute the CPSD matrix")
+        worksheet.cell(9, 1, "CPSD Window:")
+        worksheet.cell(9, 2, "# Window used to compute the CPSD matrix")
+        worksheet.cell(10, 1, "CPSD Overlap %:")
+        worksheet.cell(10, 2, "# Overlap percentage for CPSD calculations")
+        worksheet.cell(11, 1, "Allow Automatic Aborts")
+        worksheet.cell(12, 1, "Control Python Script:")
+        worksheet.cell(12, 2, "# Path to the Python script containing the control law")
+        worksheet.cell(13, 1, "Control Python Function:")
+        worksheet.cell(
+            13,
+            2,
+            "# Function or class name within the Python Script that will serve as the control law",
+        )
+        worksheet.cell(14, 1, "Control Parameters:")
+        worksheet.cell(14, 2, "# Extra parameters used in the control law")
+        worksheet.cell(15, 1, "Control Channels (1-based):")
+        worksheet.cell(16, 1, "System ID Averaging:")
+        worksheet.cell(
+            16,
+            2,
+            "# Averaging Type used for system ID.  Should be Linear or Exponential",
+        )
+        worksheet.cell(17, 1, "Noise Averages:")
+        worksheet.cell(17, 2, "# Number of Averages used when characterizing noise")
+        worksheet.cell(18, 1, "System ID Averages:")
+        worksheet.cell(18, 2, "# Number of Averages used when computing the FRF")
+        worksheet.cell(19, 1, "Exponential Averaging Coefficient:")
+        worksheet.cell(
+            19, 2, "# Averaging Coefficient for Exponential Averaging (if used)"
+        )
+        worksheet.cell(20, 1, "System ID Estimator:")
+        worksheet.cell(
+            20,
+            2,
+            "# Technique used to compute system ID.  Should be one of H1, H2, H3, or Hv.",
+        )
+        worksheet.cell(21, 1, "System ID Level (V RMS):")
+        worksheet.cell(
+            21,
+            2,
+            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
+        )
+        worksheet.cell(22, 1, "System ID Signal Type:")
+        worksheet.cell(23, 1, "System ID Window:")
+        worksheet.cell(
+            23,
+            2,
+            "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
+        )
+        worksheet.cell(24, 1, "System ID Overlap %:")
+        worksheet.cell(24, 2, "# Overlap to use in the system identification")
+        worksheet.cell(25, 1, "System ID Burst On %:")
+        worksheet.cell(25, 2, "# Percentage of a frame that the burst random is on for")
+        worksheet.cell(26, 1, "System ID Burst Pretrigger %:")
+        worksheet.cell(
+            26,
+            2,
+            "# Percentage of a frame that occurs before the burst starts in a burst random signal",
+        )
+        worksheet.cell(27, 1, "System ID Ramp Fraction %:")
+        worksheet.cell(
+            27,
+            2,
+            '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
+        )
+        worksheet.cell(28, 1, "Specification File:")
+        worksheet.cell(28, 2, "# Path to the file containing the Specification")
+        worksheet.cell(29, 1, "Response Transformation Matrix:")
+        worksheet.cell(
+            29,
+            2,
+            "# Transformation matrix to apply to the response channels.  Type None if there "
+            "is none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
+            "Transformation Matrix line down so it will fit.  The number of columns should be the "
+            "number of physical control channels.",
+        )
+        worksheet.cell(30, 1, "Output Transformation Matrix:")
+        worksheet.cell(
+            30,
+            2,
+            "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
+            "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
+            "the number of physical output channels in the environment.",
+        )
+
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
+        pass
+
+    @classmethod
+    def load_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        pass
+
+
+    # def set_parameters_from_template(
+    #     self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    # ):
+    #     """
+    #     Collects parameters for the user interface from the Excel template file
+
+    #     This function reads a filled out template worksheet to create an
+    #     environment.  Cells on this worksheet contain parameters needed to
+    #     specify the environment, so this function should read those cells and
+    #     update the UI widgets with those parameters.
+
+    #     This function is the "read" counterpart to the
+    #     ``create_environment_template`` function in the ``RandomVibrationUI`` class,
+    #     which writes a template file that can be filled out by a user.
+
+
+    #     Parameters
+    #     ----------
+    #     worksheet : openpyxl.worksheet.worksheet.Worksheet
+    #         An openpyxl worksheet that contains the environment template.
+    #         Cells on this worksheet should contain the parameters needed for the
+    #         user interface.
+
+    #     """
+    #     self.definition_widget.samples_per_frame_selector.setValue(
+    #         int(worksheet.cell(2, 2).value)
+    #     )
+    #     self.definition_widget.ramp_time_spinbox.setValue(
+    #         float(worksheet.cell(3, 2).value)
+    #     )
+    #     self.definition_widget.cola_window_selector.setCurrentIndex(
+    #         self.definition_widget.cola_window_selector.findText(
+    #             worksheet.cell(4, 2).value
+    #         )
+    #     )
+    #     self.definition_widget.cola_overlap_percentage_selector.setValue(
+    #         float(worksheet.cell(5, 2).value)
+    #     )
+    #     self.definition_widget.cola_exponent_selector.setValue(
+    #         float(worksheet.cell(6, 2).value)
+    #     )
+    #     self.definition_widget.update_transfer_function_during_control_selector.setChecked(
+    #         worksheet.cell(7, 2).value.upper() == "Y"
+    #     )
+    #     self.definition_widget.cpsd_frames_selector.setValue(
+    #         int(worksheet.cell(8, 2).value)
+    #     )
+    #     self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
+    #         self.definition_widget.cpsd_computation_window_selector.findText(
+    #             worksheet.cell(9, 2).value
+    #         )
+    #     )
+    #     self.definition_widget.cpsd_overlap_selector.setValue(
+    #         float(worksheet.cell(10, 2).value)
+    #     )
+    #     self.definition_widget.auto_abort_checkbox.setChecked(
+    #         worksheet.cell(11, 2).value.upper() == "Y"
+    #     )
+    #     self.select_python_module(None, worksheet.cell(12, 2).value)
+    #     self.definition_widget.control_function_input.setCurrentIndex(
+    #         self.definition_widget.control_function_input.findText(
+    #             worksheet.cell(13, 2).value
+    #         )
+    #     )
+    #     self.definition_widget.control_parameters_text_input.setText(
+    #         ""
+    #         if worksheet.cell(14, 2).value is None
+    #         else str(worksheet.cell(14, 2).value)
+    #     )
+    #     column_index = 2
+    #     while True:
+    #         value = worksheet.cell(15, column_index).value
+    #         if value is None or (isinstance(value, str) and value.strip() == ""):
+    #             break
+    #         item = self.definition_widget.control_channels_selector.item(int(value) - 1)
+    #         item.setCheckState(Qt.Checked)
+    #         column_index += 1
+    #     self.system_id_widget.averagingTypeComboBox.setCurrentIndex(
+    #         self.system_id_widget.averagingTypeComboBox.findText(
+    #             worksheet.cell(16, 2).value
+    #         )
+    #     )
+    #     self.system_id_widget.noiseAveragesSpinBox.setValue(
+    #         int(worksheet.cell(17, 2).value)
+    #     )
+    #     self.system_id_widget.systemIDAveragesSpinBox.setValue(
+    #         int(worksheet.cell(18, 2).value)
+    #     )
+    #     self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(
+    #         float(worksheet.cell(19, 2).value)
+    #     )
+    #     self.system_id_widget.estimatorComboBox.setCurrentIndex(
+    #         self.system_id_widget.estimatorComboBox.findText(
+    #             worksheet.cell(20, 2).value
+    #         )
+    #     )
+    #     self.system_id_widget.levelDoubleSpinBox.setValue(
+    #         float(worksheet.cell(21, 2).value)
+    #     )
+    #     # this should be a temporary solution - template file rework needed
+    #     low, high = worksheet.cell(21, 3).value, worksheet.cell(21, 4).value
+    #     sigma = worksheet.cell(21, 5).value
+    #     if low is not None:
+    #         self.system_id_widget.lowFreqCutoffSpinBox.setValue(int(low))
+    #     if high is not None:
+    #         self.system_id_widget.highFreqCutoffSpinBox.setValue(int(high))
+    #     if sigma is not None:
+    #         self.definition_widget.sigma_clipping_selector.setValue(
+    #             float(sigma)
+    #         )  # TODO: sigma clipping and bandwidths should get
+    #         # their own rows, but how to maintain backward compatibility?
+    #     self.system_id_widget.signalTypeComboBox.setCurrentIndex(
+    #         self.system_id_widget.signalTypeComboBox.findText(
+    #             worksheet.cell(22, 2).value
+    #         )
+    #     )
+    #     self.system_id_widget.windowComboBox.setCurrentIndex(
+    #         self.system_id_widget.windowComboBox.findText(worksheet.cell(23, 2).value)
+    #     )
+    #     self.system_id_widget.overlapDoubleSpinBox.setValue(
+    #         float(worksheet.cell(24, 2).value)
+    #     )
+    #     self.system_id_widget.onFractionDoubleSpinBox.setValue(
+    #         float(worksheet.cell(25, 2).value)
+    #     )
+    #     self.system_id_widget.pretriggerDoubleSpinBox.setValue(
+    #         float(worksheet.cell(26, 2).value)
+    #     )
+    #     self.system_id_widget.rampFractionDoubleSpinBox.setValue(
+    #         float(worksheet.cell(27, 2).value)
+    #     )
+
+    #     # Now we need to find the transformation matrices' sizes
+    #     response_channels = self.definition_widget.control_channels_display.value()
+    #     output_channels = self.definition_widget.output_channels_display.value()
+    #     output_transform_row = 30
+    #     if (
+    #         isinstance(worksheet.cell(29, 2).value, str)
+    #         and worksheet.cell(29, 2).value.lower() == "none"
+    #     ):
+    #         self.response_transformation_matrix = None
+    #     else:
+    #         while True:
+    #             if (
+    #                 worksheet.cell(output_transform_row, 1).value
+    #                 == "Output Transformation Matrix:"
+    #             ):
+    #                 break
+    #             output_transform_row += 1
+    #         response_size = output_transform_row - 29
+    #         response_transformation = []
+    #         for i in range(response_size):
+    #             response_transformation.append([])
+    #             for j in range(response_channels):
+    #                 response_transformation[-1].append(
+    #                     float(worksheet.cell(29 + i, 2 + j).value)
+    #                 )
+    #         self.response_transformation_matrix = np.array(response_transformation)
+    #     if (
+    #         isinstance(worksheet.cell(output_transform_row, 2).value, str)
+    #         and worksheet.cell(output_transform_row, 2).value.lower() == "none"
+    #     ):
+    #         self.output_transformation_matrix = None
+    #     else:
+    #         output_transformation = []
+    #         i = 0
+    #         while True:
+    #             if worksheet.cell(output_transform_row + i, 2).value is None or (
+    #                 isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
+    #                 and worksheet.cell(output_transform_row + i, 2).value.strip() == ""
+    #             ):
+    #                 break
+    #             output_transformation.append([])
+    #             for j in range(output_channels):
+    #                 output_transformation[-1].append(
+    #                     float(worksheet.cell(output_transform_row + i, 2 + j).value)
+    #                 )
+    #             i += 1
+    #         self.output_transformation_matrix = np.array(output_transformation)
+    #     self.define_transformation_matrices(None, dialog=False)
+    #     self.select_spec_file(None, worksheet.cell(28, 2).value)
+    # endregion
 
 # region Instructions
 class RandomInstructions(EnvironmentInstructions):
-    def __init__(self, environment_name):
+    def __init__(self, environment_name, control_test_level):
         super().__init__(CONTROL_TYPE, environment_name)
+        self.control_test_level = control_test_level
 
     def validate(self):
         return super().validate()
@@ -724,7 +1063,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             (RandomVibrationDataAnalysisCommands.PERFORM_CONTROL_PREDICTION, None),
         )
 
-    def start_control(self, data):
+    def start_control(self, data: RandomInstructions):
         """Starts the environment at the specified test level"""
         self.log("Starting Control")
         self.siggen_shutdown_achieved = False
@@ -748,7 +1087,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.environment_metadata.skip_frames, data),
+                (self.environment_metadata.skip_frames, data.control_test_level),
             ),
         )
         time.sleep(0.01)
@@ -775,7 +1114,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         )
 
         self.queue_container.signal_generation_command_queue.put(
-            self.environment_name, (SignalGenerationCommands.ADJUST_TEST_LEVEL, data)
+            self.environment_name, (SignalGenerationCommands.ADJUST_TEST_LEVEL, data.control_test_level)
         )
 
         # Tell the collector to start acquiring data
