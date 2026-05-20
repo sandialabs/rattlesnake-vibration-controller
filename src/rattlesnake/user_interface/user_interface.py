@@ -1327,14 +1327,19 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         hardware_metadata_class = HARDWARE_METADATA[hardware_type]
         match hardware_type:
             case HardwareType.NI_DAQMX:
-                return
-
                 sample_rate = self.sample_rate_selector.value()
                 time_per_read = self.buffer_size_selector.value()
                 time_per_write = self.buffer_size_selector.value()
-                task_trigger = self.task_trigger_selector.text()
-                output_trigger_generator = self.trigger_output_selector.value()
-                hardware_metadata = hardware_metadata_class()
+                task_trigger = self.task_trigger_selector.currentIndex()
+                output_trigger_generator = self.trigger_output_selector.text()
+                return hardware_metadata_class(
+                    channel_list, 
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    task_trigger,
+                    output_trigger_generator
+                )
 
             case HardwareType.LAN_XI:
                 return

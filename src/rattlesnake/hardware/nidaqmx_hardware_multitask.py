@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import time
 from typing import List
 
+import netCDF4 as nc4
+import openpyxl
 import nidaqmx as ni
 import nidaqmx.constants as nic
 import nidaqmx.stream_readers as ni_read
@@ -33,6 +35,7 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
 from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
+from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
 BUFFER_SIZE_FACTOR = 3
 HARDWARE_TYPE = HardwareType.NI_DAQMX
@@ -45,7 +48,8 @@ class NIDAQmxMetadata(HardwareMetadata):
         sample_rate: int,
         time_per_read: float,
         time_per_write: float,
-        output_oversample: int,
+        task_trigger, 
+        output_trigger_generator,
     ):
         super().__init__(
             HARDWARE_TYPE,
@@ -53,11 +57,223 @@ class NIDAQmxMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample=output_oversample,
         )
 
+        self.task_trigger = task_trigger
+        self.output_trigger_generator = output_trigger_generator
 
-# region: Acqusition
+        self._system = ni.system.System()
+        self._devices = self._system.devices
+
+        # Build dictionaries of valid inputs
+        self._device_names = []
+        self._device_input_channels = {}
+        self._device_output_channels = {}
+        self._ai_voltage_range = {}
+        self._ao_voltage_range = {}
+        self._excitation_current = {}
+        for device in self._devices:
+            device_name = device.name
+            self._device_names.append(device_name)
+            input_channels = []
+            for ai_channel in device.ai_physical_chans:
+                # Strip channel name of device name
+                channel_name = ai_channel.name
+                if channel_name.startswith(device_name):
+                    channel_name = channel_name[len(device_name):]
+                    channel_name = channel_name.lstrip('/')
+                input_channels.append(channel_name)
+            output_channels = []
+            for ao_channel in device.ao_physical_chans:
+                # Strip channel name of device name
+                channel_name = ao_channel.name
+                if channel_name.startswith(device_name):
+                    channel_name = channel_name[len(device_name):]
+                    channel_name = channel_name.lstrip('/')      
+                output_channels.append(channel_name)
+
+            ai_voltage_range = device.ai_voltage_rngs
+            ao_voltage_range = device.ao_voltage_rngs
+            excitation_current = [str(current) for current in device.ai_current_int_excit_discrete_vals]
+
+            self._device_input_channels[device_name] = input_channels
+            self._device_output_channels[device_name] = output_channels
+            self._ai_voltage_range[device_name] = ai_voltage_range
+            self._ao_voltage_range[device_name] = ao_voltage_range
+            self._excitation_current[device_name] = excitation_current       
+        self._engineering_units = {"Acceleration": ['g'],
+                                   "Force": ["lbs", 'n'],
+                                   "Voltage": ['V']}
+        self._coupling = {"Acceleration": ["AC"],
+                         "Force": ["AC"],
+                         "Voltage": ["DC"]}
+
+
+    # endregion
+
+    # region Validation
+    def validate(self):
+        return super().validate()
+    
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+
+        assist_mode_modules["sensitivity"] = HardwareAssistModules.SPINBOX
+        assist_mode_modules["unit"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_channel"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["channel_type"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["minimum_value"] = HardwareAssistModules.SPINBOX
+        assist_mode_modules["maximum_value"] = HardwareAssistModules.SPINBOX
+        assist_mode_modules["coupling"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["excitation_source"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["excitation"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_channel"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+    
+    def valid_channel_dict(self, channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        valid_dict["sensitivity"] = self.valid_sensitivity(channel.channel_type)
+        valid_dict["unit"] = self.valid_engineering_units(channel.channel_type)
+        valid_dict["physical_device"] = self.valid_physical_devices()
+        valid_dict["physical_channel"] = self.valid_input_channels(channel.physical_device)
+        valid_dict["channel_type"] = self.valid_channel_types
+        valid_dict["minimum_value"] = self.valid_min_voltage(channel.physical_device, channel.feedback_device)
+        valid_dict["maximum_value"] = self.valid_max_voltage(channel.physical_device, channel.feedback_device)
+        valid_dict["coupling"] = self.valid_coupling(channel.channel_type)
+        valid_dict["excitation_source"] = self.valid_excitation_sources()
+        valid_dict["excitation"] = self.valid_current_excitation(channel.physical_device, channel.excitation_source)
+        valid_dict["feedback_device"] = self.valid_physical_devices()
+        valid_dict["feedback_channel"] = self.valid_output_channels(channel.feedback_device)
+
+        
+    @property
+    def valid_channel_types(self):
+        valid_channel_types = ["Acceleration", "Force", "Voltage"]
+        return valid_channel_types
+    
+    @property
+    def valid_physical_devices(self):
+        valid_physical_device = self._device_names.copy()
+        return valid_physical_device
+    
+    @property
+    def valid_excitation_sources(self):
+        valid_excitation_source = ["","Internal"]
+
+        return valid_excitation_source
+    
+    def valid_coupling(self, channel_type: str = ''):
+        if channel_type in list(self._coupling.keys()):
+            valid_coupling = self._coupling[channel_type]
+        else:
+            valid_coupling = [""]
+        return valid_coupling
+
+    def valid_sensitivity(self, channel_type: str = ''):
+        if channel_type == "Voltage":
+            valid_sensitivity = [1000]
+        else:
+            valid_sensitivity = []
+        return valid_sensitivity
+
+    def valid_engineering_units(self, channel_type: str = ''):
+        if channel_type in list(self._engineering_units.keys()):
+            valid_engineering_units = self._engineering_units[channel_type]
+        else:
+            valid_engineering_units = []
+        return valid_engineering_units
+
+    def valid_input_channels(self, device_name: str = ''):
+        if device_name in self._device_names:
+            valid_input_channels = self._device_input_channels[device_name]
+        else:
+            valid_input_channels = []
+        return valid_input_channels
+    
+    def valid_output_channels(self, device_name: str = ''):
+        if device_name in self._device_names:
+            valid_output_channels = self._device_output_channels[device_name]
+        else:
+            valid_output_channels = []
+        return valid_output_channels
+    
+    def valid_current_excitation(self, device_name: str='', excitation_source: str = ''):
+        # If valid device and internal excitation source, check available values
+        if device_name in self._device_names:
+            if excitation_source == "Internal": 
+                return self._excitation_current[device_name]
+            
+        return ['']
+    
+    def valid_min_voltage(self, physical_device: str='', feedback_device: str=''):
+        if physical_device in self._device_names:
+            ai_range = self._ai_voltage_range[physical_device]
+            ai_min = min(ai_range) if ai_range else 0
+            if feedback_device in self._device_names:
+                ao_range = self._ao_voltage_range[feedback_device]
+                ao_min = min(ao_range) if ao_range else ai_min # if no output, default to ai voltage
+            else:
+                ao_min = ai_min
+            min_voltage = max([ai_min, ao_min])
+        else:
+            min_voltage = 0
+
+        try:
+            min_voltage = int(min_voltage)
+        except ValueError:
+            min_voltage = 0
+        
+        return min_voltage
+    
+    def valid_max_voltage(self, physical_device: str='', feedback_device: str=''):
+        if physical_device in self._device_names:
+            ai_range = self._ai_voltage_range[physical_device]
+            ai_max = max(ai_range) if ai_range else 0
+            if feedback_device in self._device_names:
+                ao_range = self._ao_voltage_range[feedback_device]
+                ao_max = max(ao_range) if ao_range else ai_max # if no output, default to ai voltage
+            else:
+                ao_max = ai_max
+            max_voltage = min([ai_max, ao_max])
+        else:
+            max_voltage = 0
+
+        try:
+            max_voltage = int(max_voltage)
+        except ValueError:
+            max_voltage = 0
+
+        return max_voltage
+
+    def default_current_excitaton(self, excitation_source: str = ''):
+        if excitation_source == "Internal":
+            default_current_excitation = "0.004"
+        else:
+            default_current_excitation = ""
+        return default_current_excitation
+    # endregion
+
+    # region Loading
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+        pass
+
+    @classmethod
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+        pass
+
+    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+        pass
+
+    @classmethod
+    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+        pass
+    # endregion
+
+# region Acqusition
 class NIDAQmxAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and NI hardware
 
@@ -66,7 +282,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
     Acquisition process, and must define how to get data from the test
     hardware into the controller."""
 
-    def __init__(self, task_trigger, output_trigger_generator):
+    def __init__(self):
         """
         Constructs the NIDAQmx Acquisition class and specifies values to null.
         """
@@ -77,39 +293,17 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.readers = None
         self.acquisition_delay = None
         self.read_triggers = None
-        self.task_trigger = task_trigger
-        self.output_trigger_generator = output_trigger_generator
         self.has_printed_read_statement = False
         self.trigger_output_task = None
         self.test_data = None
 
-    # region: Abstract Methods
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
-        """
-        Initialize the hardware and set up channels and sampling properties
-
-        The function must create channels on the hardware corresponding to
-        the channels in the test.  It must also set the sampling rates.
-
-        Parameters
-        ----------
-        test_data : HardwareMetadata :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
-
-        Returns
-        -------
-        None.
-
-        """
-        self.create_response_channels(channel_data)
-        self.set_parameters(test_data)
-        self.test_data = test_data
-
+    def initialize_hardware(self, metadata: NIDAQmxMetadata):
+        self.task_trigger = metadata.task_trigger
+        self.output_trigger_generator = metadata.output_trigger_generator
+        self.create_response_channels(metadata.channel_list)
+        self.set_parameters(metadata)
+        self.test_data = metadata
+        
     def create_response_channels(self, channel_data: List[Channel]):
         """Method to set up response channels
 
@@ -175,7 +369,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             self._create_channel(channel, task_index)
         print(f"Input Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, test_data: HardwareMetadata):
+    def set_parameters(self, test_data: NIDAQmxMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
@@ -337,7 +531,6 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 task.close()
         print("Input Tasks Closed")
 
-    # region: Functions
     def _create_channel(self, channel_data: Channel, task_index: int):
         """Helper function to construct a channel on the hardware.
 
@@ -503,8 +696,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             raise ValueError(f"Channel Type Not Implemented: {channel_type}")
         return channel
 
+# endregion
 
-# region: Output
+# region Output
 class NIDAQmxOutput(HardwareOutput):
     """Class defining the interface between the controller and NI hardware
 
@@ -513,7 +707,7 @@ class NIDAQmxOutput(HardwareOutput):
     Output process, and must define how to get data from the controller to the
     output hardware."""
 
-    def __init__(self, task_trigger, output_trigger_generator):
+    def __init__(self):
         """
         Constructs the NIDAQmx Output class and initializes values to null.
         """
@@ -524,14 +718,9 @@ class NIDAQmxOutput(HardwareOutput):
         self.signal_samples = None
         self.sample_rate = None
         self.buffer_size_factor = BUFFER_SIZE_FACTOR
-        self.task_trigger = task_trigger
-        self.output_trigger_generator = output_trigger_generator
         self.has_printed_write_statement = False
 
-    # region: Abstract Methods
-    def set_up_data_output_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, metadata: NIDAQmxMetadata):
         """
         Initialize the hardware and set up sources and sampling properties
 
@@ -551,8 +740,11 @@ class NIDAQmxOutput(HardwareOutput):
         None.
 
         """
-        self.create_sources(channel_data)
-        self.set_parameters(test_data)
+        self.task_trigger = metadata.task_trigger
+        self.output_trigger_generator = metadata.output_trigger_generator
+        self.create_sources(metadata.channel_list)
+        self.set_parameters(metadata)
+        pass
 
     def create_sources(self, channel_data: List[Channel]):
         """Method to set up excitation sources
@@ -646,7 +838,7 @@ class NIDAQmxOutput(HardwareOutput):
                 self._create_channel(channel, task_index)
         print(f"Output Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, test_data: HardwareMetadata):
+    def set_parameters(self, test_data: NIDAQmxMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
@@ -750,8 +942,7 @@ class NIDAQmxOutput(HardwareOutput):
             - self.tasks[0].out_stream.total_samp_per_chan_generated
             < (self.buffer_size_factor - 1) * self.signal_samples
         )
-
-    # region: Functions
+    
     def _create_channel(self, channel_data: Channel, device_index):
         """
         Helper function to construct a channel on the hardware.
@@ -787,3 +978,4 @@ class NIDAQmxOutput(HardwareOutput):
             physical_channel, min_val=minimum_value, max_val=maximum_value
         )
         return channel
+# endregion

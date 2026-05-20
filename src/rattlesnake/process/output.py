@@ -152,10 +152,7 @@ class OutputProcess(AbstractMessageProcess):
         hardware_output_class = HARDWARE_OUTPUT[metadata.hardware_type]
         match metadata.hardware_type:
             case HardwareType.NI_DAQMX:
-                self.hardware = hardware_output_class(
-                    metadata.task_trigger,
-                    metadata.output_trigger_generator,
-                )
+                self.hardware = hardware_output_class()
             case HardwareType.LAN_XI:
                 # from .lanxi_hardware_multiprocessing import LanXIOutput
 

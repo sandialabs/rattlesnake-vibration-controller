@@ -387,7 +387,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             for index, val in enumerate(self.sdynpy_system_data["coordinate"])
         }
 
-    def initialize_hardware(self, test_data: HardwareMetadata):
+    def initialize_hardware(self, test_data: SDynPySystemMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -575,7 +575,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.state = np.zeros(A_state.shape[0])
         # np.savez('SDynPy_State.npz', A=A_state, B=B_state, C = C_state, D = D_state)
 
-    def set_parameters(self, test_data: HardwareMetadata):
+    def set_parameters(self, test_data: SDynPySystemMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -722,7 +722,7 @@ class SDynPySystemOutput(HardwareOutput):
         """
         self.queue = queue
 
-    def initialize_hardware(self, test_data: HardwareMetadata):
+    def initialize_hardware(self, test_data: SDynPySystemMetadata):
         """
         Initialize the hardware and set up sources and sampling properties
 
