@@ -132,6 +132,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Storage properties
         self.hardware_file = None
+        self.lanxi_ip_addresses = []
 
         # Complete UI layout
         self.connect_callbacks()
@@ -1137,7 +1138,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Loop through table devices and append unique IP addresses
         for row in range(self.channel_table.rowCount()):
-            table_text = self.channel_table.item(row, 10).text()
+            table_item = self.channel_table.item(row, 10)
+            if table_item is None:
+                table_text = ""
+            else:
+                table_text = table_item.text()
             if re.search(ipv4_pattern, table_text) is not None:
                 if table_text not in ipv4:
                     stored_addresses.append(IPAddress(None, table_text, None))
@@ -1152,10 +1157,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     bknum.append(table_text)
 
         ip_manager = IPAddressManager(stored_addresses)
-        # TODO: I don't think the check for equality does anything here.  Show isn't blocking, so
-        # the dialog wouldn't have been accepted yet.
-        # ok_clicked = ip_manager.show() == QtWidgets.QDialog.Accepted
-        ip_manager.show()
+        ip_manager.exec()
 
     # def sample_rate_update(self):
     #     """Updates the sample rate selector based on valid available rates"""
@@ -1342,7 +1344,21 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 )
 
             case HardwareType.LAN_XI:
-                return
+                sample_rate = 2 ** self.lanxi_sample_rate_selector.currentIndex() * 4096
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = 16384 // sample_rate
+                if output_oversample == 0:
+                    output_oversample = 1
+                maximum_acquisition_processes = self.lanxi_maximum_acquisition_processes_selector.value()
+                return hardware_metadata_class(
+                    channel_list, 
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    maximum_acquisition_processes
+                )
             case HardwareType.DP_QUATTRO:
                 return
             case HardwareType.DP_900:

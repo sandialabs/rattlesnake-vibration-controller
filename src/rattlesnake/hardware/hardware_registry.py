@@ -2,7 +2,6 @@ from rattlesnake.hardware.hardware_utilities import HardwareType
 
 UNIMPLEMENTED_HARDWARE = [
     HardwareType.NONE,
-    HardwareType.LAN_XI,
     HardwareType.DP_QUATTRO,
     HardwareType.DP_900,
     HardwareType.EXODUS,
@@ -31,10 +30,11 @@ for hardware_type in HardwareType:
             HARDWARE_OUTPUT[HardwareType.NI_DAQMX] = NIDAQmxOutput
         case HardwareType.LAN_XI:
             from rattlesnake.hardware.lanxi_hardware_multiprocessing import (
+                LanXIMetadata,
                 LanXIAcquisition,
                 LanXIOutput,
             )
-
+            HARDWARE_METADATA[HardwareType.LAN_XI] = LanXIMetadata
             HARDWARE_ACQUISITION[HardwareType.LAN_XI] = LanXIAcquisition
             HARDWARE_OUTPUT[HardwareType.LAN_XI] = LanXIOutput
         case HardwareType.DP_QUATTRO:

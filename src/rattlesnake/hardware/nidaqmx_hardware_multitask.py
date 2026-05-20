@@ -924,7 +924,7 @@ class NIDAQmxOutput(HardwareOutput):
 
     def close(self):
         """Method to close down the hardware"""
-        print("CLosing Output Tasks")
+        print("Closing Output Tasks")
         if self.tasks is not None:
             for task in self.tasks:
                 task.close()

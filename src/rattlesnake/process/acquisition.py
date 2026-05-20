@@ -182,14 +182,8 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.hardware = hardware_acquisition_class()
 
             case HardwareType.LAN_XI:
-                # from .lanxi_hardware_multiprocessing import LanXIAcquisition
+                self.hardware = hardware_acquisition_class()
 
-                # self.hardware = LanXIAcquisition(
-                #     data_acquisition_parameters.extra_parameters[
-                #         "maximum_acquisition_processes"
-                #     ]
-                # )
-                pass
             case HardwareType.DP_QUATTRO:
                 # from .data_physics_hardware import DataPhysicsAcquisition
 

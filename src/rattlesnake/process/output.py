@@ -153,11 +153,10 @@ class OutputProcess(AbstractMessageProcess):
         match metadata.hardware_type:
             case HardwareType.NI_DAQMX:
                 self.hardware = hardware_output_class()
-            case HardwareType.LAN_XI:
-                # from .lanxi_hardware_multiprocessing import LanXIOutput
 
-                # self.hardware = LanXIOutput(data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"])
-                pass
+            case HardwareType.LAN_XI:
+                self.hardware = hardware_output_class()
+                
             case HardwareType.DP_QUATTRO:
                 # from .data_physics_hardware import DataPhysicsOutput
 

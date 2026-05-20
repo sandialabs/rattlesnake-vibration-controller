@@ -27,10 +27,13 @@ import socket
 import time
 from typing import List
 
+import netCDF4 as nc4
+import openpyxl
 import numpy as np
 import requests
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.lanxi_stream import OpenapiHeader, OpenapiMessage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
@@ -49,6 +52,7 @@ LANXI_STATE_SHUTDOWN = {
     "RecorderOpened": "/rest/rec/close",
     "Idle": None,
 }
+HARDWARE_TYPE = HardwareType.LAN_XI
 
 IPV4_PATTERN = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
 IPV6_PATTERN = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
@@ -57,6 +61,48 @@ IPV6_PATTERN = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
 # TODO Get responses each time a get or put is done so we know if it was successful
 # TODO Shut down the data acquisition more quickly
 
+# region Metadata
+class LanXIMetadata(HardwareMetadata):
+    def __init__(
+        self,
+        channel_list: List[Channel],
+        sample_rate: int,
+        time_per_read: float,
+        time_per_write: float,
+        output_oversample,
+        maximum_acquisition_processes,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample=output_oversample,
+        )
+        self.maximum_acquisition_processes = maximum_acquisition_processes
+        
+    # endregion
+
+    # region Validation
+    def validate(self):
+        return super().validate()
+    
+    # region Loading
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+        pass
+
+    @classmethod
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+        pass
+
+    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+        pass
+
+    @classmethod
+    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+        pass
+    # endregion
 
 class LanXIError(Exception):
     """Exception to signify an error using LAN-XI"""
@@ -412,7 +458,7 @@ def close_recorder(host):
     return
 
 
-# region: Acqusition
+# region Acqusition
 class LanXIAcquisition(HardwareAcquisition):
     """Class defining the interface between LAN-XI acquisition and the controller
 
@@ -421,7 +467,7 @@ class LanXIAcquisition(HardwareAcquisition):
     process, and must define how to get data from the test hardware into the
     controller."""
 
-    def __init__(self, maximum_processes):
+    def __init__(self):
         """
         Constructs the LAN-XI Acquisition class and specifies values to null.
         """
@@ -435,15 +481,11 @@ class LanXIAcquisition(HardwareAcquisition):
         self.slave_addresses = set([])
         self.samples_per_read = None
         self.last_acquisition_time = None
-        self.maximum_processes = maximum_processes
         self.modules_per_process = None
         self.total_processes = None
         self.acquisition_delay = None
 
-    # region: Abstract Methods
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: LanXIMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -462,7 +504,9 @@ class LanXIAcquisition(HardwareAcquisition):
         None.
 
         """
+        self.maximum_processes = test_data.maximum_acquisition_processes
         # Now create a hardware map that will help us do bookkeeping
+        channel_data = test_data.channel_list
         create_harware_maps(self.acquisition_map, self.output_map, channel_data)
         # Go through the channel table and get the hardware and channel
         # information
@@ -708,7 +752,6 @@ class LanXIAcquisition(HardwareAcquisition):
         if len(self.processes) > 0:  # This means we are still running!
             self.stop()
 
-    # region: Functions
     def _get_states(self):
         for host in list(self.slave_addresses) + [self.master_address]:
             response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
@@ -722,8 +765,9 @@ class LanXIAcquisition(HardwareAcquisition):
         for host in list(self.slave_addresses) + [self.master_address]:
             requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
 
+# endregion
 
-# region: Output
+# region Output
 class LanXIOutput(HardwareOutput):
     """Abstract class defining the interface between the controller and output
 
@@ -732,7 +776,7 @@ class LanXIOutput(HardwareOutput):
     process, and must define how to get write data to the hardware from the
     control system"""
 
-    def __init__(self, maximum_processes):
+    def __init__(self):
         """Method to start up the hardware"""
         self.sockets = {}
         self.acquisition_map = {}
@@ -749,13 +793,12 @@ class LanXIOutput(HardwareOutput):
         self.generator_sample_rate = None
         self.buffer_size = 5
         self.ready_signal_factor = BUFFER_SIZE
-        self.maximum_processes = maximum_processes
+        
 
-    # region: Abstract Methods
-    def set_up_data_output_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: LanXIMetadata):
+        self.maximum_processes = test_data.maximum_acquisition_processes
         # Create a hardware map that will help us do bookkeeping
+        channel_data = test_data.channel_list
         create_harware_maps(self.acquisition_map, self.output_map, channel_data)
         self.write_size = test_data.samples_per_write
         self.sample_rate = test_data.sample_rate
@@ -1102,7 +1145,6 @@ class LanXIOutput(HardwareOutput):
         self.empty_time = 0.0
         self.set_generators()
 
-    # region: Functions
     def set_generators(self):
         """Sets the generator states"""
         if len(self.output_map) == 0:
@@ -1290,3 +1332,4 @@ class LanXIOutput(HardwareOutput):
     def _reboot_all(self):
         for host in list(self.slave_addresses) + [self.master_address]:
             requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
+# endregion

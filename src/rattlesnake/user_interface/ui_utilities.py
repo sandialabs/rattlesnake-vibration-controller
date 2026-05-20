@@ -1674,11 +1674,10 @@ class IPAddressManager(QtWidgets.QDialog):
         ipv6_address = None
         try:
             # Get the address info for the hostname
-            ipv4_info = socket.getaddrinfo(host_name, None, socket.AF_INET)
-            ipv6_info = socket.getaddrinfo(host_name, None, socket.AF_INET6)
-            ipv4 = ipv4_info[0]
+            socket_info = socket.getaddrinfo(host_name, None)
+            ipv4 = socket_info[1]
             ipv4_address = ipv4[4][0]
-            ipv6 = ipv6_info[0]
+            ipv6 = socket_info[0]
             ipv6_address = f"[{ipv6[4][0]}%{ipv6[4][3]}]"
 
             valid_host_name = self.validate_ip_address(ipv6_address)
