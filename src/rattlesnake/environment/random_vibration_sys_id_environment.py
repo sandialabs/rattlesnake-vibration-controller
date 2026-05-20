@@ -108,8 +108,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
 
     def __init__(
         self,
+        *,
+        environment_name: str,
+        channel_list_bools: list,
+        sample_rate: int,
         number_of_channels,
-        sample_rate,
         samples_per_frame,
         test_level_ramp_time,
         cola_window,
@@ -134,8 +137,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         specification_abort_matrix,
         response_transformation_matrix,
         output_transformation_matrix,
+        sysid_metadata = None,
     ):
-        super().__init__()
+        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools, sample_rate, sysid_metadata)
         self.number_of_channels = number_of_channels
         self.sample_rate = sample_rate
         self.samples_per_frame = samples_per_frame
@@ -697,6 +701,134 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
     #         self.output_transformation_matrix = np.array(output_transformation)
     #     self.define_transformation_matrices(None, dialog=False)
     #     self.select_spec_file(None, worksheet.cell(28, 2).value)
+
+    # def retrieve_metadata(
+    #     self,
+    #     netcdf_handle: nc4._netCDF4.Dataset = None,  # pylint: disable=c-extension-no-member
+    #     environment_name: str = None,
+    # ):
+    #     """Collects environment parameters from a netCDF dataset.
+
+    #     This function retrieves parameters from a netCDF dataset that was written
+    #     by the controller during streaming.  It must populate the widgets
+    #     in the user interface with the proper information.
+
+    #     This function is the "read" counterpart to the store_to_netcdf
+    #     function in the AbstractMetadata class, which will write parameters to
+    #     the netCDF file to document the metadata.
+
+    #     Note that the entire dataset is passed to this function, so the function
+    #     should collect parameters pertaining to the environment from a Group
+    #     in the dataset sharing the environment's name, e.g.
+
+    #     ``group = netcdf_handle.groups[self.environment_name]``
+    #     ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+    #     Parameters
+    #     ----------
+    #     netcdf_handle : nc4._netCDF4.Dataset
+    #         The netCDF dataset from which the data will be read.  It should have
+    #         a group name with the enviroment's name.
+    #     environment_name : str (optional)
+    #         name of environment from which to retrieve metadata. Only needed if
+    #         different from current environment.
+
+    #     """
+    #     group = super().retrieve_metadata(netcdf_handle, environment_name)
+
+    #     # Control channels
+    #     try:
+    #         for i in group.variables["control_channel_indices"][...]:
+    #             item = self.definition_widget.control_channels_selector.item(i)
+    #             item.setCheckState(Qt.Checked)
+    #     except KeyError:
+    #         print(
+    #             "no variable control_channel_indices, please select control channels manually"
+    #         )
+    #     # Other data
+    #     try:
+    #         self.response_transformation_matrix = group.variables[
+    #             "response_transformation_matrix"
+    #         ][...].data
+    #     except KeyError:
+    #         self.response_transformation_matrix = None
+    #     try:
+    #         self.output_transformation_matrix = group.variables[
+    #             "reference_transformation_matrix"
+    #         ][...].data
+    #     except KeyError:
+    #         self.output_transformation_matrix = None
+    #     self.define_transformation_matrices(None, dialog=False)
+
+    #     # environment_name is passed when the saved environment doesn't match the
+    #     # current environment
+    #     if environment_name is None:
+    #         # Spinboxes
+    #         self.definition_widget.samples_per_frame_selector.setValue(
+    #             group.samples_per_frame
+    #         )
+    #         self.definition_widget.ramp_time_spinbox.setValue(
+    #             group.test_level_ramp_time
+    #         )
+    #         self.definition_widget.cola_overlap_percentage_selector.setValue(
+    #             group.cola_overlap * 100
+    #         )
+    #         self.definition_widget.cola_exponent_selector.setValue(
+    #             group.cola_window_exponent
+    #         )
+    #         self.definition_widget.cpsd_overlap_selector.setValue(
+    #             group.cpsd_overlap * 100
+    #         )
+    #         self.definition_widget.cpsd_frames_selector.setValue(group.frames_in_cpsd)
+    #         # Checkboxes
+    #         self.definition_widget.update_transfer_function_during_control_selector.setChecked(
+    #             bool(group.update_tf_during_control)
+    #         )
+    #         self.definition_widget.auto_abort_checkbox.setChecked(
+    #             bool(group.allow_automatic_aborts)
+    #         )
+    #         # Comboboxes
+    #         self.definition_widget.cola_window_selector.setCurrentIndex(
+    #             self.definition_widget.cola_window_selector.findText(group.cola_window)
+    #         )
+    #         self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
+    #             self.definition_widget.cpsd_computation_window_selector.findText(
+    #                 group.cpsd_window
+    #             )
+    #         )
+    #         # Specification
+    #         self.specification_frequency_lines = group.variables[
+    #             "specification_frequency_lines"
+    #         ][...].data
+    #         self.specification_cpsd_matrix = (
+    #             group.variables["specification_cpsd_matrix_real"][...].data
+    #             + 1j * group.variables["specification_cpsd_matrix_imag"][...].data
+    #         )
+    #         self.specification_warning_matrix = group.variables[
+    #             "specification_warning_matrix"
+    #         ][...].data
+    #         self.specification_abort_matrix = group.variables[
+    #             "specification_abort_matrix"
+    #         ][...].data
+    #         self.select_python_module(None, group.control_python_script)
+    #         index = self.definition_widget.control_function_input.findText(
+    #             group.control_python_function
+    #         )
+    #         if (
+    #             index == -1
+    #         ):  # error handling (older revisions of rattlesnake may be missing newer control laws)
+    #             index = 0
+    #             default = self.definition_widget.control_function_input.itemText(index)
+    #             print(
+    #                 f'Warning: control function "{group.control_python_function}" not found, '
+    #                 f'defaulting to "{default}"'
+    #             )
+    #         self.definition_widget.control_function_input.setCurrentIndex(index)
+    #         self.definition_widget.control_parameters_text_input.setText(
+    #             group.control_python_function_parameters
+    #         )
+    #         self.show_specification()
+
     # endregion
 
 # region Instructions

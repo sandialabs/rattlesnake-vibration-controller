@@ -95,9 +95,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             Queue where log file messages can be written.
 
         """
-        super().__init__(
-            environment_name, rattlesnake,
-        )
+        super().__init__(CONTROL_TYPE, environment_name, rattlesnake,)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
         random_definition_ui_path = os.path.join(DIRECTORY, "user_interface", "ui_files", "random_vibration_definition.ui")
@@ -185,11 +183,11 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.connect_callbacks()
 
         # Complete the profile commands
-        self.command_map["Set Test Level"] = self.change_test_level_from_profile
-        self.command_map["Change Specification"] = (
-            self.change_specification_from_profile
-        )
-        self.command_map["Save Control Data"] = self.save_control_data_from_profile
+        # self.command_map["Set Test Level"] = self.change_test_level_from_profile
+        # self.command_map["Change Specification"] = (
+        #     self.change_specification_from_profile
+        # )
+        # self.command_map["Save Control Data"] = self.save_control_data_from_profile
 
     def connect_callbacks(self):
         """Connects callback functions to the UI Widgets"""
@@ -455,85 +453,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.output_transformation_matrix = None
         self.define_transformation_matrices(None, False)
 
-    def collect_environment_definition_parameters(self) -> RandomVibrationMetadata:
-        """
-        Collect the parameters from the user interface defining the environment
-
-        Returns
-        -------
-        RandomVibrationMetadata
-            A metadata or parameters object containing the parameters defining
-            the corresponding environment.
-
-        """
-        if self.python_control_module is None:
-            control_module = None
-            control_function = None
-            control_function_type = None
-            control_function_parameters = None
-        else:
-            control_module = (
-                self.definition_widget.control_script_file_path_input.text()
-            )
-            control_function = self.definition_widget.control_function_input.itemText(
-                self.definition_widget.control_function_input.currentIndex()
-            )
-            control_function_type = (
-                self.definition_widget.control_function_generator_selector.currentIndex()
-            )
-            control_function_parameters = (
-                self.definition_widget.control_parameters_text_input.toPlainText()
-            )
-        return RandomVibrationMetadata(
-            number_of_channels=len(self.data_acquisition_parameters.channel_list),
-            sample_rate=self.definition_widget.sample_rate_display.value(),
-            samples_per_frame=self.definition_widget.samples_per_frame_selector.value(),
-            test_level_ramp_time=self.definition_widget.ramp_time_spinbox.value(),
-            cola_window=self.definition_widget.cola_window_selector.itemText(
-                self.definition_widget.cola_window_selector.currentIndex()
-            ),
-            cola_overlap=self.definition_widget.cola_overlap_percentage_selector.value()
-            / 100,
-            cola_window_exponent=self.definition_widget.cola_exponent_selector.value(),
-            sigma_clip=self.definition_widget.sigma_clipping_selector.value(),
-            update_tf_during_control=self.definition_widget.update_transfer_function_during_control_selector.isChecked(),
-            frames_in_cpsd=self.definition_widget.cpsd_frames_selector.value(),
-            cpsd_window=self.definition_widget.cpsd_computation_window_selector.itemText(
-                self.definition_widget.cpsd_computation_window_selector.currentIndex()
-            ),
-            cpsd_overlap=self.definition_widget.cpsd_overlap_selector.value() / 100,
-            response_transformation_matrix=self.response_transformation_matrix,
-            output_transformation_matrix=self.output_transformation_matrix,
-            control_python_script=control_module,
-            control_python_function=control_function,
-            control_python_function_type=control_function_type,
-            control_python_function_parameters=control_function_parameters,
-            control_channel_indices=self.physical_control_indices,
-            output_channel_indices=self.physical_output_indices,
-            specification_frequency_lines=self.specification_frequency_lines,
-            specification_cpsd_matrix=self.specification_cpsd_matrix,
-            specification_warning_matrix=self.specification_warning_matrix,
-            specification_abort_matrix=self.specification_abort_matrix,
-            percent_lines_out=self.definition_widget.frequency_lines_out_spinbox.value(),
-            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
-        )
-
-    def initialize_environment(self) -> RandomVibrationMetadata:
-        """
-        Update the user interface with environment parameters
-
-        This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
-
-        Returns
-        -------
-        AbstractMetadata
-            An AbstractMetadata-inheriting object that contains the parameters
-            defining the environment.
-
-        """
+    def initialize_environment(self, environment_metadata):
+        super().initialize_environment(environment_metadata)
         self.system_id_widget.samplesPerFrameSpinBox.setMaximum(
             self.definition_widget.samples_per_frame_selector.value()
         )
@@ -543,7 +464,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(
             self.definition_widget.ramp_time_spinbox.value()
         )
-        super().initialize_environment()
+        
         for widget in [
             self.prediction_widget.response_row_selector,
             self.prediction_widget.response_column_selector,
@@ -580,7 +501,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.plot_data_items[
             "prediction_warning_upper"
         ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.data_acquisition_parameters.sample_rate / 2]),
+            np.array([0, self.hardware_metadata.sample_rate / 2]),
             np.zeros(2),
             pen={
                 "color": PlotWindow.WARNING_COLOR,
@@ -592,7 +513,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.plot_data_items[
             "prediction_warning_lower"
         ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.data_acquisition_parameters.sample_rate / 2]),
+            np.array([0, self.hardware_metadata.sample_rate / 2]),
             np.zeros(2),
             pen={
                 "color": PlotWindow.WARNING_COLOR,
@@ -603,7 +524,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.plot_data_items[
             "prediction_abort_upper"
         ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.data_acquisition_parameters.sample_rate / 2]),
+            np.array([0, self.hardware_metadata.sample_rate / 2]),
             np.zeros(2),
             pen={
                 "color": PlotWindow.ABORT_COLOR,
@@ -615,7 +536,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.plot_data_items[
             "prediction_abort_lower"
         ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.data_acquisition_parameters.sample_rate / 2]),
+            np.array([0, self.hardware_metadata.sample_rate / 2]),
             np.zeros(2),
             pen={
                 "color": PlotWindow.ABORT_COLOR,
@@ -647,7 +568,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             if ui_class == self.interactive_control_law_widget.__class__:
                 print("initializing data acquisition and environment parameters")
                 self.interactive_control_law_widget.initialize_parameters(
-                    self.data_acquisition_parameters, self.environment_parameters
+                    self.hardware_metadata, self.environment_parameters
                 )
             else:
                 if self.interactive_control_law_widget is not None:
@@ -660,148 +581,80 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     self.environment_command_queue,
                     self.interactive_control_law_window,
                     self,
-                    self.data_acquisition_parameters,
+                    self.hardware_metadata,
                     self.environment_parameters,
                 )
             self.interactive_control_law_window.show()
-        return self.environment_parameters
 
-    def retrieve_metadata(
-        self,
-        netcdf_handle: nc4._netCDF4.Dataset = None,  # pylint: disable=c-extension-no-member
-        environment_name: str = None,
-    ):
-        """Collects environment parameters from a netCDF dataset.
-
-        This function retrieves parameters from a netCDF dataset that was written
-        by the controller during streaming.  It must populate the widgets
-        in the user interface with the proper information.
-
-        This function is the "read" counterpart to the store_to_netcdf
-        function in the AbstractMetadata class, which will write parameters to
-        the netCDF file to document the metadata.
-
-        Note that the entire dataset is passed to this function, so the function
-        should collect parameters pertaining to the environment from a Group
-        in the dataset sharing the environment's name, e.g.
-
-        ``group = netcdf_handle.groups[self.environment_name]``
-        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
-
-        Parameters
-        ----------
-        netcdf_handle : nc4._netCDF4.Dataset
-            The netCDF dataset from which the data will be read.  It should have
-            a group name with the enviroment's name.
-        environment_name : str (optional)
-            name of environment from which to retrieve metadata. Only needed if
-            different from current environment.
-
-        """
-        group = super().retrieve_metadata(netcdf_handle, environment_name)
-
-        # Control channels
-        try:
-            for i in group.variables["control_channel_indices"][...]:
-                item = self.definition_widget.control_channels_selector.item(i)
-                item.setCheckState(Qt.Checked)
-        except KeyError:
-            print(
-                "no variable control_channel_indices, please select control channels manually"
-            )
-        # Other data
-        try:
-            self.response_transformation_matrix = group.variables[
-                "response_transformation_matrix"
-            ][...].data
-        except KeyError:
-            self.response_transformation_matrix = None
-        try:
-            self.output_transformation_matrix = group.variables[
-                "reference_transformation_matrix"
-            ][...].data
-        except KeyError:
-            self.output_transformation_matrix = None
-        self.define_transformation_matrices(None, dialog=False)
-
-        # environment_name is passed when the saved environment doesn't match the
-        # current environment
-        if environment_name is None:
-            # Spinboxes
-            self.definition_widget.samples_per_frame_selector.setValue(
-                group.samples_per_frame
-            )
-            self.definition_widget.ramp_time_spinbox.setValue(
-                group.test_level_ramp_time
-            )
-            self.definition_widget.cola_overlap_percentage_selector.setValue(
-                group.cola_overlap * 100
-            )
-            self.definition_widget.cola_exponent_selector.setValue(
-                group.cola_window_exponent
-            )
-            self.definition_widget.cpsd_overlap_selector.setValue(
-                group.cpsd_overlap * 100
-            )
-            self.definition_widget.cpsd_frames_selector.setValue(group.frames_in_cpsd)
-            # Checkboxes
-            self.definition_widget.update_transfer_function_during_control_selector.setChecked(
-                bool(group.update_tf_during_control)
-            )
-            self.definition_widget.auto_abort_checkbox.setChecked(
-                bool(group.allow_automatic_aborts)
-            )
-            # Comboboxes
-            self.definition_widget.cola_window_selector.setCurrentIndex(
-                self.definition_widget.cola_window_selector.findText(group.cola_window)
-            )
-            self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
-                self.definition_widget.cpsd_computation_window_selector.findText(
-                    group.cpsd_window
-                )
-            )
-            # Specification
-            self.specification_frequency_lines = group.variables[
-                "specification_frequency_lines"
-            ][...].data
-            self.specification_cpsd_matrix = (
-                group.variables["specification_cpsd_matrix_real"][...].data
-                + 1j * group.variables["specification_cpsd_matrix_imag"][...].data
-            )
-            self.specification_warning_matrix = group.variables[
-                "specification_warning_matrix"
-            ][...].data
-            self.specification_abort_matrix = group.variables[
-                "specification_abort_matrix"
-            ][...].data
-            self.select_python_module(None, group.control_python_script)
-            index = self.definition_widget.control_function_input.findText(
-                group.control_python_function
-            )
-            if (
-                index == -1
-            ):  # error handling (older revisions of rattlesnake may be missing newer control laws)
-                index = 0
-                default = self.definition_widget.control_function_input.itemText(index)
-                print(
-                    f'Warning: control function "{group.control_python_function}" not found, '
-                    f'defaulting to "{default}"'
-                )
-            self.definition_widget.control_function_input.setCurrentIndex(index)
-            self.definition_widget.control_parameters_text_input.setText(
-                group.control_python_function_parameters
-            )
-            self.show_specification()
-
-    def initialize_environment(self, environment_metadata):
-        pass
-        
     def get_environment_metadata(self, global_channel_list=None):
-        pass
+        if self.hardware_metadata and global_channel_list:
+            channel_list_bools = self.get_channel_list_bools(global_channel_list)
+        else:
+            channel_list_bools = []
+
+        if self.python_control_module is None:
+            control_module = None
+            control_function = None
+            control_function_type = None
+            control_function_parameters = None
+        else:
+            control_module = (
+                self.definition_widget.control_script_file_path_input.text()
+            )
+            control_function = self.definition_widget.control_function_input.itemText(
+                self.definition_widget.control_function_input.currentIndex()
+            )
+            control_function_type = (
+                self.definition_widget.control_function_generator_selector.currentIndex()
+            )
+            control_function_parameters = (
+                self.definition_widget.control_parameters_text_input.toPlainText()
+            )
+        return RandomVibrationMetadata(
+            environment_name=self.environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=self.definition_widget.sample_rate_display.value(),
+            number_of_channels=len(self.hardware_metadata.channel_list),
+            samples_per_frame=self.definition_widget.samples_per_frame_selector.value(),
+            test_level_ramp_time=self.definition_widget.ramp_time_spinbox.value(),
+            cola_window=self.definition_widget.cola_window_selector.itemText(
+                self.definition_widget.cola_window_selector.currentIndex()
+            ),
+            cola_overlap=self.definition_widget.cola_overlap_percentage_selector.value()
+            / 100,
+            cola_window_exponent=self.definition_widget.cola_exponent_selector.value(),
+            sigma_clip=self.definition_widget.sigma_clipping_selector.value(),
+            update_tf_during_control=self.definition_widget.update_transfer_function_during_control_selector.isChecked(),
+            frames_in_cpsd=self.definition_widget.cpsd_frames_selector.value(),
+            cpsd_window=self.definition_widget.cpsd_computation_window_selector.itemText(
+                self.definition_widget.cpsd_computation_window_selector.currentIndex()
+            ),
+            cpsd_overlap=self.definition_widget.cpsd_overlap_selector.value() / 100,
+            response_transformation_matrix=self.response_transformation_matrix,
+            output_transformation_matrix=self.output_transformation_matrix,
+            control_python_script=control_module,
+            control_python_function=control_function,
+            control_python_function_type=control_function_type,
+            control_python_function_parameters=control_function_parameters,
+            control_channel_indices=self.physical_control_indices,
+            output_channel_indices=self.physical_output_indices,
+            specification_frequency_lines=self.specification_frequency_lines,
+            specification_cpsd_matrix=self.specification_cpsd_matrix,
+            specification_warning_matrix=self.specification_warning_matrix,
+            specification_abort_matrix=self.specification_abort_matrix,
+            percent_lines_out=self.definition_widget.frequency_lines_out_spinbox.value(),
+            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
+        )
+        
 
     def set_environment_metadata(self, metadata):
         pass
 
+    def get_environment_instructions(self):
+        pass
+
+    def set_environment_instructions(self, instructions):
+        pass
 
     # endregion
 
@@ -836,9 +689,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             control_coordinate = np.array(
                 [
                     (
-                        self.data_acquisition_parameters.channel_list[i].node_number,
+                        self.hardware_metadata.channel_list[i].node_number,
                         _direction_map[
-                            self.data_acquisition_parameters.channel_list[
+                            self.hardware_metadata.channel_list[
                                 i
                             ].node_direction
                         ],
@@ -1178,7 +1031,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     def update_parameters(self):
         """Recompute derived parameters from updated sampling parameters"""
-        data = self.collect_environment_definition_parameters()
+        data = self.get_environment_metadata()
         self.definition_widget.samples_per_acquire_display.setValue(
             data.samples_per_acquire
         )
@@ -1660,7 +1513,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             ["abort_level", str],
         ]
         global_data_parameters: HardwareMetadata
-        global_data_parameters = self.data_acquisition_parameters
+        global_data_parameters = self.hardware_metadata
         netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
             filename, "w", format="NETCDF4", clobber=True
         )
@@ -1806,8 +1659,33 @@ class RandomVibrationUI(SysIdEnvironmentUI):
     # endregion
 
     # region Commands
+    def display_environment_ended(self):
+        pass
 
-    # endregion
+    def display_environment_started(self):
+        pass
+
+    def start_environment(self):
+        """Sets itself up to start controlling and sends a signal to the environment to start"""
+        pass
+
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    def stop_environment(self):
+        """Sends a signal to shut down the control"""
+        pass
+
+        super().stop_environment()
+
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
+
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()
 
     def update_gui(self, queue_data: tuple):
         """Update the environment's graphical user interface
