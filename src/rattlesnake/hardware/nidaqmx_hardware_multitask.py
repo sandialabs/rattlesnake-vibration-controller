@@ -31,11 +31,30 @@ import nidaqmx.stream_readers as ni_read
 import nidaqmx.stream_writers as ni_write
 import numpy as np
 
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
 
 BUFFER_SIZE_FACTOR = 3
+HARDWARE_TYPE = HardwareType.NI_DAQMX
+
+# region Metadata
+class NIDAQmxMetadata(HardwareMetadata):
+    def __init__(
+        self,
+        channel_list: List[Channel],
+        sample_rate: int,
+        time_per_read: float,
+        time_per_write: float,
+        output_oversample: int,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample=output_oversample,
+        )
 
 
 # region: Acqusition
