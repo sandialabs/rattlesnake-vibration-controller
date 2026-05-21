@@ -448,6 +448,7 @@ class TimeEnvironment(Environment):
         self.signal_remainder = None
         self.output_channels = None
         self.measurement_channels = None
+        self.set_ready()
 
     # endregion
 
@@ -493,6 +494,7 @@ class TimeEnvironment(Environment):
         """
         self.log("Initializing Environment Parameters")
         super().initialize_environment(environment_metadata)
+        self.set_ready()
 
     # endregion
 

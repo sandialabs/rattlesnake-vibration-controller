@@ -494,7 +494,7 @@ class SysIdEnvironment(Environment):
     @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
         self.environment_metadata.sysid_metadata = sysid_metadata
-        self.set_ready()
+        # self.set_ready() # Call this at the end of your function
 
     def get_sysid_data_collector_metadata(self) -> CollectorMetadata:
         """Collects metadata to send to the data collector"""

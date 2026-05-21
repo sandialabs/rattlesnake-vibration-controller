@@ -997,11 +997,14 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         )
         self.queue_container = queue_container
 
+        self.set_ready()
     # endregion
 
     # region StateSync
     def initialize_hardware(self, hardware_metadata):
-        return super().initialize_hardware(hardware_metadata)
+        super().initialize_hardware(hardware_metadata)
+
+        self.set_ready()
 
     def initialize_environment(self, environment_metadata: RandomVibrationMetadata):
         self.environment_name = environment_metadata.environment_name
@@ -1044,7 +1047,9 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.set_ready()
 
     def initialize_sysid(self, sysid_metadata):
-        return super().initialize_sysid(sysid_metadata)
+        super().initialize_sysid(sysid_metadata)
+
+        self.set_ready()
 
     def update_interactive_control_parameters(self, parameters):
         """Sends updated parameters to the interactive control law on the data analysis process"""

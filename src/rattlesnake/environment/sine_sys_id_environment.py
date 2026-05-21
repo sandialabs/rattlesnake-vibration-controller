@@ -1275,11 +1275,13 @@ class SineEnvironment(SysIdEnvironment):
         self.control_end_index = None
         self.good_line_threshold = 0.25
 
+        self.set_ready()
     # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata):
-        return super().initialize_hardware(hardware_metadata)
+        super().initialize_hardware(hardware_metadata)
+        self.set_ready()
 
     def initialize_environment(self, environment_metadata: SineMetadata):
         # Check if all specifications are equal
@@ -1428,9 +1430,13 @@ class SineEnvironment(SysIdEnvironment):
             )
         )
         self.log("Done!")
+        
+        self.set_ready()
 
     def initialize_sysid(self, sysid_metadata):
-        return super().initialize_sysid(sysid_metadata)
+        super().initialize_sysid(sysid_metadata)
+        
+        self.set_ready()
 
     def get_signal_generation_metadata(self):
         """Gets a SignalGenerationMetadata object for the current environment"""

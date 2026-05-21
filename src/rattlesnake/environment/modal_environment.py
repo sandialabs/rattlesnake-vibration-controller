@@ -1034,6 +1034,8 @@ class ModalEnvironment(Environment):
             self.spectral_shutdown_achieved_fn,
         )
 
+        self.set_ready()
+
     # endregion
 
     # region State Sync
