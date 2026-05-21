@@ -509,9 +509,13 @@ def build_random_environment():
     rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
     random_environment_metadata = make_random_environment_metadata(hardware_metadata)
+    random_sys_id_metadata = make_sys_id_metadata()
+    random_stream_metadata = make_stream_metadata(RANDOM_ENVIRONMENT_NAME)
 
     rattlesnake.initialize_hardware(hardware_metadata)
     rattlesnake.initialize_environments([random_environment_metadata])
+    # rattlesnake.run_system_id(random_sys_id_metadata, RANDOM_ENVIRONMENT_NAME)
+    # rattlesnake.start_acquisition(random_stream_metadata)
 
     return rattlesnake
 
@@ -525,8 +529,8 @@ if __name__ == "__main__":
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
     # rattlesnake = build_sine_environment()
-    # rattlesnake = build_transient_environment()
-    rattlesnake = build_random_environment()
+    rattlesnake = build_transient_environment()
+    # rattlesnake = build_random_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

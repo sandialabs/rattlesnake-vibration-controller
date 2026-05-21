@@ -302,7 +302,17 @@ class EnvironmentUI(ABC):
                 self.set_environment_instructions(data)
             case UICommands.SET_ATTR:
                 attr, data = data
-                widget = getattr(self, attr)
+                for parent in [
+                    self.definition_widget,
+                    self.run_widget,
+                    self.system_id_widget,
+                    self.prediction_widget,
+                ]:
+                    try:
+                        widget = getattr(parent, attr)
+                        break
+                    except AttributeError:
+                        continue
                 if isinstance(widget, QtWidgets.QDoubleSpinBox):
                     widget.setValue(data)
                 elif isinstance(widget, QtWidgets.QSpinBox):
