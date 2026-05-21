@@ -403,8 +403,12 @@ def make_random_environment_metadata(hardware_metadata, environment_name=RANDOM_
     control_python_function_parameters = ""
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [3, 4, 5]
+
+    
     specification_frequency_lines = np.arange(0, 501, 1)
     specification_cpsd_matrix = np.zeros((501, 3, 3))
+    for i in range(len(specification_frequency_lines)):
+        specification_cpsd_matrix[i] = np.eye(3)
     specification_warning_matrix = np.full((2, 501, 3), np.nan)
     specification_abort_matrix = np.full((2, 501, 3), np.nan)
     response_transformation_matrix = None

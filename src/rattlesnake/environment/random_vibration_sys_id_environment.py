@@ -47,6 +47,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
+    db2scale
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.process.data_collector import (
@@ -973,6 +974,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             sysid_active_event,
             sysid_stored_event,
         )
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
         self.map_command(RandomVibrationCommands.START_CONTROL, self.start_control)
         self.map_command(RandomVibrationCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_environment)
@@ -1203,14 +1205,11 @@ class RandomVibrationEnvironment(SysIdEnvironment):
     def start_control(self, data: RandomVibrationInstructions):
         """Starts the environment at the specified test level"""
         self.log("Starting Control")
+        test_level = db2scale(data.control_test_level)
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
         self.analysis_shutdown_achieved = False
-        self.queue_container.controller_communication_queue.put(
-            self.environment_name,
-            (GlobalCommands.START_ENVIRONMENT, self.environment_name),
-        )
         # Set up the collector
         self.queue_container.collector_command_queue.put(
             self.environment_name,

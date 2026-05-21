@@ -21,6 +21,7 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationUICommands,
+    RandomVibrationInstructions
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.random_vibration_sys_id_data_analysis import (
@@ -264,8 +265,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.run_widget.current_test_level_selector.valueChanged.connect(
             self.change_control_test_level
         )
-        self.run_widget.start_test_button.clicked.connect(self.start_control)
-        self.run_widget.stop_test_button.clicked.connect(self.stop_control)
+        self.run_widget.start_test_button.clicked.connect(self.start_environment)
+        self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
         self.run_widget.create_window_button.clicked.connect(self.create_window)
         self.run_widget.show_all_asds_button.clicked.connect(self.show_all_asds)
         self.run_widget.show_all_csds_phscoh_button.clicked.connect(
@@ -702,10 +703,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.show_specification()
 
     def get_environment_instructions(self):
-        pass
+        control_test_level = self.run_widget.current_test_level_selector.value()
+        return RandomVibrationInstructions(
+            self.environment_name,
+            control_test_level
+        )
 
     def set_environment_instructions(self, instructions):
-        pass
+        self.run_widget.current_test_level_selector.setValue(instructions.control_test_level)
 
     # endregion
 
@@ -1276,38 +1281,38 @@ class RandomVibrationUI(SysIdEnvironmentUI):
     # endregion
 
     # region Run
-    def start_control(self):
-        """Runs the corresponding environment in the controller"""
-        self.enable_control(False)
-        self.controller_communication_queue.put(
-            self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
-        )
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                RandomVibrationCommands.START_CONTROL,
-                db2scale(self.run_widget.current_test_level_selector.value()),
-            ),
-        )
-        self.run_timer.start(250)
-        self.run_start_time = time.time()
-        self.run_level_start_time = self.run_start_time
-        self.run_widget.test_progress_bar.setValue(0)
-        if (
-            self.run_widget.current_test_level_selector.value()
-            >= self.run_widget.target_test_level_selector.value()
-        ):
-            self.controller_communication_queue.put(
-                self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
-            )
+    # def start_control(self):
+    #     """Runs the corresponding environment in the controller"""
+    #     self.enable_control(False)
+    #     self.controller_communication_queue.put(
+    #         self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
+    #     )
+    #     self.environment_command_queue.put(
+    #         self.log_name,
+    #         (
+    #             RandomVibrationCommands.START_CONTROL,
+    #             db2scale(self.run_widget.current_test_level_selector.value()),
+    #         ),
+    #     )
+    #     self.run_timer.start(250)
+    #     self.run_start_time = time.time()
+    #     self.run_level_start_time = self.run_start_time
+    #     self.run_widget.test_progress_bar.setValue(0)
+    #     if (
+    #         self.run_widget.current_test_level_selector.value()
+    #         >= self.run_widget.target_test_level_selector.value()
+    #     ):
+    #         self.controller_communication_queue.put(
+    #             self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
+    #         )
 
-    def stop_control(self):
-        """Stops the corresponding environment in the controller"""
-        self.run_widget.stop_test_button.setEnabled(False)
-        self.environment_command_queue.put(
-            self.log_name, (RandomVibrationCommands.STOP_CONTROL, None)
-        )
-        self.run_timer.stop()
+    # def stop_control(self):
+    #     """Stops the corresponding environment in the controller"""
+    #     self.run_widget.stop_test_button.setEnabled(False)
+    #     self.environment_command_queue.put(
+    #         self.log_name, (RandomVibrationCommands.STOP_CONTROL, None)
+    #     )
+    #     self.run_timer.stop()
 
     def enable_control(self, enabled):
         """Enables or disables widgets to start or stop control if the control is running or not"""
@@ -1711,16 +1716,29 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     # region Commands
     def display_environment_ended(self):
-        pass
+        self.enable_control(True)
 
     def display_environment_started(self):
-        pass
+        self.enable_control(False)
 
     def start_environment(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""
-        pass
+        for widget in [
+            self.run_widget.test_time_selector,
+            self.run_widget.time_test_at_target_level_checkbox,
+            self.run_widget.timed_test_radiobutton,
+            self.run_widget.continuous_test_radiobutton,
+            self.run_widget.target_test_level_selector,
+            self.run_widget.start_test_button,
+        ]:
+            widget.setEnabled(False)
+        return super().start_environment()
 
     def start_environment_ready(self):
+        self.run_timer.start(250)
+        self.run_start_time = time.time()
+        self.run_level_start_time = self.run_start_time
+        self.run_widget.test_progress_bar.setValue(0)
         return super().start_environment_ready()
 
     def start_environment_error(self, error):
@@ -1728,7 +1746,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     def stop_environment(self):
         """Sends a signal to shut down the control"""
-        pass
+        self.run_widget.stop_test_button.setEnabled(True)
 
         super().stop_environment()
 
