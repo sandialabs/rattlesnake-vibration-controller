@@ -427,7 +427,6 @@ class SysIdMetadata:
             sysid_low_frequency_cutoff=0,
             sysid_high_frequency_cutoff=int(sample_rate / 2),
             stream_file=None,
-            auto_shutdown=False,
         )
 
     # endregion
@@ -941,6 +940,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
+# endregion
 
 # region Process
 def sysid_data_analysis_process(

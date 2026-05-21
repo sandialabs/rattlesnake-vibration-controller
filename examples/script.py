@@ -21,15 +21,21 @@ from rattlesnake.environment.sine_sys_id_environment import (
     SineMetadata,
     SineInstructions,
 )
+from rattlesnake.environment.random_vibration_sys_id_environment import (
+    RandomVibrationMetadata,
+    RandomVibrationInstructions
+)
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 
 BASE_DIR = "C:/Users/cmlangs/Desktop/ExampleFiles/"
-
+THREADED = True
 BUFFER_SIZE = 0.15
 TIME_ENVIRONMENT_NAME = "My Time"
 MODAL_ENVIRONMENT_NAME = "My Modal"
 SINE_ENVIRONMENT_NAME = "My Sine"
+TRANSIENT_ENVIRONMENT_NAME = "My Transient"
+RANDOM_ENVIRONMENT_NAME = "My Random"
 
 
 # region Hardware
@@ -374,10 +380,72 @@ def make_sys_id_metadata():
 
 # endregion
 
+# region Random
+def make_random_environment_metadata(hardware_metadata, environment_name=RANDOM_ENVIRONMENT_NAME):
+    channel_list_bools = [True, True, True, True, True, True]
+    sample_rate = hardware_metadata.sample_rate
+    number_of_channels = 6
+    samples_per_frame = 1000
+    test_level_ramp_time = 0.5
+    cola_window = "Tukey"
+    cola_overlap = 0.5
+    cola_window_exponent = 0.5
+    sigma_clip = 5.0
+    update_tf_during_control = False
+    frames_in_cpsd = 20
+    cpsd_window = "Hann"
+    cpsd_overlap = 0.5
+    percent_lines_out = 10.0
+    allow_automatic_aborts = False
+    control_python_script = BASE_DIR + "/random_environment/control_laws.py"
+    control_python_function = "buzz_control"
+    control_python_function_type = 0
+    control_python_function_parameters = ""
+    control_channel_indices = [0, 1, 2]
+    output_channel_indices = [3, 4, 5]
+    specification_frequency_lines = np.arange(0, 501, 1)
+    specification_cpsd_matrix = np.zeros((501, 3, 3))
+    specification_warning_matrix = np.full((2, 501, 3), np.nan)
+    specification_abort_matrix = np.full((2, 501, 3), np.nan)
+    response_transformation_matrix = None
+    output_transformation_matrix = None
+
+    return RandomVibrationMetadata(
+        environment_name = environment_name,
+        channel_list_bools = channel_list_bools,
+        sample_rate = sample_rate,
+        number_of_channels = number_of_channels,
+        samples_per_frame = samples_per_frame,
+        test_level_ramp_time = test_level_ramp_time,
+        cola_window = cola_window,
+        cola_overlap = cola_overlap,
+        cola_window_exponent = cola_window_exponent,
+        sigma_clip = sigma_clip,
+        update_tf_during_control = update_tf_during_control,
+        frames_in_cpsd = frames_in_cpsd,
+        cpsd_window = cpsd_window,
+        cpsd_overlap = cpsd_overlap,
+        percent_lines_out = percent_lines_out,
+        allow_automatic_aborts = allow_automatic_aborts,
+        control_python_script = control_python_script,
+        control_python_function = control_python_function,
+        control_python_function_type = control_python_function_type,
+        control_python_function_parameters = control_python_function_parameters,
+        control_channel_indices = control_channel_indices,
+        output_channel_indices = output_channel_indices,
+        specification_frequency_lines = specification_frequency_lines,
+        specification_cpsd_matrix = specification_cpsd_matrix,
+        specification_warning_matrix = specification_warning_matrix,
+        specification_abort_matrix = specification_abort_matrix,
+        response_transformation_matrix = response_transformation_matrix,
+        output_transformation_matrix = output_transformation_matrix,
+        sysid_metadata = None,
+    )
+
 
 # region Environments
 def build_time_environment():
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
     time_environment_metadata = make_time_environment_metadata(hardware_metadata)
     time_profile_event_list = make_time_environment_event_list()
@@ -395,7 +463,7 @@ def build_time_environment():
 
 
 def build_modal_environment():
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
     modal_environment_metadata = make_modal_environment_metadata(hardware_metadata)
     modal_stream_metadata = make_stream_metadata(MODAL_ENVIRONMENT_NAME)
@@ -410,7 +478,7 @@ def build_modal_environment():
 
 
 def build_sine_environment():
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
     sine_environment_metadata = make_sine_environment_metadata(hardware_metadata)
     sine_sys_id_metadata = make_sys_id_metadata()
@@ -426,7 +494,7 @@ def build_sine_environment():
     return rattlesnake
 
 def build_transient_environment():
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
 
     rattlesnake.initialize_hardware(hardware_metadata)
@@ -434,10 +502,12 @@ def build_transient_environment():
     return rattlesnake
 
 def build_random_environment():
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
+    random_environment_metadata = make_random_environment_metadata(hardware_metadata)
 
     rattlesnake.initialize_hardware(hardware_metadata)
+    rattlesnake.initialize_environments([random_environment_metadata])
 
     return rattlesnake
 
@@ -447,12 +517,12 @@ def build_random_environment():
 
 # region Startup
 if __name__ == "__main__":
-    rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    # rattlesnake = RattlesnakeController(threaded=True, timeout=30)
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
     # rattlesnake = build_sine_environment()
     # rattlesnake = build_transient_environment()
-    # rattlesnake = build_random_environment()
+    rattlesnake = build_random_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

@@ -35,10 +35,6 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
-from rattlesnake.environment.random_vibration_sys_id_environment import (
-    RandomVibrationCommands,
-    RandomVibrationMetadata,
-)
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
@@ -52,11 +48,11 @@ from rattlesnake.utilities import (
 # region Commands
 class RandomVibrationDataAnalysisCommands(Enum):
     """Enumeration containing valid commands for the random data analysis process"""
-
-    INITIALIZE_PARAMETERS = 0
-    PERFORM_CONTROL_PREDICTION = 1
-    RUN_CONTROL = 2
-    STOP_CONTROL = 3
+    INITIALIZE_ENVIRONMENT = 0
+    INITIALIZE_PARAMETERS = 1
+    PERFORM_CONTROL_PREDICTION = 2
+    RUN_CONTROL = 3
+    STOP_CONTROL = 4
 
 
 class RandomVibrationDataAnalysisUICommands(Enum):
@@ -67,15 +63,6 @@ class RandomVibrationDataAnalysisUICommands(Enum):
 
 
 # endregion
-
-
-# region Metadata
-class RandomVibrationSysIdMetadata(SysIdMetadata):
-    pass
-
-
-# endregion
-
 
 class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
@@ -102,6 +89,8 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             gui_update_queue,
             environment_name,
         )
+        self.map_command(RandomVibrationDataAnalysisCommands.INITIALIZE_ENVIRONMENT, 
+                         self.initialize_environment)
         self.map_command(
             RandomVibrationDataAnalysisCommands.INITIALIZE_PARAMETERS,
             self.initialize_sysid_parameters,
@@ -139,163 +128,172 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     # endregion
 
     # region StateSync
-    def initialize_sysid_parameters(self, data: RandomVibrationSysIdMetadata):
-        self.parameters: RandomVibrationSysIdMetadata
+    def initialize_environment(self, data):
+        # This is a terrible way to do this. Basically, data is supposed to be just a str of 
+        # environment name but in this case, the data analysis process requires knowledge of
+        # the original environment metadata so we are storing it here instead. Breaks chain
+        # of inheritance for this environment.
+        self.environment_metadata = data
+        super().initialize_environment(data.environment_name)
+
+    def initialize_sysid_parameters(self, data: SysIdMetadata):
+        self.parameters: SysIdMetadata
         super().initialize_sysid_parameters(data)  # This defines self.parameters
 
         # Find the frequency lines to perform control and compute error over
         # print(type(data.specification_cpsd_matrix))
         # print(data.specification_cpsd_matrix)
         self.error_indices = ~np.all(
-            (data.specification_cpsd_matrix == 0)
-            | np.isnan(data.specification_cpsd_matrix),
+            (self.environment_metadata.specification_cpsd_matrix == 0)
+            | np.isnan(self.environment_metadata.specification_cpsd_matrix),
             axis=(-1, -2),
         )
-        self.frequencies = self.parameters.frequency_spacing * np.arange(
-            self.parameters.fft_lines
+        self.frequencies = self.environment_metadata.frequency_spacing * np.arange(
+            self.environment_metadata.fft_lines
         )
         # Load in the control script
-        _, file = os.path.split(data.control_python_script)
+        _, file = os.path.split(self.environment_metadata.control_python_script)
         file, _ = os.path.splitext(file)
-        spec = importlib.util.spec_from_file_location(file, data.control_python_script)
+        spec = importlib.util.spec_from_file_location(file, self.environment_metadata.control_python_script)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         # Pull out the function from the loaded module
-        if self.parameters.control_python_function_type == 1:  # Generator
+        if self.environment_metadata.control_python_function_type == 1:  # Generator
             # Get the generator function
-            generator_function = getattr(module, data.control_python_function)()
+            generator_function = getattr(module, self.environment_metadata.control_python_function)()
             # Get us to the first yield statement
             next(generator_function)
             # Define the control function as the generator's send function
             self.control_function = generator_function.send
-        elif self.parameters.control_python_function_type == 2:  # Class
+        elif self.environment_metadata.control_python_function_type == 2:  # Class
             control_frf = (
                 self.control_frf
-                if self.parameters.update_tf_during_control
-                else self.sysid_frf
+                if self.environment_metadata.update_tf_during_control
+                else self.sysid_data.sysid_frf
             )
             control_coherence = (
                 self.control_coherence
-                if self.parameters.update_tf_during_control
-                else self.sysid_coherence
+                if self.environment_metadata.update_tf_during_control
+                else self.sysid_data.sysid_coherence
             )
-            self.control_function = getattr(module, data.control_python_function)(
-                data.specification_cpsd_matrix,  # Specifications
-                data.specification_warning_matrix,  # Warning levels
-                data.specification_abort_matrix,  # Abort Levels
-                data.control_python_function_parameters,  # Extra parameters for the control law
+            self.control_function = getattr(module, self.environment_metadata.control_python_function)(
+                self.environment_metadata.specification_cpsd_matrix,  # Specifications
+                self.environment_metadata.specification_warning_matrix,  # Warning levels
+                self.environment_metadata.specification_abort_matrix,  # Abort Levels
+                self.environment_metadata.control_python_function_parameters,  # Extra parameters for the control law
                 control_frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
                 control_coherence,  # Coherence from the system identification
                 self.frames,  # Number of frames in the CPSD
-                self.parameters.frames_in_cpsd,  # Total number of frames
+                self.environment_metadata.frames_in_cpsd,  # Total number of frames
                 self.last_response_cpsd,  # Last Control Response for Error Correction
                 self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
             )
-        elif self.parameters.control_python_function_type == 3:  # Interactive
+        elif self.environment_metadata.control_python_function_type == 3:  # Interactive
             control_frf = (
                 self.control_frf
-                if self.parameters.update_tf_during_control
-                else self.sysid_frf
+                if self.environment_metadata.update_tf_during_control
+                else self.sysid_data.sysid_frf
             )
             control_coherence = (
                 self.control_coherence
-                if self.parameters.update_tf_during_control
-                else self.sysid_coherence
+                if self.environment_metadata.update_tf_during_control
+                else self.sysid_data.sysid_coherence
             )
-            control_class = getattr(module, data.control_python_function)
+            control_class = getattr(module, self.environment_metadata.control_python_function)
             self.control_function = control_class(
                 self.environment_name,
                 self.gui_update_queue,
-                data.specification_cpsd_matrix,  # Specifications
-                data.specification_warning_matrix,  # Warning levels
-                data.specification_abort_matrix,  # Abort Levels
-                data.control_python_function_parameters,  # Extra parameters for the control law
+                self.environment_metadata.specification_cpsd_matrix,  # Specifications
+                self.environment_metadata.specification_warning_matrix,  # Warning levels
+                self.environment_metadata.specification_abort_matrix,  # Abort Levels
+                self.environment_metadata.control_python_function_parameters,  # Extra parameters for the control law
                 control_frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
                 control_coherence,  # Coherence from the system identification
                 self.frames,  # Number of frames in the CPSD
-                self.parameters.frames_in_cpsd,  # Total number of frames
+                self.environment_metadata.frames_in_cpsd,  # Total number of frames
                 self.last_response_cpsd,  # Last Control Response for Error Correction
                 self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
             )
             self.last_interactive_parameters = None
             self.has_sent_interactive_control_transfer_function_results = False
         else:  # Function
-            self.control_function = getattr(module, data.control_python_function)
+            self.control_function = getattr(module, self.environment_metadata.control_python_function)
 
+    # region Commands
     def perform_control_prediction(self, data):  # pylint: disable=unused-argument
         """Runs the control law with system identification information to predict control"""
-        if self.sysid_frf is None:
+        if self.sysid_data.sysid_frf is None:
             return
-        if self.parameters.control_python_function_type == 1:  # Generator
+        if self.environment_metadata.control_python_function_type == 1:  # Generator
             output_cpsd = self.control_function(
                 (
-                    self.parameters.specification_cpsd_matrix,  # Specifications
-                    self.parameters.specification_warning_matrix,  # Warning levels
-                    self.parameters.specification_abort_matrix,  # Abort Levels
-                    self.sysid_frf,  # Transfer Functions
-                    self.sysid_response_noise,  # Noise levels and correlation
-                    self.sysid_reference_noise,  # from the system identification
-                    self.sysid_response_cpsd,  # Response levels and correlation
-                    self.sysid_reference_cpsd,  # from the system identification
-                    self.sysid_coherence,  # Coherence from the system identification
+                    self.environment_metadata.specification_cpsd_matrix,  # Specifications
+                    self.environment_metadata.specification_warning_matrix,  # Warning levels
+                    self.environment_metadata.specification_abort_matrix,  # Abort Levels
+                    self.sysid_data.sysid_frf,  # Transfer Functions
+                    self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                    self.sysid_data.sysid_reference_noise,  # from the system identification
+                    self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                    self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                    self.sysid_data.sysid_coherence,  # Coherence from the system identification
                     self.parameters.sysid_averages,  # Number of frames in the CPSD
                     self.parameters.sysid_averages,  # Total number of frames
-                    self.parameters.control_python_function_parameters,  # Extra parameters
+                    self.environment_metadata.control_python_function_parameters,  # Extra parameters
                     None,  # Last Control Response for Error Correction
                     None,  # Last Control Excitation for Drive-based control
                 )
             )
-        elif self.parameters.control_python_function_type in [
+        elif self.environment_metadata.control_python_function_type in [
             2,
             3,
         ]:  # Class or Interactive
             if (
-                self.parameters.control_python_function == 2
+                self.environment_metadata.control_python_function == 2
                 or not self.has_sent_interactive_control_transfer_function_results
             ):
                 self.control_function.system_id_update(
-                    self.sysid_frf,  # Transfer Functions
-                    self.sysid_response_noise,  # Noise levels and correlation
-                    self.sysid_reference_noise,  # from the system identification
-                    self.sysid_response_cpsd,  # Response levels and correlation
-                    self.sysid_reference_cpsd,  # from the system identification
-                    self.sysid_coherence,  # Coherence from the system identification
+                    self.sysid_data.sysid_frf,  # Transfer Functions
+                    self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                    self.sysid_data.sysid_reference_noise,  # from the system identification
+                    self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                    self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                    self.sysid_data.sysid_coherence,  # Coherence from the system identification
                     self.parameters.sysid_averages,  # Number of frames in the CPSD
                     self.parameters.sysid_averages,  # Total number of frames
                 )
-                if self.parameters.control_python_function_type == 3:
+                if self.environment_metadata.control_python_function_type == 3:
                     self.gui_update_queue.put(
                         (
                             self.environment_name,
                             (
                                 RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE,
                                 (
-                                    self.sysid_frf,  # Transfer Functions
-                                    self.sysid_response_noise,  # Noise levels and correlation
-                                    self.sysid_reference_noise,  # from the system identification
-                                    self.sysid_response_cpsd,  # Response levels and correlation
-                                    self.sysid_reference_cpsd,  # from the system identification
-                                    self.sysid_coherence,  # Coherence from the system id
+                                    self.sysid_data.sysid_frf,  # Transfer Functions
+                                    self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                                    self.sysid_data.sysid_reference_noise,  # from the system identification
+                                    self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                                    self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                                    self.sysid_data.sysid_coherence,  # Coherence from the system id
                                 ),
                             ),
                         )
                     )
                     self.has_sent_interactive_control_transfer_function_results = True
             if (
-                self.parameters.control_python_function_type == 2
+                self.environment_metadata.control_python_function_type == 2
                 or self.last_interactive_parameters is not None
             ):
                 output_cpsd = self.control_function.control(
-                    self.sysid_frf,  # Transfer Functions
-                    self.sysid_coherence,  # Coherence from the system identification
+                    self.sysid_data.sysid_frf,  # Transfer Functions
+                    self.sysid_data.sysid_coherence,  # Coherence from the system identification
                     self.parameters.sysid_averages,  # Number of frames in the CPSD
                     self.parameters.sysid_averages,  # Total number of frames
                     None,
@@ -316,34 +314,34 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 return
         else:  # Function
             output_cpsd = self.control_function(
-                self.parameters.specification_cpsd_matrix,  # Specifications
-                self.parameters.specification_warning_matrix,  # Warning levels
-                self.parameters.specification_abort_matrix,  # Abort Levels
-                self.sysid_frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation
-                self.sysid_reference_noise,  # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd,  # from the system identification
-                self.sysid_coherence,  # Coherence from the system identification
+                self.environment_metadata.specification_cpsd_matrix,  # Specifications
+                self.environment_metadata.specification_warning_matrix,  # Warning levels
+                self.environment_metadata.specification_abort_matrix,  # Abort Levels
+                self.sysid_data.sysid_frf,  # Transfer Functions
+                self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                self.sysid_data.sysid_reference_noise,  # from the system identification
+                self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_data.sysid_reference_cpsd,  # from the system identification
+                self.sysid_data.sysid_coherence,  # Coherence from the system identification
                 self.parameters.sysid_averages,  # Number of frames in the CPSD
                 self.parameters.sysid_averages,  # Total number of frames
-                self.parameters.control_python_function_parameters,  # Extra parameters
+                self.environment_metadata.control_python_function_parameters,  # Extra parameters
                 None,  # Last Control Response for Error Correction
                 None,  # Last Control Excitation for Drive-based control
             )
         response_cpsd = (
-            self.sysid_frf @ output_cpsd @ self.sysid_frf.conjugate().transpose(0, 2, 1)
+            self.sysid_data.sysid_frf @ output_cpsd @ self.sysid_data.sysid_frf.conjugate().transpose(0, 2, 1)
         )
         self.drive_cpsd_prediction = output_cpsd
         self.response_cpsd_prediction = response_cpsd
         rms_drives = rms_csd(
-            self.drive_cpsd_prediction, self.parameters.frequency_spacing
+            self.drive_cpsd_prediction, self.environment_metadata.frequency_spacing
         )
         response_db_error = power2db(
             np.einsum("ijj->ij", self.response_cpsd_prediction[self.error_indices]).real
         ) - power2db(
             np.einsum(
-                "ijj->ij", self.parameters.specification_cpsd_matrix[self.error_indices]
+                "ijj->ij", self.environment_metadata.specification_cpsd_matrix[self.error_indices]
             ).real
         )
         rms_db_error = rms_time(response_db_error, axis=0)
@@ -356,14 +354,14 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                         self.frequencies,
                         self.drive_cpsd_prediction,
                         self.response_cpsd_prediction,
-                        self.parameters.specification_cpsd_matrix,
+                        self.environment_metadata.specification_cpsd_matrix,
                         rms_drives,
                         rms_db_error,
                     ),
                 ),
             )
         )
-        if self.parameters.control_python_function_type == 3:
+        if self.environment_metadata.control_python_function_type == 3:
             self.has_sent_interactive_control_transfer_function_results = False
 
     def run_control(self, data):  # pylint: disable=unused-argument
@@ -392,7 +390,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                         RandomVibrationDataAnalysisUICommands.CONTROL_UPDATE,
                         (
                             self.frames,
-                            self.parameters.frames_in_cpsd,
+                            self.environment_metadata.frames_in_cpsd,
                             self.frequencies,
                             self.control_frf,
                             self.control_coherence,
@@ -408,13 +406,13 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             abort_channels = []
             with np.errstate(invalid="ignore"):
                 lines_out = (
-                    self.parameters.percent_lines_out / 100
-                ) * self.parameters.fft_lines
+                    self.environment_metadata.percent_lines_out / 100
+                ) * self.environment_metadata.fft_lines
                 for i in range(self.last_response_cpsd.shape[-1]):
                     if (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            > self.parameters.specification_abort_matrix[1, :, i]
+                            > self.environment_metadata.specification_abort_matrix[1, :, i]
                         )
                         > lines_out
                     ):
@@ -422,7 +420,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     elif (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            < self.parameters.specification_abort_matrix[0, :, i]
+                            < self.environment_metadata.specification_abort_matrix[0, :, i]
                         )
                         > lines_out
                     ):
@@ -430,7 +428,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     elif (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            > self.parameters.specification_warning_matrix[1, :, i]
+                            > self.environment_metadata.specification_warning_matrix[1, :, i]
                         )
                         > lines_out
                     ):
@@ -438,27 +436,27 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     elif (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            < self.parameters.specification_warning_matrix[0, :, i]
+                            < self.environment_metadata.specification_warning_matrix[0, :, i]
                         )
                         > lines_out
                     ):
                         warning_channels.append(i)
             if (
                 len(abort_channels) > 0
-                and self.frames == self.parameters.frames_in_cpsd
-                and self.parameters.allow_automatic_aborts
+                and self.frames == self.environment_metadata.frames_in_cpsd
+                and self.environment_metadata.allow_automatic_aborts
             ):
                 print(f"Aborting due to channel indices {abort_channels}")
                 self.log(f"Aborting due to channel indices {abort_channels}")
                 self.environment_command_queue.put(
-                    self.process_name, (RandomVibrationCommands.STOP_CONTROL, None)
+                    self.process_name, (RandomVibrationDataAnalysisCommands.STOP_CONTROL, None)
                 )
             response_db_error = power2db(
                 np.einsum("ijj->ij", self.last_response_cpsd[self.error_indices]).real
             ) - power2db(
                 np.einsum(
                     "ijj->ij",
-                    self.parameters.specification_cpsd_matrix[self.error_indices],
+                    self.environment_metadata.specification_cpsd_matrix[self.error_indices],
                 ).real
             )
             rms_db_error = rms_time(response_db_error, axis=0)
@@ -475,34 +473,34 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             # Create the new control output
             control_frf = (
                 self.control_frf
-                if self.parameters.update_tf_during_control
-                else self.sysid_frf
+                if self.environment_metadata.update_tf_during_control
+                else self.sysid_data.sysid_frf
             )
             control_coherence = (
                 self.control_coherence
-                if self.parameters.update_tf_during_control
-                else self.sysid_coherence
+                if self.environment_metadata.update_tf_during_control
+                else self.sysid_data.sysid_coherence
             )
-            if self.parameters.control_python_function_type == 1:  # Generator
+            if self.environment_metadata.control_python_function_type == 1:  # Generator
                 output_cpsd = self.control_function(
                     (
-                        self.parameters.specification_cpsd_matrix,  # Specifications
-                        self.parameters.specification_warning_matrix,  # Warning levels
-                        self.parameters.specification_abort_matrix,  # Abort Levels
+                        self.environment_metadata.specification_cpsd_matrix,  # Specifications
+                        self.environment_metadata.specification_warning_matrix,  # Warning levels
+                        self.environment_metadata.specification_abort_matrix,  # Abort Levels
                         control_frf,  # Transfer Functions
-                        self.sysid_response_noise,  # Noise levels and correlation
-                        self.sysid_reference_noise,  # from the system identification
-                        self.sysid_response_cpsd,  # Response levels and correlation
-                        self.sysid_reference_cpsd,  # from the system identification
+                        self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                        self.sysid_data.sysid_reference_noise,  # from the system identification
+                        self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                        self.sysid_data.sysid_reference_cpsd,  # from the system identification
                         control_coherence,  # Coherence
                         self.frames,  # Number of frames in the CPSD
-                        self.parameters.frames_in_cpsd,  # Total number of frames
-                        self.parameters.control_python_function_parameters,  # Extra parameters
+                        self.environment_metadata.frames_in_cpsd,  # Total number of frames
+                        self.environment_metadata.control_python_function_parameters,  # Extra parameters
                         self.last_response_cpsd,  # Last Control Response for Error Correction
                         self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
                     )
                 )
-            elif self.parameters.control_python_function_type in [
+            elif self.environment_metadata.control_python_function_type in [
                 2,
                 3,
             ]:  # Class or interactive class
@@ -510,34 +508,34 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     control_frf,  # Transfer Functions
                     control_coherence,  # Coherence
                     self.frames,  # Number of frames in the CPSD
-                    self.parameters.frames_in_cpsd,  # Total number of frames
+                    self.environment_metadata.frames_in_cpsd,  # Total number of frames
                     self.last_response_cpsd,  # Last Control Response for Error Correction
                     self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
                 )
             else:  # Function
                 output_cpsd = self.control_function(
-                    self.parameters.specification_cpsd_matrix,  # Specifications
-                    self.parameters.specification_warning_matrix,  # Warning levels
-                    self.parameters.specification_abort_matrix,  # Abort Levels
+                    self.environment_metadata.specification_cpsd_matrix,  # Specifications
+                    self.environment_metadata.specification_warning_matrix,  # Warning levels
+                    self.environment_metadata.specification_abort_matrix,  # Abort Levels
                     control_frf,  # Transfer Functions
-                    self.sysid_response_noise,  # Noise levels and correlation
-                    self.sysid_reference_noise,  # from the system identification
-                    self.sysid_response_cpsd,  # Response levels and correlation
-                    self.sysid_reference_cpsd,  # from the system identification
+                    self.sysid_data.sysid_response_noise,  # Noise levels and correlation
+                    self.sysid_data.sysid_reference_noise,  # from the system identification
+                    self.sysid_data.sysid_response_cpsd,  # Response levels and correlation
+                    self.sysid_data.sysid_reference_cpsd,  # from the system identification
                     control_coherence,  # Coherence
                     self.frames,  # Number of frames in the CPSD
-                    self.parameters.frames_in_cpsd,  # Total number of frames
-                    self.parameters.control_python_function_parameters,  # Extra parameters
+                    self.environment_metadata.frames_in_cpsd,  # Total number of frames
+                    self.environment_metadata.control_python_function_parameters,  # Extra parameters
                     self.last_response_cpsd,  # Last Control Response for Error Correction
                     self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
                 )
             self.log(
                 f"RMS Outputs from Control \n  "
-                f"{rms_csd(output_cpsd, self.parameters.frequency_spacing)}"
+                f"{rms_csd(output_cpsd, self.environment_metadata.frequency_spacing)}"
             )
             self.data_out_queue.put([output_cpsd])
             self.log("Finished Controlling")
-            rms_voltages = rms_csd(output_cpsd, self.parameters.frequency_spacing)
+            rms_voltages = rms_csd(output_cpsd, self.environment_metadata.frequency_spacing)
             self.gui_update_queue.put(
                 (
                     self.environment_name,
@@ -550,7 +548,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
     def update_interactive_control_parameters(self, interactive_control_parameters):
         """Updates parameters for the interactive control law"""
-        if self.parameters.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_python_function_type == 3:  # Interactive
             self.control_function.update_parameters(interactive_control_parameters)
             self.last_interactive_parameters = interactive_control_parameters
         else:
@@ -561,7 +559,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
     def send_interactive_command(self, command):
         """Sends a command to the interactive control law"""
-        if self.parameters.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_python_function_type == 3:  # Interactive
             self.control_function.send_command(command)
         else:
             raise ValueError(
@@ -584,10 +582,12 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         self.last_response_cpsd = None
         self.last_drive_cpsd = None
         self.environment_command_queue.put(
-            self.process_name, (SysIDDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
+            self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
+# endregion
 
+# region Process
 def random_data_analysis_process(
     environment_name: str,
     command_queue: VerboseMessageQueue,

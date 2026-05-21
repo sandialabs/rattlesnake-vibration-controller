@@ -832,7 +832,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
     # endregion
 
 # region Instructions
-class RandomInstructions(EnvironmentInstructions):
+class RandomVibrationInstructions(EnvironmentInstructions):
     def __init__(self, environment_name, control_test_level):
         super().__init__(CONTROL_TYPE, environment_name)
         self.control_test_level = control_test_level
@@ -975,6 +975,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         )
         self.map_command(RandomVibrationCommands.START_CONTROL, self.start_control)
         self.map_command(RandomVibrationCommands.STOP_CONTROL, self.stop_environment)
+        self.map_command(RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(
             RandomVibrationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
         )
@@ -1001,7 +1002,18 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         return super().initialize_hardware(hardware_metadata)
 
     def initialize_environment(self, environment_metadata: RandomVibrationMetadata):
-        super().initialize_environment(environment_metadata)
+        self.environment_name = environment_metadata.environment_name
+        self.environment_metadata = environment_metadata
+
+        # Set up the data analysis
+        self.queue_container.data_analysis_command_queue.put(
+            self.environment_name,
+            (
+                RandomVibrationDataAnalysisCommands.INITIALIZE_ENVIRONMENT,
+                self.environment_metadata,
+            ),
+        )
+
         # Set up the collector
         self.queue_container.collector_command_queue.put(
             self.environment_name,
@@ -1026,14 +1038,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
                 self.get_spectral_processing_metadata(),
             ),
         )
-        # Set up the data analysis
-        self.queue_container.data_analysis_command_queue.put(
-            self.environment_name,
-            (
-                RandomVibrationDataAnalysisCommands.INITIALIZE_PARAMETERS,
-                self.environment_metadata,
-            ),
-        )
+        
         self.set_ready()
 
     def initialize_sysid(self, sysid_metadata):
@@ -1094,10 +1099,10 @@ class RandomVibrationEnvironment(SysIdEnvironment):
     def get_signal_generation_metadata(self):
         """Gets relevant metadata for the signal generation process"""
         return SignalGenerationMetadata(
-            samples_per_write=self.data_acquisition_parameters.samples_per_write,
+            samples_per_write=self.hardware_metadata.samples_per_write,
             level_ramp_samples=self.environment_metadata.test_level_ramp_time
             * self.environment_metadata.sample_rate
-            * self.data_acquisition_parameters.output_oversample,
+            * self.hardware_metadata.output_oversample,
             output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
         )
 
@@ -1112,7 +1117,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             self.environment_metadata.cola_window,
             self.environment_metadata.cola_window_exponent,
             self.environment_metadata.sigma_clip,
-            self.data_acquisition_parameters.output_oversample,
+            self.hardware_metadata.output_oversample,
         )
 
     def get_spectral_processing_metadata(self):
@@ -1120,23 +1125,23 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         averaging_type = AveragingTypes.LINEAR
         averages = self.environment_metadata.frames_in_cpsd
         exponential_averaging_coefficient = 0
-        if self.environment_parameters.sysid_estimator == "H1":
+        if self.environment_metadata.sysid_metadata.sysid_estimator == "H1":
             frf_estimator = Estimator.H1
-        elif self.environment_parameters.sysid_estimator == "H2":
+        elif self.environment_metadata.sysid_metadata.sysid_estimator == "H2":
             frf_estimator = Estimator.H2
-        elif self.environment_parameters.sysid_estimator == "H3":
+        elif self.environment_metadata.sysid_metadata.sysid_estimator == "H3":
             frf_estimator = Estimator.H3
-        elif self.environment_parameters.sysid_estimator == "Hv":
+        elif self.environment_metadata.sysid_metadata.sysid_estimator == "Hv":
             frf_estimator = Estimator.HV
         else:
             raise ValueError(
-                f"Invalid FRF Estimator {self.environment_parameters.sysid_estimator}"
+                f"Invalid FRF Estimator {self.environment_metadata.sysid_metadata.sysid_estimator}"
             )
-        num_response_channels = self.environment_parameters.num_response_channels
-        num_reference_channels = self.environment_parameters.num_reference_channels
-        frequency_spacing = self.environment_parameters.frequency_spacing
-        sample_rate = self.environment_parameters.sample_rate
-        num_frequency_lines = self.environment_parameters.fft_lines
+        num_response_channels = self.environment_metadata.num_response_channels
+        num_reference_channels = self.environment_metadata.num_reference_channels
+        frequency_spacing = self.environment_metadata.frequency_spacing
+        sample_rate = self.environment_metadata.sample_rate
+        num_frequency_lines = self.environment_metadata.fft_lines
         return SpectralProcessingMetadata(
             averaging_type,
             averages,
@@ -1195,7 +1200,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             (RandomVibrationDataAnalysisCommands.PERFORM_CONTROL_PREDICTION, None),
         )
 
-    def start_control(self, data: RandomInstructions):
+    def start_control(self, data: RandomVibrationInstructions):
         """Starts the environment at the specified test level"""
         self.log("Starting Control")
         self.siggen_shutdown_achieved = False
@@ -1263,7 +1268,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         # self.queue_container.data_analysis_command_queue.put(
         #     self.environment_name,
         #     (RandomVibrationDataAnalysisCommands.INITIALIZE_PARAMETERS,
-        #      self.environment_parameters))
+        #      self.environment_metadata))
 
         # Start the data analysis running
         self.queue_container.data_analysis_command_queue.put(
@@ -1313,7 +1318,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.environment_parameters.skip_frames * 10, 1),
+                (self.environment_metadata.skip_frames * 10, 1),
             ),
         )
         self.queue_container.signal_generation_command_queue.put(
@@ -1497,7 +1502,7 @@ def random_vibration_process(
         sysid_active_event,
         sysid_stored_event,
     )
-    process_class.run()
+    process_class.run(shutdown_event)
 
     # Rejoin all the processes
     process_class.log("Joining Subprocesses")

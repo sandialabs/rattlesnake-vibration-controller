@@ -306,28 +306,28 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     @property
     def initialized_control_names(self):
-        if self.environment_parameters.response_transformation_matrix is None:
+        if self.environment_metadata.response_transformation_matrix is None:
             return [
                 self.physical_channel_names[i]
-                for i in self.environment_parameters.control_channel_indices
+                for i in self.environment_metadata.control_channel_indices
             ]
         else:
             return [
                 f"Transformed Response {i + 1}"
                 for i in range(
-                    self.environment_parameters.response_transformation_matrix.shape[0]
+                    self.environment_metadata.response_transformation_matrix.shape[0]
                 )
             ]
 
     @property
     def initialized_output_names(self):
-        if self.environment_parameters.reference_transformation_matrix is None:
+        if self.environment_metadata.reference_transformation_matrix is None:
             return self.physical_output_names
         else:
             return [
                 f"Transformed Drive {i + 1}"
                 for i in range(
-                    self.environment_parameters.reference_transformation_matrix.shape[0]
+                    self.environment_metadata.reference_transformation_matrix.shape[0]
                 )
             ]
 
@@ -491,9 +491,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.prediction_widget.excitation_display_plot.getPlotItem().addLegend()
         self.prediction_widget.response_display_plot.getPlotItem().addLegend()
         self.plot_data_items["response_prediction"] = multiline_plotter(
-            np.arange(self.environment_parameters.fft_lines)
-            * self.environment_parameters.frequency_spacing,
-            np.zeros((4, self.environment_parameters.fft_lines)),
+            np.arange(self.environment_metadata.fft_lines)
+            * self.environment_metadata.frequency_spacing,
+            np.zeros((4, self.environment_metadata.fft_lines)),
             widget=self.prediction_widget.response_display_plot,
             other_pen_options={"width": 2},
             names=["Real Prediction", "Real Spec", "Imag Prediction", "Imag Spec"],
@@ -545,9 +545,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             },
         )
         self.plot_data_items["excitation_prediction"] = multiline_plotter(
-            np.arange(self.environment_parameters.fft_lines)
-            * self.environment_parameters.frequency_spacing,
-            np.zeros((2, self.environment_parameters.fft_lines)),
+            np.arange(self.environment_metadata.fft_lines)
+            * self.environment_metadata.frequency_spacing,
+            np.zeros((2, self.environment_metadata.fft_lines)),
             widget=self.prediction_widget.excitation_display_plot,
             other_pen_options={"width": 1},
             names=["Real Prediction", "Imag Prediction"],
@@ -568,7 +568,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             if ui_class == self.interactive_control_law_widget.__class__:
                 print("initializing data acquisition and environment parameters")
                 self.interactive_control_law_widget.initialize_parameters(
-                    self.hardware_metadata, self.environment_parameters
+                    self.hardware_metadata, self.environment_metadata
                 )
             else:
                 if self.interactive_control_law_widget is not None:
@@ -582,7 +582,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     self.interactive_control_law_window,
                     self,
                     self.hardware_metadata,
-                    self.environment_parameters,
+                    self.environment_metadata,
                 )
             self.interactive_control_law_window.show()
 
@@ -647,8 +647,59 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         
 
-    def set_environment_metadata(self, metadata):
-        pass
+    def set_environment_metadata(self, metadata:  RandomVibrationMetadata):
+        self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
+        self.definition_widget.samples_per_frame_selector.setValue(metadata.samples_per_frame)
+        self.definition_widget.ramp_time_spinbox.setValue(metadata.test_level_ramp_time)
+        index = self.definition_widget.cola_window_selector.findText(metadata.cola_window)
+        if index >= 0:
+            self.definition_widget.cola_window_selector.setCurrentIndex(index)
+
+        self.definition_widget.cola_overlap_percentage_selector.setValue(
+            metadata.cola_overlap * 100
+        )
+        self.definition_widget.cola_exponent_selector.setValue(
+            metadata.cola_window_exponent
+        )
+        self.definition_widget.sigma_clipping_selector.setValue(metadata.sigma_clip)
+        self.definition_widget.update_transfer_function_during_control_selector.setChecked(
+            metadata.update_tf_during_control
+        )
+        self.definition_widget.cpsd_frames_selector.setValue(metadata.frames_in_cpsd)
+        index = self.definition_widget.cpsd_computation_window_selector.findText(
+            metadata.cpsd_window
+        )
+        if index >= 0:
+            self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(index)
+        self.definition_widget.cpsd_overlap_selector.setValue(metadata.cpsd_overlap * 100)
+        if metadata.control_python_script:
+            self.select_python_module(None, metadata.control_python_script)
+            self.definition_widget.control_function_input.setCurrentIndex(
+                metadata.control_python_function_type
+            )
+        self.definition_widget.frequency_lines_out_spinbox.setValue(
+            metadata.percent_lines_out
+        )
+        self.definition_widget.auto_abort_checkbox.setChecked(
+            metadata.allow_automatic_aborts
+        )
+        for i in range(self.definition_widget.control_channels_selector.count()):
+            state = Qt.Checked if i in metadata.control_channel_indices else Qt.Unchecked
+            self.definition_widget.control_channels_selector.item(i).setCheckState(state)
+
+        self.response_transformation_matrix = metadata.response_transformation_matrix
+        self.output_transformation_matrix = metadata.reference_transformation_matrix
+        self.specification_frequency_lines = metadata.specification_frequency_lines
+        self.specification_cpsd_matrix = metadata.specification_cpsd_matrix
+        self.specification_warning_matrix = metadata.specification_warning_matrix
+        self.specification_abort_matrix = metadata.specification_abort_matrix
+
+        if np.all(np.isnan(self.specification_abort_matrix)):
+            self.definition_widget.auto_abort_checkbox.setChecked(False)
+            self.definition_widget.auto_abort_checkbox.setEnabled(False)
+        else:
+            self.definition_widget.auto_abort_checkbox.setEnabled(True)
+        self.show_specification()
 
     def get_environment_instructions(self):
         pass
@@ -1113,7 +1164,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.prediction_widget.excitation_column_selector.currentIndex()
         )
         self.plot_data_items["excitation_prediction"][0].setData(
-            self.frequencies,
+            self.sysid_data.frequencies,
             np.abs(
                 np.real(
                     self.excitation_prediction[:, excite_row_index, excite_column_index]
@@ -1123,25 +1174,25 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         row_index = self.prediction_widget.response_row_selector.currentIndex()
         column_index = self.prediction_widget.response_column_selector.currentIndex()
         self.plot_data_items["response_prediction"][0].setData(
-            self.frequencies,
+            self.sysid_data.frequencies,
             np.abs(np.real(self.response_prediction[:, row_index, column_index])),
         )
         if row_index == column_index:
             warning_upper = abs(
-                self.environment_parameters.specification_warning_matrix[
+                self.environment_metadata.specification_warning_matrix[
                     1, :, row_index
                 ]
             )
             warning_lower = abs(
-                self.environment_parameters.specification_warning_matrix[
+                self.environment_metadata.specification_warning_matrix[
                     0, :, row_index
                 ]
             )
             abort_upper = abs(
-                self.environment_parameters.specification_abort_matrix[1, :, row_index]
+                self.environment_metadata.specification_abort_matrix[1, :, row_index]
             )
             abort_lower = abs(
-                self.environment_parameters.specification_abort_matrix[0, :, row_index]
+                self.environment_metadata.specification_abort_matrix[0, :, row_index]
             )
             self.plot_data_items["prediction_warning_upper"].setData(
                 self.specification_frequency_lines, warning_upper
@@ -1156,13 +1207,13 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 self.specification_frequency_lines, abort_lower
             )
             self.plot_data_items["excitation_prediction"][1].setData(
-                self.frequencies, np.zeros(self.frequencies.shape)
+                self.sysid_data.frequencies, np.zeros(self.sysid_data.frequencies.shape)
             )
             self.plot_data_items["response_prediction"][2].setData(
-                self.frequencies, np.zeros(self.frequencies.shape)
+                self.sysid_data.frequencies, np.zeros(self.sysid_data.frequencies.shape)
             )
             self.plot_data_items["response_prediction"][3].setData(
-                self.frequencies, np.zeros(self.frequencies.shape)
+                self.sysid_data.frequencies, np.zeros(self.sysid_data.frequencies.shape)
             )
         else:
             self.plot_data_items["prediction_warning_upper"].setData(
@@ -1182,7 +1233,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 np.zeros(2),
             )
             self.plot_data_items["excitation_prediction"][1].setData(
-                self.frequencies,
+                self.sysid_data.frequencies,
                 np.abs(
                     np.imag(
                         self.excitation_prediction[
@@ -1192,24 +1243,24 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 ),
             )
             self.plot_data_items["response_prediction"][2].setData(
-                self.frequencies,
+                self.sysid_data.frequencies,
                 np.abs(np.imag(self.response_prediction[:, row_index, column_index])),
             )
             self.plot_data_items["response_prediction"][3].setData(
-                self.frequencies,
+                self.sysid_data.frequencies,
                 np.abs(
                     np.imag(
-                        self.environment_parameters.specification_cpsd_matrix[
+                        self.environment_metadata.specification_cpsd_matrix[
                             :, row_index, column_index
                         ]
                     )
                 ),
             )
         self.plot_data_items["response_prediction"][1].setData(
-            self.frequencies,
+            self.sysid_data.frequencies,
             np.abs(
                 np.real(
-                    self.environment_parameters.specification_cpsd_matrix[
+                    self.environment_metadata.specification_cpsd_matrix[
                         :, row_index, column_index
                     ]
                 )
@@ -1590,7 +1641,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             for i, cd in enumerate(channel_data):
                 var[i] = cd
         group_handle = netcdf_handle.createGroup(self.environment_name)
-        self.environment_parameters.store_to_netcdf(group_handle)
+        self.environment_metadata.store_to_netcdf(group_handle)
         # Create Variables for Spectral Data
         group_handle.createDimension(
             "drive_channels", self.last_transfer_function.shape[2]
@@ -1728,14 +1779,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             # Now compute if any channels are erroring or not
             with np.errstate(invalid="ignore"):
                 lines_out = (
-                    self.environment_parameters.percent_lines_out / 100
-                ) * self.environment_parameters.fft_lines
+                    self.environment_metadata.percent_lines_out / 100
+                ) * self.environment_metadata.fft_lines
                 for i in range(self.prediction_widget.response_error_list.count()):
                     item = self.prediction_widget.response_error_list.item(i)
                     if (
                         sum(
                             self.response_prediction[:, i, i]
-                            > self.environment_parameters.specification_abort_matrix[
+                            > self.environment_metadata.specification_abort_matrix[
                                 1, :, i
                             ]
                         )
@@ -1745,7 +1796,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     elif (
                         sum(
                             self.response_prediction[:, i, i]
-                            < self.environment_parameters.specification_abort_matrix[
+                            < self.environment_metadata.specification_abort_matrix[
                                 0, :, i
                             ]
                         )
@@ -1755,7 +1806,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     elif (
                         sum(
                             self.response_prediction[:, i, i]
-                            > self.environment_parameters.specification_warning_matrix[
+                            > self.environment_metadata.specification_warning_matrix[
                                 1, :, i
                             ]
                         )
@@ -1765,7 +1816,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     elif (
                         sum(
                             self.response_prediction[:, i, i]
-                            < self.environment_parameters.specification_warning_matrix[
+                            < self.environment_metadata.specification_warning_matrix[
                                 0, :, i
                             ]
                         )
@@ -1778,7 +1829,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             (
                 frames,
                 total_frames,
-                self.frequencies,
+                self.sysid_data.frequencies,
                 self.last_transfer_function,
                 self.last_coherence,
                 self.last_response_cpsd,
@@ -1792,7 +1843,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.system_id_widget.total_frames_spinbox.setValue(total_frames)
             self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
             self.plot_data_items["sum_asds_control"].setData(
-                self.frequencies, np.einsum("ijj", self.last_response_cpsd).real
+                self.sysid_data.frequencies, np.einsum("ijj", self.last_response_cpsd).real
             )
             # Go through and remove any closed windows
             self.plot_windows = [
