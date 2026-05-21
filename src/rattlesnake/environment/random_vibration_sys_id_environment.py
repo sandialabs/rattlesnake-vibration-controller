@@ -286,7 +286,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             environment's metadata is stored.
 
         """
-        super().store_to_netcdf(netcdf_group_handle)
+        super().save_metadata_to_netcdf(netcdf_group_handle)
         netcdf_group_handle.samples_per_frame = self.samples_per_frame
         netcdf_group_handle.test_level_ramp_time = self.test_level_ramp_time
         netcdf_group_handle.cpsd_overlap = self.cpsd_overlap

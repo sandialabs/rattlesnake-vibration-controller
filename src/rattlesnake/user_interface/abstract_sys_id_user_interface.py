@@ -770,7 +770,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
             return
 
         try:
-            os.remove(filepath)  # The sysid_save only appends to files
+            # os.remove(filepath)  # The sysid_save only appends to files
             self.rattlesnake.save_system_id_to_file(self.environment_name, filepath)
         except Exception as e:
             self.display_error(e)

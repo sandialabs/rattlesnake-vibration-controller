@@ -1274,46 +1274,11 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     def recompute_prediction(self):
         """Sends a message to the environment process to recompute the prediction"""
-        self.environment_command_queue.put(
-            self.log_name, (RandomVibrationCommands.RECOMPUTE_PREDICTION, None)
-        )
+        self.rattlesnake.send_environment_command(self.environment_name, RandomVibrationCommands.RECOMPUTE_PREDICTION, None)
 
     # endregion
 
     # region Run
-    # def start_control(self):
-    #     """Runs the corresponding environment in the controller"""
-    #     self.enable_control(False)
-    #     self.controller_communication_queue.put(
-    #         self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
-    #     )
-    #     self.environment_command_queue.put(
-    #         self.log_name,
-    #         (
-    #             RandomVibrationCommands.START_CONTROL,
-    #             db2scale(self.run_widget.current_test_level_selector.value()),
-    #         ),
-    #     )
-    #     self.run_timer.start(250)
-    #     self.run_start_time = time.time()
-    #     self.run_level_start_time = self.run_start_time
-    #     self.run_widget.test_progress_bar.setValue(0)
-    #     if (
-    #         self.run_widget.current_test_level_selector.value()
-    #         >= self.run_widget.target_test_level_selector.value()
-    #     ):
-    #         self.controller_communication_queue.put(
-    #             self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
-    #         )
-
-    # def stop_control(self):
-    #     """Stops the corresponding environment in the controller"""
-    #     self.run_widget.stop_test_button.setEnabled(False)
-    #     self.environment_command_queue.put(
-    #         self.log_name, (RandomVibrationCommands.STOP_CONTROL, None)
-    #     )
-    #     self.run_timer.stop()
-
     def enable_control(self, enabled):
         """Enables or disables widgets to start or stop control if the control is running or not"""
         for widget in [
@@ -1374,12 +1339,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     def change_control_test_level(self):
         """Updates the test level of the control."""
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                RandomVibrationCommands.ADJUST_TEST_LEVEL,
-                db2scale(self.run_widget.current_test_level_selector.value()),
-            ),
+        self.rattlesnake.send_environment_command(
+            self.environment_name, 
+            RandomVibrationCommands.ADJUST_TEST_LEVEL, 
+            self.run_widget.current_test_level_selector.value(),
         )
         self.run_level_start_time = time.time()
         # Check and see if we need to start streaming data
@@ -1387,9 +1350,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.run_widget.current_test_level_selector.value()
             >= self.run_widget.target_test_level_selector.value()
         ):
-            self.controller_communication_queue.put(
-                self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
-            )
+            self.rattlesnake.environment_at_target_level(self.environment_name)
 
     def change_test_level_from_profile(self, test_level):
         """Sets the test level from a profile instruction
@@ -1401,22 +1362,22 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         """
         self.run_widget.current_test_level_selector.setValue(float(test_level))
 
-    def change_specification_from_profile(self, new_specification_file):
-        """
-        Loads in a new specification and starts controlling to it
+    # def change_specification_from_profile(self, new_specification_file):
+    #     """
+    #     Loads in a new specification and starts controlling to it
 
-        Parameters
-        ----------
-        new_specification_file : str
-            File path to a new specification file
+    #     Parameters
+    #     ----------
+    #     new_specification_file : str
+    #         File path to a new specification file
 
-        """
-        self.select_spec_file(None, new_specification_file)
-        environment_parameters = self.initialize_environment()
-        self.environment_command_queue.put(
-            self.log_name,
-            (GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS, environment_parameters),
-        )
+    #     """
+    #     self.select_spec_file(None, new_specification_file)
+    #     environment_parameters = self.initialize_environment()
+    #     self.environment_command_queue.put(
+    #         self.log_name,
+    #         (GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS, environment_parameters),
+    #     )
 
     def show_magnitude_window(self, item):
         """Creates a window showing the magnitude of a signal when an item is double-clicked"""
@@ -1774,181 +1735,155 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         """
         if super().update_gui(queue_data):
             return
-        message, data = queue_data
-        if message == RandomVibrationDataAnalysisUICommands.CONTROL_PREDICTIONS:
-            (
-                _,
-                self.excitation_prediction,
-                self.response_prediction,
-                _,
-                rms_voltage_prediction,
-                rms_db_error_prediction,
-            ) = data
-            self.update_control_predictions()
-            for widget, widget_data in zip(
-                [
-                    self.prediction_widget.excitation_voltage_list,
-                    self.prediction_widget.response_error_list,
-                ],
-                [rms_voltage_prediction, rms_db_error_prediction],
-            ):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in widget_data])
-            # Now compute if any channels are erroring or not
-            with np.errstate(invalid="ignore"):
-                lines_out = (
-                    self.environment_metadata.percent_lines_out / 100
-                ) * self.environment_metadata.fft_lines
-                for i in range(self.prediction_widget.response_error_list.count()):
-                    item = self.prediction_widget.response_error_list.item(i)
-                    if (
-                        sum(
-                            self.response_prediction[:, i, i]
-                            > self.environment_metadata.specification_abort_matrix[
-                                1, :, i
-                            ]
-                        )
-                        > lines_out
-                    ):
-                        item.setBackground(QColor(255, 125, 125))
-                    elif (
-                        sum(
-                            self.response_prediction[:, i, i]
-                            < self.environment_metadata.specification_abort_matrix[
-                                0, :, i
-                            ]
-                        )
-                        > lines_out
-                    ):
-                        item.setBackground(QColor(255, 125, 125))
-                    elif (
-                        sum(
-                            self.response_prediction[:, i, i]
-                            > self.environment_metadata.specification_warning_matrix[
-                                1, :, i
-                            ]
-                        )
-                        > lines_out
-                    ):
-                        item.setBackground(QColor(255, 255, 125))
-                    elif (
-                        sum(
-                            self.response_prediction[:, i, i]
-                            < self.environment_metadata.specification_warning_matrix[
-                                0, :, i
-                            ]
-                        )
-                        > lines_out
-                    ):
-                        item.setBackground(QColor(255, 255, 125))
-                    else:
-                        item.setBackground(QColor(255, 255, 255))
-        elif message == RandomVibrationDataAnalysisUICommands.CONTROL_UPDATE:
-            (
-                frames,
-                total_frames,
-                self.sysid_data.frequencies,
-                self.last_transfer_function,
-                self.last_coherence,
-                self.last_response_cpsd,
-                self.last_reference_cpsd,
-                self.last_condition,
-            ) = data
-            self.update_sysid_plots(
-                update_time=False, update_transfer_function=True, update_noise=True
-            )
-            self.system_id_widget.current_frames_spinbox.setValue(frames)
-            self.system_id_widget.total_frames_spinbox.setValue(total_frames)
-            self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
-            self.plot_data_items["sum_asds_control"].setData(
-                self.sysid_data.frequencies, np.einsum("ijj", self.last_response_cpsd).real
-            )
-            # Go through and remove any closed windows
-            self.plot_windows = [
-                window for window in self.plot_windows if window.isVisible()
-            ]
-            for window in self.plot_windows:
-                window.update_plot(self.last_response_cpsd)
-        elif (
-            message
-            == RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE
-        ):
-            if self.interactive_control_law_widget is not None:
-                self.interactive_control_law_widget.update_ui_sysid(*data)
-        elif message == ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE:
-            if self.interactive_control_law_widget is not None:
-                self.interactive_control_law_widget.update_ui_control(data)
-        elif (
-            message
-            == RandomVibrationDataAnalysisUICommands.UPDATE_TEST_RESPONSE_ERROR_LIST
-        ):
-            rms_db_error, warning_channels, abort_channels = data
-            self.run_widget.test_response_error_list.clear()
-            self.run_widget.test_response_error_list.addItems(
-                [f"{d:.3f}" for d in rms_db_error]
-            )
-            for index in warning_channels:
-                item = self.run_widget.test_response_error_list.item(index)
-                item.setBackground(QColor(255, 255, 125))
-            for index in abort_channels:
-                item = self.run_widget.test_response_error_list.item(index)
-                item.setBackground(QColor(255, 125, 125))
-        elif message == RandomVibrationUICommands.ENABLE_CONTROL:
-            self.enable_control(True)
-        elif message == UICommands.ENABLE:
-            widget = None
-            for parent in [
-                self.definition_widget,
-                self.system_id_widget,
-                self.prediction_widget,
-                self.run_widget,
-            ]:
-                try:
-                    widget = getattr(parent, data)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
-            widget.setEnabled(True)
-        elif message == UICommands.DISABLE:
-            widget = None
-            for parent in [
-                self.definition_widget,
-                self.system_id_widget,
-                self.prediction_widget,
-                self.run_widget,
-            ]:
-                try:
-                    widget = getattr(parent, data)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Disable Widget {data}: not found in UI")
-            widget.setEnabled(False)
-        else:
-            widget = None
-            for parent in [
-                self.definition_widget,
-                self.system_id_widget,
-                self.prediction_widget,
-                self.run_widget,
-            ]:
-                try:
-                    widget = getattr(parent, message)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Update Widget {message}: not found in UI")
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
+        
+        command, data = queue_data
+        match command:
+            case RandomVibrationDataAnalysisUICommands.CONTROL_PREDICTIONS:
+                (
+                    _,
+                    self.excitation_prediction,
+                    self.response_prediction,
+                    _,
+                    rms_voltage_prediction,
+                    rms_db_error_prediction,
+                ) = data
+                self.update_control_predictions()
+                for widget, widget_data in zip(
+                    [
+                        self.prediction_widget.excitation_voltage_list,
+                        self.prediction_widget.response_error_list,
+                    ],
+                    [rms_voltage_prediction, rms_db_error_prediction],
+                ):
+                    widget.clear()
+                    widget.addItems([f"{d:.3f}" for d in widget_data])
+                # Now compute if any channels are erroring or not
+                with np.errstate(invalid="ignore"):
+                    lines_out = (
+                        self.environment_metadata.percent_lines_out / 100
+                    ) * self.environment_metadata.fft_lines
+                    for i in range(self.prediction_widget.response_error_list.count()):
+                        item = self.prediction_widget.response_error_list.item(i)
+                        if (
+                            sum(
+                                self.response_prediction[:, i, i]
+                                > self.environment_metadata.specification_abort_matrix[
+                                    1, :, i
+                                ]
+                            )
+                            > lines_out
+                        ):
+                            item.setBackground(QColor(255, 125, 125))
+                        elif (
+                            sum(
+                                self.response_prediction[:, i, i]
+                                < self.environment_metadata.specification_abort_matrix[
+                                    0, :, i
+                                ]
+                            )
+                            > lines_out
+                        ):
+                            item.setBackground(QColor(255, 125, 125))
+                        elif (
+                            sum(
+                                self.response_prediction[:, i, i]
+                                > self.environment_metadata.specification_warning_matrix[
+                                    1, :, i
+                                ]
+                            )
+                            > lines_out
+                        ):
+                            item.setBackground(QColor(255, 255, 125))
+                        elif (
+                            sum(
+                                self.response_prediction[:, i, i]
+                                < self.environment_metadata.specification_warning_matrix[
+                                    0, :, i
+                                ]
+                            )
+                            > lines_out
+                        ):
+                            item.setBackground(QColor(255, 255, 125))
+                        else:
+                            item.setBackground(QColor(255, 255, 255))
+            case RandomVibrationDataAnalysisUICommands.CONTROL_UPDATE:
+                (
+                    frames,
+                    total_frames,
+                    self.sysid_data.frequencies,
+                    self.last_transfer_function,
+                    self.last_coherence,
+                    self.last_response_cpsd,
+                    self.last_reference_cpsd,
+                    self.last_condition,
+                ) = data
+                self.update_sysid_plots(
+                    update_time=False, update_transfer_function=True, update_noise=True
+                )
+                self.system_id_widget.current_frames_spinbox.setValue(frames)
+                self.system_id_widget.total_frames_spinbox.setValue(total_frames)
+                self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
+                self.plot_data_items["sum_asds_control"].setData(
+                    self.sysid_data.frequencies, np.einsum("ijj", self.last_response_cpsd).real
+                )
+                # Go through and remove any closed windows
+                self.plot_windows = [
+                    window for window in self.plot_windows if window.isVisible()
+                ]
+                for window in self.plot_windows:
+                    window.update_plot(self.last_response_cpsd)
+            case RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE:
+                if self.interactive_control_law_widget is not None:
+                    self.interactive_control_law_widget.update_ui_sysid(*data)
+            case ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE:
+                if self.interactive_control_law_widget is not None:
+                    self.interactive_control_law_widget.update_ui_control(data)
+            case RandomVibrationDataAnalysisUICommands.UPDATE_TEST_RESPONSE_ERROR_LIST:
+                rms_db_error, warning_channels, abort_channels = data
+                self.run_widget.test_response_error_list.clear()
+                self.run_widget.test_response_error_list.addItems(
+                    [f"{d:.3f}" for d in rms_db_error]
+                )
+                for index in warning_channels:
+                    item = self.run_widget.test_response_error_list.item(index)
+                    item.setBackground(QColor(255, 255, 125))
+                for index in abort_channels:
+                    item = self.run_widget.test_response_error_list.item(index)
+                    item.setBackground(QColor(255, 125, 125))
+            case RandomVibrationUICommands.ENABLE_CONTROL:
+                self.enable_control(True)
+            case UICommands.ENABLE:
+                widget = None
+                for parent in [
+                    self.definition_widget,
+                    self.system_id_widget,
+                    self.prediction_widget,
+                    self.run_widget,
+                ]:
+                    try:
+                        widget = getattr(parent, data)
+                        break
+                    except AttributeError:
+                        continue
+                if widget is None:
+                    raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
+                widget.setEnabled(True)
+            case UICommands.DISABLE:
+                widget = None
+                for parent in [
+                    self.definition_widget,
+                    self.system_id_widget,
+                    self.prediction_widget,
+                    self.run_widget,
+                ]:
+                    try:
+                        widget = getattr(parent, data)
+                        break
+                    except AttributeError:
+                        continue
+                if widget is None:
+                    raise ValueError(f"Cannot Disable Widget {data}: not found in UI")
+                widget.setEnabled(False)
+            case _:
+                print(f"Unknown Random UI Command {command}")
         

@@ -698,9 +698,8 @@ class SysIdEnvironment(Environment):
 
         match file_extension:
             case ".nc4":
-                mode = "a" if os.path.exists(filepath) else "w"
                 netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
-                    filepath, mode, format="NETCDF4"
+                    filepath, "w", format="NETCDF4", clobber=True
                 )
                 if self.environment_name not in netcdf_dataset.groups:
                     netcdf_handle = netcdf_dataset.createGroup(self.environment_name)

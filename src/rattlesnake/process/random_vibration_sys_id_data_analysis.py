@@ -43,6 +43,7 @@ from rattlesnake.utilities import (
     rms_csd,
     rms_time,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 
 # region Commands
@@ -539,7 +540,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.gui_update_queue.put(
                 (
                     self.environment_name,
-                    ("test_output_voltage_list", rms_voltages),
+                    (UICommands.SET_ATTR, ("test_output_voltage_list", rms_voltages)),
                 )
             )
         self.command_queue.put(
