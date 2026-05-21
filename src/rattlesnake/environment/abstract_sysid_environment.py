@@ -494,6 +494,15 @@ class SysIdEnvironment(Environment):
     @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
         self.environment_metadata.sysid_metadata = sysid_metadata
+
+        # Set up the data analysis
+        self.data_analysis_command_queue.put(
+            self.environment_name,
+            (
+                SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
+                sysid_metadata,
+            ),
+        )
         # self.set_ready() # Call this at the end of your function
 
     def get_sysid_data_collector_metadata(self) -> CollectorMetadata:
@@ -815,15 +824,6 @@ class SysIdEnvironment(Environment):
             self.environment_name, (SignalGenerationCommands.GENERATE_SIGNALS, None)
         )
 
-        # Set up the data analysis
-        self.data_analysis_command_queue.put(
-            self.environment_name,
-            (
-                SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
-                self.environment_metadata.sysid_metadata,
-            ),
-        )
-
         # Start the data analysis running
         self.data_analysis_command_queue.put(
             self.environment_name,
@@ -922,15 +922,6 @@ class SysIdEnvironment(Environment):
         # Tell the signal generation to start generating signals
         self.signal_generator_command_queue.put(
             self.environment_name, (SignalGenerationCommands.GENERATE_SIGNALS, None)
-        )
-
-        # Set up the data analysis
-        self.data_analysis_command_queue.put(
-            self.environment_name,
-            (
-                SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
-                self.environment_metadata.sysid_metadata,
-            ),
         )
 
         # Start the data analysis running

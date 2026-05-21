@@ -817,22 +817,27 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 #     return
 
                 netcdf_handle = netcdf_dataset.groups[self.environment_name]
+                sysid_metadata = SysIdMetadata().load_metadata_from_netcdf(netcdf_handle, self.hardware_metadata)
                 sysid_data = SysIdDataPackage().load_package_from_netcdf(netcdf_handle)
             case "SDynPy FRF (*.npz)":
                 sdynpy_dict = np.load(filename)
+                sysid_metadata = SysIdMetadata().default_metadata(self.hardware_metadata.sample_rate)
                 sysid_data = SysIdDataPackage().load_package_from_sdynpy_frf(
                     sdynpy_dict
                 )
             case "Forcefinder SPR (*.npz)":
                 forcefinder_dict = np.load(filename)
+                sysid_metadata = SysIdMetadata().default_metadata(self.hardware_metadata.sample_rate)
                 sysid_data = SysIdDataPackage().load_package_from_forcefinder_spr(
                     forcefinder_dict
                 )
             case "MatLab File (*.mat)":
                 field_dict = loadmat(filename)
+                sysid_metadata = SysIdMetadata().default_metadata(self.hardware_metadata.sample_rate)
                 sysid_data = SysIdDataPackage().load_package_from_mat_field(field_dict)
             case "Numpy File (*.npz)":
                 field_dict = np.load(filename)
+                sysid_metadata = SysIdMetadata().default_metadata(self.hardware_metadata.sample_rate)
                 sysid_data = SysIdDataPackage().load_package_from_numpy_field(
                     field_dict
                 )
@@ -843,6 +848,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 return
 
         try:
+            self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
             self.rattlesnake.load_system_id_from_package(
                 self.environment_name, sysid_data
             )
