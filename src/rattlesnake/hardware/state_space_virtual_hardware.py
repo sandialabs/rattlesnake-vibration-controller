@@ -33,11 +33,9 @@ import numpy as np
 import scipy.signal as signal
 from scipy.io import loadmat
 
-from rattlesnake.hardware.hardware_utilities import HardwareType
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
 from rattlesnake.utilities import flush_queue
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 
 HARDWARE_TYPE = HardwareType.STATE_SPACE
 

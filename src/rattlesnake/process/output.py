@@ -183,10 +183,9 @@ class OutputProcess(AbstractMessageProcess):
                     self.queue_container.single_process_hardware_queue
                 )
             case HardwareType.SDYNPY_FRF:
-                # from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
-
-                # self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
-                pass
+                self.hardware = hardware_output_class(
+                    self.queue_container.single_process_hardware_queue
+                )
             case _:
                 raise TypeError(f"{metadata.hardware_type} has not been implemented")
         # Initialize hardware and create channels

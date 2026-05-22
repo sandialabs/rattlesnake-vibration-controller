@@ -5,7 +5,6 @@ UNIMPLEMENTED_HARDWARE = [
     HardwareType.DP_QUATTRO,
     HardwareType.DP_900,
     HardwareType.EXODUS,
-    HardwareType.SDYNPY_FRF,
 ]
 
 
@@ -81,9 +80,10 @@ for hardware_type in HardwareType:
             HARDWARE_OUTPUT[HardwareType.SDYNPY_SYSTEM] = SDynPySystemOutput
         case HardwareType.SDYNPY_FRF:
             from rattlesnake.hardware.sdynpy_frf_virtual_hardware import (
+                SDynPyFRFMetadata,
                 SDynPyFRFAcquisition,
                 SDynPyFRFOutput,
             )
-
+            HARDWARE_METADATA[HardwareType.SDYNPY_FRF] = SDynPyFRFMetadata
             HARDWARE_ACQUISITION[HardwareType.SDYNPY_FRF] = SDynPyFRFAcquisition
             HARDWARE_OUTPUT[HardwareType.SDYNPY_FRF] = SDynPyFRFOutput

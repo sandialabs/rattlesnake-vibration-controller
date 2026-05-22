@@ -217,13 +217,9 @@ class AcquisitionProcess(AbstractMessageProcess):
                     self.queue_container.single_process_hardware_queue,
                 )
             case HardwareType.SDYNPY_FRF:
-                # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
-
-                # self.hardware = SDynPyFRFAcquisition(
-                #     data_acquisition_parameters.hardware_file,
-                #     self.queue_container.single_process_hardware_queue,
-                # )
-                pass
+                self.hardware = hardware_acquisition_class(
+                    self.queue_container.single_process_hardware_queue,
+                )
             case _:
                 raise TypeError(f"{metadata.hardware_type} has not been implemented")
         # Initialize hardware and create channels

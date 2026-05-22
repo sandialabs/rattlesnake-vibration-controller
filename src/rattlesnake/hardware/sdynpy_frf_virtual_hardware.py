@@ -25,15 +25,16 @@ import multiprocessing as mp
 import time
 from typing import List
 
+import openpyxl
+import netCDF4 as nc4
 import numpy as np
 
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
 from rattlesnake.utilities import (
     flush_queue,
     reduce_array_by_coordinate,
 )
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 
 try:
     # cupy may not exist if correct modules aren't installed
@@ -83,8 +84,108 @@ _direction_map = {
     None: 0,
 }
 
+HARDWARE_TYPE = HardwareType.SDYNPY_FRF
 
-# region: Acqusition
+# region Metadata
+class SDynPyFRFMetadata(HardwareMetadata):
+    def __init__(
+        self,
+        channel_list: List[Channel],
+        sample_rate: int,
+        time_per_read: float,
+        time_per_write: float,
+        output_oversample: int,
+        hardware_file: str,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample=output_oversample,
+        )
+        self.hardware_file = hardware_file
+
+    # endregion
+
+    # region Validation
+    def validate(self):
+        return super().validate()
+    
+    # endregion
+
+    # region Loading
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+        super().save_metadata_to_netcdf(netcdf_dataset)
+
+        netcdf_dataset.hardware_file = self.hardware_file
+
+    @classmethod
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_netcdf(netcdf_dataset)
+
+        hardware_file = netcdf_dataset.hardware_file
+
+        return cls(
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+            hardware_file,
+        )
+
+    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+        super().save_metadata_to_workbook(workbook)
+
+        hardware_worksheet = workbook["Hardware"]
+        hardware_worksheet.cell(2, 2, self.hardware_file)
+
+    @classmethod
+    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_workbook(workbook)
+
+        hardware_file = None
+
+        hardware_worksheet = workbook["Hardware"]
+        for row in hardware_worksheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            if value is None or value == "":
+                continue
+            match name:
+                case "hardware_file":
+                    hardware_file = value
+                case _:
+                    continue
+
+        return cls(
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+            hardware_file,
+        )
+
+# endregion
+
+# region Acqusition
 class SDynPyFRFAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -96,7 +197,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, frf_file: str, queue: mp.queues.Queue):
+    def __init__(self, queue: mp.queues.Queue):
         """
         Loads in the SDynPy file and sets initial parameters to null
         values.
@@ -118,11 +219,6 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.sdynpy_data, self.function_type = np.load(frf_file).values()
-        if self.function_type.item() not in [4, 29]:
-            raise ValueError(
-                "File must be SDynPy TransferFunctionArray or ImpulseResponseFunctionArray"
-            )
         self.system = None
         self.times = None
         self.sample_rate = None
@@ -142,10 +238,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         self.irf = None
         self.acquisition_delay = None
 
-    # region: Abstract Methods
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: SDynPyFRFMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -165,8 +258,13 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         None.
 
         """
+        self.sdynpy_data, self.function_type = np.load(test_data.hardware_file).values()
+        if self.function_type.item() not in [4, 29]:
+            raise ValueError(
+                "File must be SDynPy TransferFunctionArray or ImpulseResponseFunctionArray"
+            )
         self.set_parameters(test_data)
-        self.create_response_channels(channel_data)
+        self.create_response_channels(test_data.channel_list)
 
     def create_response_channels(self, channel_data: List[Channel]):
         """Method to set up response channels
@@ -398,8 +496,9 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
     def close(self):
         """Method to close down the hardware"""
 
+# endregion
 
-# region: Output
+# region Output
 class SDynPyFRFOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -420,10 +519,7 @@ class SDynPyFRFOutput(HardwareOutput):
         """
         self.queue = queue
 
-    # region: Abstract Methods
-    def set_up_data_output_parameters_and_channels(
-        self, test_data: HardwareMetadata, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: SDynPyFRFMetadata):
         """
         Initialize the hardware and set up sources and sampling properties
 
@@ -479,3 +575,5 @@ class SDynPyFRFOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
+    
+# endregion
