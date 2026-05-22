@@ -16,7 +16,7 @@ from rattlesnake.cicd.utilities import (
 )
 
 
-def generate_footer_md(metadata: ReportMetadata) -> str:
+def generate_footer(metadata: ReportMetadata) -> str:
     """
     Construct the metadata block for myst.yml.
 
@@ -88,8 +88,10 @@ def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
     """
     Orchestrate report generation.
     """
-    footer_md = generate_footer_md(metadata)
-    update_myst_file(args.myst_file, footer_md)
+    footer_md = generate_footer(metadata)
+    # TODO: CBH re-enable once primary_sidebar_footer HTML rendering is resolved
+    # update_myst_file(args.myst_file, footer_md)
+    _ = footer_md  # suppress unused-variable warning while injection is suspended
 
 
 def parse_arguments() -> argparse.Namespace:
