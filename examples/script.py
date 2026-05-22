@@ -525,12 +525,12 @@ def build_random_environment():
 
 # region Startup
 if __name__ == "__main__":
-    # rattlesnake = RattlesnakeController(threaded=True, timeout=30)
+    rattlesnake = RattlesnakeController(threaded=False, timeout=10)
     # rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
     # rattlesnake = build_sine_environment()
     # rattlesnake = build_transient_environment()
-    rattlesnake = build_random_environment()
+    # rattlesnake = build_random_environment()
 
     launch_rattlesnake_ui(rattlesnake)
 # endregion

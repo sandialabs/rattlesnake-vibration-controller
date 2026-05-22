@@ -70,7 +70,8 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
 
 def main():
     """Main Rattlesnake Application Entry Point"""
-
+    print("Loading Rattlesnake...")
+    
     rattlesnake = RattlesnakeController()
 
     launch_rattlesnake_ui(rattlesnake)
