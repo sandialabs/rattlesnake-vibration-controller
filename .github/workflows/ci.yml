@@ -86,8 +86,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
+        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
 
     steps:
 
