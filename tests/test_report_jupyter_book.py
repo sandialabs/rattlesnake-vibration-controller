@@ -7,14 +7,14 @@ import types
 # import pytest  # unused import
 
 from rattlesnake.cicd.report_jupyter_book import (
-    generate_footer_md,
+    generate_footer,
     update_myst_file,
     main,
 )
 from rattlesnake.cicd.utilities import ReportMetadata
 
 
-def test_generate_footer_md():
+def test_generate_footer():
     """Test the generation of the Markdown footer."""
     metadata = ReportMetadata(
         timestamp="20240324_120000_UTC",
@@ -24,7 +24,7 @@ def test_generate_footer_md():
         github_repo="owner/repo",
     )
 
-    footer = generate_footer_md(metadata)
+    footer = generate_footer(metadata)
 
     assert "---" in footer
     assert '<div style="font-size: 0.7em;">' in footer
