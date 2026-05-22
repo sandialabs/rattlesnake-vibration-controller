@@ -49,7 +49,7 @@ def generate_footer(metadata: ReportMetadata) -> str:
     )
 
 
-def update_myst_file(myst_file: str, footer_md: str) -> None:
+def update_myst_file(myst_file: str, footer_md: str, debug: bool = False) -> None:
     """
     Read myst.yml and inject the footer.
     """
@@ -82,6 +82,11 @@ def update_myst_file(myst_file: str, footer_md: str) -> None:
         with open(myst_file, "w", encoding="utf-8") as f:
             f.writelines(new_lines)
         print("[OK] Successfully updated Jupyter Book metadata")
+        if debug:
+            print("--- myst.yml new_lines (debug) ---")
+            for line in new_lines:
+                print(repr(line))
+            print("--- end new_lines ---")
 
 
 def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
@@ -89,7 +94,10 @@ def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
     Orchestrate report generation.
     """
     footer_md = generate_footer(metadata)
-    update_myst_file(args.myst_file, footer_md)
+    extended_debug: bool = (
+        True  # Set to True to print the new myst.yml content for debugging
+    )
+    update_myst_file(args.myst_file, footer_md, debug=extended_debug)
 
 
 def parse_arguments() -> argparse.Namespace:
