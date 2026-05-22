@@ -209,16 +209,11 @@ class AcquisitionProcess(AbstractMessageProcess):
                 # )
                 pass
             case HardwareType.STATE_SPACE:
-                # from .state_space_virtual_hardware import StateSpaceAcquisition
-
-                # self.hardware = StateSpaceAcquisition(
-                #     data_acquisition_parameters.hardware_file,
-                #     self.queue_container.single_process_hardware_queue,
-                # )
-                pass
+                self.hardware = hardware_acquisition_class(
+                    self.queue_container.single_process_hardware_queue,
+                )
             case HardwareType.SDYNPY_SYSTEM:
                 self.hardware = hardware_acquisition_class(
-                    metadata.hardware_file,
                     self.queue_container.single_process_hardware_queue,
                 )
             case HardwareType.SDYNPY_FRF:

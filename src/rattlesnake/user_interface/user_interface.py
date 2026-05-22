@@ -1366,7 +1366,19 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case HardwareType.EXODUS:
                 return
             case HardwareType.STATE_SPACE:
-                return
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
             case HardwareType.SDYNPY_SYSTEM:
                 sample_rate = self.sample_rate_selector.value()
                 time_per_read = self.buffer_size_selector.value()

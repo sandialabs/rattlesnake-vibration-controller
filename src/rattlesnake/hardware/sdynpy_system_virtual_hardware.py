@@ -338,7 +338,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, system_file: str, queue: mp.Queue, sleep: bool = True):
+    def __init__(self, queue: mp.Queue, sleep: bool = True):
         """
         Loads in the SDynPy system file and sets initial parameters to null
         values.
@@ -365,9 +365,6 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.sdynpy_system_data = {
-            key: val for key, val in np.load(system_file).items()
-        }
         self.system = None
         self.times = None
         self.state = None
@@ -381,11 +378,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.output_channels = None
         self.acquisition_delay = None
         self.sleep = sleep
-        # Create a dictionary of channels for faster lookup
-        self.channel_indices = {
-            tuple([abs(v) for v in val]): index
-            for index, val in enumerate(self.sdynpy_system_data["coordinate"])
-        }
+
 
     def initialize_hardware(self, test_data: SDynPySystemMetadata):
         """
@@ -407,6 +400,14 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         None.
 
         """
+        self.sdynpy_system_data = {
+            key: val for key, val in np.load(test_data.hardware_file).items()
+        }
+        # Create a dictionary of channels for faster lookup
+        self.channel_indices = {
+            tuple([abs(v) for v in val]): index
+            for index, val in enumerate(self.sdynpy_system_data["coordinate"])
+        }
         self.create_response_channels(test_data.channel_list)
         self.set_parameters(test_data)
 

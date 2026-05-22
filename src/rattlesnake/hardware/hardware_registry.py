@@ -5,7 +5,6 @@ UNIMPLEMENTED_HARDWARE = [
     HardwareType.DP_QUATTRO,
     HardwareType.DP_900,
     HardwareType.EXODUS,
-    HardwareType.STATE_SPACE,
     HardwareType.SDYNPY_FRF,
 ]
 
@@ -63,10 +62,11 @@ for hardware_type in HardwareType:
             HARDWARE_OUTPUT[HardwareType.EXODUS] = ExodusOutput
         case HardwareType.STATE_SPACE:
             from rattlesnake.hardware.state_space_virtual_hardware import (
+                StateSpaceMetadata,
                 StateSpaceAcquisition,
                 StateSpaceOutput,
             )
-
+            HARDWARE_METADATA[HardwareType.STATE_SPACE] = StateSpaceMetadata
             HARDWARE_ACQUISITION[HardwareType.STATE_SPACE] = StateSpaceAcquisition
             HARDWARE_OUTPUT[HardwareType.STATE_SPACE] = StateSpaceOutput
         case HardwareType.SDYNPY_SYSTEM:

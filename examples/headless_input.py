@@ -9,7 +9,7 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 IMPORT_METHOD = "manual" # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
+HARDWARE_TYPE = HardwareType.NONE
 ENVIRONMENT_TYPE = EnvironmentType.TIME
 STREAM_TYPE = StreamType.NO_STREAM # None means dont start streaming
 START_ENVIRONMENT = False

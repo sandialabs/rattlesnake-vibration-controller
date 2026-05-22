@@ -175,10 +175,9 @@ class OutputProcess(AbstractMessageProcess):
                 # self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
                 pass
             case HardwareType.STATE_SPACE:
-                # from .state_space_virtual_hardware import StateSpaceOutput
-
-                # self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
-                pass
+                self.hardware = hardware_output_class(
+                    self.queue_container.single_process_hardware_queue
+                )
             case HardwareType.SDYNPY_SYSTEM:
                 self.hardware = hardware_output_class(
                     self.queue_container.single_process_hardware_queue
