@@ -27,14 +27,14 @@ def test_generate_footer_md():
     footer = generate_footer_md(metadata)
 
     assert "---" in footer
-    assert '<div' not in footer
-    assert "**Generated:**\\" in footer
-    assert "2024-03-24 12:00:00 UTC\\" in footer
-    assert "2024-03-24 08:00:00 EST\\" in footer
-    assert "2024-03-24 06:00:00 MST\\" in footer
-    assert "[12345678](https://github.com/owner/repo/actions/runs/12345678)\\" in footer
-    assert "[main](https://github.com/owner/repo/tree/main)\\" in footer
-    assert "[abc1234](https://github.com/owner/repo/commit/abc123456789)" in footer
+    assert '<div style="font-size: 0.7em;">' in footer
+    assert "Generated:<br>" in footer
+    assert "&nbsp;&nbsp;2024-03-24 12:00:00 UTC<br>" in footer
+    assert "&nbsp;&nbsp;2024-03-24 08:00:00 EST<br>" in footer
+    assert "&nbsp;&nbsp;2024-03-24 06:00:00 MST<br>" in footer
+    assert 'Run ID: <a href="https://github.com/owner/repo/actions/runs/12345678">12345678</a><br>' in footer
+    assert 'Branch: <a href="https://github.com/owner/repo/tree/main">main</a><br>' in footer
+    assert 'Commit: <a href="https://github.com/owner/repo/commit/abc123456789">abc1234</a><br>' in footer
     assert "owner/repo" in footer
     assert "Repository:" not in footer
 
@@ -50,12 +50,12 @@ site:
     myst_file = tmp_path / "myst.yml"
     myst_file.write_text(myst_content)
 
-    footer_md = "      ---\n      **Generated:** 2024-03-24"
+    footer_md = "      ---\n      <div style=\"font-size: 0.7em;\">Generated: 2024-03-24</div>"
     update_myst_file(str(myst_file), footer_md)
 
     updated_content = myst_file.read_text()
     assert "---" in updated_content
-    assert "**Generated:** 2024-03-24" in updated_content
+    assert '<div style="font-size: 0.7em;">Generated: 2024-03-24</div>' in updated_content
 
 
 def test_update_myst_file_no_footer(tmp_path, capsys):
@@ -98,8 +98,8 @@ site:
     assert "[OK] Successfully updated Jupyter Book metadata" in captured.out
     
     updated_content = myst_file.read_text()
-    assert "**Generated:**\\" in updated_content
-    assert "2024-03-24 12:00:00 UTC\\" in updated_content
+    assert "Generated:<br>" in updated_content
+    assert "&nbsp;&nbsp;2024-03-24 12:00:00 UTC<br>" in updated_content
 
 
 def test_main_error(monkeypatch, capsys):

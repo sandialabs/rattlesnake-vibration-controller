@@ -326,6 +326,15 @@ Full suite of CI/CD jobs triggered for main or dev branch updates.
 
 Running the full suite is significantly more time-consuming than executing only the specific tests relevant to the modified files.
 
+#### Matrix scope
+
+The `pytest_matrix` job runs across combinations of operating systems and Python versions. The scope is adaptive:
+
+- **Feature branches** — runs only `ubuntu-latest` × `3.12` (1 runner). This keeps per-push feedback fast.
+- **`main` and `dev` branches** — runs the full matrix: `macos-latest`, `ubuntu-latest`, and `windows-latest` × `3.11` and `3.12` (6 runners). Full cross-platform coverage is enforced before anything reaches a release branch.
+
+This means OS-specific or Python-version-specific bugs are caught on `main`/`dev` before a release, without slowing down every feature branch push.
+
 ### Test
 
 Tests are grouped by the amount of time required to run the tests.  The current
