@@ -85,7 +85,10 @@ def main():
             metadata = {
                 "score": str(score),
                 "color": color,
-                "pages_url": f"https://{owner}.github.io/{repo}/{args.deploy_subdir}/reports/lint/",
+                "pages_url": (
+                    f"https://{owner}.github.io/{repo}"
+                    f"/{args.deploy_subdir}/reports/lint/"
+                ),
                 "workflow_url": (
                     f"{args.github_server_url}/{args.github_repo}/"
                     "actions/workflows/ci.yml"

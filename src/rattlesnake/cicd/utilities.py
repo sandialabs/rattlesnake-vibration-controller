@@ -7,11 +7,13 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime
-from typing import NamedTuple
+from datetime import datetime, timedelta
+from typing import Final, NamedTuple
 
 import pytz
 import requests
+
+GITHUB_RUN_EXPIRY_DAYS: Final = 90
 
 
 class ReportMetadata(NamedTuple):
@@ -287,6 +289,30 @@ def get_multiline_timestamp(short: str) -> list[str]:
     return ["Generated:", utc_str, est_str, mst_str, pst_str]
 
 
+def expiry_date(short: str) -> str:
+    """
+    Return the GitHub Actions run expiry date as YYYY-mm-dd.
+
+    GitHub retains workflow run logs for GITHUB_RUN_EXPIRY_DAYS days.
+
+    Args:
+        short: UTC timestamp in the form YYYYMMDD_HHMMSS_UTC
+
+    Returns:
+        Expiry date string in YYYY-mm-dd format.
+    """
+    pattern: re.Pattern = re.compile(r"^(\d{8})_(\d{6})_(UTC|GMT|Z)$")
+    match = pattern.match(short)
+    if not match:
+        raise ValueError(f"Invalid timestamp format: '{short}'")
+    date_part, time_part, _ = match.groups()
+    utc_dt: datetime = datetime.strptime(
+        f"{date_part}_{time_part}_UTC", "%Y%m%d_%H%M%S_%Z"
+    )
+    expiry: datetime = utc_dt + timedelta(days=GITHUB_RUN_EXPIRY_DAYS)
+    return expiry.strftime("%Y-%m-%d")
+
+
 HTML_PREAMBLE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -345,7 +371,8 @@ def get_html_report_header(
     <title>{title}</title>
     <style>
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont,
+                         'Segoe UI', Roboto, sans-serif;
             margin: 0; padding: 20px; background: #f6f8fa; line-height: 1.6;
         }}
         .container {{

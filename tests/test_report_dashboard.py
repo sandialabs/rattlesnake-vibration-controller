@@ -27,6 +27,7 @@ def test_generate_dashboard_html():
     assert "main/badges/lint.svg" in html
     assert "dev/badges/coverage.svg" in html
     assert "2026-04-24" in html
+    assert "(expires 2026-07-23)" in html
 
 
 def test_main_success(tmp_path, monkeypatch, capsys):

@@ -365,13 +365,17 @@ uv run preflight
 
 #### Modes and options
 
-By default, `preflight` matches CI's scope on non-`main`/`dev` branches: full pylint on `src/rattlesnake/`, ruff format check, and pytest on `tests/*.py` and `tests/short/`.
+By default, `preflight` matches CI's scope on non-`main`/`dev` branches: ruff format check and full pylint on `src/rattlesnake/`. When pytest is re-enabled, the default scope will also run `tests/ --ignore=tests/long`; use `--all-tests` to include `tests/long/` (matching CI on `main`/`dev`).
+
+```{note}
+pytest steps are currently skipped pending resolution of a test hang in `test_acquisition.py` (see TODO in `src/rattlesnake/preflight.py`). Only ruff format check and pylint run until that issue is resolved with Dan.
+```
 
 option | description
 --- | ---
-*(none)* | Default scope: matches CI on a feature branch
+*(none)* | Default scope: ruff format check + pylint (+ pytest `tests/ --ignore=tests/long` when re-enabled)
 `--all-tests` | Full suite including `tests/long/`; matches CI on `main`/`dev`
-`--coverage` | Adds `--cov=rattlesnake --cov-report=term-missing` to the pytest run
+`--coverage` | Adds `--cov=rattlesnake --cov-report=term-missing` to the pytest run (no effect while pytest is disabled)
 `--tag TAG` | Validates `TAG` before pushing a release: checks current branch is `main` or `dev`, that the tag conforms to PEP 440, and that it is strictly newer than all existing tags. Runs before lint and tests.
 `--docs` | Builds the Jupyter Book with `--strict`; matches the `docs_jupyter_book` CI job. Requires network access to `api.mystmd.org`.
 `--no-sync` | Skips `uv sync` (useful when offline or behind a firewall)
@@ -381,13 +385,16 @@ option | description
 #### Examples
 
 ```sh
-uv run preflight                          # default scope
-uv run preflight --all-tests              # full suite
-uv run preflight --coverage               # default scope + coverage report
-uv run preflight --all-tests --coverage   # full suite + coverage report
-uv run preflight --tag v1.0.0rc1          # validate tag, then default scope
-uv run preflight --docs                   # build Jupyter Book
-uv run preflight --no-sync                # skip dependency sync
+uv run preflight                            # default scope
+uv run preflight --all-tests                # full suite
+uv run preflight --coverage                 # default scope + coverage report
+uv run preflight --all-tests --coverage     # full suite + coverage report
+uv run preflight --tag v1.0.0rc1            # validate tag, then default scope
+uv run preflight --tag v1.0.0 --all-tests   # validate tag, then full suite
+uv run preflight --docs                     # build Jupyter Book
+uv run preflight --no-sync                  # skip dependency sync
+uv run preflight --force                    # continue past network/sync failures
+uv run preflight --skip-network-check       # skip initial PyPI connectivity check
 ```
 
 ### Trusted Publishing

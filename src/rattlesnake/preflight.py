@@ -17,7 +17,8 @@ The `--no-sync` flag allows users to skip the dependency synchronization step,
 which is useful when they are behind a firewall or have already installed dependencies.
 
 Usage:
-    uv run preflight [--no-sync] [--skip-network-check] [--all-tests] [--coverage] [--tag TAG] [--docs] [--force]
+    uv run preflight [--no-sync] [--skip-network-check] [--all-tests]
+                     [--coverage] [--tag TAG] [--docs] [--force]
 
 Examples:
     uv run preflight                         # Default: matches CI's non-main/dev scope
@@ -26,8 +27,8 @@ Examples:
     uv run preflight --all-tests --coverage  # Full suite + coverage report
     uv run preflight --tag v1.0.0rc1         # Validate tag, then run default scope
     uv run preflight --tag v1.0.0 --all-tests  # Validate tag, then run full suite
-    uv run preflight --docs                  # Build Jupyter Book (requires network access)
-    uv run preflight --no-sync               # Skip dependency sync (useful when offline/firewall)
+    uv run preflight --docs                  # Build Jupyter Book (requires network)
+    uv run preflight --no-sync               # Skip dependency sync (offline/firewall)
     uv run preflight --force                 # Continue even if network/sync checks fail
     uv run preflight --skip-network-check    # Skip the initial connectivity check
 
@@ -139,7 +140,8 @@ def validate_tag_checks(tag: str) -> bool:
     except InvalidVersion:
         print(f"  [FAIL] PEP 440: '{tag}' is not a valid PEP 440 version.")
         print(
-            "         Valid examples: v1.0.0  v1.1.0a1  v1.1.0rc1  v1.0.0.post1  v1.1.0.dev1"
+            "         Valid examples: v1.0.0  v1.1.0a1  v1.1.0rc1"
+            "  v1.0.0.post1  v1.1.0.dev1"
         )
         return False
 
@@ -162,11 +164,13 @@ def validate_tag_checks(tag: str) -> bool:
     latest_version, latest_tag = max(existing, key=lambda x: x[0])
     if new_version <= latest_version:
         print(
-            f"  [FAIL] Monotonicity: '{tag}' ({new_version}) is not newer than '{latest_tag}' ({latest_version})."
+            f"  [FAIL] Monotonicity: '{tag}' ({new_version}) is not newer"
+            f" than '{latest_tag}' ({latest_version})."
         )
         return False
     print(
-        f"  [OK]   Monotonicity: '{tag}' ({new_version}) is newer than '{latest_tag}' ({latest_version})."
+        f"  [OK]   Monotonicity: '{tag}' ({new_version}) is newer"
+        f" than '{latest_tag}' ({latest_version})."
     )
     return True
 
@@ -181,28 +185,43 @@ def main() -> None:
     parser.add_argument(
         "--all-tests",
         action="store_true",
-        help="Run all tests in 'tests/' and lint all source files (matches CI on main/dev).",
+        help=(
+            "Run all tests in 'tests/' and lint all source files"
+            " (matches CI on main/dev)."
+        ),
     )
     parser.add_argument(
         "--coverage",
         action="store_true",
-        help="Add coverage reporting to the pytest run (--cov=rattlesnake --cov-report=term-missing).",
+        help=(
+            "Add coverage reporting to the pytest run"
+            " (--cov=rattlesnake --cov-report=term-missing)."
+        ),
     )
     parser.add_argument(
         "--tag",
         metavar="TAG",
         default=None,
-        help="Validate TAG before pushing a release (branch, PEP 440, monotonicity). Runs before lint/tests.",
+        help=(
+            "Validate TAG before pushing a release"
+            " (branch, PEP 440, monotonicity). Runs before lint/tests."
+        ),
     )
     parser.add_argument(
         "--docs",
         action="store_true",
-        help="Build the Jupyter Book documentation (requires network access to api.mystmd.org).",
+        help=(
+            "Build the Jupyter Book documentation"
+            " (requires network access to api.mystmd.org)."
+        ),
     )
     parser.add_argument(
         "--no-sync",
         action="store_true",
-        help="Skip 'uv' dependency synchronization (useful when offline or behind a firewall).",
+        help=(
+            "Skip 'uv' dependency synchronization"
+            " (useful when offline or behind a firewall)."
+        ),
     )
     parser.add_argument(
         "--skip-network-check",
@@ -288,7 +307,8 @@ def main() -> None:
             elif "Connect" in sync_res.stderr or "timeout" in sync_res.stderr:
                 print("\n    Detected Connection Issue.")
                 print(
-                    "    - Solution: Check your proxy settings (HTTP_PROXY/HTTPS_PROXY)."
+                    "    - Solution: Check your proxy settings"
+                    " (HTTP_PROXY/HTTPS_PROXY)."
                 )
 
             print("\n    Full error from 'uv':")
@@ -326,8 +346,10 @@ def main() -> None:
                 f"uv run {sync_flag} pylint src/rattlesnake",
                 "Full Pylint Analysis",
             ),
-            # TODO: CBH re-enable once test_acquisition hanging issue is resolved with Dan
-            # (f"uv run {sync_flag} pytest tests/ {cov_flags}", "Full Test Suite" + (" (with coverage)" if args.coverage else "")),
+            # TODO: CBH re-enable once test_acquisition hang is resolved with Dan
+            # (f"uv run {sync_flag} pytest tests/ {cov_flags}",
+            #  "Full Test Suite"
+            #  + (" (with coverage)" if args.coverage else "")),
         ]
     else:
         steps = [
@@ -339,8 +361,10 @@ def main() -> None:
                 f"uv run {sync_flag} pylint src/rattlesnake",
                 "Pylint Analysis",
             ),
-            # TODO: CBH re-enable once test_acquisition hanging issue is resolved with Dan
-            # (f"uv run {sync_flag} pytest tests/ --ignore=tests/long {cov_flags}", "Tests (tests/ --ignore=tests/long)" + (" with coverage" if args.coverage else "")),
+            # TODO: CBH re-enable once test_acquisition hang is resolved with Dan
+            # (f"uv run {sync_flag} pytest tests/ --ignore=tests/long {cov_flags}",
+            #  "Tests (tests/ --ignore=tests/long)"
+            #  + (" with coverage" if args.coverage else "")),
         ]
 
     all_passed = True
@@ -380,19 +404,23 @@ def main() -> None:
         print("PREFLIGHT FAILED: Fix errors before pushing.")
         if not args.no_sync:
             print(
-                "\n[TIP] If synchronization failed, try 'python preflight.py --no-sync'."
+                "\n[TIP] If synchronization failed,"
+                " try 'python preflight.py --no-sync'."
             )
         if not args.all_tests:
             print(
-                "\n[TIP] To run the full suite (including tests/long/), use 'python preflight.py --all-tests'."
+                "\n[TIP] To run the full suite (including tests/long/),"
+                " use 'python preflight.py --all-tests'."
             )
         if not args.coverage:
             print(
-                "\n[TIP] To include a coverage report, add '--coverage' to your command."
+                "\n[TIP] To include a coverage report,"
+                " add '--coverage' to your command."
             )
         if not args.docs:
             print(
-                "\n[TIP] To check the documentation build, add '--docs' (requires network access)."
+                "\n[TIP] To check the documentation build,"
+                " add '--docs' (requires network access)."
             )
         sys.exit(1)
 
