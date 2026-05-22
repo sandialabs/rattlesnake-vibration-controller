@@ -35,7 +35,6 @@ def generate_footer(metadata: ReportMetadata) -> str:
     indent = "      "
 
     return (
-        f"{indent}---\n"
         f'{indent}<div style="font-size: 0.7em;">\n'
         f"{indent}{ts_lines[0]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
