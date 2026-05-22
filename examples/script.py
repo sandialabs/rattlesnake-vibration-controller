@@ -458,8 +458,8 @@ def build_time_environment():
 
     rattlesnake.initialize_hardware(hardware_metadata)
     rattlesnake.initialize_environments([time_environment_metadata])
-    rattlesnake.initialize_profile_event_list(time_profile_event_list)
-    rattlesnake.set_stream_metadata(time_stream_metadata)
+    # rattlesnake.initialize_profile_event_list(time_profile_event_list)
+    # rattlesnake.set_stream_metadata(time_stream_metadata)
     rattlesnake.start_acquisition(time_stream_metadata)
     rattlesnake.start_environment(time_environment_instructions)
 
@@ -525,8 +525,8 @@ def build_random_environment():
 
 # region Startup
 if __name__ == "__main__":
-    rattlesnake = RattlesnakeController(threaded=False, timeout=10)
-    # rattlesnake = build_time_environment()
+    # rattlesnake = RattlesnakeController(threaded=False, timeout=10)
+    rattlesnake = build_time_environment()
     # rattlesnake = build_modal_environment()
     # rattlesnake = build_sine_environment()
     # rattlesnake = build_transient_environment()
