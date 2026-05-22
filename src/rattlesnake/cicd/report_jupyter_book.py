@@ -36,15 +36,16 @@ def generate_footer_md(metadata: ReportMetadata) -> str:
 
     return (
         f"{indent}---\n"
-        f"{indent}**{ts_lines[0]}**\\\n"
-        f"{indent}{ts_lines[1]}\\\n"
-        f"{indent}{ts_lines[2]}\\\n"
-        f"{indent}{ts_lines[3]}\\\n"
-        f"{indent}{ts_lines[4]}\n"
-        f"\n"
-        f"{indent}Run ID: [{metadata.run_id}]({run_url})\\\n"
-        f"{indent}Branch: [{metadata.ref_name}]({branch_url})\\\n"
-        f"{indent}Commit: [{metadata.github_sha[:7]}]({commit_url})\n"
+        f'{indent}<div style="font-size: 0.7em;">\n'
+        f"{indent}{ts_lines[0]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[2]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[4]}<br>\n"
+        f'{indent}Run ID: <a href="{run_url}">{metadata.run_id}</a><br>\n'
+        f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
+        f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
+        f"{indent}</div>\n"
     )
 
 
