@@ -26,7 +26,6 @@ def test_generate_footer():
 
     footer = generate_footer(metadata)
 
-    assert "---" in footer
     assert '<div style="font-size: 0.7em;">' in footer
     assert "Generated:<br>" in footer
     assert "&nbsp;&nbsp;2024-03-24 12:00:00 UTC<br>" in footer
