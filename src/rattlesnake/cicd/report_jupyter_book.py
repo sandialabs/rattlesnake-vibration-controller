@@ -71,8 +71,9 @@ def update_myst_file(myst_file: str, footer_md: str, debug: bool = False) -> Non
         if in_footer:
             if line.strip() and not line.startswith("    "):
                 in_footer = False
-            else:
-                continue
+            # else:
+            #     continue  # was discarding existing footer lines (static links),
+            #                # causing CI metadata to replace rather than prepend them
 
         new_lines.append(line)
 
@@ -98,7 +99,7 @@ def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
         True  # Set to True to print the new myst.yml content for debugging
     )
     # Suppress injection to see primary_sidebar_footer in myst.yml for testing
-    # update_myst_file(args.myst_file, footer_md, debug=extended_debug)
+    update_myst_file(args.myst_file, footer_md, debug=extended_debug)
 
 
 def parse_arguments() -> argparse.Namespace:
