@@ -23,6 +23,7 @@ from rattlesnake.cicd.utilities import (
     get_score_color_coverage,
     get_score_color_lint,
     get_timestamp,
+    expiry_date,
 )
 
 # region: Test get_score_color_lint
@@ -232,6 +233,27 @@ def test_get_multiline_timestamp_invalid():
     """Test invalid format for multiline timestamp."""
     with pytest.raises(ValueError):
         get_multiline_timestamp("invalid")
+
+
+# endregion
+
+# region: Test expiry_date
+
+
+def test_expiry_date():
+    """Test that expiry_date adds 90 days to the timestamp."""
+    assert expiry_date("20260424_000000_UTC") == "2026-07-23"
+
+
+def test_expiry_date_year_rollover():
+    """Test expiry_date crossing a year boundary."""
+    assert expiry_date("20261015_000000_UTC") == "2027-01-13"
+
+
+def test_expiry_date_invalid():
+    """Test that an invalid timestamp raises ValueError."""
+    with pytest.raises(ValueError):
+        expiry_date("not-a-timestamp")
 
 
 # endregion
