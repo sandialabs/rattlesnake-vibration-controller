@@ -45,6 +45,7 @@ def generate_footer(metadata: ReportMetadata) -> str:
         f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
         f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
+        f"\n"
     )
 
 
