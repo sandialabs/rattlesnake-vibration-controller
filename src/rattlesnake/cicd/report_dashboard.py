@@ -12,6 +12,7 @@ from rattlesnake.cicd.utilities import (
     add_common_args,
     extend_timestamp,
     report_cli_entrypoint,
+    expiry_date,
 )
 
 
@@ -43,6 +44,7 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
         HTML string
     """
     timestamp_ext = extend_timestamp(metadata.timestamp)
+    expiry = expiry_date(metadata.timestamp)
     # Pre-calculate GitHub URLs for use in the template
     github_url, run_url, branch_url, commit_url = get_github_urls(metadata)
 
@@ -183,6 +185,7 @@ def generate_dashboard_html(metadata: ReportMetadata) -> str:
                     <span class="font-semibold">Run ID:</span>
                     <a href="{run_url}" class="text-blue-600 hover:underline">
                         {metadata.run_id}</a>
+                    <span class="text-slate-400">(expires {expiry})</span>
                 </div>
                 <div>
                     <span class="font-semibold">Branch:</span>
