@@ -283,7 +283,7 @@ class TimeMetadata(EnvironmentMetadata):
     def save_metadata_to_worksheet(
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
     ):
-        super().store_to_worksheet(worksheet)
+        super().save_metadata_to_worksheet(worksheet)
 
         if self.signal_file:
             worksheet.cell(2, 2, str(self.signal_file))

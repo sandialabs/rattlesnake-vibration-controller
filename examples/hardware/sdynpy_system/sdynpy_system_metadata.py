@@ -5,20 +5,14 @@ import defaults
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system_virtual_hardware import SDynPySystemMetadata
 
-HARDWARE_FILE = defaults.DIRECTORY + "/hardware/sdynpy_system.npz"
+HARDWARE_FILE = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.npz"
 
 def worksheet_sdynpy_system_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
-    channel_list = SDynPySystemMetadata.load_channel_table_from_workbook(workbook)
-    metadata = SDynPySystemMetadata(
-        channel_list=channel_list,
-        sample_rate=defaults.SAMPLE_RATE,
-        time_per_read=defaults.BUFFER_SIZE,
-        time_per_write=defaults.BUFFER_SIZE,
-        output_oversample=defaults.OUTPUT_OVERSAMPLE,
-        hardware_file=HARDWARE_FILE,
-    )
+    metadata = SDynPySystemMetadata.load_metadata_from_workbook(workbook)
+    metadata.hardware_file = HARDWARE_FILE
+    workbook.close()
     return metadata
 
 def netcdf_sdynpy_system_metadata():

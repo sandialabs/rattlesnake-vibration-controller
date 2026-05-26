@@ -195,10 +195,46 @@ class HardwareMetadata:
                 worksheet.cell(row=row_idx, column=col_idx, value=val)
 
     @classmethod
+    def load_channel_table_from_workbook(
+        cls, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> List[Channel]:
+        sheets = workbook.sheetnames
+
+        if len(sheets) > 1:
+            sheets = [sheet for sheet in sheets if "channel" in sheet.lower()]
+        if len(sheets) > 1:
+            raise RattlesnakeError(
+                "Multiple channel table sheets located in Excel Spreadsheet"
+            )
+        if len(sheets) == 0:
+            raise RattlesnakeError(
+                "Excel Spreadsheet does not contain a channel table sheet"
+            )
+
+        worksheet = workbook[sheets[0]]
+
+        channel_list = []
+        channel_attr_list = Channel().channel_attr_list
+        for row in worksheet.iter_rows(min_row=3, min_col=2, max_col=23):
+            channel = Channel()
+            for col, cell in enumerate(row):
+                value = cell.value
+                value = None if isinstance(value, str) and not value.strip() else value
+                setattr(channel, channel_attr_list[col], cell.value)
+            if channel.is_empty:
+                break
+            channel_list.append(channel)
+
+        return channel_list
+
+    @classmethod
     def save_blank_hardware_to_workbook(
         cls, workbook: openpyxl.workbook.workbook.Workbook
     ):
-        hardware_worksheet = workbook.create_sheet("Hardware")
+        if "Hardware" in workbook.sheetnames:
+            hardware_worksheet = workbook["Hardware"]
+        else:
+            hardware_worksheet = workbook.create_sheet("Hardware")
         hardware_worksheet.cell(1, 1, "Hardware Type")
         hardware_worksheet.cell(1, 2, "# Enter hardware index here")
         hardware_worksheet.cell(
@@ -265,40 +301,50 @@ class HardwareMetadata:
             "Only used if Task Triggers is 2.  Only used for NI hardware.  "
             "This row can be deleted if it is not used.",
         )
-
+    
     @classmethod
-    def load_channel_table_from_workbook(
-        cls, workbook: openpyxl.workbook.workbook.Workbook
-    ) -> List[Channel]:
-        sheets = workbook.sheetnames
+    @abstractmethod
+    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+        channel_list = cls.load_channel_table_from_workbook(workbook)
 
-        if len(sheets) > 1:
-            sheets = [sheet for sheet in sheets if "channel" in sheet.lower()]
-        if len(sheets) > 1:
-            raise RattlesnakeError(
-                "Multiple channel table sheets located in Excel Spreadsheet"
-            )
-        if len(sheets) == 0:
-            raise RattlesnakeError(
-                "Excel Spreadsheet does not contain a channel table sheet"
-            )
+        # This is a holdover from previous worksheet logic
+        # Need default values
+        hardware_type = HardwareType.NONE
+        sample_rate = 1000
+        time_per_read = 0.1
+        time_per_write = 0.1
+        output_oversample = 1
 
-        worksheet = workbook[sheets[0]]
+        # Hardware
+        hardware_sheet = workbook["Hardware"]
+        for row in hardware_sheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            if value is None or value == "":
+                continue
+            match name:
+                case "hardware_type":
+                    hardware_type_int = int(value)
+                    hardware_type = HardwareType(hardware_type_int)
+                case "sample_rate":
+                    sample_rate = int(value)
+                case "time_per_read":
+                    time_per_read = float(value)
+                case "time_per_write":
+                    time_per_write = float(value)
+                case "integration_oversampling":
+                    output_oversample = int(value)
+                case _:
+                    continue
 
-        channel_list = []
-        channel_attr_list = Channel().channel_attr_list
-        for row in worksheet.iter_rows(min_row=3, min_col=2, max_col=23):
-            channel = Channel()
-            for col, cell in enumerate(row):
-                value = cell.value
-                value = None if isinstance(value, str) and not value.strip() else value
-                setattr(channel, channel_attr_list[col], cell.value)
-            if channel.is_empty:
-                break
-            channel_list.append(channel)
-        workbook.close()
-
-        return channel_list
+        return (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        )
 
     @abstractmethod
     def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
@@ -390,9 +436,11 @@ class HardwareMetadata:
     @abstractmethod
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
         self.save_channel_table_to_workbook(self.channel_list, workbook)
-        self.save_blank_hardware_to_workbook(workbook)
 
-        hardware_worksheet = workbook["Hardware"]
+        if "Hardware" in workbook.sheetnames:
+            hardware_worksheet = workbook["Hardware"]
+        else:
+            hardware_worksheet = workbook.create_sheet("Hardware")
 
         # Fill out values
         hardware_type = self.hardware_type
@@ -400,50 +448,6 @@ class HardwareMetadata:
         hardware_worksheet.cell(3, 2, str(self.sample_rate))
         hardware_worksheet.cell(4, 2, str(self.time_per_read))
         hardware_worksheet.cell(5, 2, str(self.time_per_write))
-
-    @classmethod
-    @abstractmethod
-    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
-        channel_list = cls.load_channel_table_from_workbook(workbook)
-
-        # This is a holdover from previous worksheet logic
-        # Need default values
-        hardware_type = HardwareType.NONE
-        sample_rate = 1000
-        time_per_read = 0.1
-        time_per_write = 0.1
-        output_oversample = 1
-
-        # Hardware
-        hardware_sheet = workbook["Hardware"]
-        for row in hardware_sheet.rows:
-            name = str(row[0].value).lower().strip().replace(" ", "_")
-            value = row[1].value
-            if value is None or value == "":
-                continue
-            match name:
-                case "hardware_type":
-                    hardware_type_int = int(value)
-                    hardware_type = HardwareType(hardware_type_int)
-                case "sample_rate":
-                    sample_rate = int(value)
-                case "time_per_read":
-                    time_per_read = float(value)
-                case "time_per_write":
-                    time_per_write = float(value)
-                case "integration_oversampling":
-                    output_oversample = int(value)
-                case _:
-                    continue
-
-        return (
-            hardware_type,
-            channel_list,
-            sample_rate,
-            time_per_read,
-            time_per_write,
-            output_oversample,
-        )
 
     # endregion
 

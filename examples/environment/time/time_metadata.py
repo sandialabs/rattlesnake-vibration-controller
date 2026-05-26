@@ -1,4 +1,5 @@
 import numpy as np
+import openpyxl
 
 import defaults
 
@@ -9,7 +10,11 @@ from rattlesnake.environment.time_environment import TimeCommands, TimeMetadata,
 ENVIRONMENT_NAME = "Time 0"
 
 def worksheet_time_metadata():
-    pass
+    worksheet_dir = defaults.DIRECTORY + "/environment/time/time_worksheet.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    worksheet = workbook.worksheets[ENVIRONMENT_NAME]
+    metadata = TimeMetadata().load_metadata_from_worksheet(worksheet)
+    return metadata
 
 def netcdf_time_metadata():
     pass
@@ -49,9 +54,9 @@ def time_event_list():
 
     timestamp = 2
     command = GlobalCommands.START_ENVIRONMENT
-    time_instructions = time_instructions()
+    instructions = time_instructions()
     start_environment_event = ProfileEvent(
-        timestamp, ENVIRONMENT_NAME, command, time_instructions
+        timestamp, ENVIRONMENT_NAME, command, instructions
     )
 
     timestamp = 4

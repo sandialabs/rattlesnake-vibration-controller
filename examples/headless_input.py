@@ -8,54 +8,58 @@ from rattlesnake.process.streaming import StreamType
 
 """USER INPUTS"""
 THREADED = False
-IMPORT_METHOD = "manual" # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.NONE
-ENVIRONMENT_TYPE = EnvironmentType.TIME
-STREAM_TYPE = StreamType.NO_STREAM # None means dont start streaming
+IMPORT_METHOD = "worksheet" # worksheet, netcdf, manual
+HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
+ENVIRONMENT_TYPE = EnvironmentType.NONE
+STREAM_TYPE = StreamType.NO_STREAM
+START_HARDWARE = False
 START_ENVIRONMENT = False
 RUN_PROFILE = False
-
 
 def build_rattlesnake_object():
     rattlesnake = RattlesnakeController(threaded=THREADED, timeout=10)
 
+    hardware_metadata = HARDWARE_DICT[HARDWARE_TYPE][IMPORT_METHOD]()
+    environment_metadata = ENVIRONMENT_DICT[ENVIRONMENT_TYPE][IMPORT_METHOD]()
+    environment_name = getattr(environment_metadata, "environment_name", None)
+    stream_metadata = STREAM_DICT[STREAM_TYPE](environment_name)
+    instructions = INSTRUCTIONS_DICT[ENVIRONMENT_TYPE]()
+    event_list = EVENT_DICT[ENVIRONMENT_TYPE]()
+
     # Initialize hardware
     if HARDWARE_TYPE is HardwareType.NONE:
         return rattlesnake
-    hardware_metadata = HARDWARE_DICT[HARDWARE_TYPE][IMPORT_METHOD]()
     rattlesnake.initialize_hardware(hardware_metadata)
 
     # Initialize environment
     if ENVIRONMENT_TYPE is EnvironmentType.NONE:
         return rattlesnake
-    environment_metadata = ENVIRONMENT_DICT[ENVIRONMENT_TYPE][IMPORT_METHOD]()
     rattlesnake.initialize_environments([environment_metadata])
+    rattlesnake.initialize_profile_event_list(event_list)
 
     # Start Acquisition
-    if STREAM_TYPE is None:
+    if not START_HARDWARE:
         return rattlesnake
-    if STREAM_TYPE == StreamType.TEST_LEVEL:
-        stream_metadata = STREAM_DICT[STREAM_TYPE](environment_metadata.environment_name)
-    else:
-        stream_metadata = STREAM_DICT[STREAM_TYPE]()
     rattlesnake.start_acquisition(stream_metadata)
 
     # Start Environment
-    if not START_ENVIRONMENT:
+    if not START_ENVIRONMENT or RUN_PROFILE:
         return rattlesnake
-    if not RUN_PROFILE:
-        instructions = INSTRUCTIONS_DICT[ENVIRONMENT_TYPE]()
-        rattlesnake.start_environment(instructions=instructions)
-    else:
-        event_list = EVENT_DICT[ENVIRONMENT_TYPE]()
+    if RUN_PROFILE:
         rattlesnake.start_profile(event_list)
-
+    else:
+        rattlesnake.start_environment(instructions=instructions)
     return rattlesnake
 
+def test_rattlesnake_objects():
+    hardware_metadata = HARDWARE_DICT[HARDWARE_TYPE]["manual"]()
+    hardware_metadata2 = HARDWARE_DICT[HARDWARE_TYPE]["worksheet"]()
+    pass
 
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
+    test_rattlesnake_objects()
     rattlesnake = build_rattlesnake_object()
 
     launch_rattlesnake_ui(rattlesnake)

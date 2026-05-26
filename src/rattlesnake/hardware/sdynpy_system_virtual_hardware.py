@@ -289,6 +289,7 @@ class SDynPySystemMetadata(HardwareMetadata):
 
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(2, 2, self.hardware_file)
+        hardware_worksheet.cell(7, 2, self.output_oversample)
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):

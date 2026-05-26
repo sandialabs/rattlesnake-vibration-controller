@@ -182,7 +182,7 @@ def save_rattlesnake_to_workbook(
                 row_idx = row + 3
                 channel_worksheet.cell(row=row_idx, column=col_idx, value="x")
             environment_worksheet = workbook.create_sheet(environment_name)
-            environment_metadata.store_to_worksheet(environment_worksheet)
+            environment_metadata.save_metadata_to_worksheet(environment_worksheet)
 
     # Save profile event list
     profile_sheet = workbook.create_sheet("Test Profile")

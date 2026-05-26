@@ -525,6 +525,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         # Get rattlesnake state
         state = self.rattlesnake.state
+        has_system_id = self.has_system_id
+        has_test_pred = self.has_test_pred
         has_profile = self.rattlesnake.has_profile
         has_streamed = self.rattlesnake.has_streamed
 
@@ -551,11 +553,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 # Enable next tab (sysid/profile)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
-                if self.has_system_id:
+                if has_system_id:
                     self.rattlesnake_tabs.setTabEnabled(2, True)
                     self.rattlesnake_tabs.setCurrentIndex(2)
                 else:
+                    self.rattlesnake_tabs.setTabEnabled(4, True)
                     self.rattlesnake_tabs.setCurrentIndex(4)
                 if has_profile:
                     self.load_ui_from_profile()
@@ -570,23 +572,33 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.rattlesnake_tabs.setCurrentIndex(2)
                 if has_profile:
                     self.load_ui_from_profile()
-                    self.initialize_profile()
                 if has_streamed:
                     self.load_ui_from_stream_metadata()
             case RattlesnakeState.HARDWARE_ACTIVE:
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
+                if has_system_id:
+                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                if has_test_pred:
+                    self.rattlesnake_tabs.setTabEnabled(3, True)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
                 if has_profile:
                     self.load_ui_from_profile()
-                    self.initialize_profile()
+                self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
                 self.rattlesnake_tabs.setCurrentIndex(5)
             case RattlesnakeState.ENVIRONMENT_ACTIVE:
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
+                if has_system_id:
+                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                if has_test_pred:
+                    self.rattlesnake_tabs.setTabEnabled(3, True)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
                 if has_profile:
                     self.load_ui_from_profile()
+                self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
                 self.rattlesnake_tabs.setCurrentIndex(5)
