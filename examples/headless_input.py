@@ -8,9 +8,9 @@ from rattlesnake.process.streaming import StreamType
 
 """USER INPUTS"""
 THREADED = False
-IMPORT_METHOD = "netcdf" # worksheet, netcdf, manual
+IMPORT_METHOD = "worksheet" # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.TIME
+ENVIRONMENT_TYPE = EnvironmentType.MODAL
 STREAM_TYPE = StreamType.NO_STREAM
 START_HARDWARE = False
 START_ENVIRONMENT = False
@@ -23,9 +23,9 @@ def build_rattlesnake_object():
     environment_metadata = ENVIRONMENT_DICT[ENVIRONMENT_TYPE][IMPORT_METHOD](hardware_metadata)
     environment_name = getattr(environment_metadata, "environment_name", None)
     stream_metadata = STREAM_DICT[STREAM_TYPE](environment_name)
-    instructions = INSTRUCTIONS_DICT[ENVIRONMENT_TYPE]()
     event_list = EVENT_DICT[ENVIRONMENT_TYPE]()
-
+    instructions = INSTRUCTIONS_DICT[ENVIRONMENT_TYPE]()
+    
     # Initialize hardware
     if HARDWARE_TYPE is HardwareType.NONE:
         return rattlesnake
@@ -35,10 +35,10 @@ def build_rattlesnake_object():
     if ENVIRONMENT_TYPE is EnvironmentType.NONE:
         return rattlesnake
     rattlesnake.initialize_environments([environment_metadata])
-    rattlesnake.initialize_profile_event_list(event_list)
 
-    if STREAM_TYPE is not None:
-        rattlesnake.set_stream_metadata(stream_metadata)
+    # These are purely to set the UI
+    rattlesnake.initialize_profile_event_list(event_list)
+    rattlesnake.set_stream_metadata(stream_metadata)
 
     # Start Acquisition
     if not START_HARDWARE:

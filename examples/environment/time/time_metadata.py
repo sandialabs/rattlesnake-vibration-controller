@@ -24,7 +24,7 @@ def worksheet_time_metadata(hardware_metadata):
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
-    channel_list_bools = [True] * defaults.NUM_CHANNELS
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
     metadata = TimeMetadata.load_metadata_from_worksheet(worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
 
     signal = create_time_signal()
@@ -36,7 +36,7 @@ def netcdf_time_metadata(hardware_metadata):
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
-    channel_list_bools = [True] * defaults.NUM_CHANNELS
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
     metadata = TimeMetadata.load_metadata_from_netcdf(netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
 
     return metadata
@@ -44,13 +44,13 @@ def netcdf_time_metadata(hardware_metadata):
 def manual_time_metadata(hardware_metadata):
     # Create signal array
     signal = create_time_signal()
-    channel_list_bools = [True] * defaults.NUM_CHANNELS
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
     cancel_rampdown_time = 0.5
 
     metadata = TimeMetadata(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
-        sample_rate=defaults.SAMPLE_RATE,
+        sample_rate=hardware_metadata.sample_rate,
         output_signal=signal,
         cancel_rampdown_time=cancel_rampdown_time,
     )
