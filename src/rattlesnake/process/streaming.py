@@ -37,7 +37,6 @@ from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 
 
-# region: StreamType
 class StreamType(Enum):
     NO_STREAM = 0
     IMMEDIATELY = 1
@@ -45,8 +44,7 @@ class StreamType(Enum):
     TEST_LEVEL = 3
     MANUAL = 4
 
-
-# region: StreamMetadata
+# region Metadata
 class StreamMetadata:
     def __init__(
         self,
@@ -81,7 +79,9 @@ class StreamMetadata:
                     "No test level environment was chosen for the stream to start at"
                 )
 
+# endregion
 
+# region Process Class
 class StreamingProcess(AbstractMessageProcess):
     """
     Class containing the functionality to stream data to disk.
@@ -220,8 +220,9 @@ class StreamingProcess(AbstractMessageProcess):
         self.finalize(None)
         return True
 
+# endregion
 
-# region: streaming_process
+# region Process
 def streaming_process(
     queue_container: QueueContainer,
     ready_event: mp.synchronize.Event,
@@ -243,3 +244,4 @@ def streaming_process(
     streaming_instance = StreamingProcess("Streaming", queue_container, ready_event)
 
     streaming_instance.run(shutdown_event)
+# endregion

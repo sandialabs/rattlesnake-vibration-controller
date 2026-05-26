@@ -1,4 +1,5 @@
 import openpyxl
+import netCDF4 as nc4
 
 import defaults
 
@@ -16,7 +17,12 @@ def worksheet_sdynpy_system_metadata():
     return metadata
 
 def netcdf_sdynpy_system_metadata():
-    pass
+    netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.nc4"
+    netcdf_dataset = nc4.Dataset(netcdf_dir)
+    metadata = SDynPySystemMetadata.load_metadata_from_netcdf(netcdf_dataset)
+    metadata.hardware_file = HARDWARE_FILE
+    netcdf_dataset.close()
+    return metadata
 
 def manual_sdynpy_system_metadata():
     directions = ["X+", "Y+", "Z+"]

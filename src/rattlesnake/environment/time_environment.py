@@ -306,9 +306,12 @@ class TimeMetadata(EnvironmentMetadata):
                     continue
                 case "signal_file":
                     signal_file = value
-                    output_signal = load_time_history(
-                        signal_file, hardware_metadata.sample_rate
-                    )
+                    try:
+                        output_signal = load_time_history(
+                            signal_file, hardware_metadata.sample_rate
+                        )
+                    except:
+                        output_signal = np.zeros((1, 1))
                 case "cancel_rampdown_time":
                     cancel_rampdown_time = float(value)
                 case "":

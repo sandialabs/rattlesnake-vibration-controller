@@ -1,5 +1,6 @@
 import numpy as np
 import openpyxl
+import netCDF4 as nc4
 
 import defaults
 
@@ -9,24 +10,40 @@ from rattlesnake.environment.time_environment import TimeCommands, TimeMetadata,
 
 ENVIRONMENT_NAME = "Time 0"
 
-def worksheet_time_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/environment/time/time_worksheet.xlsx"
-    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
-    worksheet = workbook.worksheets[ENVIRONMENT_NAME]
-    metadata = TimeMetadata().load_metadata_from_worksheet(worksheet)
-    return metadata
-
-def netcdf_time_metadata():
-    pass
-
-def manual_time_metadata():
+def create_time_signal():
     num_samples = defaults.SAMPLE_RATE * 5
     frequency = 2  # Hz sine wave
-
-    # Create signal array
     t = np.arange(num_samples) / defaults.SAMPLE_RATE
     signal = np.zeros((defaults.NUM_FORCES, num_samples))
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
+
+    return signal
+
+def worksheet_time_metadata(hardware_metadata):
+    worksheet_dir = defaults.DIRECTORY + "/environment/time/time.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    worksheet = workbook[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * defaults.NUM_CHANNELS
+    metadata = TimeMetadata.load_metadata_from_worksheet(worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
+
+    signal = create_time_signal()
+    metadata.output_signal = signal
+    return metadata
+
+def netcdf_time_metadata(hardware_metadata):
+    netcdf_dir = defaults.DIRECTORY + "/environment/time/time.nc4"
+    netcdf_dataset = nc4.Dataset(netcdf_dir)
+    netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * defaults.NUM_CHANNELS
+    metadata = TimeMetadata.load_metadata_from_netcdf(netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
+
+    return metadata
+
+def manual_time_metadata(hardware_metadata):
+    # Create signal array
+    signal = create_time_signal()
     channel_list_bools = [True] * defaults.NUM_CHANNELS
     cancel_rampdown_time = 0.5
 
