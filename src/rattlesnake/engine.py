@@ -92,6 +92,7 @@ class RattlesnakeController:
         self._threaded = threaded
         self._blocking = True  # Wait for ready events?, True for IDE, False for UI
         self._timeout = timeout  # Timeout while waiting for ready_events
+        self.has_gui = False
 
         if self.threaded:
             new_queue = thqueue.Queue  # threading-safe in-memory queue
@@ -418,6 +419,10 @@ class RattlesnakeController:
     # endregion
 
     # region Loading
+    def setup_gui(self):
+        self.clear_blocking()
+        self.has_gui = True
+
     def load_rattlesnake_from_template(self, filepath: str):
         """
         Loads data from worksheet or netcdf4 file to the rattlesnake controller.

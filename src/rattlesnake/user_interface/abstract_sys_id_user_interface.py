@@ -1215,9 +1215,11 @@ class SysIdEnvironmentUI(EnvironmentUI):
                     update_kurtosis=True,
                 )
             case SysIdDataAnalysisUICommands.NOISE_COMPLETED:
-                self.run_system_id_validate_noise_closeout()
+                if self.rattlesnake.has_gui:
+                    self.run_system_id_validate_noise_closeout()
             case SysIdDataAnalysisUICommands.TRANSFER_COMPLETED:
-                self.run_system_id_validate_transfer_closeout()
+                if self.rattlesnake.has_gui:
+                    self.run_system_id_validate_transfer_closeout()
             case SysIdDataAnalysisUICommands.NOISE_UPDATE:
                 (
                     frames,

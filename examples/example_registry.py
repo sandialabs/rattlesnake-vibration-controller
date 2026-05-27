@@ -4,7 +4,7 @@ from hardware.stream_metadata import (stream_metadata_no, stream_metadata_immedi
 from environment.time.time_metadata import (manual_time_metadata, netcdf_time_metadata, worksheet_time_metadata,
                                             time_event_list, time_instructions)
 from environment.modal.modal_metadata import manual_modal_metadata, netcdf_modal_metadata, worksheet_modal_metadata, modal_instructions
-from environment.sine.sine_metadata import manual_sine_metadata, worksheet_sine_metadata, netcdf_sine_metadata
+from environment.sine.sine_metadata import manual_sine_metadata, worksheet_sine_metadata, netcdf_sine_metadata, sine_instructions
 from environment.sysid.sysid_metadata import (manual_sysid_metadata, worksheet_sysid_metadata, netcdf_sysid_metadata,
                                               netcdf_sysid_data_package)
 
@@ -87,4 +87,4 @@ INSTRUCTIONS_DICT = {}
 INSTRUCTIONS_DICT[EnvironmentType.NONE] = lambda: None
 INSTRUCTIONS_DICT[EnvironmentType.TIME] = time_instructions
 INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
-INSTRUCTIONS_DICT[EnvironmentType.SINE] = lambda: None
+INSTRUCTIONS_DICT[EnvironmentType.SINE] = sine_instructions

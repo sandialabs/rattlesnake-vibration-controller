@@ -116,7 +116,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Communication objects
         self.rattlesnake = rattlesnake
-        self.rattlesnake.clear_blocking()
         self.environment_uis = {}
         self.profile_table_list = []
         self.profile_timer_list = []
@@ -143,6 +142,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Show UI
         self.show()
+
+        # Tell Rattlesnake it now has a gui
+        self.gui_update_queue.put((UICommands.GUI_SETUP_FINISHED, None))
 
     def complete_ui(self):
         """
@@ -481,6 +483,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.rattlesnake_tabs.setCurrentIndex(data)
             case UICommands.DISABLE_TAB:
                 self.rattlesnake_tabs.setTabEnabled(data, False)
+            case UICommands.GUI_SETUP_FINISHED:
+                self.rattlesnake.setup_gui()
             case _:
                 widget = getattr(self, command)
                 if isinstance(widget, QtWidgets.QDoubleSpinBox):

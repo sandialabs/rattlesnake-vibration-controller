@@ -10,7 +10,19 @@ from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 ENVIRONMENT_NAME = "Sine 0"
 
 def sine_instructions():
-    pass
+    control_test_level = 0
+    control_tones = None
+    control_end_time = None
+    control_start_time = None
+
+    instructions = SineInstructions(
+                        ENVIRONMENT_NAME,
+                        control_test_level,
+                        control_tones,
+                        control_start_time,
+                        control_end_time
+                    )
+    return instructions
 
 
 def worksheet_sine_metadata(hardware_metadata):

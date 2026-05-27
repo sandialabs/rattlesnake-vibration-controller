@@ -63,6 +63,7 @@ class UICommands(Enum):
     COMPLETED_SYSTEM_ID = 10
     ENVIRONMENT_STARTED = 11
     ENVIRONMENT_ENDED = 12
+    GUI_SETUP_FINISHED = 13
 
     @property
     def label(self):

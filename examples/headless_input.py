@@ -13,10 +13,10 @@ IMPORT_METHOD = "netcdf" # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.SINE
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = False
-RUN_SYSID = True
-START_HARDWARE = False
-START_ENVIRONMENT = False
+LOAD_SYSID = True
+RUN_SYSID = False
+START_HARDWARE = True
+START_ENVIRONMENT = True
 RUN_PROFILE = False
 
 def build_rattlesnake_object():
@@ -46,11 +46,11 @@ def build_rattlesnake_object():
     rattlesnake.set_stream_metadata(stream_metadata)
 
     if ENVIRONMENT_TYPE in SYSID_ENVIRONMENTS:
-        rattlesnake.initialize_system_id(sysid_metadata, environment_metadata.environment_name  )
+        rattlesnake.initialize_system_id(sysid_metadata, environment_name  )
         if RUN_SYSID:
-            rattlesnake.run_system_id(sysid_metadata, environment_metadata.environment_name)
+            rattlesnake.run_system_id(sysid_metadata, environment_name)
         if LOAD_SYSID:
-            rattlesnake.load_system_id_from_package(environment_metadata.environment_name, sysid_package)
+            rattlesnake.load_system_id_from_package(environment_name, sysid_package)
 
     # Start Acquisition
     if not START_HARDWARE:
@@ -74,7 +74,7 @@ def test_rattlesnake_objects():
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
-    test_rattlesnake_objects()
+    # test_rattlesnake_objects()
     rattlesnake = build_rattlesnake_object()
 
     launch_rattlesnake_ui(rattlesnake)
