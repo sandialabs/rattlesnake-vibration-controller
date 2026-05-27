@@ -9,14 +9,14 @@ from rattlesnake.process.streaming import StreamType
 
 """USER INPUTS"""
 THREADED = False
-IMPORT_METHOD = "netcdf" # worksheet, netcdf, manual
+IMPORT_METHOD = "manual" # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.SINE
+ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = True
 RUN_SYSID = False
-START_HARDWARE = True
-START_ENVIRONMENT = True
+START_HARDWARE = False
+START_ENVIRONMENT = False
 RUN_PROFILE = False
 
 def build_rattlesnake_object():

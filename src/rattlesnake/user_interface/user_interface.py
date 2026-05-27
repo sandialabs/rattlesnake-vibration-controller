@@ -682,9 +682,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.environment_uis[environment_name].initialize_hardware(
                 hardware_metadata
             )
+            # QtWidgets.QApplication.processEvents()
             self.environment_uis[environment_name].set_environment_metadata(
                 environment_metadata
             )
+            # QtWidgets.QApplication.processEvents()
             self.environment_uis[environment_name].initialize_environment(
                 environment_metadata
             )

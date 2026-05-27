@@ -1327,7 +1327,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     )
                     if time_at_level_elapsed > check_time_seconds:
                         self.run_widget.test_progress_bar.setValue(100)
-                        self.stop_control()
+                        self.stop_environment()
                 else:
                     self.run_widget.test_progress_bar.setValue(0)
             else:
@@ -1335,7 +1335,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     int(time_elapsed / check_time_seconds * 100)
                 )
                 if time_elapsed > check_time_seconds:
-                    self.stop_control()
+                    self.stop_environment()
 
     def change_control_test_level(self):
         """Updates the test level of the control."""
