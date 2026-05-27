@@ -4,6 +4,9 @@ from hardware.stream_metadata import (stream_metadata_no, stream_metadata_immedi
 from environment.time.time_metadata import (manual_time_metadata, netcdf_time_metadata, worksheet_time_metadata,
                                             time_event_list, time_instructions)
 from environment.modal.modal_metadata import manual_modal_metadata, netcdf_modal_metadata, worksheet_modal_metadata, modal_instructions
+from environment.sine.sine_metadata import manual_sine_metadata, worksheet_sine_metadata, netcdf_sine_metadata
+from environment.sysid.sysid_metadata import (manual_sysid_metadata, worksheet_sysid_metadata, netcdf_sysid_metadata,
+                                              netcdf_sysid_data_package)
 
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -44,9 +47,25 @@ MODAL_DICT = {
     "worksheet": worksheet_modal_metadata,
     "netcdf": netcdf_modal_metadata,
 }
+SINE_DICT = {
+    "manual": manual_sine_metadata,
+    "worksheet": worksheet_sine_metadata,
+    "netcdf": netcdf_sine_metadata,
+}
 ENVIRONMENT_DICT[EnvironmentType.NONE] = BLANK_ENVIRONMENT_DICT
 ENVIRONMENT_DICT[EnvironmentType.TIME] = TIME_DICT
 ENVIRONMENT_DICT[EnvironmentType.MODAL] = MODAL_DICT
+ENVIRONMENT_DICT[EnvironmentType.SINE] = SINE_DICT
+
+# System Identification
+SYSID_DICT = {
+    "manual": manual_sysid_metadata,
+    "worksheet": worksheet_sysid_metadata,
+    "netcdf": netcdf_sysid_metadata
+}
+SYSID_LOAD_DICT = {
+    "netcdf": netcdf_sysid_data_package
+}
 
 # Streaming
 STREAM_DICT = {}
@@ -61,9 +80,11 @@ EVENT_DICT = {}
 EVENT_DICT[EnvironmentType.NONE] = lambda: []
 EVENT_DICT[EnvironmentType.TIME] = time_event_list
 EVENT_DICT[EnvironmentType.MODAL] = lambda: []
+EVENT_DICT[EnvironmentType.SINE] = lambda: []
 
 # Instructions
 INSTRUCTIONS_DICT = {}
 INSTRUCTIONS_DICT[EnvironmentType.NONE] = lambda: None
 INSTRUCTIONS_DICT[EnvironmentType.TIME] = time_instructions
 INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
+INSTRUCTIONS_DICT[EnvironmentType.SINE] = lambda: None
