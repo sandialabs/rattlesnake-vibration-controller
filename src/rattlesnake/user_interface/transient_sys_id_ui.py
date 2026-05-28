@@ -298,7 +298,7 @@ class TransientUI(SysIdEnvironmentUI):
                 f"Control function has not been loaded for {self.environment_name}"
             )
         self.system_id_widget.samplesPerFrameSpinBox.setMaximum(
-            self.specification_signal.shape[-1]
+            self.environment_metadata.control_signal.shape[-1]
         )
         for widget in [
             self.prediction_widget.response_selector,
@@ -451,7 +451,7 @@ class TransientUI(SysIdEnvironmentUI):
 
         # Basic numeric and UI values
         self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
-        self.definition_widget.ramp_selector.setValue(metadata.ramp_time)
+        self.definition_widget.ramp_selector.setValue(metadata.test_level_ramp_time)
 
         # Python Control Module Logic
         if metadata.control_python_script:
@@ -493,6 +493,10 @@ class TransientUI(SysIdEnvironmentUI):
             )
             if item:
                 item.setCheckState(Qt.Checked)
+
+        self.specification_signal = metadata.control_signal
+        self.setup_specification_table()
+        self.show_signal()
 
     def get_environment_instructions(self):
         test_level = self.run_widget.test_level_selector.value()
@@ -757,7 +761,7 @@ class TransientUI(SysIdEnvironmentUI):
     ):
         """Defines the transformation matrices using the dialog box"""
         if dialog:
-            (response_transformation, output_transformation, result) = (
+            response_transformation, output_transformation, result = (
                 TransformationMatrixWindow.define_transformation_matrices(
                     self.response_transformation_matrix,
                     self.definition_widget.control_channels_display.value(),
