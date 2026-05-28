@@ -37,7 +37,11 @@ import numpy as np
 import openpyxl
 from scipy.io import savemat
 
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.utilities import (
+    GlobalCommands,
+    VerboseMessageQueue,
+    read_transformation_matrix_from_worksheet,
+)
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import (
     EnvironmentMetadata,
@@ -307,6 +311,108 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         super().load_metadata_from_worksheet(
             worksheet, environment_name, channel_list_bools, hardware_metadata
         )
+
+    @classmethod
+    def save_sysid_matrix_to_worksheet(
+        cls,
+        worksheet,
+        response_matrix,
+        output_matrix,
+        start_row,
+    ):
+        response_row = start_row
+        output_row = start_row + 1
+        if response_matrix is not None:
+            worksheet.cell(start_row + 1, 1, None)
+            worksheet.cell(start_row + 1, 2, None)
+            for i, row in enumerate(response_matrix):
+                for j, value in enumerate(row):
+                    worksheet.cell(i + response_row, j + 2, value)
+            # Shift output transfomation matrix down
+            output_row = i + 1
+            worksheet.cell(i + 1, 1, "Output Transformation Matrix:")
+            worksheet.cell(
+                i + 1,
+                2,
+                "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
+                "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
+                "the number of physical output channels in the environment.",
+            )
+        if output_matrix is not None:
+            for i, row in enumerate(output_matrix):
+                for j, value in enumerate(row):
+                    worksheet.cell(i + output_row, j + 2, value)
+
+    @classmethod
+    def load_sysid_matrix_from_worksheet(cls, worksheet, start_row):
+        start_response_row = start_row
+        num_response_row = 1
+        if (
+            isinstance(worksheet.cell(start_response_row, 2).value, str)
+            and worksheet.cell(start_response_row, 2).value.lower() == "none"
+        ):
+            response_transformation_matrix = None
+        elif (
+            worksheet.cell(start_response_row, 2)
+            .value.lower()
+            .startswith("# transformation matrix")
+        ):
+            response_transformation_matrix = None
+        else:
+
+            while True:
+                first_col_value = worksheet.cell(
+                    start_response_row + num_response_row, 2
+                ).value
+                if worksheet.cell(
+                    start_response_row + num_response_row, 1
+                ).value == "Output Transformation Matrix:" or (
+                    first_col_value is None
+                    or (
+                        isinstance(first_col_value, str)
+                        and first_col_value.strip() == ""
+                    )
+                ):
+                    break
+                num_response_row += 1
+            response_transformation_matrix = read_transformation_matrix_from_worksheet(
+                worksheet,
+                start_row=start_response_row,
+                num_rows=num_response_row,
+                start_col=2,
+            )
+        # Output transformation matrix
+        start_output_row = start_response_row + num_response_row
+        num_output_row = 1
+        if (
+            isinstance(worksheet.cell(start_output_row, 2).value, str)
+            and worksheet.cell(start_output_row, 2).value.lower() == "none"
+        ):
+            output_transformation_matrix = None
+        elif (
+            worksheet.cell(start_output_row, 2)
+            .value.lower()
+            .startswith("# transformation matrix")
+        ):
+            output_transformation_matrix = None
+        else:
+            while True:
+                first_col_value = worksheet.cell(
+                    start_output_row + num_output_row, 2
+                ).value
+                if first_col_value is None or (
+                    isinstance(first_col_value, str) and first_col_value.strip() == ""
+                ):
+                    break
+                num_output_row += 1
+            output_transformation_matrix = read_transformation_matrix_from_worksheet(
+                worksheet,
+                start_row=start_output_row,
+                num_rows=num_output_row,
+                start_col=2,
+            )
+
+        return response_transformation_matrix, output_transformation_matrix
 
     # endregion
 
@@ -1050,7 +1156,7 @@ class SysIdEnvironment(Environment):
     def system_id_complete(self, data):
         """Sends a message to the controller that this environment has completed system id"""
         self.log("Finished System Identification")
-        (_, self.sysid_data) = data
+        _, self.sysid_data = data
         self.gui_update_queue.put(
             (
                 self.environment_name,

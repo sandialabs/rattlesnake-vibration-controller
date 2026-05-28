@@ -26,7 +26,6 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataPackage,
 )
 
-
 TASK_NAME = "Environment Manager"
 CLOSE_TIMEOUT = 5
 
@@ -144,6 +143,15 @@ class EnvironmentManager:
                 acquisition_ready_environments[queue_name] = True
 
         return acquisition_ready_environments
+
+    @property
+    def sysid_active_environments(self):
+        sysid_active_list = []
+        for queue_name, environment_name in self.environment_names.items():
+            if self.environment_sysid_active_events[queue_name].is_set():
+                sysid_active_list.append(environment_name)
+
+        return sysid_active_list
 
     def clear_sysid_events(self):
         for queue_name in self.queue_names:

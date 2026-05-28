@@ -25,6 +25,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
+import inspect
 import threading
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
@@ -37,17 +39,31 @@ import netCDF4 as nc4
 import numpy as np
 import openpyxl
 
-from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.random_vibration_sys_id_utilities import (
+    load_specification,
+)
+from rattlesnake.environment.abstract_interactive_control_law import (
+    AbstractControlLawComputation,
+)
+from rattlesnake.environment.environment_utilities import (
+    EnvironmentType,
+)
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.abstract_environment import EnvironmentInstructions, EnvironmentCommands
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentInstructions,
+    EnvironmentCommands,
+)
 from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironment,
     SysIdEnvironmentMetadata,
 )
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
-    db2scale
+    db2scale,
+    load_python_module,
+    _direction_map,
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.process.data_collector import (
@@ -138,9 +154,15 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         specification_abort_matrix,
         response_transformation_matrix,
         output_transformation_matrix,
-        sysid_metadata = None,
+        sysid_metadata=None,
     ):
-        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools, sample_rate, sysid_metadata)
+        super().__init__(
+            CONTROL_TYPE,
+            environment_name,
+            channel_list_bools,
+            sample_rate,
+            sysid_metadata,
+        )
         self.number_of_channels = number_of_channels
         self.sample_rate = sample_rate
         self.samples_per_frame = samples_per_frame
@@ -398,108 +420,65 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(1, 1, "Control Type")
         worksheet.cell(1, 2, "Random")
         worksheet.cell(2, 1, "Samples Per Frame:")
-        worksheet.cell(2, 2, "# Number of Samples per Measurement Frame")
+        worksheet.cell(2, 3, "# Number of Samples per Measurement Frame")
         worksheet.cell(3, 1, "Test Level Ramp Time:")
-        worksheet.cell(3, 2, "# Time taken to Ramp between test levels")
+        worksheet.cell(3, 3, "# Time taken to Ramp between test levels")
         worksheet.cell(4, 1, "COLA Window:")
-        worksheet.cell(4, 2, "# Window used for Constant Overlap and Add process")
+        worksheet.cell(4, 3, "# Window used for Constant Overlap and Add process")
         worksheet.cell(5, 1, "COLA Overlap %:")
-        worksheet.cell(5, 2, "# Overlap used in Constant Overlap and Add process")
+        worksheet.cell(5, 3, "# Overlap used in Constant Overlap and Add process")
         worksheet.cell(6, 1, "COLA Window Exponent:")
         worksheet.cell(
             6,
-            2,
+            3,
             "# Exponent Applied to the COLA Window (use 0.5 unless you "
             "are sure you don't want to!)",
         )
         worksheet.cell(7, 1, "Update System ID During Control:")
         worksheet.cell(
             7,
-            2,
+            3,
             "# Continue updating transfer function while the controller is controlling (Y/N)",
         )
         worksheet.cell(8, 1, "Frames in CPSD:")
-        worksheet.cell(8, 2, "# Frames used to compute the CPSD matrix")
+        worksheet.cell(8, 3, "# Frames used to compute the CPSD matrix")
         worksheet.cell(9, 1, "CPSD Window:")
-        worksheet.cell(9, 2, "# Window used to compute the CPSD matrix")
+        worksheet.cell(9, 3, "# Window used to compute the CPSD matrix")
         worksheet.cell(10, 1, "CPSD Overlap %:")
-        worksheet.cell(10, 2, "# Overlap percentage for CPSD calculations")
+        worksheet.cell(10, 3, "# Overlap percentage for CPSD calculations")
         worksheet.cell(11, 1, "Allow Automatic Aborts")
+        worksheet.cell(
+            11,
+            3,
+            "# Shut down the test automatically if an abort level is reached (Y/N)",
+        )
         worksheet.cell(12, 1, "Control Python Script:")
-        worksheet.cell(12, 2, "# Path to the Python script containing the control law")
+        worksheet.cell(12, 3, "# Path to the Python script containing the control law")
         worksheet.cell(13, 1, "Control Python Function:")
         worksheet.cell(
             13,
-            2,
+            3,
             "# Function or class name within the Python Script that will serve as the control law",
         )
         worksheet.cell(14, 1, "Control Parameters:")
-        worksheet.cell(14, 2, "# Extra parameters used in the control law")
+        worksheet.cell(14, 3, "# Extra parameters used in the control law")
         worksheet.cell(15, 1, "Control Channels (1-based):")
-        worksheet.cell(16, 1, "System ID Averaging:")
+        SysIdMetadata.create_blank_worksheet(worksheet, start_row=16)
+        worksheet.cell(29, 1, "Specification File:")
+        worksheet.cell(29, 3, "# Path to the file containing the Specification")
+        worksheet.cell(30, 1, "Response Transformation Matrix:")
         worksheet.cell(
-            16,
-            2,
-            "# Averaging Type used for system ID.  Should be Linear or Exponential",
-        )
-        worksheet.cell(17, 1, "Noise Averages:")
-        worksheet.cell(17, 2, "# Number of Averages used when characterizing noise")
-        worksheet.cell(18, 1, "System ID Averages:")
-        worksheet.cell(18, 2, "# Number of Averages used when computing the FRF")
-        worksheet.cell(19, 1, "Exponential Averaging Coefficient:")
-        worksheet.cell(
-            19, 2, "# Averaging Coefficient for Exponential Averaging (if used)"
-        )
-        worksheet.cell(20, 1, "System ID Estimator:")
-        worksheet.cell(
-            20,
-            2,
-            "# Technique used to compute system ID.  Should be one of H1, H2, H3, or Hv.",
-        )
-        worksheet.cell(21, 1, "System ID Level (V RMS):")
-        worksheet.cell(
-            21,
-            2,
-            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
-        )
-        worksheet.cell(22, 1, "System ID Signal Type:")
-        worksheet.cell(23, 1, "System ID Window:")
-        worksheet.cell(
-            23,
-            2,
-            "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
-        )
-        worksheet.cell(24, 1, "System ID Overlap %:")
-        worksheet.cell(24, 2, "# Overlap to use in the system identification")
-        worksheet.cell(25, 1, "System ID Burst On %:")
-        worksheet.cell(25, 2, "# Percentage of a frame that the burst random is on for")
-        worksheet.cell(26, 1, "System ID Burst Pretrigger %:")
-        worksheet.cell(
-            26,
-            2,
-            "# Percentage of a frame that occurs before the burst starts in a burst random signal",
-        )
-        worksheet.cell(27, 1, "System ID Ramp Fraction %:")
-        worksheet.cell(
-            27,
-            2,
-            '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
-        )
-        worksheet.cell(28, 1, "Specification File:")
-        worksheet.cell(28, 2, "# Path to the file containing the Specification")
-        worksheet.cell(29, 1, "Response Transformation Matrix:")
-        worksheet.cell(
-            29,
-            2,
+            30,
+            3,
             "# Transformation matrix to apply to the response channels.  Type None if there "
             "is none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
             "Transformation Matrix line down so it will fit.  The number of columns should be the "
             "number of physical control channels.",
         )
-        worksheet.cell(30, 1, "Output Transformation Matrix:")
+        worksheet.cell(31, 1, "Output Transformation Matrix:")
         worksheet.cell(
-            30,
-            2,
+            31,
+            3,
             "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
             "the number of physical output channels in the environment.",
@@ -508,7 +487,45 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
     def save_metadata_to_worksheet(
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
     ):
-        pass
+        super().save_metadata_to_worksheet(worksheet)
+
+        if self.samples_per_frame is not None:
+            worksheet.cell(2, 2, self.samples_per_frame)
+        if self.test_level_ramp_time is not None:
+            worksheet.cell(3, 2, self.test_level_ramp_time)
+        if self.cola_window is not None:
+            worksheet.cell(4, 2, self.cola_window)
+        if self.cola_overlap is not None:
+            worksheet.cell(5, 2, self.cola_overlap)
+        if self.cola_window_exponent is not None:
+            worksheet.cell(6, 2, self.cola_window_exponent)
+        if self.update_tf_during_control is not None:
+            worksheet.cell(7, 2, "Y" if self.update_tf_during_control else "N")
+        if self.frames_in_cpsd is not None:
+            worksheet.cell(8, 2, self.frames_in_cpsd)
+        if self.cpsd_window is not None:
+            worksheet.cell(9, 2, self.cpsd_window)
+        if self.cpsd_overlap is not None:
+            worksheet.cell(10, 2, self.cpsd_overlap)
+        if self.allow_automatic_aborts is not None:
+            worksheet.cell(11, 2, "Y" if self.allow_automatic_aborts else "N")
+        if self.control_python_script is not None:
+            worksheet.cell(12, 2, self.control_python_script)
+        if self.control_python_function is not None:
+            worksheet.cell(13, 2, self.control_python_function)
+        if self.control_python_function_parameters is not None:
+            worksheet.cell(14, 2, self.control_python_function_parameters)
+        if self.control_channel_indices is not None:
+            for idx, channel_ind in enumerate(self.control_channel_indices):
+                col_idx = idx + 2
+                worksheet.cell(15, col_idx, channel_ind + 1)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=16)
+        self.save_sysid_matrix_to_worksheet(
+            worksheet,
+            self.response_transformation_matrix,
+            self.output_transformation_matrix,
+            start_row=30,
+        )
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -518,8 +535,146 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
     ):
-        pass
+        sample_rate = hardware_metadata.sample_rate
+        number_of_channels = sum(channel_list_bools)
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
+            if channel_bool
+        ]
 
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
+        samples_per_frame = int(worksheet.cell(2, 2).value)
+        test_level_ramp_time = float(worksheet.cell(3, 2).value)
+        cola_window = worksheet.cell(4, 2).value
+        cola_overlap = float(worksheet.cell(5, 2).value)
+        cola_window_exponent = float(worksheet.cell(6, 2).value)
+        update_tf_during_control = worksheet.cell(7, 2).value.upper() == "Y"
+        frames_in_cpsd = int(worksheet.cell(8, 2).value)
+        cpsd_window = worksheet.cell(9, 2).value
+        cpsd_overlap = float(worksheet.cell(10, 2).value)
+        allow_automatic_aborts = worksheet.cell(11, 2).value.upper() == "Y"
+
+        control_python_script = (
+            worksheet.cell(12, 2).value
+            if worksheet.cell(12, 2).value is not None
+            else ""
+        )
+        control_python_function = (
+            worksheet.cell(13, 2).value
+            if worksheet.cell(13, 2).value is not None
+            else ""
+        )
+        control_python_function_parameters = (
+            worksheet.cell(14, 2).value
+            if worksheet.cell(14, 2).value is not None
+            else ""
+        )
+
+        control_channel_indices = []
+        column_index = 2
+        while True:
+            channel_ind = worksheet.cell(15, column_index).value
+            if channel_ind is None or (
+                isinstance(channel_ind, str) and channel_ind.strip() == ""
+            ):
+                break
+            try:
+                control_channel_indices.append(int(channel_ind) - 1)
+            except:
+                break
+            column_index += 1
+
+        response_transformation_matrix, output_transformation_matrix = (
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=30)
+        )
+
+        # Find python module type
+        python_control_module = load_python_module(control_python_script)
+        function = getattr(python_control_module, control_python_function)
+        control_python_function_type = None
+        if inspect.isgeneratorfunction(function):
+            control_python_function_type = "Generator"
+        elif inspect.isclass(function) and issubclass(
+            function, AbstractControlLawComputation
+        ):
+            control_python_function_type = "Class"
+        elif inspect.isclass(function):
+            control_python_function_type = "Interactive"
+        else:
+            control_python_function_type = "Function"
+
+        coord_dtype = np.dtype([("node", "<u8"), ("direction", "i1")])
+        if response_transformation_matrix is not None:
+            control_coordinate = None
+        else:
+            control_coordinate = np.array(
+                [
+                    (
+                        environment_channel_list,
+                        _direction_map[environment_channel_list[i].node_direction],
+                    )
+                    for i in output_channel_indices
+                ],
+                dtype=coord_dtype,
+            )
+
+        # TODO Fix the template to include this
+        sigma_clip = worksheet.cell(21, 5).value
+        metadata = cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            number_of_channels=number_of_channels,
+            samples_per_frame=samples_per_frame,
+            test_level_ramp_time=test_level_ramp_time,
+            cola_window=cola_window,
+            cola_overlap=cola_overlap,
+            cola_window_exponent=cola_window_exponent,
+            sigma_clip=sigma_clip,
+            update_tf_during_control=update_tf_during_control,
+            frames_in_cpsd=frames_in_cpsd,
+            cpsd_window=cpsd_window,
+            cpsd_overlap=cpsd_overlap,
+            percent_lines_out=0.1,  # TODO This is wrong
+            allow_automatic_aborts=allow_automatic_aborts,
+            control_python_script=control_python_script,
+            control_python_function=control_python_function,
+            control_python_function_type=control_python_function_type,
+            control_python_function_parameters=control_python_function_parameters,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
+            specification_frequency_lines=None,
+            specification_cpsd_matrix=None,
+            specification_warning_matrix=None,
+            specification_abort_matrix=None,
+            response_transformation_matrix=response_transformation_matrix,
+            output_transformation_matrix=output_transformation_matrix,
+            sysid_metadata=None,
+        )
+
+        # Load specification
+        specification_file = worksheet.cell(29, 2).value
+        if specification_file is not None:
+            (
+                metadata.specification_frequency_lines,
+                metadata.specification_cpsd_matrix,
+                metadata.specification_warning_matrix,
+                metadata.specification_abort_matrix,
+            ) = load_specification(
+                specification_file,
+                metadata.fft_lines,
+                metadata.frequency_spacing,
+                control_coordinate,
+            )
+        return metadata
 
     # def set_parameters_from_template(
     #     self, worksheet: openpyxl.worksheet.worksheet.Worksheet
@@ -535,7 +690,6 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
     #     This function is the "read" counterpart to the
     #     ``create_environment_template`` function in the ``RandomVibrationUI`` class,
     #     which writes a template file that can be filled out by a user.
-
 
     #     Parameters
     #     ----------
@@ -832,6 +986,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
 
     # endregion
 
+
 # region Instructions
 class RandomVibrationInstructions(EnvironmentInstructions):
     def __init__(self, environment_name, control_test_level):
@@ -977,7 +1132,9 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
         self.map_command(RandomVibrationCommands.START_CONTROL, self.start_control)
         self.map_command(RandomVibrationCommands.STOP_CONTROL, self.stop_environment)
-        self.map_command(RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_environment)
+        self.map_command(
+            RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_environment
+        )
         self.map_command(
             RandomVibrationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
         )
@@ -998,6 +1155,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.queue_container = queue_container
 
         self.set_ready()
+
     # endregion
 
     # region StateSync
@@ -1043,7 +1201,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
                 self.get_spectral_processing_metadata(),
             ),
         )
-        
+
         self.set_ready()
 
     def initialize_sysid(self, sysid_metadata):
@@ -1255,7 +1413,8 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         )
 
         self.queue_container.signal_generation_command_queue.put(
-            self.environment_name, (SignalGenerationCommands.ADJUST_TEST_LEVEL, test_level)
+            self.environment_name,
+            (SignalGenerationCommands.ADJUST_TEST_LEVEL, test_level),
         )
 
         # Tell the collector to start acquiring data

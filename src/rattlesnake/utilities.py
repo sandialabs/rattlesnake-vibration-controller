@@ -212,7 +212,7 @@ class VerboseMessageQueue:
             A (message,data) tuple
 
         """
-        (message_id, message_data_tuple) = self.base_queue.get(*args, **kwargs)
+        message_id, message_data_tuple = self.base_queue.get(*args, **kwargs)
         if message_id != "":
             self.log_queue.put(
                 f"{datetime.now()}: {task_name} got "
@@ -422,6 +422,56 @@ def flush_queue(queue, timeout=None):
         except (thqueue.Empty, mpqueue.Empty):
             return data
 
+
+_direction_map = {
+    "X+": 1,
+    "X": 1,
+    "+X": 1,
+    "Y+": 2,
+    "Y": 2,
+    "+Y": 2,
+    "Z+": 3,
+    "Z": 3,
+    "+Z": 3,
+    "RX+": 4,
+    "RX": 4,
+    "+RX": 4,
+    "RY+": 5,
+    "RY": 5,
+    "+RY": 5,
+    "RZ+": 6,
+    "RZ": 6,
+    "+RZ": 6,
+    "X-": -1,
+    "-X": -1,
+    "Y-": -2,
+    "-Y": -2,
+    "Z-": -3,
+    "-Z": -3,
+    "RX-": -4,
+    "-RX": -4,
+    "RY-": -5,
+    "-RY": -5,
+    "RZ-": -6,
+    "-RZ": -6,
+    "": 0,
+    None: 0,
+}
+_direction_inv_map = {
+    0: "",
+    1: "X+",
+    2: "Y+",
+    3: "Z+",
+    4: "RX+",
+    5: "RY+",
+    6: "RZ+",
+    -1: "X-",
+    -2: "Y-",
+    -3: "Z-",
+    -4: "RX-",
+    -5: "RY-",
+    -6: "RZ-",
+}
 
 # endregion
 

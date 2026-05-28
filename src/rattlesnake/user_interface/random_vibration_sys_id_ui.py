@@ -21,7 +21,7 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationUICommands,
-    RandomVibrationInstructions
+    RandomVibrationInstructions,
 )
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -29,8 +29,7 @@ from rattlesnake.process.random_vibration_sys_id_data_analysis import (
     RandomVibrationDataAnalysisUICommands,
 )
 from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
-from rattlesnake.user_interface.random_vibration_sys_id_ui_utilities import (
-    _direction_map,
+from rattlesnake.environment.random_vibration_sys_id_utilities import (
     load_specification,
 )
 from rattlesnake.user_interface.ui_utilities import (
@@ -41,10 +40,8 @@ from rattlesnake.user_interface.ui_utilities import (
     multiline_plotter,
 )
 from rattlesnake.utilities import (
+    _direction_map,
     DIRECTORY,
-    GlobalCommands,
-    VerboseMessageQueue,
-    db2scale,
     load_python_module,
 )
 
@@ -97,13 +94,17 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             Queue where log file messages can be written.
 
         """
-        super().__init__(CONTROL_TYPE, environment_name, rattlesnake,)
+        super().__init__(
+            CONTROL_TYPE,
+            environment_name,
+            rattlesnake,
+        )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        random_definition_ui_path = os.path.join(DIRECTORY, "user_interface", "ui_files", "random_vibration_definition.ui")
-        uic.loadUi(
-            random_definition_ui_path, self.definition_widget
+        random_definition_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "random_vibration_definition.ui"
         )
+        uic.loadUi(random_definition_ui_path, self.definition_widget)
         # Add the page to the control prediction tabwidget
         self.prediction_widget = QtWidgets.QWidget()
         random_prediction_ui_path = os.path.join(
@@ -290,7 +291,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
     def physical_output_names(self):
         """Names of the physical output channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
-    
+
     @property
     def physical_control_indices(self):
         """Indices corresponding to the physical channels that are used as outputs"""
@@ -466,7 +467,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(
             self.definition_widget.ramp_time_spinbox.value()
         )
-        
+
         for widget in [
             self.prediction_widget.response_row_selector,
             self.prediction_widget.response_column_selector,
@@ -647,13 +648,16 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             percent_lines_out=self.definition_widget.frequency_lines_out_spinbox.value(),
             allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
         )
-        
 
-    def set_environment_metadata(self, metadata:  RandomVibrationMetadata):
+    def set_environment_metadata(self, metadata: RandomVibrationMetadata):
         self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
-        self.definition_widget.samples_per_frame_selector.setValue(metadata.samples_per_frame)
+        self.definition_widget.samples_per_frame_selector.setValue(
+            metadata.samples_per_frame
+        )
         self.definition_widget.ramp_time_spinbox.setValue(metadata.test_level_ramp_time)
-        index = self.definition_widget.cola_window_selector.findText(metadata.cola_window)
+        index = self.definition_widget.cola_window_selector.findText(
+            metadata.cola_window
+        )
         if index >= 0:
             self.definition_widget.cola_window_selector.setCurrentIndex(index)
 
@@ -672,8 +676,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             metadata.cpsd_window
         )
         if index >= 0:
-            self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(index)
-        self.definition_widget.cpsd_overlap_selector.setValue(metadata.cpsd_overlap * 100)
+            self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
+                index
+            )
+        self.definition_widget.cpsd_overlap_selector.setValue(
+            metadata.cpsd_overlap * 100
+        )
         if metadata.control_python_script:
             self.select_python_module(None, metadata.control_python_script)
             self.definition_widget.control_function_input.setCurrentIndex(
@@ -686,8 +694,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             metadata.allow_automatic_aborts
         )
         for i in range(self.definition_widget.control_channels_selector.count()):
-            state = Qt.Checked if i in metadata.control_channel_indices else Qt.Unchecked
-            self.definition_widget.control_channels_selector.item(i).setCheckState(state)
+            state = (
+                Qt.Checked if i in metadata.control_channel_indices else Qt.Unchecked
+            )
+            self.definition_widget.control_channels_selector.item(i).setCheckState(
+                state
+            )
 
         self.response_transformation_matrix = metadata.response_transformation_matrix
         self.output_transformation_matrix = metadata.reference_transformation_matrix
@@ -705,13 +717,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     def get_environment_instructions(self):
         control_test_level = self.run_widget.current_test_level_selector.value()
-        return RandomVibrationInstructions(
-            self.environment_name,
-            control_test_level
-        )
+        return RandomVibrationInstructions(self.environment_name, control_test_level)
 
     def set_environment_instructions(self, instructions):
-        self.run_widget.current_test_level_selector.setValue(instructions.control_test_level)
+        self.run_widget.current_test_level_selector.setValue(
+            instructions.control_test_level
+        )
 
     # endregion
 
@@ -748,9 +759,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     (
                         self.hardware_metadata.channel_list[i].node_number,
                         _direction_map[
-                            self.hardware_metadata.channel_list[
-                                i
-                            ].node_direction
+                            self.hardware_metadata.channel_list[i].node_direction
                         ],
                     )
                     for i in self.physical_control_indices
@@ -1027,7 +1036,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
     ):  # pylint: disable=unused-argument
         """Defines the transformation matrices using the dialog box"""
         if dialog:
-            (response_transformation, output_transformation, result) = (
+            response_transformation, output_transformation, result = (
                 TransformationMatrixWindow.define_transformation_matrices(
                     self.response_transformation_matrix,
                     self.definition_widget.control_channels_display.value(),
@@ -1120,6 +1129,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.definition_widget.specification_file_name_display.setText("")
         self.show_specification()
         self.update_parameters()
+
     # endregion
 
     # region Prediction
@@ -1185,14 +1195,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         if row_index == column_index:
             warning_upper = abs(
-                self.environment_metadata.specification_warning_matrix[
-                    1, :, row_index
-                ]
+                self.environment_metadata.specification_warning_matrix[1, :, row_index]
             )
             warning_lower = abs(
-                self.environment_metadata.specification_warning_matrix[
-                    0, :, row_index
-                ]
+                self.environment_metadata.specification_warning_matrix[0, :, row_index]
             )
             abort_upper = abs(
                 self.environment_metadata.specification_abort_matrix[1, :, row_index]
@@ -1275,7 +1281,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
     def recompute_prediction(self):
         """Sends a message to the environment process to recompute the prediction"""
-        self.rattlesnake.send_environment_command(self.environment_name, RandomVibrationCommands.RECOMPUTE_PREDICTION, None)
+        self.rattlesnake.send_environment_command(
+            self.environment_name, RandomVibrationCommands.RECOMPUTE_PREDICTION, None
+        )
 
     # endregion
 
@@ -1341,8 +1349,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
     def change_control_test_level(self):
         """Updates the test level of the control."""
         self.rattlesnake.send_environment_command(
-            self.environment_name, 
-            RandomVibrationCommands.ADJUST_TEST_LEVEL, 
+            self.environment_name,
+            RandomVibrationCommands.ADJUST_TEST_LEVEL,
             self.run_widget.current_test_level_selector.value(),
         )
         self.run_level_start_time = time.time()
@@ -1504,8 +1512,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         if filename == "":
             return
         netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
-                    filename, "w", format="NETCDF4", clobber=True
-                )
+            filename, "w", format="NETCDF4", clobber=True
+        )
         if self.environment_name not in netcdf_dataset.groups:
             netcdf_handle = netcdf_dataset.createGroup(self.environment_name)
         else:
@@ -1576,6 +1584,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         var[...] = self.last_reference_noise.imag
         netcdf_handle.close()
+
     # endregion
 
     # region Commands
@@ -1638,7 +1647,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         """
         if super().update_gui(queue_data):
             return
-        
+
         command, data = queue_data
         match command:
             case RandomVibrationDataAnalysisUICommands.CONTROL_PREDICTIONS:
@@ -1725,9 +1734,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 )
                 self.system_id_widget.current_frames_spinbox.setValue(frames)
                 self.system_id_widget.total_frames_spinbox.setValue(total_frames)
-                self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
+                self.system_id_widget.progressBar.setValue(
+                    int(frames / total_frames * 100)
+                )
                 self.plot_data_items["sum_asds_control"].setData(
-                    self.sysid_data.frequencies, np.einsum("ijj", self.last_response_cpsd).real
+                    self.sysid_data.frequencies,
+                    np.einsum("ijj", self.last_response_cpsd).real,
                 )
                 # Go through and remove any closed windows
                 self.plot_windows = [
@@ -1789,4 +1801,3 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 widget.setEnabled(False)
             case _:
                 print(f"Unknown Random UI Command {command}")
-        

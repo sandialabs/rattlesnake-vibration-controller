@@ -29,8 +29,13 @@ import openpyxl
 import netCDF4 as nc4
 import numpy as np
 
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareMetadata,
+    HardwareAcquisition,
+    HardwareOutput,
+)
 from rattlesnake.utilities import (
+    _direction_map,
     flush_queue,
     reduce_array_by_coordinate,
 )
@@ -49,42 +54,8 @@ except ModuleNotFoundError:
     xp = np
     CUDA = False
 
-_direction_map = {
-    "X+": 1,
-    "X": 1,
-    "+X": 1,
-    "Y+": 2,
-    "Y": 2,
-    "+Y": 2,
-    "Z+": 3,
-    "Z": 3,
-    "+Z": 3,
-    "RX+": 4,
-    "RX": 4,
-    "+RX": 4,
-    "RY+": 5,
-    "RY": 5,
-    "+RY": 5,
-    "RZ+": 6,
-    "RZ": 6,
-    "+RZ": 6,
-    "X-": -1,
-    "-X": -1,
-    "Y-": -2,
-    "-Y": -2,
-    "Z-": -3,
-    "-Z": -3,
-    "RX-": -4,
-    "-RX": -4,
-    "RY-": -5,
-    "-RY": -5,
-    "RZ-": -6,
-    "-RZ": -6,
-    "": 0,
-    None: 0,
-}
-
 HARDWARE_TYPE = HardwareType.SDYNPY_FRF
+
 
 # region Metadata
 class SDynPyFRFMetadata(HardwareMetadata):
@@ -112,7 +83,7 @@ class SDynPyFRFMetadata(HardwareMetadata):
     # region Validation
     def validate(self):
         return super().validate()
-    
+
     # endregion
 
     # region Loading
@@ -183,7 +154,9 @@ class SDynPyFRFMetadata(HardwareMetadata):
             hardware_file,
         )
 
+
 # endregion
+
 
 # region Acqusition
 class SDynPyFRFAcquisition(HardwareAcquisition):
@@ -496,7 +469,9 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
     def close(self):
         """Method to close down the hardware"""
 
+
 # endregion
+
 
 # region Output
 class SDynPyFRFOutput(HardwareOutput):
@@ -575,5 +550,6 @@ class SDynPyFRFOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
-    
+
+
 # endregion

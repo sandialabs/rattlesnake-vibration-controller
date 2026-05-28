@@ -43,7 +43,6 @@ from rattlesnake.utilities import (
     scale2db,
     wrap,
     db2scale,
-    read_transformation_matrix_from_worksheet,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import (
@@ -748,28 +747,12 @@ class SineMetadata(SysIdEnvironmentMetadata):
                 col_idx = idx + 2
                 worksheet.cell(18, col_idx, channel_ind + 1)
         self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=19)
-        response_row = 34
-        output_row = 35
-        if self.response_transformation_matrix is not None:
-            worksheet.cell(35, 1, None)
-            worksheet.cell(35, 2, None)
-            for i, row in enumerate(self.response_transformation_matrix):
-                for j, value in enumerate(row):
-                    worksheet.cell(i + response_row, j + 2, value)
-            # Shift output transfomation matrix down
-            output_row = i + 1
-            worksheet.cell(i + 1, 1, "Output Transformation Matrix:")
-            worksheet.cell(
-                i + 1,
-                2,
-                "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
-                "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
-                "the number of physical output channels in the environment.",
-            )
-        if self.response_transformation_matrix is not None:
-            for i, row in enumerate(self.response_transformation_matrix):
-                for j, value in enumerate(row):
-                    worksheet.cell(i + output_row, j + 2, value)
+        self.save_sysid_matrix_to_worksheet(
+            worksheet,
+            self.response_transformation_matrix,
+            self.output_transformation_matrix,
+            start_row=34,
+        )
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -839,74 +822,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
         sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
             worksheet, hardware_metadata, start_row=19
         )
-
-        # Now we need to find the transformation matrices' sizes
-        start_response_row = 34
-        num_response_row = 1
-        if (
-            isinstance(worksheet.cell(start_response_row, 2).value, str)
-            and worksheet.cell(start_response_row, 2).value.lower() == "none"
-        ):
-            response_transformation_matrix = None
-        elif (
-            worksheet.cell(start_response_row, 2)
-            .value.lower()
-            .startswith("# transformation matrix")
-        ):
-            response_transformation_matrix = None
-        else:
-
-            while True:
-                first_col_value = worksheet.cell(
-                    start_response_row + num_response_row, 2
-                ).value
-                if worksheet.cell(
-                    start_response_row + num_response_row, 1
-                ).value == "Output Transformation Matrix:" or (
-                    first_col_value is None
-                    or (
-                        isinstance(first_col_value, str)
-                        and first_col_value.strip() == ""
-                    )
-                ):
-                    break
-                num_response_row += 1
-            response_transformation_matrix = read_transformation_matrix_from_worksheet(
-                worksheet,
-                start_row=start_response_row,
-                num_rows=num_response_row,
-                start_col=2,
-            )
-        # Output transformation matrix
-        start_output_row = start_response_row + num_response_row
-        num_output_row = 1
-        if (
-            isinstance(worksheet.cell(start_output_row, 2).value, str)
-            and worksheet.cell(start_output_row, 2).value.lower() == "none"
-        ):
-            output_transformation_matrix = None
-        elif (
-            worksheet.cell(start_output_row, 2)
-            .value.lower()
-            .startswith("# transformation matrix")
-        ):
-            output_transformation_matrix = None
-        else:
-            while True:
-                first_col_value = worksheet.cell(
-                    start_output_row + num_output_row, 2
-                ).value
-                if first_col_value is None or (
-                    isinstance(first_col_value, str) and first_col_value.strip() == ""
-                ):
-                    break
-                num_output_row += 1
-            output_transformation_matrix = read_transformation_matrix_from_worksheet(
-                worksheet,
-                start_row=start_output_row,
-                num_rows=num_output_row,
-                start_col=2,
-            )
+        response_transformation_matrix, output_transformation_matrix = (
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=34)
+        )
 
         # Specification Files
         specification_files = []
@@ -1276,6 +1194,7 @@ class SineEnvironment(SysIdEnvironment):
         self.good_line_threshold = 0.25
 
         self.set_ready()
+
     # endregion
 
     # region State Sync
@@ -1430,12 +1349,12 @@ class SineEnvironment(SysIdEnvironment):
             )
         )
         self.log("Done!")
-        
+
         self.set_ready()
 
     def initialize_sysid(self, sysid_metadata):
         super().initialize_sysid(sysid_metadata)
-        
+
         self.set_ready()
 
     def get_signal_generation_metadata(self):

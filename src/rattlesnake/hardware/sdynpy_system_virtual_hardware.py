@@ -31,7 +31,12 @@ import scipy.signal as signal
 import netCDF4 as nc4
 import openpyxl
 
-from rattlesnake.utilities import flush_queue, RattlesnakeError
+from rattlesnake.utilities import (
+    flush_queue,
+    RattlesnakeError,
+    _direction_map,
+    _direction_inv_map,
+)
 from rattlesnake.hardware.abstract_hardware import (
     HardwareMetadata,
     HardwareAcquisition,
@@ -39,56 +44,6 @@ from rattlesnake.hardware.abstract_hardware import (
 )
 from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
 from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
-
-_direction_map = {
-    "X+": 1,
-    "X": 1,
-    "+X": 1,
-    "Y+": 2,
-    "Y": 2,
-    "+Y": 2,
-    "Z+": 3,
-    "Z": 3,
-    "+Z": 3,
-    "RX+": 4,
-    "RX": 4,
-    "+RX": 4,
-    "RY+": 5,
-    "RY": 5,
-    "+RY": 5,
-    "RZ+": 6,
-    "RZ": 6,
-    "+RZ": 6,
-    "X-": -1,
-    "-X": -1,
-    "Y-": -2,
-    "-Y": -2,
-    "Z-": -3,
-    "-Z": -3,
-    "RX-": -4,
-    "-RX": -4,
-    "RY-": -5,
-    "-RY": -5,
-    "RZ-": -6,
-    "-RZ": -6,
-    "": 0,
-    None: 0,
-}
-_direction_inv_map = {
-    0: "",
-    1: "X+",
-    2: "Y+",
-    3: "Z+",
-    4: "RX+",
-    5: "RY+",
-    6: "RZ+",
-    -1: "X-",
-    -2: "Y-",
-    -3: "Z-",
-    -4: "RX-",
-    -5: "RY-",
-    -6: "RZ-",
-}
 
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 DEBUG = False
@@ -379,7 +334,6 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.output_channels = None
         self.acquisition_delay = None
         self.sleep = sleep
-
 
     def initialize_hardware(self, test_data: SDynPySystemMetadata):
         """

@@ -1144,6 +1144,7 @@ class RattlesnakeController:
         if self.state in (
             RattlesnakeState.HARDWARE_ACTIVE,
             RattlesnakeState.ENVIRONMENT_ACTIVE,
+            RattlesnakeState.SYS_ID_ACTIVE,
         ):
             self.stop_acquisition()
         # Close out of acquisition, output, streaming process
