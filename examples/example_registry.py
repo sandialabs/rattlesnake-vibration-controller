@@ -7,7 +7,7 @@ from environment.modal.modal_metadata import manual_modal_metadata, netcdf_modal
 from environment.sine.sine_metadata import manual_sine_metadata, worksheet_sine_metadata, netcdf_sine_metadata, sine_instructions
 from environment.sysid.sysid_metadata import (manual_sysid_metadata, worksheet_sysid_metadata, netcdf_sysid_metadata,
                                               netcdf_sysid_data_package)
-from environment.random.random_metadata import manual_random_metadata, netcdf_random_metadata, worksheet_random_metadata
+from environment.random.random_metadata import manual_random_metadata, netcdf_random_metadata, worksheet_random_metadata, random_instructions
 
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -97,4 +97,4 @@ INSTRUCTIONS_DICT[EnvironmentType.NONE] = lambda: None
 INSTRUCTIONS_DICT[EnvironmentType.TIME] = time_instructions
 INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
 INSTRUCTIONS_DICT[EnvironmentType.SINE] = sine_instructions
-INSTRUCTIONS_DICT[EnvironmentType.RANDOM] = lambda: None
+INSTRUCTIONS_DICT[EnvironmentType.RANDOM] = random_instructions

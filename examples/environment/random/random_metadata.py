@@ -7,7 +7,14 @@ from rattlesnake.environment.random_vibration_sys_id_environment import RandomVi
 
 ENVIRONMENT_NAME = "Random 0"
 
+def random_instructions():
+    control_test_level = 1
+    instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
+
+    return instructions
+
 def worksheet_random_metadata(hardware_metadata):
+
     pass
 
 def netcdf_random_metadata(hardware_metadata):

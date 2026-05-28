@@ -1228,7 +1228,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.environment_metadata.skip_frames, data.control_test_level),
+                (self.environment_metadata.skip_frames, test_level),
             ),
         )
         time.sleep(0.01)
@@ -1255,7 +1255,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         )
 
         self.queue_container.signal_generation_command_queue.put(
-            self.environment_name, (SignalGenerationCommands.ADJUST_TEST_LEVEL, data.control_test_level)
+            self.environment_name, (SignalGenerationCommands.ADJUST_TEST_LEVEL, test_level)
         )
 
         # Tell the collector to start acquiring data

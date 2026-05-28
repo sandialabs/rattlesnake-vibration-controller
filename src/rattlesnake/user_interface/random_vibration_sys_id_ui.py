@@ -23,6 +23,7 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationUICommands,
     RandomVibrationInstructions
 )
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.random_vibration_sys_id_data_analysis import (
     RandomVibrationDataAnalysisUICommands,
@@ -1493,10 +1494,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         """Saves the control data to a file when requested by a profile argument"""
         self.save_spectral_data(None, filename)
 
-    def save_spectral_data(
-        self, clicked, filename=None
-    ):  # pylint: disable=unused-argument
-        """Save Spectral Data from the Controller"""
+    def save_spectral_data(self, clicked, filename=None):
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self.definition_widget,
@@ -1505,168 +1503,73 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
         if filename == "":
             return
-        labels = [
-            ["node_number", str],
-            ["node_direction", str],
-            ["comment", str],
-            ["serial_number", str],
-            ["triax_dof", str],
-            ["sensitivity", str],
-            ["unit", str],
-            ["make", str],
-            ["model", str],
-            ["expiration", str],
-            ["physical_device", str],
-            ["physical_channel", str],
-            ["channel_type", str],
-            ["minimum_value", str],
-            ["maximum_value", str],
-            ["coupling", str],
-            ["excitation_source", str],
-            ["excitation", str],
-            ["feedback_device", str],
-            ["feedback_channel", str],
-            ["warning_level", str],
-            ["abort_level", str],
-        ]
-        global_data_parameters: HardwareMetadata
-        global_data_parameters = self.hardware_metadata
-        netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
-            filename, "w", format="NETCDF4", clobber=True
-        )
-        # Create dimensions
+        netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
+                    filename, "w", format="NETCDF4", clobber=True
+                )
+        if self.environment_name not in netcdf_dataset.groups:
+            netcdf_handle = netcdf_dataset.createGroup(self.environment_name)
+        else:
+            netcdf_handle = netcdf_dataset.groups[self.environment_name]
+        self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
+        netcdf_dataset.close()
         netcdf_handle.createDimension(
-            "response_channels", len(global_data_parameters.channel_list)
-        )
-        netcdf_handle.createDimension(
-            "output_channels",
-            len(
-                [
-                    channel
-                    for channel in global_data_parameters.channel_list
-                    if channel.feedback_device is not None
-                ]
-            ),
-        )
-        netcdf_handle.createDimension("time_samples", None)
-        netcdf_handle.createDimension(
-            "num_environments", len(global_data_parameters.environment_names)
-        )
-        # Create attributes
-        netcdf_handle.file_version = "3.0.0"
-        netcdf_handle.sample_rate = global_data_parameters.sample_rate
-        netcdf_handle.time_per_write = (
-            global_data_parameters.samples_per_write
-            / global_data_parameters.output_sample_rate
-        )
-        netcdf_handle.time_per_read = (
-            global_data_parameters.samples_per_read / global_data_parameters.sample_rate
-        )
-        netcdf_handle.hardware = global_data_parameters.hardware
-        netcdf_handle.hardware_file = (
-            "None"
-            if global_data_parameters.hardware_file is None
-            else global_data_parameters.hardware_file
-        )
-        netcdf_handle.output_oversample = global_data_parameters.output_oversample
-        for key, value in global_data_parameters.extra_parameters.items():
-            setattr(netcdf_handle, key, value)
-        # Create Variables
-        var = netcdf_handle.createVariable(
-            "environment_names", str, ("num_environments",)
-        )
-        this_environment_index = None
-        for i, name in enumerate(global_data_parameters.environment_names):
-            var[i] = name
-            if name == self.environment_name:
-                this_environment_index = i
-        var = netcdf_handle.createVariable(
-            "environment_active_channels",
-            "i1",
-            ("response_channels", "num_environments"),
-        )
-        var[...] = global_data_parameters.environment_active_channels.astype("int8")[
-            global_data_parameters.environment_active_channels[
-                :, this_environment_index
-            ],
-            :,
-        ]
-        # Create channel table variables
-        for label, netcdf_datatype in labels:
-            var = netcdf_handle.createVariable(
-                "/channels/" + label, netcdf_datatype, ("response_channels",)
-            )
-            channel_data = [
-                getattr(channel, label)
-                for channel in global_data_parameters.channel_list
-            ]
-            if netcdf_datatype == "i1":
-                channel_data = np.array([1 if val else 0 for val in channel_data])
-            else:
-                channel_data = ["" if val is None else val for val in channel_data]
-            for i, cd in enumerate(channel_data):
-                var[i] = cd
-        group_handle = netcdf_handle.createGroup(self.environment_name)
-        self.environment_metadata.store_to_netcdf(group_handle)
-        # Create Variables for Spectral Data
-        group_handle.createDimension(
             "drive_channels", self.last_transfer_function.shape[2]
         )
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "frf_data_real",
             "f8",
             ("fft_lines", "specification_channels", "drive_channels"),
         )
         var[...] = self.last_transfer_function.real
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "frf_data_imag",
             "f8",
             ("fft_lines", "specification_channels", "drive_channels"),
         )
         var[...] = self.last_transfer_function.imag
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "frf_coherence", "f8", ("fft_lines", "specification_channels")
         )
         var[...] = self.last_coherence.real
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "response_cpsd_real",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
         var[...] = self.last_response_cpsd.real
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "response_cpsd_imag",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
         var[...] = self.last_response_cpsd.imag
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "drive_cpsd_real", "f8", ("fft_lines", "drive_channels", "drive_channels")
         )
         var[...] = self.last_reference_cpsd.real
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "drive_cpsd_imag", "f8", ("fft_lines", "drive_channels", "drive_channels")
         )
         var[...] = self.last_reference_cpsd.imag
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "response_noise_cpsd_real",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
         var[...] = self.last_response_noise.real
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "response_noise_cpsd_imag",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
         var[...] = self.last_response_noise.imag
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "drive_noise_cpsd_real",
             "f8",
             ("fft_lines", "drive_channels", "drive_channels"),
         )
         var[...] = self.last_reference_noise.real
-        var = group_handle.createVariable(
+        var = netcdf_handle.createVariable(
             "drive_noise_cpsd_imag",
             "f8",
             ("fft_lines", "drive_channels", "drive_channels"),

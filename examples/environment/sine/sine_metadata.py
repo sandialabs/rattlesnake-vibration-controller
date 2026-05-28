@@ -8,6 +8,7 @@ from rattlesnake.environment.sine_sys_id_environment import SineCommands, SineMe
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 
 ENVIRONMENT_NAME = "Sine 0"
+# ENVIRONMENT_NAME = "sysid"
 
 def sine_instructions():
     control_test_level = 0
