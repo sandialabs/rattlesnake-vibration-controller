@@ -45,7 +45,7 @@ def worksheet_random_metadata(hardware_metadata):
 
 
 def netcdf_random_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/random/random.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 

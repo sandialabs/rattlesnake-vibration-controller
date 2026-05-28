@@ -17,7 +17,7 @@ from rattlesnake.process.streaming import StreamType
 
 """USER INPUTS"""
 THREADED = False
-IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
+IMPORT_METHOD = "netcdf"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM

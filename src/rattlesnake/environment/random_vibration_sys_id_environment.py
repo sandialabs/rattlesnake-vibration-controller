@@ -413,7 +413,103 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
     ):
-        pass
+        """Collect environment parameters from a netCDF group."""
+
+        sample_rate = hardware_metadata.sample_rate
+        number_of_channels = sum(channel_list_bools)
+
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
+            if channel_bool
+        ]
+
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
+        samples_per_frame = netcdf_group_handle.samples_per_frame
+        test_level_ramp_time = netcdf_group_handle.test_level_ramp_time
+        cpsd_overlap = netcdf_group_handle.cpsd_overlap
+        update_tf_during_control = bool(netcdf_group_handle.update_tf_during_control)
+        cola_window = netcdf_group_handle.cola_window
+        cola_overlap = netcdf_group_handle.cola_overlap
+        cola_window_exponent = netcdf_group_handle.cola_window_exponent
+        frames_in_cpsd = netcdf_group_handle.frames_in_cpsd
+        cpsd_window = netcdf_group_handle.cpsd_window
+        control_python_script = netcdf_group_handle.control_python_script
+        control_python_function = netcdf_group_handle.control_python_function
+        control_python_function_type = netcdf_group_handle.control_python_function_type
+        control_python_function_parameters = (
+            netcdf_group_handle.control_python_function_parameters
+        )
+        allow_automatic_aborts = bool(netcdf_group_handle.allow_automatic_aborts)
+
+        control_channel_indices = netcdf_group_handle.variables[
+            "control_channel_indices"
+        ][...]
+
+        specification_frequency_lines = netcdf_group_handle.variables[
+            "specification_frequency_lines"
+        ][...]
+        specification_cpsd_matrix = (
+            netcdf_group_handle.variables["specification_cpsd_matrix_real"][...]
+            + 1j * netcdf_group_handle.variables["specification_cpsd_matrix_imag"][...]
+        )
+        specification_warning_matrix = netcdf_group_handle.variables[
+            "specification_warning_matrix"
+        ][...]
+        specification_abort_matrix = netcdf_group_handle.variables[
+            "specification_abort_matrix"
+        ][...]
+
+        response_transformation_matrix = None
+        if "response_transformation_matrix" in netcdf_group_handle.variables:
+            response_transformation_matrix = netcdf_group_handle.variables[
+                "response_transformation_matrix"
+            ][...]
+
+        reference_transformation_matrix = None
+        if "reference_transformation_matrix" in netcdf_group_handle.variables:
+            reference_transformation_matrix = netcdf_group_handle.variables[
+                "reference_transformation_matrix"
+            ][...]
+
+        return cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            number_of_channels=number_of_channels,
+            samples_per_frame=samples_per_frame,
+            test_level_ramp_time=test_level_ramp_time,
+            cola_window=cola_window,
+            cola_overlap=cola_overlap,
+            cola_window_exponent=cola_window_exponent,
+            sigma_clip=5,
+            update_tf_during_control=update_tf_during_control,
+            frames_in_cpsd=frames_in_cpsd,
+            cpsd_window=cpsd_window,
+            cpsd_overlap=cpsd_overlap,
+            percent_lines_out=0.1,  # TODO This is wrong
+            allow_automatic_aborts=allow_automatic_aborts,
+            control_python_script=control_python_script,
+            control_python_function=control_python_function,
+            control_python_function_type=control_python_function_type,
+            control_python_function_parameters=control_python_function_parameters,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
+            specification_frequency_lines=specification_frequency_lines,
+            specification_cpsd_matrix=specification_cpsd_matrix,
+            specification_warning_matrix=specification_warning_matrix,
+            specification_abort_matrix=specification_abort_matrix,
+            response_transformation_matrix=response_transformation_matrix,
+            output_transformation_matrix=reference_transformation_matrix,
+            sysid_metadata=None,
+        )
 
     @staticmethod
     def create_blank_worksheet_template(worksheet):
@@ -605,15 +701,15 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         function = getattr(python_control_module, control_python_function)
         control_python_function_type = None
         if inspect.isgeneratorfunction(function):
-            control_python_function_type = "Generator"
+            control_python_function_type = 1
         elif inspect.isclass(function) and issubclass(
             function, AbstractControlLawComputation
         ):
-            control_python_function_type = "Class"
+            control_python_function_type = 2
         elif inspect.isclass(function):
-            control_python_function_type = "Interactive"
+            control_python_function_type = 3
         else:
-            control_python_function_type = "Function"
+            control_python_function_type = 0
 
         coord_dtype = np.dtype([("node", "<u8"), ("direction", "i1")])
         if response_transformation_matrix is not None:

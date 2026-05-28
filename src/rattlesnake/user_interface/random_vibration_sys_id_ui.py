@@ -684,7 +684,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         if metadata.control_python_script:
             self.select_python_module(None, metadata.control_python_script)
-            self.definition_widget.control_function_input.setCurrentText(
+            self.definition_widget.control_function_input.setCurrentIndex(
                 metadata.control_python_function_type
             )
         self.definition_widget.frequency_lines_out_spinbox.setValue(
