@@ -463,22 +463,22 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(14, 1, "Control Parameters:")
         worksheet.cell(14, 3, "# Extra parameters used in the control law")
         worksheet.cell(15, 1, "Control Channels (1-based):")
-        SysIdMetadata.create_blank_worksheet(worksheet, start_row=16)
-        worksheet.cell(29, 1, "Specification File:")
-        worksheet.cell(29, 3, "# Path to the file containing the Specification")
-        worksheet.cell(30, 1, "Response Transformation Matrix:")
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=16)
+        worksheet.cell(30, 1, "Specification File:")
+        worksheet.cell(30, 3, "# Path to the file containing the Specification")
+        worksheet.cell(31, 1, "Response Transformation Matrix:")
         worksheet.cell(
-            30,
-            3,
+            31,
+            2,
             "# Transformation matrix to apply to the response channels.  Type None if there "
             "is none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
             "Transformation Matrix line down so it will fit.  The number of columns should be the "
             "number of physical control channels.",
         )
-        worksheet.cell(31, 1, "Output Transformation Matrix:")
+        worksheet.cell(32, 1, "Output Transformation Matrix:")
         worksheet.cell(
-            31,
-            3,
+            32,
+            2,
             "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
             "the number of physical output channels in the environment.",
@@ -523,9 +523,13 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
-            self.output_transformation_matrix,
-            start_row=30,
+            self.reference_transformation_matrix,
+            start_row=31,
         )
+
+        # TODO Fix the template to include this
+        if self.sigma_clip is not None:
+            worksheet.cell(21, 5, self.sigma_clip)
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -593,7 +597,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             column_index += 1
 
         response_transformation_matrix, output_transformation_matrix = (
-            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=30)
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=31)
         )
 
         # Find python module type
@@ -618,8 +622,10 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             control_coordinate = np.array(
                 [
                     (
-                        environment_channel_list,
-                        _direction_map[environment_channel_list[i].node_direction],
+                        hardware_metadata.channel_list[i].node_number,
+                        _direction_map[
+                            hardware_metadata.channel_list[i].node_direction
+                        ],
                     )
                     for i in output_channel_indices
                 ],
@@ -661,7 +667,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         )
 
         # Load specification
-        specification_file = worksheet.cell(29, 2).value
+        specification_file = worksheet.cell(30, 2).value
         if specification_file is not None:
             (
                 metadata.specification_frequency_lines,
@@ -674,6 +680,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 metadata.frequency_spacing,
                 control_coordinate,
             )
+
         return metadata
 
     # def set_parameters_from_template(

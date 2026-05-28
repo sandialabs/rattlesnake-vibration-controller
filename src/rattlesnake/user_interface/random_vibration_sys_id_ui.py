@@ -684,7 +684,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         if metadata.control_python_script:
             self.select_python_module(None, metadata.control_python_script)
-            self.definition_widget.control_function_input.setCurrentIndex(
+            self.definition_widget.control_function_input.setCurrentText(
                 metadata.control_python_function_type
             )
         self.definition_widget.frequency_lines_out_spinbox.setValue(
@@ -1519,71 +1519,70 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         else:
             netcdf_handle = netcdf_dataset.groups[self.environment_name]
         self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
-        netcdf_dataset.close()
         netcdf_handle.createDimension(
-            "drive_channels", self.last_transfer_function.shape[2]
+            "drive_channels", self.sysid_data.sysid_frf.shape[2]
         )
         var = netcdf_handle.createVariable(
             "frf_data_real",
             "f8",
             ("fft_lines", "specification_channels", "drive_channels"),
         )
-        var[...] = self.last_transfer_function.real
+        var[...] = self.sysid_data.sysid_frf.real
         var = netcdf_handle.createVariable(
             "frf_data_imag",
             "f8",
             ("fft_lines", "specification_channels", "drive_channels"),
         )
-        var[...] = self.last_transfer_function.imag
+        var[...] = self.sysid_data.sysid_frf.imag
         var = netcdf_handle.createVariable(
             "frf_coherence", "f8", ("fft_lines", "specification_channels")
         )
-        var[...] = self.last_coherence.real
+        var[...] = self.sysid_data.sysid_coherence.real
         var = netcdf_handle.createVariable(
             "response_cpsd_real",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
-        var[...] = self.last_response_cpsd.real
+        var[...] = self.sysid_data.sysid_response_cpsd.real
         var = netcdf_handle.createVariable(
             "response_cpsd_imag",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
-        var[...] = self.last_response_cpsd.imag
+        var[...] = self.sysid_data.sysid_response_cpsd.imag
         var = netcdf_handle.createVariable(
             "drive_cpsd_real", "f8", ("fft_lines", "drive_channels", "drive_channels")
         )
-        var[...] = self.last_reference_cpsd.real
+        var[...] = self.sysid_data.sysid_reference_cpsd.real
         var = netcdf_handle.createVariable(
             "drive_cpsd_imag", "f8", ("fft_lines", "drive_channels", "drive_channels")
         )
-        var[...] = self.last_reference_cpsd.imag
+        var[...] = self.sysid_data.sysid_reference_cpsd.imag
         var = netcdf_handle.createVariable(
             "response_noise_cpsd_real",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
-        var[...] = self.last_response_noise.real
+        var[...] = self.sysid_data.sysid_response_noise.real
         var = netcdf_handle.createVariable(
             "response_noise_cpsd_imag",
             "f8",
             ("fft_lines", "specification_channels", "specification_channels"),
         )
-        var[...] = self.last_response_noise.imag
+        var[...] = self.sysid_data.sysid_response_noise.imag
         var = netcdf_handle.createVariable(
             "drive_noise_cpsd_real",
             "f8",
             ("fft_lines", "drive_channels", "drive_channels"),
         )
-        var[...] = self.last_reference_noise.real
+        var[...] = self.sysid_data.sysid_reference_noise.real
         var = netcdf_handle.createVariable(
             "drive_noise_cpsd_imag",
             "f8",
             ("fft_lines", "drive_channels", "drive_channels"),
         )
-        var[...] = self.last_reference_noise.imag
-        netcdf_handle.close()
+        var[...] = self.sysid_data.sysid_reference_noise.imag
+        netcdf_dataset.close()
 
     # endregion
 
@@ -1723,11 +1722,11 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     frames,
                     total_frames,
                     self.sysid_data.frequencies,
-                    self.last_transfer_function,
-                    self.last_coherence,
-                    self.last_response_cpsd,
-                    self.last_reference_cpsd,
-                    self.last_condition,
+                    self.sysid_data.sysid_frf,
+                    self.sysid_data.sysid_coherence,
+                    self.sysid_data.sysid_response_cpsd,
+                    self.sysid_data.sysid_reference_cpsd,
+                    self.sysid_data.sysid_condition,
                 ) = data
                 self.update_sysid_plots(
                     update_time=False, update_transfer_function=True, update_noise=True
@@ -1739,14 +1738,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 )
                 self.plot_data_items["sum_asds_control"].setData(
                     self.sysid_data.frequencies,
-                    np.einsum("ijj", self.last_response_cpsd).real,
+                    np.einsum("ijj", self.sysid_data.sysid_response_cpsd).real,
                 )
                 # Go through and remove any closed windows
                 self.plot_windows = [
                     window for window in self.plot_windows if window.isVisible()
                 ]
                 for window in self.plot_windows:
-                    window.update_plot(self.last_response_cpsd)
+                    window.update_plot(self.sysid_data.sysid_response_cpsd)
             case RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE:
                 if self.interactive_control_law_widget is not None:
                     self.interactive_control_law_widget.update_ui_sysid(*data)
