@@ -5,26 +5,19 @@ name: ci.yml
 on:
   push:
     branches:
-      - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-    # Only trigger if files in these paths change
-    # paths:
-    #   - 'src/**'                    # Any source code changes
-    #   - 'pyproject.toml'            # Any dependency changes
-    #   - 'uv.lock'                   # Any locked version changes
-    #   - '.github/workflows/ci.yml'  # Changes to the workflow itself
-    #   - 'src/rattlesnake/cicd/**'   # Changes to your reporting scripts
-  pull_request:
-    branches:
-      - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-    paths:
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/ci.yml'
-      - 'src/rattlesnake/cicd/**'
-
+      - '**'
+  workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
+  # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Testing level (small | full)'
+        required: true
+        default: 'small'
+        type: choice
+        options:
+          - small
+          - full
 
 # Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
 concurrency:
@@ -42,16 +35,59 @@ env:
 
 jobs:
 
+  # Detect what files changed to optimize the workflow
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_changed: ${{ steps.filter.outputs.docs }}
+      code_changed: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Filter changes
+        uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          list-files: shell
+          base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
+          filters: |
+            docs:
+              - 'documentation/**'
+              - '*.md'  # Include markdown files at the root, which might be docs-related (e.g., README.md)
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/workflows/**'
+
+      # Log the results to the GitHub Actions console
+      - name: Log change status
+        run: |
+          echo "📂 Docs changed: ${{ steps.filter.outputs.docs }}"
+          echo "📂 Docs files: ${{ steps.filter.outputs.docs_files }}"
+          echo "💻 Code changed: ${{ steps.filter.outputs.code }}"
+          echo "💻 Code files: ${{ steps.filter.outputs.code_files }}"
+
   # 2026-03-13: We cannot use uv with the test matrix because of Qt.  There is
   # a known challenge with PyQt5 on modern macOS (particularly M1/M2/M3 Silicon)
   # and some Windows environments.  PyQt does not have pre-built wheels for every
   # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
+        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
 
     steps:
 
@@ -81,10 +117,39 @@ jobs:
           python -m pip install .[dev]
 
       - name: Run tests
+        shell: bash
         run: |
-          python -m pytest -v
+          # Detect message from Push OR Pull Request
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          BRANCH_NAME="${{ github.ref_name }}"
+          
+          # Root tests + short tests should likely be the default "small" suite
+          TEST_PATHS="tests/*.py tests/short"
+
+          # Trigger full suite if:
+          # 1. Commit message contains [all tests]
+          # 2. Manual dispatch 'test_level' is 'full'
+          # 3. Current branch is exactly 'main' or 'dev'
+          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+             [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
+             [[ "$BRANCH_NAME" == "main" ]] || \
+             [[ "$BRANCH_NAME" == "dev" ]]; then
+            echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+            TEST_PATHS="tests"
+          else
+            echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+          fi
+
+          # Execute pytest on selected directories
+          python -m pytest -vs $TEST_PATHS
 
   lint:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -145,6 +210,12 @@ jobs:
           lint_output_*.txt
 
   coverage:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -167,7 +238,22 @@ jobs:
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          # Match logic from pytest_matrix
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          TEST_PATHS="tests/*.py tests/short"
+          BRANCH_NAME="${{ github.ref_name }}"
+
+          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+               [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
+               [[ "$BRANCH_NAME" == "main" ]] || \
+               [[ "$BRANCH_NAME" == "dev" ]]; then
+              echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+              TEST_PATHS="tests"
+          else
+              echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+          fi
+
+          uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
           uv run python src/rattlesnake/cicd/report_coverage.py \
             --input_file coverage.xml \
@@ -193,6 +279,12 @@ jobs:
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
+    needs: changes
+    # Run if code changed OR if we're on a primary branch
+    if: |
+      needs.changes.outputs.docs_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -235,9 +327,11 @@ jobs:
           path: documentation/_build/html
 
   deploy:
-    needs: [pytest_matrix, lint, coverage, docs_jupyter_book]
+    needs: [changes, pytest_matrix, lint, coverage, docs_jupyter_book]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    # Run only on main/dev AND only if no previous jobs actually failed
+    if: |
+      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
 
     steps:
       - name: Checkout code
@@ -318,6 +412,10 @@ jobs:
           # Create a root index.html using the Python script
           uv run python src/rattlesnake/cicd/report_dashboard.py \
             --github_repo ${{ github.repository }} \
+            --timestamp "$(date +"%Y%m%d_%H%M%S_%Z")" \
+            --run_id ${{ github.run_id }} \
+            --ref_name ${{ github.ref_name }} \
+            --github_sha ${{ github.sha }} \
             --output_file pages/index.html
 
       - name: Deploy to GitHub Pages
@@ -329,4 +427,18 @@ jobs:
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
 
-    # TODO: Publish to PyPI
+    # TODO: Chad to reconsider peaceiris/actions-gh-pages vs. GitHub's built-in pages deployment via the "pages" folder in the repository. The built-in method is simpler but less flexible, while peaceiris allows for more control over commit messages, history, and deployment process.`
+
+    #       1. The "Official" Way (actions/upload-pages-artifact & actions/deploy-pages)
+    #    * How it works: It packages your files into an internal GitHub "artifact" and deploys it directly to the Pages
+    #      infrastructure.
+    #    * Pros: No extra branch required. It doesn't clutter your Git history with automated commits. It's faster and more secure
+    #      (uses OIDC tokens).
+    #    * Cons: You can't easily "see" the source of the current site in your repo without looking at the Actions run.
+    # 
+    #   2. The "Traditional" Way (peaceiris/actions-gh-pages)
+    #    * How it works: it takes your files and commits them to a branch (usually gh-pages). GitHub then serves the site from that
+    #      branch.
+    #    * Pros: You have a permanent record of every deployment in a branch. It's easy to roll back by reverting a commit.
+    #    * Cons: It creates a massive amount of automated commits that "bloat" your repository size over time. It requires contents:
+     #      write permissions.

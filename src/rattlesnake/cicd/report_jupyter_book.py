@@ -7,123 +7,119 @@ CI/CD metadata (timestamp, branch, commit hash).
 """
 
 import argparse
-import sys
-from rattlesnake.cicd.utilities import get_multiline_timestamp
+
+from rattlesnake.cicd.utilities import (
+    ReportMetadata,
+    add_common_args,
+    get_multiline_timestamp,
+    report_cli_entrypoint,
+)
 
 
-def generate_footer_md(
-    timestamp_raw: str, run_id: str, ref_name: str, github_sha: str, github_repo: str
-) -> str:
+def generate_footer(metadata: ReportMetadata) -> str:
     """
-    Generate a Markdown snippet with CI/CD metadata.
+    Construct the metadata block for myst.yml.
 
     Args:
-        timestamp_raw: Raw UTC timestamp string from CI/CD
-        run_id: GitHub Actions run ID
-        ref_name: Git reference name (branch)
-        github_sha: GitHub commit SHA
-        github_repo: GitHub repository name
+        metadata: CI/CD metadata
 
     Returns:
-        Markdown string formatted for the primary_sidebar_footer block
+        Formatted HTML/Markdown string for the footer
     """
-    # Use 6-space indentation as found in myst.yml for the block content
-    indent: str = "      "
-    ts_lines = get_multiline_timestamp(timestamp_raw)
+    github_url = f"https://github.com/{metadata.github_repo}"
+    run_url = f"{github_url}/actions/runs/{metadata.run_id}"
+    branch_url = f"{github_url}/tree/{metadata.ref_name}"
+    commit_url = f"{github_url}/commit/{metadata.github_sha}"
 
-    # Use HTML links instead of Markdown links since we are inside a <div>
-    run_url = f"https://github.com/{github_repo}/actions/runs/{run_id}"
-    branch_url = f"https://github.com/{github_repo}/tree/{ref_name}"
-    commit_url = f"https://github.com/{github_repo}/commit/{github_sha}"
+    ts_lines = get_multiline_timestamp(metadata.timestamp)
+    indent = "      "
 
     return (
-        f"\n"
-        f"{indent}---\n"
         f'{indent}<div style="font-size: 0.7em;">\n'
         f"{indent}{ts_lines[0]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[2]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
-        f'{indent}Run ID: <a href="{run_url}">{run_id}</a><br>\n'
-        f'{indent}Branch: <a href="{branch_url}">{ref_name}</a><br>\n'
-        f'{indent}Commit: <a href="{commit_url}">{github_sha[:7]}</a><br>\n'
+        f"{indent}&nbsp;&nbsp;{ts_lines[4]}<br>\n"
+        f'{indent}Run ID: <a href="{run_url}">{metadata.run_id}</a><br>\n'
+        f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
+        f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
+        f"\n"
     )
 
 
-def update_myst_file(file_path: str, footer_md: str) -> None:
+def update_myst_file(myst_file: str, footer_md: str, debug: bool = False) -> None:
     """
-    Append metadata footer to the myst.yml file.
-
-    Args:
-        file_path: Path to the myst.yml file
-        footer_md: Markdown snippet to append
-
-    Raises:
-        FileNotFoundError: If myst.yml is not found
-        IOError: If writing to the file fails
+    Read myst.yml and inject the footer.
     """
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+    with open(myst_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
 
-        if "primary_sidebar_footer: |" not in content:
-            print(f"Warning: 'primary_sidebar_footer: |' not found in {file_path}")
-            return
+    new_lines = []
+    in_footer = False
+    footer_updated = False
 
-        # Simple append to the end of the file since primary_sidebar_footer is the last part
-        with open(file_path, "a", encoding="utf-8") as f:
-            f.write(footer_md)
+    for line in lines:
+        if "primary_sidebar_footer: |" in line:
+            new_lines.append(line)
+            new_lines.append(footer_md)
+            footer_updated = True
+            in_footer = True
+            continue
 
-    except FileNotFoundError as e:
-        raise FileNotFoundError(f'File not found: "{file_path}"') from e
-    except IOError as e:
-        raise IOError(f'Error updating file "{file_path}": {e}') from e
+        if in_footer:
+            if line.strip() and not line.startswith("    "):
+                in_footer = False
+            # else:
+            #     continue  # was discarding existing footer lines (static links),
+            #                # causing CI metadata to replace rather than prepend them
+
+        new_lines.append(line)
+
+    if not footer_updated:
+        print("Warning: 'primary_sidebar_footer: |' not found in myst.yml")
+    else:
+        with open(myst_file, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
+        print("[OK] Successfully updated Jupyter Book metadata")
+        if debug:
+            print("--- myst.yml new_lines (debug) ---")
+            for line in new_lines:
+                print(repr(line))
+            print("--- end new_lines ---")
+
+
+def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
+    """
+    Orchestrate report generation.
+    """
+    footer_md = generate_footer(metadata)
+    extended_debug: bool = (
+        True  # Set to True to print the new myst.yml content for debugging
+    )
+    # Suppress injection to see primary_sidebar_footer in myst.yml for testing
+    update_myst_file(args.myst_file, footer_md, debug=extended_debug)
 
 
 def parse_arguments() -> argparse.Namespace:
     """
     Parse command line arguments.
-
-    Returns:
-        Parsed arguments namespace
     """
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description="Inject CI/CD metadata into myst.yml",
+        description="Update Jupyter Book metadata."
     )
-    parser.add_argument("--myst_file", required=True, help="Path to myst.yml")
     parser.add_argument(
-        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
+        "--myst_file", required=True, help="Path to myst.yml configuration file"
     )
-    parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
-    parser.add_argument("--ref_name", required=True, help="Git branch name")
-    parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
-    parser.add_argument("--github_repo", required=True, help="GitHub repository name")
-
+    add_common_args(parser)
     return parser.parse_args()
 
 
 def main() -> int:
     """Main entry point."""
-    args: argparse.Namespace = parse_arguments()
-    try:
-        footer_md: str = generate_footer_md(
-            args.timestamp,
-            args.run_id,
-            args.ref_name,
-            args.github_sha,
-            args.github_repo,
-        )
-        update_myst_file(args.myst_file, footer_md)
-        print(f"✅ Successfully updated Jupyter Book metadata in {args.myst_file}")
-    except (FileNotFoundError, IOError) as e:
-        print(f"❌ File Error: {e}")
-        return 1
-    except ValueError as e:  # Catch potential parsing errors
-        print(f"❌ Input Error: {e}")
-        return 1
-    return 0
+    return report_cli_entrypoint(parse_arguments, generate_report, exit_on_error=False)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

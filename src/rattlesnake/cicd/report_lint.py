@@ -7,10 +7,16 @@ This module extracts lint output and generates a custom HTML report.
 import argparse
 import os
 import re
-import sys
-from typing import List, Tuple
 
-from rattlesnake.cicd.utilities import get_multiline_timestamp, get_score_color_lint
+from rattlesnake.cicd.utilities import (
+    ReportMetadata,
+    add_common_args,
+    get_html_report_footer,
+    get_html_report_header,
+    get_score_color_lint,
+    report_cli_entrypoint,
+    write_report,
+)
 
 
 def get_lint_content(input_file: str) -> str:
@@ -24,245 +30,154 @@ def get_lint_content(input_file: str) -> str:
         Content of the lint output file
     """
     if not os.path.exists(input_file):
-        raise FileNotFoundError(f"Input file not found: {input_file}")
+        raise FileNotFoundError(f"The input file '{input_file}' was not found.")
     with open(input_file, "r", encoding="utf-8") as f:
         return f.read()
 
 
-def get_lint_sections(lint_content: str) -> Tuple[List[str], List[str]]:
+def get_lint_sections(content: str) -> tuple[list[str], list[str]]:
     """
-    Parse lint output to extract issues and summary.
+    Parse lint output into issues and summary sections.
 
     Args:
-        lint_content: Raw lint output content
+        content: The lint output content
 
     Returns:
-        A tuple containing (issues_lines, summary_lines)
+        A tuple of (issues, summary_lines)
     """
-    issues: List[str] = []
-    summary: List[str] = []
-    lines: List[str] = lint_content.split("\n")
+    # Split by any sequence of 10 or more dashes (common in pylint output)
+    sections = re.split(r"-{10,}", content)
 
-    in_summary: bool = False
+    # Issues are almost always before the first separator
+    issues = sections[0].strip().split("\n")
+    issues = [i for i in issues if i.strip()]
 
-    for line in lines:
-        if not line.strip():
-            continue
+    # If there are no separators, the whole file might be issues or just a score
+    if len(sections) == 1:
+        lines = content.split("\n")
+        return lines, lines
 
-        if "-------------------" in line or "Report" in line:
-            in_summary = True
-
-        if not in_summary:
-            # Extract issues that match the lint format
-            if re.match(r"^[^:]+:\d+:\d+: [A-Z]\d+: .*", line):
-                issues.append(line)
-        else:
-            summary.append(line)
+    # For summary, take everything after the first separator
+    summary_text: str = "\n".join(sections[1:])
+    summary = summary_text.split("\n")
 
     return issues, summary
 
 
-def get_score_from_summary(summary_lines: List[str]) -> str:
+def get_score_from_summary(summary_lines: list[str]) -> str:
     """
-    Extract the lint score from summary lines.
+    Extract lint score from summary.
 
     Args:
-        summary_lines: List of lines from the summary section
+        summary_lines: Lines from the summary section
 
     Returns:
-        The score as a string (e.g., "8.50")
+        The extracted score as a string
     """
+    score_pattern = r"Your code has been rated at (\d+\.\d+)/10"
     for line in summary_lines:
-        match = re.search(r"Your code has been rated at (\d+\.\d+)/10", line)
+        match = re.search(score_pattern, line)
         if match:
             return match.group(1)
     return "0.00"
 
 
-def get_html_header(score: str, timestamp_short: str) -> str:
+def get_html_issues_table(issues: list[str], metadata: ReportMetadata) -> str:
     """
-    Generate the HTML header and summary section.
+    Generate issues table.
 
     Args:
-        score: The lint score
-        timestamp_short: Timestamp string for processing
+        issues: List of lint issues
+        metadata: CI/CD metadata
 
     Returns:
-        HTML string for the header
-    """
-    color: str = get_score_color_lint(score)
-    ts_lines: List[str] = get_multiline_timestamp(timestamp_short)
-
-    return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lint Report</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }}
-        h1, h2 {{ color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }}
-        .summary-card {{ background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }}
-        .score-box {{ text-align: center; }}
-        .score-value {{ font-size: 48px; font-weight: bold; color: {color}; }}
-        .timestamp {{ color: #666; font-size: 0.9em; }}
-        .issue-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-        .issue-table th, .issue-table td {{ text-align: left; padding: 12px; border-bottom: 1px solid #eee; }}
-        .issue-table th {{ background: #f2f2f2; }}
-        .type-error {{ color: #c0392b; font-weight: bold; }}
-        .type-warning {{ color: #f39c12; font-weight: bold; }}
-        .type-convention {{ color: #2980b9; font-weight: bold; }}
-        .type-refactor {{ color: #8e44ad; font-weight: bold; }}
-        .file-link {{ color: #3498db; text-decoration: none; }}
-        .file-link:hover {{ text-decoration: underline; }}
-    </style>
-</head>
-<body>
-    <h1>Lint Analysis Report</h1>
-    
-    <div class="summary-card">
-        <div>
-            <h2>Summary</h2>
-            <div class="timestamp">
-                {ts_lines[0]}<br>
-                &nbsp;&nbsp;{ts_lines[1]}<br>
-                &nbsp;&nbsp;{ts_lines[2]}<br>
-                &nbsp;&nbsp;{ts_lines[3]}
-            </div>
-        </div>
-        <div class="score-box">
-            <div>Global Score</div>
-            <div class="score-value">{score}/10</div>
-        </div>
-    </div>
-"""
-
-
-def get_html_issues_table(issues: List[str], github_repo: str, github_sha: str) -> str:
-    """
-    Generate the HTML table for lint issues.
-
-    Args:
-        issues: List of raw lint issue lines
-        github_repo: GitHub repository name (owner/repo)
-        github_sha: Full git commit SHA
-
-    Returns:
-        HTML string for the issues table
+        HTML table string
     """
     if not issues:
-        return "<p>✅ No issues found! Great job.</p>"
+        return '<div class="section"><p>No issues found! Great job.</p></div>'
 
-    html: List[str] = [
-        """
-    <h2>Detailed Issues</h2>
-    <table class="issue-table">
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>File</th>
-                <th>Line</th>
-                <th>Message</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
-    ]
+    table_html = """
+        <div class="section">
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Line:Col</th>
+                    <th>Type</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>"""
+
+    msg_types = {
+        "C": "Convention",
+        "R": "Refactor",
+        "W": "Warning",
+        "E": "Error",
+        "F": "Fatal",
+    }
+
+    # Pattern: path/to/file.py:line:col: TYPE: Message
+    pattern = r"(.+):(\d+):(\d+): ([A-Z])\d+: (.+)"
 
     for issue in issues:
-        # Format: path/to/file.py:line:col: C0114: Missing module docstring (missing-module-docstring)
-        # pylint: disable=line-too-long
-        match = re.match(r"^([^:]+):(\d+):(\d+): ([A-Z])\d+: (.*)$", issue)
+        match = re.search(pattern, issue)
         if match:
-            file_path, line, _, category_code, message = match.groups()
+            file_path, line, col, type_code, text = match.groups()
+            type_name = msg_types.get(type_code, type_code)
 
-            category_map = {
-                "E": ("Error", "type-error"),
-                "W": ("Warning", "type-warning"),
-                "C": ("Convention", "type-convention"),
-                "R": ("Refactor", "type-refactor"),
-            }
-
-            cat_name, cat_class = category_map.get(category_code, ("Other", ""))
-
-            # Create GitHub link
-            # Note: We assume the file_path from lint is relative to repo root
-            github_url: str = (
-                f"https://github.com/{github_repo}/blob/{github_sha}/{file_path}#L{line}"
+            # GitHub direct link
+            file_url = (
+                f"https://github.com/{metadata.github_repo}/blob/"
+                f"{metadata.github_sha}/{file_path}#L{line}"
             )
 
-            html.append(
-                f"""
-            <tr>
-                <td><span class="{cat_class}">{cat_name}</span></td>
-                <td><a href="{github_url}" class="file-link">{file_path}</a></td>
-                <td>{line}</td>
-                <td>{message}</td>
-            </tr>
-            """
-            )
+            row_color = ""
+            if type_code == "E":
+                row_color = ' style="background-color: #ffeef0"'
+            elif type_code == "W":
+                row_color = ' style="background-color: #fff5b1"'
 
-    html.append("        </tbody>\n    </table>")
-    return "".join(html)
+            table_html += f"""
+                <tr{row_color}>
+                    <td><a href="{file_url}">{file_path}</a></td>
+                    <td>{line}:{col}</td>
+                    <td>{type_name}</td>
+                    <td>{text}</td>
+                </tr>"""
+
+    table_html += """
+            </tbody>
+        </table>
+        </div>"""
+    return table_html
 
 
-def get_html_footer(run_id: str, ref_name: str, github_repo: str) -> str:
+def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
     """
-    Generate the HTML footer with CI/CD metadata.
+    Orchestrate report generation.
 
     Args:
-        run_id: GitHub actions run ID
-        ref_name: Branch/tag name
-        github_repo: Repository name
-
-    Returns:
-        HTML string for the footer
+        args: Parsed command line arguments
+        metadata: CI/CD metadata
     """
-    run_url: str = f"https://github.com/{github_repo}/actions/runs/{run_id}"
-    return f"""
-    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 0.8em;">
-        <p>Generated by GitHub Actions Workflow<br>
-        Run ID: <a href="{run_url}">{run_id}</a> | Branch: {ref_name}</p>
-    </div>
-</body>
-</html>
-"""
-
-
-def generate_report(
-    input_file: str,
-    output_file: str,
-    timestamp: str,
-    run_id: str,
-    ref_name: str,
-    github_sha: str,
-    github_repo: str,
-) -> None:
-    """
-    Main function to orchestrate report generation.
-
-    Args:
-        input_file: Path to lint output
-        output_file: Path for the generated HTML
-        timestamp: Build timestamp
-        run_id: GitHub run ID
-        ref_name: Branch name
-        github_sha: Commit SHA
-        github_repo: Repo name (owner/repo)
-    """
-    content: str = get_lint_content(input_file)
+    content = get_lint_content(args.input_file)
     issues, summary = get_lint_sections(content)
-    score: str = get_score_from_summary(summary)
+    score = get_score_from_summary(summary)
 
-    html: str = (
-        get_html_header(score, timestamp)
-        + get_html_issues_table(issues, github_repo, github_sha)
-        + get_html_footer(run_id, ref_name, github_repo)
+    score_color = get_score_color_lint(score)
+    html = get_html_report_header(
+        title="Lint Report",
+        score_label="Pylint Score",
+        score_value=f"{score}/10",
+        score_color=score_color,
+        metadata=metadata,
     )
+    html += get_html_issues_table(issues, metadata)
+    html += get_html_report_footer()
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(html)
+    write_report(html, args.output_file)
+    print(f"[OK] Lint report generated: {args.output_file}")
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -276,38 +191,18 @@ def parse_arguments() -> argparse.Namespace:
         description="Generate a custom HTML report from lint output.",
     )
     parser.add_argument("--input_file", required=True, help="Path to lint output file")
-    parser.add_argument("--output_file", required=True, help="Path for output HTML file")
-    parser.add_argument("--timestamp", required=True, help="Build timestamp")
-    parser.add_argument("--run_id", required=True, help="GitHub actions run ID")
-    parser.add_argument("--ref_name", required=True, help="Branch/tag name")
-    parser.add_argument("--github_sha", required=True, help="Full git commit SHA")
-    parser.add_argument("--github_repo", required=True, help="GitHub repository name")
+    parser.add_argument(
+        "--output_file", required=True, help="Path for output HTML file"
+    )
 
+    add_common_args(parser)
     return parser.parse_args()
 
 
 def main() -> int:
     """Main entry point."""
-    args: argparse.Namespace = parse_arguments()
-    try:
-        generate_report(
-            args.input_file,
-            args.output_file,
-            args.timestamp,
-            args.run_id,
-            args.ref_name,
-            args.github_sha,
-            args.github_repo,
-        )
-        print(f"✅ Lint report generated: {args.output_file}")
-    except (FileNotFoundError, IOError) as e:
-        print(f"❌ File Error: {e}")
-        return 1
-    except ValueError as e:  # Catch potential parsing errors
-        print(f"❌ Input Error: {e}")
-        return 1
-    return 0
+    return report_cli_entrypoint(parse_arguments, generate_report, exit_on_error=False)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

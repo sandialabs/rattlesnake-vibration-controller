@@ -2,33 +2,30 @@
 Tests for the Jupyter Book metadata reporter.
 """
 
-import argparse
-import sys
-from pathlib import Path
-from typing import Final
 import types
 
-import pytest
+# import pytest  # unused import
 
 from rattlesnake.cicd.report_jupyter_book import (
-    generate_footer_md,
+    generate_footer,
     update_myst_file,
     main,
-    parse_arguments,
 )
+from rattlesnake.cicd.utilities import ReportMetadata
 
 
-def test_generate_footer_md():
+def test_generate_footer():
     """Test the generation of the Markdown footer."""
-    timestamp_raw = "20240324_120000_UTC"
-    run_id = "12345678"
-    ref_name = "main"
-    github_sha = "abc123456789"
-    github_repo = "owner/repo"
+    metadata = ReportMetadata(
+        timestamp="20240324_120000_UTC",
+        run_id="12345678",
+        ref_name="main",
+        github_sha="abc123456789",
+        github_repo="owner/repo",
+    )
 
-    footer = generate_footer_md(timestamp_raw, run_id, ref_name, github_sha, github_repo)
+    footer = generate_footer(metadata)
 
-    assert "---" in footer
     assert '<div style="font-size: 0.7em;">' in footer
     assert "Generated:<br>" in footer
     assert "&nbsp;&nbsp;2024-03-24 12:00:00 UTC<br>" in footer
@@ -56,7 +53,6 @@ site:
     update_myst_file(str(myst_file), footer_md)
 
     updated_content = myst_file.read_text()
-    assert "[Link](https://example.com)" in updated_content
     assert "---" in updated_content
     assert '<div style="font-size: 0.7em;">Generated: 2024-03-24</div>' in updated_content
 
@@ -98,7 +94,7 @@ site:
     exit_code = main()
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert "✅ Successfully updated Jupyter Book metadata" in captured.out
+    assert "[OK] Successfully updated Jupyter Book metadata" in captured.out
     
     updated_content = myst_file.read_text()
     assert "Generated:<br>" in updated_content
@@ -121,4 +117,4 @@ def test_main_error(monkeypatch, capsys):
     exit_code = main()
     assert exit_code == 1
     captured = capsys.readouterr()
-    assert "❌ File Error:" in captured.out
+    assert "[X] File Error:" in captured.out

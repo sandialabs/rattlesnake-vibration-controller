@@ -2070,7 +2070,7 @@ wheels = [
 ]
 
 [[package]]
-name = "rattlesnake"
+name = "rattlesnake-vibration-controller"
 source = { editable = "." }
 dependencies = [
     { name = "kaitaistruct" },

@@ -3,15 +3,18 @@ Generates the Lint badge (SVG) and metadata (JSON) for CI/CD.
 """
 
 import argparse
-import json
 import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
-from rattlesnake.cicd.utilities import get_score_color_lint
+from rattlesnake.cicd.utilities import (
+    add_badge_args,
+    badge_image_download,
+    badge_metadata_json_write,
+    get_score_color_lint,
+)
 
 
 def extract_score(input_file: str) -> float:
@@ -23,8 +26,8 @@ def extract_score(input_file: str) -> float:
             match = pattern.search(content)
             if match:
                 return float(match.group(1))
-    except Exception as e:
-        print(f"⚠️ Error reading lint output: {e}")
+    except (FileNotFoundError, IOError, ValueError) as e:
+        print(f"[!] Error reading lint output: {e}")
     return 0.0
 
 
@@ -34,7 +37,7 @@ def export_to_github_env(color: str):
     if env_path:
         with open(env_path, "a", encoding="utf-8") as f:
             f.write(f"BADGE_COLOR={color}\n")
-        print(f"    🎨 Exported BADGE_COLOR={color} to GITHUB_ENV")
+        print(f"    [C] Exported BADGE_COLOR={color} to GITHUB_ENV")
 
 
 def main():
@@ -42,12 +45,12 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Lint badge and metadata.")
     parser.add_argument("--input_file", help="Lint text output file (to extract score)")
     parser.add_argument("--score", type=float, help="Lint score (direct input)")
-    parser.add_argument("--output_dir", help="Directory to save badges")
-    parser.add_argument("--github_repo", help="owner/repo")
-    parser.add_argument("--deploy_subdir", help="main or dev")
-    parser.add_argument("--run_id", help="GitHub Run ID")
-    parser.add_argument("--github_server_url", default="https://github.com")
-    parser.add_argument("--export_env", action="store_true", help="Export color to GITHUB_ENV")
+    parser.add_argument(
+        "--export_env", action="store_true", help="Export color to GITHUB_ENV"
+    )
+
+    # Add common badge arguments from utilities
+    add_badge_args(parser)
 
     args = parser.parse_args()
 
@@ -57,7 +60,7 @@ def main():
     elif args.input_file:
         score = extract_score(args.input_file)
     else:
-        print("❌ Error: Must provide either --input_file or --score")
+        print("[X] Error: Must provide either --input_file or --score")
         sys.exit(1)
 
     color = get_score_color_lint(str(score))
@@ -72,14 +75,9 @@ def main():
 
         # Download SVG badge
         badge_url = f"https://img.shields.io/badge/lint-{score}-{color}.svg"
-        try:
-            response = requests.get(badge_url, timeout=10)
-            response.raise_for_status()
-            with open(Path(args.output_dir) / "lint.svg", "wb") as f:
-                f.write(response.content)
-            print(f"✅ Lint SVG badge saved to {args.output_dir}")
-        except Exception as e:
-            print(f"❌ Failed to download badge: {e}")
+        output_svg = str(Path(args.output_dir) / "lint.svg")
+        if badge_image_download(url=badge_url, output_path=output_svg):
+            print(f"[OK] Lint SVG badge saved to {args.output_dir}")
 
         # Generate JSON metadata if other required args are present
         if all([args.github_repo, args.deploy_subdir, args.run_id]):
@@ -87,17 +85,23 @@ def main():
             metadata = {
                 "score": str(score),
                 "color": color,
-                "pages_url": f"https://{owner}.github.io/{repo}/{args.deploy_subdir}/reports/lint/",
-                "workflow_url": f"{args.github_server_url}/{args.github_repo}/actions/workflows/ci.yml",
+                "pages_url": (
+                    f"https://{owner}.github.io/{repo}"
+                    f"/{args.deploy_subdir}/reports/lint/"
+                ),
+                "workflow_url": (
+                    f"{args.github_server_url}/{args.github_repo}/"
+                    "actions/workflows/ci.yml"
+                ),
                 "run_id": args.run_id,
                 "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
 
-            with open(Path(args.output_dir) / "lint-info.json", "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2)
-            print(f"✅ Lint JSON metadata saved to {args.output_dir}")
+            output_json = str(Path(args.output_dir) / "lint-info.json")
+            badge_metadata_json_write(metadata=metadata, output_path=output_json)
+            print(f"[OK] Lint JSON metadata saved to {args.output_dir}")
 
-    print(f"🏁 Lint badge processing complete: Score={score}, Color={color}")
+    print(f"Lint badge processing complete: Score={score}, Color={color}")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rattlesnake"
+name = "rattlesnake-vibration-controller"
 # version = "3.1.1"  # Deprecate use of hard-coded version numbers, now hatch-vcs
 dynamic = ["version"]  # Removed static version, now determined by hatch-vcs
 description = "Multiple-Input Multiple-Output Vibration Controller"
@@ -23,19 +23,20 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
     ]
 dependencies = [
-    "kaitaistruct",
-    "netCDF4",
-    "nidaqmx",
-    "numpy",
-    "openpyxl",
-    "packaging",
-    "PyQt5; sys_platform!='darwin'",
-    "PyQt6; sys_platform=='darwin'",
-    "pyqtgraph",
-    "qtpy",
-    "requests",
-    "scipy",
-    ]
+  "kaitaistruct",
+  "netCDF4",
+  "nidaqmx",
+  "numpy",
+  "openpyxl",
+  "packaging",
+  "PyQt5; sys_platform!='darwin'",
+  "PyQt6; sys_platform=='darwin'",
+  "pyqtgraph",
+  "pytz",
+  "qtpy",
+  "requests",
+  "scipy",
+  ]
 
 [project.optional-dependencies]
 dev = [
@@ -47,13 +48,14 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-qt==4.4.0",
-  "pytz",
+  "requests",
   "ruff",
 ]
 
 # Entry Points
 [project.scripts]
 rattlesnake = "rattlesnake.main:main"
+preflight = "rattlesnake.preflight:main"
 
 [project.urls]
 Documentation = "https://sandialabs.github.io/rattlesnake-vibration-controller"
@@ -73,5 +75,9 @@ python_files = ["test_*.py"]  # Ignores files without "test" prefix for pytest r
 testpaths = ["tests/"]
 pythonpath = ["src", "tests"]
 
+[tool.pylint.format]
+max-line-length = 88  # Match ruff/black default.
+
 [tool.ruff]
-line-length = 100
+# line-length = 100
+line-length = 88  # The Ruff default is 88 characters, which is also the Black default. Setting it to 88 ensures consistency between Ruff and Black formatting, and is explicit.

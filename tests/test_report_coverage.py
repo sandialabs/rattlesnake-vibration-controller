@@ -8,7 +8,7 @@ coverage.xml output and generate a custom HTML report.
 import types
 from pathlib import Path
 
-import pytest
+# import pytest  # unused import
 from rattlesnake.cicd.report_coverage import (
     CoverageMetric,
     get_coverage_metric,
@@ -16,6 +16,7 @@ from rattlesnake.cicd.report_coverage import (
     main,
     run_coverage_report,
 )
+from rattlesnake.cicd.utilities import ReportMetadata
 
 
 def test_coverage_metric_calculation():
@@ -50,15 +51,15 @@ def test_get_coverage_metric_missing_file():
 def test_get_report_html():
     """Test generating the HTML report string."""
     cm = CoverageMetric(lines_valid=100, lines_covered=95)
-    html = get_report_html(
-        cm,
-        "20240101_120000_UTC",
-        "run1",
-        "main",
-        "sha123456789",
-        "owner/repo",
+    metadata = ReportMetadata(
+        timestamp="20240101_120000_UTC",
+        run_id="run1",
+        ref_name="main",
+        github_sha="sha123456789",
+        github_repo="owner/repo",
     )
-    assert "<h1>Coverage Report</h1>" in html
+    html = get_report_html(cm, metadata)
+    assert "<title>Coverage Report</title>" in html
     assert "Coverage: 95.00%" in html
     assert "run1" in html
     assert "sha1234" in html
@@ -71,14 +72,18 @@ def test_run_coverage_report(tmp_path):
     input_file.write_text(coverage_xml)
     output_file = tmp_path / "report.html"
 
+    metadata = ReportMetadata(
+        timestamp="20240101_120000_UTC",
+        run_id="run1",
+        ref_name="main",
+        github_sha="sha1",
+        github_repo="owner/repo",
+    )
+
     cm = run_coverage_report(
         str(input_file),
         str(output_file),
-        "20240101_120000_UTC",
-        "run1",
-        "main",
-        "sha1",
-        "owner/repo",
+        metadata,
     )
 
     assert cm.coverage == 90.0
@@ -108,7 +113,7 @@ def test_main_success(monkeypatch, capsys, tmp_path):
     exit_code = main()
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert "✅ Coverage HTML report generated" in captured.out
+    assert "[OK] Coverage HTML report generated" in captured.out
     assert output_file.exists()
 
 
