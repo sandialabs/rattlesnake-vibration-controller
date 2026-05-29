@@ -23,6 +23,7 @@ for hardware_type in HardwareType:
                 NIDAQmxAcquisition,
                 NIDAQmxOutput,
             )
+
             HARDWARE_METADATA[HardwareType.NI_DAQMX] = NIDAQmxMetadata
             HARDWARE_ACQUISITION[HardwareType.NI_DAQMX] = NIDAQmxAcquisition
             HARDWARE_OUTPUT[HardwareType.NI_DAQMX] = NIDAQmxOutput
@@ -32,6 +33,7 @@ for hardware_type in HardwareType:
                 LanXIAcquisition,
                 LanXIOutput,
             )
+
             HARDWARE_METADATA[HardwareType.LAN_XI] = LanXIMetadata
             HARDWARE_ACQUISITION[HardwareType.LAN_XI] = LanXIAcquisition
             HARDWARE_OUTPUT[HardwareType.LAN_XI] = LanXIOutput
@@ -65,6 +67,7 @@ for hardware_type in HardwareType:
                 StateSpaceAcquisition,
                 StateSpaceOutput,
             )
+
             HARDWARE_METADATA[HardwareType.STATE_SPACE] = StateSpaceMetadata
             HARDWARE_ACQUISITION[HardwareType.STATE_SPACE] = StateSpaceAcquisition
             HARDWARE_OUTPUT[HardwareType.STATE_SPACE] = StateSpaceOutput
@@ -84,6 +87,7 @@ for hardware_type in HardwareType:
                 SDynPyFRFAcquisition,
                 SDynPyFRFOutput,
             )
+
             HARDWARE_METADATA[HardwareType.SDYNPY_FRF] = SDynPyFRFMetadata
             HARDWARE_ACQUISITION[HardwareType.SDYNPY_FRF] = SDynPyFRFAcquisition
             HARDWARE_OUTPUT[HardwareType.SDYNPY_FRF] = SDynPyFRFOutput

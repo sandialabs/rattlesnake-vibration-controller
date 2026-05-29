@@ -21,6 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import os
 import traceback
 from abc import ABC, abstractmethod
@@ -150,7 +151,7 @@ class EnvironmentMetadata(ABC):
         things like duplicate channel_list entries, valid control channels,
         etc.
         """
-        if self.environment_type not in EnvironmentType:
+        if not isinstance(self.environment_type, EnvironmentType):
             raise RattlesnakeError(
                 f"{self.environment_type} is not a valid ControlType"
             )

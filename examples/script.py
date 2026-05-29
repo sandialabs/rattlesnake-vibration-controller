@@ -5,7 +5,9 @@ from rattlesnake.main import launch_rattlesnake_ui
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.sdynpy_system_virtual_hardware import SDynPySystemMetadata
+from rattlesnake.hardware.sdynpy_system_virtual_hardware import (
+    SDynPySystemMetadata,
+)
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.environment.time_environment import (
     TimeMetadata,
@@ -23,7 +25,7 @@ from rattlesnake.environment.sine_sys_id_environment import (
 )
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
-    RandomVibrationInstructions
+    RandomVibrationInstructions,
 )
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
@@ -380,8 +382,11 @@ def make_sys_id_metadata():
 
 # endregion
 
+
 # region Random
-def make_random_environment_metadata(hardware_metadata, environment_name=RANDOM_ENVIRONMENT_NAME):
+def make_random_environment_metadata(
+    hardware_metadata, environment_name=RANDOM_ENVIRONMENT_NAME
+):
     channel_list_bools = [True, True, True, True, True, True]
     sample_rate = hardware_metadata.sample_rate
     number_of_channels = 6
@@ -404,7 +409,6 @@ def make_random_environment_metadata(hardware_metadata, environment_name=RANDOM_
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [3, 4, 5]
 
-    
     specification_frequency_lines = np.arange(0, 501, 1)
     specification_cpsd_matrix = np.zeros((501, 3, 3))
     for i in range(len(specification_frequency_lines)):
@@ -415,35 +419,35 @@ def make_random_environment_metadata(hardware_metadata, environment_name=RANDOM_
     output_transformation_matrix = None
 
     return RandomVibrationMetadata(
-        environment_name = environment_name,
-        channel_list_bools = channel_list_bools,
-        sample_rate = sample_rate,
-        number_of_channels = number_of_channels,
-        samples_per_frame = samples_per_frame,
-        test_level_ramp_time = test_level_ramp_time,
-        cola_window = cola_window,
-        cola_overlap = cola_overlap,
-        cola_window_exponent = cola_window_exponent,
-        sigma_clip = sigma_clip,
-        update_tf_during_control = update_tf_during_control,
-        frames_in_cpsd = frames_in_cpsd,
-        cpsd_window = cpsd_window,
-        cpsd_overlap = cpsd_overlap,
-        percent_lines_out = percent_lines_out,
-        allow_automatic_aborts = allow_automatic_aborts,
-        control_python_script = control_python_script,
-        control_python_function = control_python_function,
-        control_python_function_type = control_python_function_type,
-        control_python_function_parameters = control_python_function_parameters,
-        control_channel_indices = control_channel_indices,
-        output_channel_indices = output_channel_indices,
-        specification_frequency_lines = specification_frequency_lines,
-        specification_cpsd_matrix = specification_cpsd_matrix,
-        specification_warning_matrix = specification_warning_matrix,
-        specification_abort_matrix = specification_abort_matrix,
-        response_transformation_matrix = response_transformation_matrix,
-        output_transformation_matrix = output_transformation_matrix,
-        sysid_metadata = None,
+        environment_name=environment_name,
+        channel_list_bools=channel_list_bools,
+        sample_rate=sample_rate,
+        number_of_channels=number_of_channels,
+        samples_per_frame=samples_per_frame,
+        test_level_ramp_time=test_level_ramp_time,
+        cola_window=cola_window,
+        cola_overlap=cola_overlap,
+        cola_window_exponent=cola_window_exponent,
+        sigma_clip=sigma_clip,
+        update_tf_during_control=update_tf_during_control,
+        frames_in_cpsd=frames_in_cpsd,
+        cpsd_window=cpsd_window,
+        cpsd_overlap=cpsd_overlap,
+        percent_lines_out=percent_lines_out,
+        allow_automatic_aborts=allow_automatic_aborts,
+        control_python_script=control_python_script,
+        control_python_function=control_python_function,
+        control_python_function_type=control_python_function_type,
+        control_python_function_parameters=control_python_function_parameters,
+        control_channel_indices=control_channel_indices,
+        output_channel_indices=output_channel_indices,
+        specification_frequency_lines=specification_frequency_lines,
+        specification_cpsd_matrix=specification_cpsd_matrix,
+        specification_warning_matrix=specification_warning_matrix,
+        specification_abort_matrix=specification_abort_matrix,
+        response_transformation_matrix=response_transformation_matrix,
+        output_transformation_matrix=output_transformation_matrix,
+        sysid_metadata=None,
     )
 
 
@@ -497,6 +501,7 @@ def build_sine_environment():
 
     return rattlesnake
 
+
 def build_transient_environment():
     rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
     hardware_metadata = make_sdynpy_system_metadata()
@@ -504,6 +509,7 @@ def build_transient_environment():
     rattlesnake.initialize_hardware(hardware_metadata)
 
     return rattlesnake
+
 
 def build_random_environment():
     rattlesnake = RattlesnakeController(threaded=THREADED, timeout=30)
@@ -518,7 +524,6 @@ def build_random_environment():
     # rattlesnake.start_acquisition(random_stream_metadata)
 
     return rattlesnake
-
 
 
 # endregion

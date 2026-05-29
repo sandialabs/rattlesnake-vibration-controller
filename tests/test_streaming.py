@@ -1,162 +1,211 @@
-from rattlesnake.process.streaming import StreamingProcess, streaming_process
-from rattlesnake.utilities import (
-    VerboseMessageQueue,
-    QueueContainer,
-    Channel,
-    DataAcquisitionParameters,
-)
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from functions.common_functions import create_data_acquisition_parameters
-from unittest import mock
-import multiprocessing as mp
+from rattlesnake.process.streaming import StreamType, StreamMetadata, StreamingProcess, streaming_process
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from mock_objects.mock_hardware import MockHardwareMetadata
+from mock_objects.mock_environment import MockEnvironmentMetadata
+from mock_objects.mock_utilities import mock_queue_container, mock_event_container
 import pytest
 import numpy as np
+import multiprocessing as mp
+from unittest import mock
 
 
-# Create log_file_queue
-@pytest.fixture
-def log_file_queue():
-    return mp.Queue()
+# region: Fixtures
+@pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
+def streaming(request):
+    use_thread = request.param
+    queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
+    streaming_process = StreamingProcess("Process Name", queue_container, event_container.streaming_ready_event)
+    return streaming_process
 
 
-# Create queue_container
-@pytest.fixture
-def queue_container(log_file_queue):
-    queue_container = QueueContainer(
-        VerboseMessageQueue(log_file_queue, "Controller Communication Queue"),
-        VerboseMessageQueue(log_file_queue, "Acquisition Command Queue"),
-        VerboseMessageQueue(log_file_queue, "Output Command Queue"),
-        VerboseMessageQueue(log_file_queue, "Streaming Command Queue"),
-        log_file_queue,
-        mp.Queue(),
-        mp.Queue(),
-        mp.Queue(),
-        {"Modal": VerboseMessageQueue(log_file_queue, "Environment Command Queue")},
-        {"Modal": mp.Queue()},
-        {"Modal": mp.Queue()},
-    )
-    return queue_container
+# region: StreamMetadata
+def test_stream_metadata_init():
+    stream_metadata = StreamMetadata()
+
+    assert isinstance(stream_metadata, StreamMetadata)
+    assert hasattr(stream_metadata, "stream_type")
+    assert hasattr(stream_metadata, "stream_file")
+    assert hasattr(stream_metadata, "test_level_environment_name")
 
 
-@pytest.fixture
-def streaming_process_obj(queue_container):
-    streaming_process_obj = StreamingProcess("Process Name", queue_container)
-    return streaming_process_obj
+@pytest.mark.parametrize(
+    "stream_type, stream_file, test_level, path_exists, expected",
+    [
+        (StreamType.MANUAL, "filepath", None, True, True),
+        (StreamType.MANUAL, None, None, True, ValueError),
+        (StreamType.MANUAL, "filepath", None, False, ValueError),
+        (StreamType.NO_STREAM, None, None, False, True),
+        (StreamType.IMMEDIATELY, "filepath", None, True, True),
+        (StreamType.TEST_LEVEL, "filepath", "Environment 0", True, True),
+        (StreamType.TEST_LEVEL, "filepath", None, True, ValueError),
+    ],
+)
+@mock.patch("rattlesnake.process.streaming.Path")
+def test_stream_metadata_validate(mock_path, stream_type, stream_file, test_level, path_exists, expected):
+    stream_metadata = StreamMetadata()
+    stream_metadata.stream_type = stream_type
+    stream_metadata.stream_file = stream_file
+    stream_metadata.test_level_environment_name = test_level
+
+    mock_path.return_value.parent.exists.return_value = path_exists
+
+    if expected is ValueError:
+        with pytest.raises(ValueError):
+            stream_metadata.validate()
+    elif expected is True:
+        assert stream_metadata.validate()
+    else:
+        assert False
 
 
-@pytest.fixture()
-def data_acquisition_parameters():
-    return create_data_acquisition_parameters()
-
-
+# region: StreamingProcess
 # Test StreamingProcess intialization
-def test_streaming_process_init(queue_container):
-    streaming_process = StreamingProcess("Process Name", queue_container)
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_streaming_init(use_thread):
+    queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
+    streaming_process = StreamingProcess("Process Name", queue_container, event_container.streaming_ready_event)
 
     # Test if object is the correct class
     assert isinstance(streaming_process, StreamingProcess)
+    assert isinstance(streaming_process, AbstractMessageProcess)
 
 
+@pytest.mark.parametrize(
+    "stream_type",
+    [
+        StreamType.NO_STREAM,
+        StreamType.IMMEDIATELY,
+        StreamType.PROFILE_INSTRUCTION,
+        StreamType.TEST_LEVEL,
+        StreamType.MANUAL,
+    ],
+)
 @mock.patch("rattlesnake.process.streaming.nc.Dataset")
-def test_streaming_process_initialize(
-    mock_dataset, streaming_process_obj, data_acquisition_parameters
-):
-    mock_metadata = mock.MagicMock()
-    mock_dataset().createGroup.return_value = "Group Handle"
-    data = (
-        "Filename",
-        data_acquisition_parameters,
-        {"Environment Name": mock_metadata},
-    )
+def test_streaming_process_initialize(mock_dataset, stream_type, streaming):
+    mock_dataset.return_value.createGroup.return_value = "Group Handle"
+    stream_metadata = StreamMetadata()
+    stream_metadata.stream_file = "filename"
+    stream_metadata.stream_type = stream_type
+    hardware_metadata = MockHardwareMetadata()
+    environment_metadata = MockEnvironmentMetadata()
+    mock_store = mock.MagicMock()
+    environment_metadata.store_to_netcdf = mock_store
+    environment_metadata_dict = {"Environment 0": environment_metadata}
+    data = (stream_metadata, hardware_metadata, environment_metadata_dict)
 
-    streaming_process_obj.initialize(data)
+    streaming.clear_ready()
+    streaming.initialize(data)
 
-    dimension_calls = [
-        mock.call("response_channels", 2),
-        mock.call("output_channels", 1),
-        mock.call("time_samples", None),
-        mock.call("num_environments", 1),
-    ]
-    mock_dataset().createDimension.assert_has_calls(dimension_calls)
-    assert streaming_process_obj.netcdf_handle.sample_rate == 2000
-    mock_metadata.store_to_netcdf.assert_called_with("Group Handle")
+    assert streaming.ready_event.is_set()
+    if stream_type == StreamType.NO_STREAM:
+        mock_dataset.return_value.createDimension.assert_not_called()
+    else:
+        dimension_calls = [
+            mock.call("response_channels", 2),
+            mock.call("output_channels", 1),
+            mock.call("time_samples", None),
+            mock.call("num_environments", 1),
+        ]
+        mock_dataset.return_value.createDimension.assert_has_calls(dimension_calls)
+        assert streaming.netcdf_handle.sample_rate == 1000
+        mock_store.assert_called_once_with("Group Handle")
 
 
-def test_streaming_process_write_data(streaming_process_obj):
+def test_streaming_process_write_data(streaming):
     data = "data"
     mock_dataset = mock.MagicMock()
     mock_dataset.dimensions = {"time_samples": np.array([0, 0])}
-    streaming_process_obj.netcdf_handle = mock_dataset
+    streaming.netcdf_handle = mock_dataset
 
-    streaming_process_obj.write_data(data)
+    streaming.write_data(data)
 
-    mock_dataset.variables["time_data"].__setitem__.assert_called_with(
-        (slice(None, None, None), slice(2, None, None)), data
-    )
+    mock_dataset.variables["time_data"].__setitem__.assert_called_with((slice(None, None, None), slice(2, None, None)), data)
 
 
-def test_streaming_process_create_new_stream(streaming_process_obj):
+def test_streaming_process_create_new_stream(streaming):
     mock_dataset = mock.MagicMock()
-    streaming_process_obj.netcdf_handle = mock_dataset
+    streaming.netcdf_handle = mock_dataset
 
-    streaming_process_obj.create_new_stream(None)
+    streaming.create_new_stream(None)
 
     mock_dataset.createDimension.assert_called_with("time_samples_1", None)
-    mock_dataset.createVariable.assert_called_with(
-        "time_data_1", "f8", ("response_channels", "time_samples_1")
-    )
+    mock_dataset.createVariable.assert_called_with("time_data_1", "f8", ("response_channels", "time_samples_1"))
 
 
-def test_streaming_process_finalize(streaming_process_obj):
+def test_streaming_process_create_new_stream_no_netcdf(streaming):
+    streaming.netcdf_handle = None
+
+    streaming.create_new_stream(None)
+
+    assert True
+
+
+def test_streaming_process_finalize(streaming):
     mock_dataset = mock.MagicMock()
-    streaming_process_obj.netcdf_handle = mock_dataset
+    streaming.netcdf_handle = mock_dataset
 
-    streaming_process_obj.finalize(None)
+    streaming.finalize(None)
 
     mock_dataset.close.assert_called
-    assert streaming_process_obj.netcdf_handle == None
+    assert streaming.netcdf_handle == None
+
+
+def test_streaming_process_write_data(streaming):
+    data = "data"
+    mock_dataset = mock.MagicMock()
+    mock_dataset.dimensions = {"time_samples": np.array([0, 0])}
+    streaming.netcdf_handle = mock_dataset
+
+    streaming.write_data(data)
+
+    mock_dataset.variables["time_data"].__setitem__.assert_called_with((slice(None, None, None), slice(2, None, None)), data)
+
+
+def test_streaming_process_write_data_no_init(streaming):
+    data = "data"
+    streaming.netcdf_handle = None
+    result = streaming.write_data(data)
+
+    assert result is None
+
+
+def test_streaming_process_create_new_stream(streaming):
+    mock_dataset = mock.MagicMock()
+    streaming.netcdf_handle = mock_dataset
+
+    streaming.create_new_stream(None)
+
+    mock_dataset.createDimension.assert_called_with("time_samples_1", None)
+    mock_dataset.createVariable.assert_called_with("time_data_1", "f8", ("response_channels", "time_samples_1"))
+
+
+def test_streaming_process_finalize(streaming):
+    mock_dataset = mock.MagicMock()
+    streaming.netcdf_handle = mock_dataset
+
+    streaming.finalize(None)
+
+    mock_dataset.close.assert_called
+    assert streaming.netcdf_handle == None
 
 
 @mock.patch("rattlesnake.process.streaming.StreamingProcess.finalize")
-def test_streaming_process_quit(mock_finalize, streaming_process_obj):
-    quit_var = streaming_process_obj.quit(None)
+def test_streaming_process_quit(mock_finalize, streaming):
+    quit_var = streaming.quit(None)
 
     mock_finalize.assert_called()
     assert quit_var == True
 
 
-# Test streaming_process function
-# Prevent run while loop from starting
-@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
-def test_streaming_process_func(mock_run, queue_container):
-    streaming_process(queue_container)
+# region: streaming_process
+@pytest.mark.parametrize("use_thread", [True, False])
+@mock.patch("rattlesnake.process.streaming.StreamingProcess")
+def test_output_process_func(mock_stream, use_thread):
+    queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
+    streaming_process(queue_container, event_container.streaming_ready_event, event_container.streaming_close_event)
 
-    # Test if the run function was called
-    mock_run.assert_called()
-
-
-if __name__ == "__main__":
-    log_file_queue = mp.Queue()
-
-    queue_container = QueueContainer(
-        VerboseMessageQueue(log_file_queue, "Controller Communication Queue"),
-        VerboseMessageQueue(log_file_queue, "Acquisition Command Queue"),
-        VerboseMessageQueue(log_file_queue, "Output Command Queue"),
-        VerboseMessageQueue(log_file_queue, "Streaming Command Queue"),
-        log_file_queue,
-        mp.Queue(),
-        mp.Queue(),
-        mp.Queue(),
-        {"Modal": VerboseMessageQueue(log_file_queue, "Environment Command Queue")},
-        {"Modal": mp.Queue()},
-        {"Modal": mp.Queue()},
-    )
-
-    streaming_process_obj = StreamingProcess("Process Name", queue_container)
-
-    data_acquisition_parameters = create_data_acquisition_parameters()
-
-    # test_streaming_process_initialize(streaming_process_obj = streaming_process_obj, data_acquisition_parameters = data_acquisition_parameters)
-    test_streaming_process_create_new_stream(
-        streaming_process_obj=streaming_process_obj
-    )
+    mock_instance = mock_stream.return_value
+    mock_instance.run.assert_called()

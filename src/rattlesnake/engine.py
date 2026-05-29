@@ -177,6 +177,7 @@ class RattlesnakeController:
             environment_sysid_active_events[queue_name] = new_event()
             environment_sysid_stored_events[queue_name] = new_event()
             environment_active_events[queue_name].clear()
+            environment_sysid_active_events[queue_name].clear()
             environment_command_queues[queue_name] = VerboseMessageQueue(
                 log_file_queue,
                 mp.Queue(),

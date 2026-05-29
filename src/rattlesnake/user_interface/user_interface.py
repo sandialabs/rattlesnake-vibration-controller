@@ -1351,12 +1351,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 task_trigger = self.task_trigger_selector.currentIndex()
                 output_trigger_generator = self.trigger_output_selector.text()
                 return hardware_metadata_class(
-                    channel_list, 
+                    channel_list,
                     sample_rate,
                     time_per_read,
                     time_per_write,
                     task_trigger,
-                    output_trigger_generator
+                    output_trigger_generator,
                 )
 
             case HardwareType.LAN_XI:
@@ -1366,14 +1366,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 output_oversample = 16384 // sample_rate
                 if output_oversample == 0:
                     output_oversample = 1
-                maximum_acquisition_processes = self.lanxi_maximum_acquisition_processes_selector.value()
+                maximum_acquisition_processes = (
+                    self.lanxi_maximum_acquisition_processes_selector.value()
+                )
                 return hardware_metadata_class(
-                    channel_list, 
+                    channel_list,
                     sample_rate,
                     time_per_read,
                     time_per_write,
                     output_oversample,
-                    maximum_acquisition_processes
+                    maximum_acquisition_processes,
                 )
             case HardwareType.DP_QUATTRO:
                 return
