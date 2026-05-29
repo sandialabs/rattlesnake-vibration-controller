@@ -301,7 +301,7 @@ class HardwareMetadata:
             "Only used if Task Triggers is 2.  Only used for NI hardware.  "
             "This row can be deleted if it is not used.",
         )
-    
+
     @classmethod
     @abstractmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):

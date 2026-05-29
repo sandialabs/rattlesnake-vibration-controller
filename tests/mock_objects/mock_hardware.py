@@ -1,32 +1,27 @@
+from enum import Enum
+from unittest import mock
+
+import numpy as np
+
+from mock_objects.mock_utilities import mock_channel_list
 from rattlesnake.hardware.abstract_hardware import (
-    HardwareMetadata,
     HardwareAcquisition,
+    HardwareMetadata,
     HardwareOutput,
 )
 from rattlesnake.hardware.hardware_utilities import HardwareType
-from rattlesnake.hardware.sdynpy_system_virtual_hardware import SDynPySystemMetadata
-from .mock_utilities import mock_channel_list
-import numpy as np
-from unittest import mock
-from enum import Enum
+from rattlesnake.hardware.hardware_registry import UNIMPLEMENTED_HARDWARE
 
-UNIMPLEMENTED_HARDWARE = [
-    HardwareType.NI_DAQMX,
-    HardwareType.LAN_XI,
-    HardwareType.DP_QUATTRO,
-    HardwareType.DP_900,
-    HardwareType.EXODUS,
-    HardwareType.STATE_SPACE,
-    HardwareType.SDYNPY_FRF,
-]
-IMPLEMENTED_HARDWARE = [
-    hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE
-]
+# IMPLEMENTED_HARDWARE = [
+#     hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE
+# ]
+IMPLEMENTED_HARDWARE = [HardwareType.NONE, HardwareType.SDYNPY_SYSTEM]
 
 
-# region: Import Locations
+# region Import
 def acquisition_dict():
     acquisition_dict = {
+        HardwareType.NONE: "mock_objects.mock_hardware.MockHardwareAcqusition",
         HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx.NIDAQmxAcquisition",
         HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIAcquisition",
         HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsAcquisition",
@@ -53,29 +48,10 @@ def output_dict():
     return output_dict
 
 
-def metadata_attr_dict():
-    metadata_dict = {
-        HardwareType.NI_DAQMX: "",
-        HardwareType.LAN_XI: "",
-        HardwareType.DP_QUATTRO: "",
-        HardwareType.DP_900: "",
-        HardwareType.EXODUS: "",
-        HardwareType.STATE_SPACE: "",
-        HardwareType.SDYNPY_SYSTEM: SDynPySystemMetadata().extra_attr_list,
-        HardwareType.SDYNPY_FRF: "",
-    }
-    return metadata_dict
-
-
-# region: MockHardwareType
-class MockHardwareType(Enum):
-    HARDWARE = 0
-
-
-# region: MockHardwareMetadata
+# region Metadata
 class MockHardwareMetadata(HardwareMetadata):
     def __init__(self):
-        super().__init__(MockHardwareType.HARDWARE, [], 1000, 0.5, 0.5)
+        super().__init__(HardwareType.NONE, [], 1000, 0.5, 0.5)
         self.channel_list = mock_channel_list()
         self.sample_rate = 1000
         self.time_per_read = 0.25
@@ -100,7 +76,7 @@ class MockHardwareMetadata(HardwareMetadata):
         return super().assist_mode_modules
 
 
-# region: MockHardwareAcquisition
+# region Acquisition
 class MockHardwareAcquisition(HardwareAcquisition):
     def __init__(self):
         super().__init__()
@@ -134,7 +110,7 @@ class MockHardwareAcquisition(HardwareAcquisition):
         return 0
 
 
-# region: MockHardwareOutput
+# region Output
 class MockHardwareOutput(HardwareOutput):
     def __init__(self):
         super().__init__()

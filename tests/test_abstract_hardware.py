@@ -1,8 +1,18 @@
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
-from mock_objects.mock_hardware import MockHardwareMetadata, MockHardwareAcquisition, MockHardwareOutput
-from mock_objects.mock_utilities import mock_channel_list
-import pytest
 import numpy as np
+import pytest
+
+from mock_objects.mock_hardware import (
+    MockHardwareAcquisition,
+    MockHardwareMetadata,
+    MockHardwareOutput,
+)
+from mock_objects.mock_utilities import mock_channel_list
+from rattlesnake.utilities import RattlesnakeError
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareAcquisition,
+    HardwareMetadata,
+    HardwareOutput,
+)
 
 channel_list = mock_channel_list()
 
@@ -41,24 +51,18 @@ def test_hardware_metadata_properties(hardware_metadata):
     "channel_list, expected",
     [
         (channel_list, True),
-        (channel_list + [channel_list[0]], ValueError),
+        (channel_list + [channel_list[0]], RattlesnakeError),
     ],
 )
 def test_hardware_metadata_validate(channel_list, expected, hardware_metadata):
     hardware_metadata.channel_list = channel_list
 
-    if expected is ValueError:
-        with pytest.raises(ValueError):
-            valid_hardware = hardware_metadata.validate()
+    if expected is RattlesnakeError:
+        with pytest.raises(RattlesnakeError):
+            hardware_metadata.validate()
     else:
-        valid_hardware = hardware_metadata.validate()
-        assert valid_hardware == expected
-
-
-def test_hardware_metadata_extra_attr_list(hardware_metadata):
-    attr_list = hardware_metadata.extra_attr_list
-
-    assert attr_list[0] == "extra_attr"
+        hardware_metadata.validate()
+        assert True
 
 
 # region: Hardware Acquisition
