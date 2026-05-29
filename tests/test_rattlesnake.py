@@ -119,16 +119,16 @@ def test_rattlesnake_properties(rattlesnake_package):
         ([True, True], [True, True], True, True),
         ([True, True], [], True, True),
         ([], [True, True], True, True),
-        ([True, True], [False, True], True, TimeoutError),
-        ([False, True], [True, True], True, TimeoutError),
+        ([True, True], [False, True], True, RattlesnakeError),
+        ([False, True], [True, True], True, RattlesnakeError),
         ([True, True], [False, False], False, True),
         ([True, True], [], False, True),
         ([], [False, False], False, True),
-        ([True, True], [False, True], False, TimeoutError),
-        ([False, True], [True, True], False, TimeoutError),
-        ([True, True], [True, True], None, TimeoutError),
+        ([True, True], [False, True], False, RattlesnakeError),
+        ([False, True], [True, True], False, RattlesnakeError),
+        ([True, True], [True, True], None, RattlesnakeError),
         ([True, True], [], None, True),
-        ([], [True, True], None, TimeoutError),
+        ([], [True, True], None, RattlesnakeError),
     ],
 )
 @mock.patch("rattlesnake.engine.time.time")
@@ -156,8 +156,8 @@ def test_rattlesnake_wait_for_events(
         mock_active_event.is_set.return_value = return_value
         active_event_list.append(mock_active_event)
 
-    if expected is TimeoutError:
-        with pytest.raises(TimeoutError):
+    if expected is RattlesnakeError:
+        with pytest.raises(RattlesnakeError):
             rattlesnake.wait_for_events(
                 ready_event_list,
                 active_event_list,
@@ -227,138 +227,178 @@ def test_rattlesnake_initialize_hardware(
 
 
 @pytest.mark.parametrize(
-    "state, expected",
+    "state, should_raise",
     [
-        (RattlesnakeState.INIT, RuntimeError),
-        (RattlesnakeState.HARDWARE_STORE, True),
-        (RattlesnakeState.ENVIRONMENT_STORE, True),
-        (RattlesnakeState.HARDWARE_ACTIVE, RuntimeError),
-        (RattlesnakeState.ENVIRONMENT_ACTIVE, RuntimeError),
+        (RattlesnakeState.INIT, True),
+        (RattlesnakeState.HARDWARE_STORE, False),
+        (RattlesnakeState.ENVIRONMENT_STORE, False),
+        (RattlesnakeState.HARDWARE_ACTIVE, True),
+        (RattlesnakeState.ENVIRONMENT_ACTIVE, True),
     ],
 )
-def test_rattlesnake_set_environment(state, expected, rattlesnake_package):
+def test_rattlesnake_initialize_environment(state, should_raise, rattlesnake_package):
     rattlesnake, threaded, blocking = rattlesnake_package
+
     mock_wait_event = mock.MagicMock()
     mock_environment_manager = mock.MagicMock()
-    mock_acquisiton = mock.MagicMock()
+    mock_acquisition = mock.MagicMock()
     mock_output = mock.MagicMock()
+
     rattlesnake.wait_for_events = mock_wait_event
     rattlesnake.environment_manager = mock_environment_manager
-    rattlesnake.queue_container.acquisition_command_queue = mock_acquisiton
+    rattlesnake.queue_container.acquisition_command_queue = mock_acquisition
     rattlesnake.queue_container.output_command_queue = mock_output
+
+    hardware_metadata = mock.MagicMock(spec=HardwareMetadata)
+    rattlesnake.hardware_metadata = hardware_metadata
 
     environment_metadata = mock.MagicMock(spec=EnvironmentMetadata)
     environment_metadata_list = [environment_metadata]
+    initialized_environment_metadata = {"Environment 0": environment_metadata}
+    mock_environment_manager.initialize_environments.return_value = (
+        initialized_environment_metadata
+    )
 
     with mock.patch.object(
         RattlesnakeController, "state", new_callable=mock.PropertyMock
     ) as mock_state:
         mock_state.return_value = state
 
-        if expected is RuntimeError:
-            with pytest.raises(RuntimeError):
+        if should_raise:
+            with pytest.raises(RattlesnakeError):
                 rattlesnake.initialize_environments(environment_metadata_list)
         else:
-            rattlesnake.initialize_environments(environment_metadata_list)
-
-            mock_environment_manager.validate_environment_metadata.assert_called_with(
+            returned_environment_metadata = rattlesnake.initialize_environments(
                 environment_metadata_list
             )
-            mock_environment_manager.initialize_environments.assert_called()
-            mock_acquisiton.put.assert_called_with(
+
+            mock_environment_manager.validate_environment_metadata.assert_called_once_with(
+                environment_metadata_list, hardware_metadata
+            )
+            mock_environment_manager.initialize_environments.assert_called_once_with(
+                environment_metadata_list, hardware_metadata
+            )
+
+            mock_acquisition.put.assert_called_once_with(
                 "Rattlesnake",
                 (
                     GlobalCommands.INITIALIZE_ENVIRONMENT,
-                    rattlesnake.environment_metadata,
+                    initialized_environment_metadata,
                 ),
             )
-            mock_output.put.assert_called_with(
+            mock_output.put.assert_called_once_with(
                 "Rattlesnake",
                 (
                     GlobalCommands.INITIALIZE_ENVIRONMENT,
-                    rattlesnake.environment_metadata,
+                    initialized_environment_metadata,
                 ),
             )
+
+            assert returned_environment_metadata == initialized_environment_metadata
             if blocking:
-                mock_wait_event.assert_called()
+                mock_wait_event.assert_called_once()
 
 
-def test_rattlesnake_set_empty_environment(rattlesnake_package):
+def test_rattlesnake_initialize_empty_environment(rattlesnake_package):
     rattlesnake, threaded, blocking = rattlesnake_package
+
     mock_wait_event = mock.MagicMock()
     mock_environment_manager = mock.MagicMock()
-    mock_environment_manager.environment_metadata = {}
-    mock_acquisiton = mock.MagicMock()
+    mock_acquisition = mock.MagicMock()
     mock_output = mock.MagicMock()
+
     rattlesnake.wait_for_events = mock_wait_event
     rattlesnake.environment_manager = mock_environment_manager
-    rattlesnake.queue_container.acquisition_command_queue = mock_acquisiton
+    rattlesnake.queue_container.acquisition_command_queue = mock_acquisition
     rattlesnake.queue_container.output_command_queue = mock_output
 
+    rattlesnake.hardware_metadata = None
+
     environment_metadata_list = []
+    initialized_environment_metadata = {}
+    mock_environment_manager.initialize_environments.return_value = (
+        initialized_environment_metadata
+    )
 
     with mock.patch.object(
         RattlesnakeController, "state", new_callable=mock.PropertyMock
     ) as mock_state:
         mock_state.return_value = RattlesnakeState.ENVIRONMENT_STORE
 
-        rattlesnake.initialize_environments(environment_metadata_list)
+        returned_environment_metadata = rattlesnake.initialize_environments(
+            environment_metadata_list
+        )
 
-        mock_environment_manager.validate_environment_metadata.assert_called_with(
+        mock_environment_manager.validate_environment_metadata.assert_called_once_with(
             environment_metadata_list, None
         )
-        mock_environment_manager.initialize_environments.assert_called()
+        mock_environment_manager.initialize_environments.assert_called_once_with(
+            environment_metadata_list, None
+        )
 
-        mock_acquisiton.put.assert_called_with(
+        mock_acquisition.put.assert_called_once_with(
             "Rattlesnake",
-            (GlobalCommands.INITIALIZE_ENVIRONMENT, rattlesnake.environment_metadata),
+            (
+                GlobalCommands.INITIALIZE_ENVIRONMENT,
+                initialized_environment_metadata,
+            ),
         )
-        mock_output.put.assert_called_with(
+        mock_output.put.assert_called_once_with(
             "Rattlesnake",
-            (GlobalCommands.INITIALIZE_ENVIRONMENT, rattlesnake.environment_metadata),
+            (
+                GlobalCommands.INITIALIZE_ENVIRONMENT,
+                initialized_environment_metadata,
+            ),
         )
+
+        assert returned_environment_metadata == initialized_environment_metadata
         if blocking:
-            mock_wait_event.assert_called()
+            mock_wait_event.assert_called_once()
 
 
 @pytest.mark.parametrize(
-    "state, instance, expected",
+    "state, valid_stream_metadata, should_raise",
     [
-        (RattlesnakeState.INIT, StreamMetadata, RuntimeError),
-        (RattlesnakeState.HARDWARE_STORE, StreamMetadata, RuntimeError),
-        (RattlesnakeState.ENVIRONMENT_STORE, StreamMetadata, True),
-        (RattlesnakeState.ENVIRONMENT_STORE, None, TypeError),
-        (RattlesnakeState.HARDWARE_ACTIVE, StreamMetadata, RuntimeError),
-        (RattlesnakeState.ENVIRONMENT_ACTIVE, StreamMetadata, RuntimeError),
+        (RattlesnakeState.INIT, True, True),
+        (RattlesnakeState.HARDWARE_STORE, True, True),
+        (RattlesnakeState.ENVIRONMENT_STORE, True, False),
+        (RattlesnakeState.ENVIRONMENT_STORE, False, True),
+        (RattlesnakeState.HARDWARE_ACTIVE, True, True),
+        (RattlesnakeState.ENVIRONMENT_ACTIVE, True, True),
     ],
 )
-def test_rattlesnake_start_acquisition(state, instance, expected, rattlesnake_package):
+def test_rattlesnake_start_acquisition(
+    state, valid_stream_metadata, should_raise, rattlesnake_package
+):
     rattlesnake, threaded, blocking = rattlesnake_package
+
     mock_wait_event = mock.MagicMock()
     mock_streaming = mock.MagicMock()
     mock_controller = mock.MagicMock()
+
     rattlesnake.wait_for_events = mock_wait_event
     rattlesnake.queue_container.streaming_command_queue = mock_streaming
     rattlesnake.queue_container.controller_command_queue = mock_controller
 
-    stream_metadata = mock.MagicMock(spec=instance)
+    if valid_stream_metadata:
+        stream_metadata = StreamMetadata()
+        stream_metadata.validate = mock.MagicMock()
+    else:
+        stream_metadata = None
 
     with mock.patch.object(
         RattlesnakeController, "state", new_callable=mock.PropertyMock
     ) as mock_state:
         mock_state.return_value = state
 
-        if expected == RuntimeError:
-            with pytest.raises(RuntimeError):
-                rattlesnake.start_acquisition(stream_metadata)
-        elif expected == TypeError:
-            with pytest.raises(TypeError):
+        if should_raise:
+            with pytest.raises(RattlesnakeError):
                 rattlesnake.start_acquisition(stream_metadata)
         else:
             rattlesnake.start_acquisition(stream_metadata)
 
-            stream_metadata.validate.assert_called()
-            mock_streaming.put.assert_called_with(
+            stream_metadata.validate.assert_called_once_with()
+            mock_streaming.put.assert_called_once_with(
                 "Rattlesnake",
                 (
                     GlobalCommands.INITIALIZE_STREAMING,
@@ -369,21 +409,22 @@ def test_rattlesnake_start_acquisition(state, instance, expected, rattlesnake_pa
                     ),
                 ),
             )
-            mock_controller.put.assert_called_with(
+            mock_controller.put.assert_called_once_with(
                 "Rattlesnake", (GlobalCommands.RUN_HARDWARE, stream_metadata)
             )
+
             if blocking:
-                mock_wait_event.assert_called()
+                mock_wait_event.assert_called_once()
 
 
 @pytest.mark.parametrize(
     "state, expected",
     [
-        (RattlesnakeState.INIT, RuntimeError),
-        (RattlesnakeState.HARDWARE_STORE, RuntimeError),
-        (RattlesnakeState.ENVIRONMENT_STORE, RuntimeError),
+        (RattlesnakeState.INIT, RattlesnakeError),
+        (RattlesnakeState.HARDWARE_STORE, RattlesnakeError),
+        (RattlesnakeState.ENVIRONMENT_STORE, RattlesnakeError),
         (RattlesnakeState.HARDWARE_ACTIVE, True),
-        (RattlesnakeState.ENVIRONMENT_ACTIVE, RuntimeError),
+        (RattlesnakeState.ENVIRONMENT_ACTIVE, RattlesnakeError),
     ],
 )
 def test_rattlesnake_start_profile(state, expected, rattlesnake_package):
@@ -403,8 +444,8 @@ def test_rattlesnake_start_profile(state, expected, rattlesnake_package):
     ) as mock_state:
         mock_state.return_value = state
 
-        if expected is RuntimeError:
-            with pytest.raises(RuntimeError):
+        if expected is RattlesnakeError:
+            with pytest.raises(RattlesnakeError):
                 rattlesnake.start_profile(profile_event_list)
         else:
             rattlesnake.start_profile(profile_event_list)

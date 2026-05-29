@@ -1,18 +1,20 @@
-from rattlesnake.profile_manager import (
-    ProfileManager,
-    ProfileEvent,
-    EXTRA_CLOSEOUT_TIME,
-)
-from rattlesnake.utilities import GlobalCommands
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.environment.abstract_environment import EnvironmentInstructions
-from rattlesnake.environment.time_environment import TimeCommands
-from mock_objects.mock_utilities import mock_queue_container, fake_time
-import pytest
 from unittest import mock
 
+import pytest
 
-# region: Fixtures
+from mock_objects.mock_utilities import fake_time, mock_queue_container
+from mock_objects.mock_environment import MockEnvironmentInstructions
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.time_environment import TimeCommands
+from rattlesnake.profile_manager import (
+    EXTRA_CLOSEOUT_TIME,
+    ProfileEvent,
+    ProfileManager,
+)
+from rattlesnake.utilities import GlobalCommands, RattlesnakeError
+
+
+# region Fixtures
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def profile_manager(request):
     use_thread = request.param
@@ -21,7 +23,7 @@ def profile_manager(request):
     return profile_manager
 
 
-# region: ProfileEvent
+# region Event
 def test_profile_event_init():
     timestamp = 0
     environment_name = "Global"
@@ -60,7 +62,7 @@ def test_profile_event_properties():
             GlobalCommands.START_ENVIRONMENT,
             EnvironmentType.TIME,
             "Environment 0",
-            TypeError,
+            RattlesnakeError,
         ),
         (
             -10,
@@ -68,7 +70,7 @@ def test_profile_event_properties():
             GlobalCommands.START_STREAMING,
             "Global",
             "Global",
-            ValueError,
+            RattlesnakeError,
         ),
         (
             "timestamp",
@@ -76,16 +78,16 @@ def test_profile_event_properties():
             GlobalCommands.START_STREAMING,
             "Global",
             "Global",
-            ValueError,
+            RattlesnakeError,
         ),
-        (0, 10, GlobalCommands.START_STREAMING, "Global", "Global", TypeError),
+        (0, 10, GlobalCommands.START_STREAMING, "Global", "Global", RattlesnakeError),
         (
             0,
             "Environment Name",
             GlobalCommands.START_ENVIRONMENT,
             "Global",
             "Global",
-            TypeError,
+            RattlesnakeError,
         ),
         (
             0,
@@ -93,7 +95,7 @@ def test_profile_event_properties():
             GlobalCommands.START_STREAMING,
             EnvironmentType.TIME,
             "Environment 0",
-            TypeError,
+            RattlesnakeError,
         ),
         (
             0,
@@ -101,16 +103,16 @@ def test_profile_event_properties():
             GlobalCommands.START_STREAMING,
             "Not a environment",
             "Global",
-            TypeError,
+            RattlesnakeError,
         ),
-        (0, "Environment Name", "Not a command", "Global", "Global", TypeError),
+        (0, "Environment Name", "Not a command", "Global", "Global", RattlesnakeError),
         (
             0,
             "Environment Name",
             GlobalCommands.START_STREAMING,
             "Global",
             None,
-            ValueError,
+            RattlesnakeError,
         ),
         (
             0,
@@ -118,7 +120,7 @@ def test_profile_event_properties():
             TimeCommands.SET_TEST_LEVEL,
             EnvironmentType.TIME,
             "Environment 0",
-            TypeError,
+            RattlesnakeError,
         ),
     ],
 )
@@ -129,18 +131,18 @@ def test_profile_event_validate(
     profile_event._environment_type = environment_type
     profile_event._queue_name = queue_name
 
-    if expected is TypeError:
-        with pytest.raises(TypeError):
+    if expected is RattlesnakeError:
+        with pytest.raises(RattlesnakeError):
             profile_event.validate()
     elif expected is ValueError:
         with pytest.raises(ValueError):
             profile_event.validate()
     else:
-        valid_profile = profile_event.validate()
-        assert valid_profile == True
+        profile_event.validate()
+        assert True
 
 
-# region: ProfileManager
+# region Manager
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_profile_manager_init(use_thread):
     queue_container = mock_queue_container(use_thread)
@@ -160,65 +162,61 @@ def test_profile_manager_properties(profile_manager):
 
 
 @pytest.mark.parametrize(
-    "profile_event_list, profile_queue_names, valid_list, expected",
+    "profile_event_list, profile_queue_names, environment_types, expected",
     [
         ([], [], [], True),
         (
             [ProfileEvent(0, "Global", GlobalCommands.START_STREAMING)],
             ["Global"],
-            [True],
+            ["Global"],
+            True,
+        ),
+        (
+            [ProfileEvent(0, "Environment Name", TimeCommands.SET_TEST_LEVEL, 10)],
+            ["Environment 0"],
+            [EnvironmentType.TIME],
             True,
         ),
         (
             [ProfileEvent(0, "Environment Name", TimeCommands.SET_TEST_LEVEL)],
             ["Environment 0"],
-            [True],
-            True,
+            [EnvironmentType.RANDOM],
+            RattlesnakeError,
         ),
         (
             [None],
             ["Global"],
-            [True],
-            TypeError,
-        ),
-        (
-            [ProfileEvent(0, "Environment Name", TimeCommands.SET_TEST_LEVEL)],
-            ["Environment 0"],
-            [False],
-            ValueError,
+            [EnvironmentType.TIME],
+            RattlesnakeError,
         ),
         (
             [ProfileEvent(0, "Global", "Not a command")],
             ["Global"],
-            [True],
-            KeyError,
+            [EnvironmentType.TIME],
+            RattlesnakeError,
         ),
     ],
 )
 def test_profile_manager_validate_profile_list(
-    profile_event_list, profile_queue_names, valid_list, expected, profile_manager
+    profile_event_list,
+    profile_queue_names,
+    environment_types,
+    expected,
+    profile_manager,
 ):
-    for profile_event, queue_name, valid in zip(
-        profile_event_list, profile_queue_names, valid_list
+    for profile_event, environment_type, queue_name in zip(
+        profile_event_list, environment_types, profile_queue_names
     ):
         if isinstance(profile_event, ProfileEvent):
-            mock_valid = mock.MagicMock()
-            mock_valid.return_value = valid
-            profile_event.validate = mock_valid
             profile_event._queue_name = queue_name
+            profile_event._environment_type = environment_type
 
-    if expected is KeyError:
-        with pytest.raises(KeyError):
-            profile_manager.validate_profile_list(profile_event_list)
-    elif expected is TypeError:
-        with pytest.raises(TypeError):
-            profile_manager.validate_profile_list(profile_event_list)
-    elif expected is ValueError:
-        with pytest.raises(ValueError):
+    if expected is RattlesnakeError:
+        with pytest.raises(RattlesnakeError):
             profile_manager.validate_profile_list(profile_event_list)
     else:
-        valid_profile_event = profile_manager.validate_profile_list(profile_event_list)
-        assert valid_profile_event
+        profile_manager.validate_profile_list(profile_event_list)
+        assert True
 
 
 @mock.patch("rattlesnake.profile_manager.threading.Timer")
@@ -295,7 +293,7 @@ def test_profile_manager_stop_profile(mock_timer, profile_manager):
 
 
 def test_profile_manager_stop_hardware(profile_manager):
-    instructions = EnvironmentInstructions("Environment Type", "Environment 0")
+    instructions = MockEnvironmentInstructions()
     profile_manager.environment_instructions = {"Environment 0": instructions}
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
@@ -327,7 +325,7 @@ def test_profile_manager_stop_streaming(profile_manager):
 
 
 def test_start_environment(profile_manager):
-    instructions = EnvironmentInstructions("Environment Type", "Environment 0")
+    instructions = MockEnvironmentInstructions()
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
     profile_manager.start_environment(

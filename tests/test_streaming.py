@@ -1,12 +1,20 @@
-from rattlesnake.process.streaming import StreamType, StreamMetadata, StreamingProcess, streaming_process
-from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_environment import MockEnvironmentMetadata
-from mock_objects.mock_utilities import mock_queue_container, mock_event_container
-import pytest
-import numpy as np
 import multiprocessing as mp
 from unittest import mock
+
+import numpy as np
+import pytest
+
+from mock_objects.mock_environment import MockEnvironmentMetadata
+from mock_objects.mock_hardware import MockHardwareMetadata
+from mock_objects.mock_utilities import mock_event_container, mock_queue_container
+from rattlesnake.utilities import RattlesnakeError
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.process.streaming import (
+    StreamMetadata,
+    StreamingProcess,
+    StreamType,
+    streaming_process,
+)
 
 
 # region: Fixtures
@@ -15,7 +23,9 @@ def streaming(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    streaming_process = StreamingProcess("Process Name", queue_container, event_container.streaming_ready_event)
+    streaming_process = StreamingProcess(
+        "Process Name", queue_container, event_container.streaming_ready_event
+    )
     return streaming_process
 
 
@@ -33,16 +43,18 @@ def test_stream_metadata_init():
     "stream_type, stream_file, test_level, path_exists, expected",
     [
         (StreamType.MANUAL, "filepath", None, True, True),
-        (StreamType.MANUAL, None, None, True, ValueError),
-        (StreamType.MANUAL, "filepath", None, False, ValueError),
+        (StreamType.MANUAL, None, None, True, RattlesnakeError),
+        (StreamType.MANUAL, "filepath", None, False, RattlesnakeError),
         (StreamType.NO_STREAM, None, None, False, True),
         (StreamType.IMMEDIATELY, "filepath", None, True, True),
         (StreamType.TEST_LEVEL, "filepath", "Environment 0", True, True),
-        (StreamType.TEST_LEVEL, "filepath", None, True, ValueError),
+        (StreamType.TEST_LEVEL, "filepath", None, True, RattlesnakeError),
     ],
 )
 @mock.patch("rattlesnake.process.streaming.Path")
-def test_stream_metadata_validate(mock_path, stream_type, stream_file, test_level, path_exists, expected):
+def test_stream_metadata_validate(
+    mock_path, stream_type, stream_file, test_level, path_exists, expected
+):
     stream_metadata = StreamMetadata()
     stream_metadata.stream_type = stream_type
     stream_metadata.stream_file = stream_file
@@ -50,13 +62,12 @@ def test_stream_metadata_validate(mock_path, stream_type, stream_file, test_leve
 
     mock_path.return_value.parent.exists.return_value = path_exists
 
-    if expected is ValueError:
-        with pytest.raises(ValueError):
+    if expected is RattlesnakeError:
+        with pytest.raises(RattlesnakeError):
             stream_metadata.validate()
-    elif expected is True:
-        assert stream_metadata.validate()
-    else:
-        assert False
+    elif expected:
+        stream_metadata.validate()
+        assert True
 
 
 # region: StreamingProcess
@@ -65,7 +76,9 @@ def test_stream_metadata_validate(mock_path, stream_type, stream_file, test_leve
 def test_streaming_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    streaming_process = StreamingProcess("Process Name", queue_container, event_container.streaming_ready_event)
+    streaming_process = StreamingProcess(
+        "Process Name", queue_container, event_container.streaming_ready_event
+    )
 
     # Test if object is the correct class
     assert isinstance(streaming_process, StreamingProcess)
@@ -82,16 +95,20 @@ def test_streaming_init(use_thread):
         StreamType.MANUAL,
     ],
 )
+@mock.patch("rattlesnake.process.streaming.save_rattlesnake_to_netcdf")
 @mock.patch("rattlesnake.process.streaming.nc.Dataset")
-def test_streaming_process_initialize(mock_dataset, stream_type, streaming):
-    mock_dataset.return_value.createGroup.return_value = "Group Handle"
+def test_streaming_process_initialize(
+    mock_dataset,
+    mock_save_rattlesnake_to_netcdf,
+    stream_type,
+    streaming,
+):
     stream_metadata = StreamMetadata()
     stream_metadata.stream_file = "filename"
     stream_metadata.stream_type = stream_type
+
     hardware_metadata = MockHardwareMetadata()
     environment_metadata = MockEnvironmentMetadata()
-    mock_store = mock.MagicMock()
-    environment_metadata.store_to_netcdf = mock_store
     environment_metadata_dict = {"Environment 0": environment_metadata}
     data = (stream_metadata, hardware_metadata, environment_metadata_dict)
 
@@ -99,18 +116,21 @@ def test_streaming_process_initialize(mock_dataset, stream_type, streaming):
     streaming.initialize(data)
 
     assert streaming.ready_event.is_set()
+
     if stream_type == StreamType.NO_STREAM:
-        mock_dataset.return_value.createDimension.assert_not_called()
+        mock_dataset.assert_not_called()
+        mock_save_rattlesnake_to_netcdf.assert_not_called()
+        assert streaming.netcdf_handle is None
     else:
-        dimension_calls = [
-            mock.call("response_channels", 2),
-            mock.call("output_channels", 1),
-            mock.call("time_samples", None),
-            mock.call("num_environments", 1),
-        ]
-        mock_dataset.return_value.createDimension.assert_has_calls(dimension_calls)
-        assert streaming.netcdf_handle.sample_rate == 1000
-        mock_store.assert_called_once_with("Group Handle")
+        mock_dataset.assert_called_once_with(
+            "filename", "w", format="NETCDF4", clobber=True
+        )
+        assert streaming.netcdf_handle is mock_dataset.return_value
+        mock_save_rattlesnake_to_netcdf.assert_called_once_with(
+            mock_dataset.return_value,
+            hardware_metadata,
+            environment_metadata_dict,
+        )
 
 
 def test_streaming_process_write_data(streaming):
@@ -121,7 +141,9 @@ def test_streaming_process_write_data(streaming):
 
     streaming.write_data(data)
 
-    mock_dataset.variables["time_data"].__setitem__.assert_called_with((slice(None, None, None), slice(2, None, None)), data)
+    mock_dataset.variables["time_data"].__setitem__.assert_called_with(
+        (slice(None, None, None), slice(2, None, None)), data
+    )
 
 
 def test_streaming_process_create_new_stream(streaming):
@@ -131,7 +153,9 @@ def test_streaming_process_create_new_stream(streaming):
     streaming.create_new_stream(None)
 
     mock_dataset.createDimension.assert_called_with("time_samples_1", None)
-    mock_dataset.createVariable.assert_called_with("time_data_1", "f8", ("response_channels", "time_samples_1"))
+    mock_dataset.createVariable.assert_called_with(
+        "time_data_1", "f8", ("response_channels", "time_samples_1")
+    )
 
 
 def test_streaming_process_create_new_stream_no_netcdf(streaming):
@@ -160,7 +184,9 @@ def test_streaming_process_write_data(streaming):
 
     streaming.write_data(data)
 
-    mock_dataset.variables["time_data"].__setitem__.assert_called_with((slice(None, None, None), slice(2, None, None)), data)
+    mock_dataset.variables["time_data"].__setitem__.assert_called_with(
+        (slice(None, None, None), slice(2, None, None)), data
+    )
 
 
 def test_streaming_process_write_data_no_init(streaming):
@@ -178,7 +204,9 @@ def test_streaming_process_create_new_stream(streaming):
     streaming.create_new_stream(None)
 
     mock_dataset.createDimension.assert_called_with("time_samples_1", None)
-    mock_dataset.createVariable.assert_called_with("time_data_1", "f8", ("response_channels", "time_samples_1"))
+    mock_dataset.createVariable.assert_called_with(
+        "time_data_1", "f8", ("response_channels", "time_samples_1")
+    )
 
 
 def test_streaming_process_finalize(streaming):
@@ -205,7 +233,11 @@ def test_streaming_process_quit(mock_finalize, streaming):
 def test_output_process_func(mock_stream, use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    streaming_process(queue_container, event_container.streaming_ready_event, event_container.streaming_close_event)
+    streaming_process(
+        queue_container,
+        event_container.streaming_ready_event,
+        event_container.streaming_close_event,
+    )
 
     mock_instance = mock_stream.return_value
     mock_instance.run.assert_called()

@@ -1,43 +1,46 @@
-from rattlesnake.environment.time_environment import (
-    TimeCommands,
-    TimeUICommands,
-    TimeMetadata,
-    TimeInstructions,
-    TimeQueues,
-    TimeEnvironment,
-    time_process,
-)
-from rattlesnake.environment.abstract_environment import (
-    EnvironmentMetadata,
-    EnvironmentInstructions,
-    Environment,
-)
-from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_utilities import (
-    mock_channel_list,
-    mock_queue_container,
-    mock_event_container,
-)
 import multiprocessing as mp
-import numpy as np
-import pytest
-import netCDF4 as nc4
 from unittest import mock
 
-# region: Fixtures
-channel_list = mock_channel_list()
+import netCDF4 as nc4
+import numpy as np
+import pytest
+
+from mock_objects.mock_hardware import MockHardwareMetadata
+from mock_objects.mock_utilities import (
+    mock_channel_list_bools,
+    mock_event_container,
+    mock_queue_container,
+)
+from rattlesnake.environment.abstract_environment import (
+    Environment,
+    EnvironmentInstructions,
+    EnvironmentMetadata,
+)
+from rattlesnake.environment.time_environment import (
+    TimeCommands,
+    TimeEnvironment,
+    TimeInstructions,
+    TimeMetadata,
+    TimeQueues,
+    TimeUICommands,
+    time_process,
+)
+from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.utilities import GlobalCommands, RattlesnakeError
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 
+# region Fixtures
 @pytest.fixture
 def time_metadata():
-    time_metadata = TimeMetadata("Time Environment")
-    time_metadata.channel_list = mock_channel_list()
+    time_metadata = TimeMetadata(
+        "Time Environment",
+        channel_list_bools=mock_channel_list_bools,
+        sample_rate=1000,
+        output_signal=np.zeros((1, 2000)),
+        cancel_rampdown_time=0.1,
+    )
     time_metadata.queue_name = "Environment 0"
-    time_metadata.sample_rate = 1000
-    time_metadata.output_signal = np.zeros((1, 2000))
-    time_metadata.cancel_rampdown_time = 0.1
 
     return time_metadata
 
@@ -69,7 +72,7 @@ def time_environment(request):
     return time_environment
 
 
-# region: TimeMetadata
+# region Metadata
 def test_time_metadata_init():
     time_metadata = TimeMetadata("Time Environment")
 
@@ -85,53 +88,61 @@ def test_time_metadata_properties(time_metadata):
 
 
 @pytest.mark.parametrize(
-    "channel_list, sample_rate, cancel_rampdown_time, output_signal, expected",
+    "channel_list_bools, sample_rate, cancel_rampdown_time, output_signal, expected",
     [
-        (channel_list + [Channel()], 1000, 0.5, np.zeros((1, 2000)), True),
-        (channel_list, -10, 0.5, np.zeros((1, 2000)), ValueError),
-        (channel_list, 1000, None, np.zeros((1, 2000)), ValueError),
-        (channel_list, None, 0.5, np.zeros((1, 2000)), ValueError),
-        (channel_list, 1000, 0.5, None, TypeError),
-        (channel_list, 1000, 0.5, np.zeros((1, 2000, 3)), TypeError),
-        (channel_list, 1000, 0.5, np.zeros((0, 2000)), ValueError),
+        (mock_channel_list_bools(), 1000, 0.5, np.zeros((1, 2000)), True),
+        (mock_channel_list_bools(), -10, 0.5, np.zeros((1, 2000)), RattlesnakeError),
+        (mock_channel_list_bools(), 1000, None, np.zeros((1, 2000)), RattlesnakeError),
+        (mock_channel_list_bools(), None, 0.5, np.zeros((1, 2000)), RattlesnakeError),
+        (mock_channel_list_bools(), 1000, 0.5, None, RattlesnakeError),
+        (
+            mock_channel_list_bools(),
+            1000,
+            0.5,
+            np.zeros((1, 2000, 3)),
+            RattlesnakeError,
+        ),
+        (mock_channel_list_bools(), 1000, 0.5, np.zeros((0, 2000)), RattlesnakeError),
     ],
 )
 def test_time_metadata_validate(
-    channel_list,
+    channel_list_bools,
     sample_rate,
     cancel_rampdown_time,
     output_signal,
     expected,
     time_metadata,
 ):
-    time_metadata.channel_list = channel_list
+    hardware_metadata = MockHardwareMetadata()
+    time_metadata.channel_list_bools = channel_list_bools
     time_metadata.sample_rate = sample_rate
     time_metadata.cancel_rampdown_time = cancel_rampdown_time
     time_metadata.output_signal = output_signal
 
-    if expected is True:
-        valid_metadata = time_metadata.validate()
+    if expected is RattlesnakeError:
+        with pytest.raises(RattlesnakeError):
+            time_metadata.validate(hardware_metadata)
+    elif expected:
+        valid_metadata = time_metadata.validate(hardware_metadata)
         assert valid_metadata
-    elif expected is ValueError:
-        with pytest.raises(ValueError):
-            time_metadata.validate()
-    elif expected is TypeError:
-        with pytest.raises(TypeError):
-            time_metadata.validate()
 
 
 def test_environment_metadata_store_to_netcdf(time_metadata):
     dataset = nc4.Dataset("temp.nc", mode="w", diskless=True, persist=False)
     netcdf_group = dataset.createGroup("temp_group")
 
-    time_metadata.store_to_netcdf(netcdf_group)
+    time_metadata.save_metadata_to_netcdf(netcdf_group)
 
     assert True
 
 
-# region: TimeInstructions
+# region Instructions
 def test_time_instructions_init():
-    time_instructions = TimeInstructions("Time Environment")
+    time_instructions = TimeInstructions(
+        environment_name="Time Environment",
+        current_test_level=1,
+        repeat=False,
+    )
 
     assert isinstance(time_instructions, TimeInstructions)
     assert isinstance(time_instructions, EnvironmentInstructions)
@@ -139,7 +150,7 @@ def test_time_instructions_init():
     assert hasattr(time_instructions, "repeat")
 
 
-# region: TimeQueues
+# region Queues
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_time_queues_init(use_thread):
     queue_container = mock_queue_container(use_thread)
@@ -155,7 +166,7 @@ def test_time_queues_init(use_thread):
     assert isinstance(time_queues, TimeQueues)
 
 
-# region: TimeEnvironment
+# region Environment
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_time_environment_init(use_thread):
     queue_container = mock_queue_container(use_thread)
@@ -168,8 +179,6 @@ def test_time_environment_init(use_thread):
         queue_container.environment_data_out_queues["Environment 0"],
         queue_container.log_file_queue,
     )
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     time_environment = TimeEnvironment(
         "Time Environment",
         "Environment 0",
@@ -195,7 +204,7 @@ def test_time_environment_initialize_hardware(time_environment):
 def test_time_environment_initialize_environment(time_metadata, time_environment):
     time_environment.initialize_environment(time_metadata)
 
-    assert time_environment.metadata == time_metadata
+    assert time_environment.environment_metadata == time_metadata
 
 
 @mock.patch("rattlesnake.environment.time_environment.TimeEnvironment.shutdown")
@@ -210,51 +219,67 @@ def test_time_environment_run_environment(
 ):
     mock_gui_queue = mock.MagicMock()
     time_environment.queue_container.gui_update_queue = mock_gui_queue
+
     mock_data_in_queue = mock.MagicMock()
     time_environment.queue_container.data_in_queue = mock_data_in_queue
+
     mock_data_out_queue = mock.MagicMock()
     time_environment.queue_container.data_out_queue = mock_data_out_queue
+
     mock_command_queue = mock.MagicMock()
     time_environment.queue_container.environment_command_queue = mock_command_queue
 
-    mock_data_in_queue.get_nowait.side_effect = [
-        (np.ones((2, 2000)), False),
-        (np.ones((2, 2000)), False),
-    ]
-    mock_data_in_queue.get.return_value = (np.ones((2, 2000)), True)
-    mock_data_out_queue.empty.side_effect = [True, True]
+    mock_data_in_queue.get_nowait.return_value = (np.ones((2, 2000)), False)
+    mock_data_out_queue.empty.return_value = True
 
     hardware_metadata = MockHardwareMetadata()
     time_environment.initialize_hardware(hardware_metadata)
-    time_environment.metadata = time_metadata
+    time_environment.environment_metadata = time_metadata
 
-    time_instructions_1 = TimeInstructions("Time Environment")
-    time_instructions_1.current_test_level = 1
-    time_instructions_1.repeat = True
-    time_environment.run_environment(time_instructions_1)
-
-    time_instructions_2 = TimeInstructions("Time Environment")
-    time_instructions_2.current_test_level = 0
-    time_instructions_2.repeat = False
-    time_environment.run_environment(time_instructions_2)
-
-    log_calls = [
-        mock.call("Test Level set to 1"),
-    ]
-    mock_log.assert_has_calls(log_calls)
-    np.testing.assert_array_equal(
-        np.zeros((1, 250)), mock_output.call_args_list[0][0][0]
+    time_instructions = TimeInstructions(
+        environment_name="Time Environment",
+        current_test_level=1,
+        repeat=True,
     )
-    assert mock_output.call_args_list[0][0][1] == False
+
+    time_environment.run_environment(time_instructions)
+
+    assert time_environment.active
+
+    mock_gui_queue.put.assert_any_call(
+        (
+            "Time Environment",
+            (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, time_instructions),
+        )
+    )
+    mock_gui_queue.put.assert_any_call(
+        ("Time Environment", (UICommands.ENVIRONMENT_STARTED, None))
+    )
+
+    time_data_call = None
+    for call in mock_gui_queue.put.call_args_list:
+        args = call[0][0]
+        if args[0] == "Time Environment" and args[1][0] == TimeUICommands.TIME_DATA:
+            time_data_call = args
+            break
+
+    assert time_data_call is not None
+
+    measurement_data, output_data = time_data_call[1][1]
+    np.testing.assert_array_equal(measurement_data, np.ones((1, 2000)))
+    np.testing.assert_array_equal(output_data, np.ones((1, 2000)))
+
+    np.testing.assert_array_equal(
+        time_metadata.output_signal[:, : hardware_metadata.samples_per_write],
+        mock_output.call_args[0][0],
+    )
+    assert mock_output.call_args[0][1] is False
+
     mock_command_queue.put.assert_called_with(
         "Time Environment", (GlobalCommands.START_ENVIRONMENT, None)
     )
-    np.testing.assert_array_equal(
-        np.ones((1, 2000)), mock_gui_queue.put.call_args_list[0][0][0][1][1][0]
-    )
-    np.testing.assert_array_equal(
-        np.ones((1, 2000)), mock_gui_queue.put.call_args_list[1][0][0][1][1][0]
-    )
+
+    mock_shutdown.assert_not_called()
 
 
 @pytest.mark.parametrize("test_level_change", [0, -0.001])
@@ -302,7 +327,7 @@ def test_time_environment_stop_environment(mock_adjust, time_environment):
 def test_time_environment_adjust_test_level(mock_log, time_environment, time_metadata):
     time_environment.current_test_level = 1
     time_environment.test_level_target = 0.1
-    time_environment.metadata = time_metadata
+    time_environment.environment_metadata = time_metadata
 
     time_environment.adjust_test_level(0.8)
 
@@ -325,13 +350,10 @@ def test_time_environment_shutdown(mock_log, time_environment):
     mock_log.assert_called_with("Shutting Down Time History Generation")
     mock_command_queue.flush.assert_called_with("Time Environment")
     put_calls = [
-        mock.call(("Environment 0", (TimeUICommands.ENABLE, "test_level_selector"))),
-        mock.call(("Environment 0", (TimeUICommands.ENABLE, "repeat_signal_checkbox"))),
-        mock.call(("Environment 0", (TimeUICommands.ENABLE, "start_test_button"))),
-        mock.call(("Environment 0", (TimeUICommands.DISABLE, "stop_test_button"))),
+        mock.call(("Time Environment", (UICommands.ENVIRONMENT_ENDED, None))),
     ]
     mock_gui_queue.put.assert_has_calls(put_calls)
-    assert time_environment.startup == True
+    assert not time_environment._active_event.is_set()
 
 
 # region: time_process
@@ -354,6 +376,9 @@ def test_time_process(mock_process_class, use_thread):
         event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
         event_container.environment_close_events["Environment 0"],
+        event_container.environment_sysid_active_events["Environment 0"],
+        event_container.environment_sysid_stored_events["Environment 0"],
+        use_thread,
     )
 
     mock_instance = mock_process_class.return_value

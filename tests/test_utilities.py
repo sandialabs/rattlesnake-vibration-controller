@@ -31,10 +31,13 @@ def verbose_fixture(request, log_file_queue, name_manager):
     else:
         queue = mp.Queue()
 
-    return (VerboseMessageQueue(log_file_queue, queue, name_manager, "VerboseQueue"), use_thread)
+    return (
+        VerboseMessageQueue(log_file_queue, queue, "VerboseQueue", name_manager),
+        use_thread,
+    )
 
 
-# region: log_file_task
+# region log_file_task
 # Prevent a file from opening
 @mock.patch("builtins.open", new_callable=mock.mock_open)
 def test_log_file_process(mock_file, log_file_queue):
@@ -56,10 +59,12 @@ def test_log_file_process(mock_file, log_file_queue):
     mock_file().flush.assert_called()
 
 
-# region: VerboseMessageQueue
+# region VerboseMessageQueue
 # Test the initialization of the verbose mesage queue
 def test_verbose_queue_init(log_file_queue, name_manager):
-    verbose_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), name_manager, "VerboseQueue")
+    verbose_queue = VerboseMessageQueue(
+        log_file_queue, mp.Queue(), "VerboseQueue", name_manager
+    )
 
     assert isinstance(verbose_queue, VerboseMessageQueue)
 
@@ -151,17 +156,24 @@ def test_verbose_queue_log(mock_time, mock_id, log_file_queue, verbose_fixture):
 
     # Put data into verbose queue and clear the queue, store data into verbose_array
     verbose_queue.put(task_name, message_data_tuple)
-    verbose_process = new_process(target=clear_verbose_queue, args=(verbose_queue, "Get Queue", verbose_array))
+    verbose_process = new_process(
+        target=clear_verbose_queue, args=(verbose_queue, "Get Queue", verbose_array)
+    )
     verbose_process.start()
     verbose_process.join()
 
     # Clear the log_file_queue and store the messages to log_string
-    log_file_process = new_process(target=clear_log_queue, args=(log_file_queue, log_string))
+    log_file_process = new_process(
+        target=clear_log_queue, args=(log_file_queue, log_string)
+    )
     log_file_process.start()
     log_file_process.join()
 
     # Test if log message matches template
-    assert log_string.value == b"Datetime: Test verbose queue put QUIT (1) to VerboseQueue\nDatetime: Get Queue got QUIT (1) from VerboseQueue\n"
+    assert (
+        log_string.value
+        == b"Datetime: Test verbose queue put QUIT (1) to VerboseQueue\nDatetime: Get Queue got QUIT (1) from VerboseQueue\n"
+    )
 
 
 # Test verbose message queue flush and log_file_queue
@@ -169,7 +181,9 @@ def test_verbose_queue_log(mock_time, mock_id, log_file_queue, verbose_fixture):
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
 # Mock the datetime for the logging queue
 @mock.patch("rattlesnake.utilities.datetime")
-def test_verbose_message_queue_flush(mock_time, mock_id, log_file_queue, verbose_fixture):
+def test_verbose_message_queue_flush(
+    mock_time, mock_id, log_file_queue, verbose_fixture
+):
     verbose_queue, use_thread = verbose_fixture
     if use_thread:
         new_process = threading.Thread
@@ -191,7 +205,9 @@ def test_verbose_message_queue_flush(mock_time, mock_id, log_file_queue, verbose
     data = verbose_queue.flush(task_name)
 
     # Clear log_file_queue and store messages to log_string
-    log_file_process = new_process(target=clear_log_queue, args=(log_file_queue, log_string))
+    log_file_process = new_process(
+        target=clear_log_queue, args=(log_file_queue, log_string)
+    )
     log_file_process.start()
     log_file_process.join()
 

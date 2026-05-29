@@ -148,7 +148,7 @@ class VerboseMessageQueue:
             env = self.environment_name.value
             return f"{self.base_name} | {env}" if env else self.base_name
         else:
-            return {self.base_name}
+            return self.base_name
 
     def assign_environment(self, env_name: str):
         self.environment_name.value = env_name
