@@ -45,3 +45,4 @@ coverage.xml
 # ignore local documentation built by Jupyter Book
 documentation/_build/**
 _build/
+output.html
