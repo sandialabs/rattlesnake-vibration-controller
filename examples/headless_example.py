@@ -28,27 +28,38 @@ START_ENVIRONMENT = False
 RUN_PROFILE = False
 
 
-def build_rattlesnake_object():
-    rattlesnake = RattlesnakeController(threaded=THREADED, timeout=120)
+def build_rattlesnake_object(
+    threaded=THREADED,
+    import_method=IMPORT_METHOD,
+    hardware_type=HARDWARE_TYPE,
+    environment_type=ENVIRONMENT_TYPE,
+    stream_type=STREAM_TYPE,
+    load_sysid=LOAD_SYSID,
+    run_sysid=RUN_SYSID,
+    start_hardware=START_HARDWARE,
+    start_environment=START_ENVIRONMENT,
+    run_profile=RUN_PROFILE,
+):
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=120)
 
-    hardware_metadata = HARDWARE_DICT[HARDWARE_TYPE][IMPORT_METHOD]()
-    environment_metadata = ENVIRONMENT_DICT[ENVIRONMENT_TYPE][IMPORT_METHOD](
+    hardware_metadata = HARDWARE_DICT[hardware_type][import_method]()
+    environment_metadata = ENVIRONMENT_DICT[environment_type][import_method](
         hardware_metadata
     )
     environment_name = getattr(environment_metadata, "environment_name", None)
-    sysid_metadata = SYSID_DICT[IMPORT_METHOD](hardware_metadata)
+    sysid_metadata = SYSID_DICT[import_method](hardware_metadata)
     sysid_package = SYSID_LOAD_DICT["netcdf"]()
-    stream_metadata = STREAM_DICT[STREAM_TYPE](environment_name)
-    event_list = EVENT_DICT[ENVIRONMENT_TYPE]()
-    instructions = INSTRUCTIONS_DICT[ENVIRONMENT_TYPE]()
+    stream_metadata = STREAM_DICT[stream_type](environment_name)
+    event_list = EVENT_DICT[environment_type]()
+    instructions = INSTRUCTIONS_DICT[environment_type]()
 
     # Initialize hardware
-    if HARDWARE_TYPE is HardwareType.NONE:
+    if hardware_type is HardwareType.NONE:
         return rattlesnake
     rattlesnake.initialize_hardware(hardware_metadata)
 
     # Initialize environment
-    if ENVIRONMENT_TYPE is EnvironmentType.NONE:
+    if environment_type is EnvironmentType.NONE:
         return rattlesnake
     rattlesnake.initialize_environments([environment_metadata])
 
@@ -56,32 +67,26 @@ def build_rattlesnake_object():
     rattlesnake.initialize_profile_event_list(event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
 
-    if ENVIRONMENT_TYPE in SYSID_ENVIRONMENTS:
+    if environment_type in SYSID_ENVIRONMENTS:
         rattlesnake.initialize_system_id(sysid_metadata, environment_name)
-        if RUN_SYSID:
+        if run_sysid:
             rattlesnake.run_system_id(sysid_metadata, environment_name)
-        if LOAD_SYSID:
+        if load_sysid:
             rattlesnake.load_system_id_from_package(environment_name, sysid_package)
 
     # Start Acquisition
-    if not START_HARDWARE:
+    if not start_hardware:
         return rattlesnake
     rattlesnake.start_acquisition(stream_metadata)
 
     # Start Environment
-    if not START_ENVIRONMENT or RUN_PROFILE:
+    if not start_environment or run_profile:
         return rattlesnake
-    if RUN_PROFILE:
+    if run_profile:
         rattlesnake.start_profile(event_list)
     else:
         rattlesnake.start_environment(instructions=instructions)
     return rattlesnake
-
-
-def test_rattlesnake_objects():
-    hardware_metadata = HARDWARE_DICT[HARDWARE_TYPE]["manual"]()
-    hardware_metadata2 = HARDWARE_DICT[HARDWARE_TYPE]["worksheet"]()
-    pass
 
 
 if __name__ == "__main__":
