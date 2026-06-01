@@ -250,6 +250,7 @@ class RattlesnakeController:
                 self.event_container.acquisition_close_event,
             ),
         )
+
         self.acquisition_proc.start()
         # Output
         self.output_proc = new_process(
