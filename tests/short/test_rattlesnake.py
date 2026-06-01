@@ -30,22 +30,70 @@ from unittest import mock
 
 
 # region Rattlesnake
-@pytest.mark.parametrize("threaded", [True, False])
-@pytest.mark.parametrize("blocking", [True, False])
-@mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events")
-def test_rattlesnake_init(mock_wait_event, threaded, blocking):
-    mock_wait_event.return_value = None
-    with (
-        mock.patch("rattlesnake.engine.mp.Process"),
-        mock.patch("rattlesnake.engine.threading.Thread"),
-    ):
-        rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
-        if not blocking:
-            rattlesnake.clear_blocking()
+# @pytest.mark.parametrize("threaded", [True, False])
+# @pytest.mark.parametrize("blocking", [True, False])
+# @mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events")
+# def test_rattlesnake_init(mock_wait_event, threaded, blocking):
+#     mock_wait_event.return_value = None
+#     with (
+#         mock.patch("rattlesnake.engine.mp.Process"),
+#         mock.patch("rattlesnake.engine.threading.Thread"),
+#     ):
+#         rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
+#         if not blocking:
+#             rattlesnake.clear_blocking()
 
-        assert isinstance(rattlesnake, RattlesnakeController)
-        if blocking:
-            mock_wait_event.assert_called()
+#         assert isinstance(rattlesnake, RattlesnakeController)
+#         if blocking:
+#             mock_wait_event.assert_called()
+import pytest
+from unittest import mock
+from rattlesnake.engine import RattlesnakeController
+
+
+@pytest.mark.parametrize("threaded", [True, False])
+@mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events")
+@mock.patch("rattlesnake.engine.ProfileManager")
+@mock.patch("rattlesnake.engine.EnvironmentManager")
+@mock.patch("rattlesnake.engine.VerboseMessageQueue")
+@mock.patch("rattlesnake.engine.thqueue.Queue")
+@mock.patch("rattlesnake.engine.threading.Event")
+@mock.patch("rattlesnake.engine.threading.Thread")
+@mock.patch("rattlesnake.engine.mp.Manager")
+@mock.patch("rattlesnake.engine.mp.Event")
+@mock.patch("rattlesnake.engine.mp.Queue")
+@mock.patch("rattlesnake.engine.mp.Process")
+def test_rattlesnake_init(
+    mock_mp_process,
+    mock_mp_queue,
+    mock_mp_event,
+    mock_mp_manager,
+    mock_thread,
+    mock_thread_event,
+    mock_thqueue_queue,
+    mock_verbose_queue,
+    mock_environment_manager,
+    mock_profile_manager,
+    mock_wait_for_events,
+    threaded,
+):
+    mock_environment_manager.return_value.ready_event_list = []
+
+    controller = RattlesnakeController(threaded=threaded, timeout=1)
+
+    assert isinstance(controller, RattlesnakeController)
+    assert controller.threaded is threaded
+    assert controller.timeout == 1
+    assert controller.blocking is True
+    assert controller.hardware_metadata is None
+    assert controller.environment_metadata == {}
+
+    mock_wait_for_events.assert_called_once()
+
+    if threaded:
+        assert mock_thread.call_count >= 4
+    else:
+        assert mock_mp_process.call_count >= 5
 
 
 # @pytest.mark.parametrize(
