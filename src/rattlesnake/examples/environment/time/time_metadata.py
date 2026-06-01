@@ -95,7 +95,7 @@ def time_event_list():
     data = 2
     set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
-    timestamp = 6
+    timestamp = 7
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 

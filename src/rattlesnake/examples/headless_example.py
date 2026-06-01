@@ -80,7 +80,7 @@ def build_rattlesnake_object(
     rattlesnake.start_acquisition(stream_metadata)
 
     # Start Environment
-    if not start_environment or run_profile:
+    if not start_environment or not run_profile:
         return rattlesnake
     if run_profile:
         rattlesnake.start_profile(event_list)
