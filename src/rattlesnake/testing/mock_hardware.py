@@ -18,11 +18,25 @@ from rattlesnake.hardware.hardware_registry import UNIMPLEMENTED_HARDWARE
 IMPLEMENTED_HARDWARE = [HardwareType.NONE, HardwareType.SDYNPY_SYSTEM]
 
 
+def metadata_attr_dict():
+    _metadata_attr_dict = {
+        HardwareType.NI_DAQMX: ["task_trigger", "output_trigger_generator"],
+        HardwareType.LAN_XI: ["maximum_acquisition_processes"],
+        HardwareType.DP_QUATTRO: ["hardware_file"],
+        HardwareType.DP_900: ["hardware_file"],
+        HardwareType.EXODUS: ["hardware_file"],
+        HardwareType.STATE_SPACE: ["hardware_file"],
+        HardwareType.SDYNPY_SYSTEM: ["hardware_file"],
+        HardwareType.SDYNPY_FRF: ["hardware_file"],
+    }
+    return _metadata_attr_dict
+
+
 # region Import
 def acquisition_dict():
     acquisition_dict = {
-        HardwareType.NONE: "mock_objects.mock_hardware.MockHardwareAcqusition",
-        HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx.NIDAQmxAcquisition",
+        HardwareType.NONE: "rattlesnake.testing.mock_hardware.MockHardwareAcqusition",
+        HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx_hardware_multitask.NIDAQmxAcquisition",
         HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIAcquisition",
         HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsAcquisition",
         HardwareType.DP_900: "rattlesnake.hardware.data_physics_dp900_hardware.DataPhysicsDP900Acquisition",
@@ -36,7 +50,7 @@ def acquisition_dict():
 
 def output_dict():
     output_dict = {
-        HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx.NIDAQmxOutput",
+        HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx_hardware_multitask.NIDAQmxOutput",
         HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIOutput",
         HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsOutput",
         HardwareType.DP_900: "rattlesnake.hardware.data_physics_dp900_hardware.DataPhysicsDP900Output",
