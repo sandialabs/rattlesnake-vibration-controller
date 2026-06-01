@@ -8,40 +8,37 @@ from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
 import pytest
 from unittest import mock
 
-
 # region Fixtures
-@pytest.fixture(
-    params=[(True, True), (True, False), (False, True), (False, False)],
-    ids=[
-        "threaded, blocking",
-        "threaded, non_blocking",
-        "non_threaded, blocking",
-        "non_threaded, non_blocking",
-    ],
-)
-@mock.patch("rattlesnake.engine.mp.Process")
-@mock.patch("rattlesnake.engine.threading.Thread")
-@mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events")
-def rattlesnake_package(mock_wait_event, mock_thread, mock_process, request):
-    threaded, blocking = request.param
-    rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
-    if not blocking:
-        rattlesnake.clear_blocking()
-    return (rattlesnake, threaded, blocking)
+# @pytest.fixture(
+#     params=[(True, True), (True, False), (False, True), (False, False)],
+#     ids=[
+#         "threaded, blocking",
+#         "threaded, non_blocking",
+#         "non_threaded, blocking",
+#         "non_threaded, non_blocking",
+#     ],
+# )
+# @mock.patch("rattlesnake.engine.mp.Process")
+# @mock.patch("rattlesnake.engine.threading.Thread")
+# @mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events")
+# def rattlesnake_package(mock_wait_event, mock_thread, mock_process, request):
+#     threaded, blocking = request.param
+#     rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
+#     if not blocking:
+#         rattlesnake.clear_blocking()
+#     return (rattlesnake, threaded, blocking)
 
 
 # region Rattlesnake
 @pytest.mark.parametrize("threaded", [True, False])
 @pytest.mark.parametrize("blocking", [True, False])
-def test_rattlesnake_init(
-    mock_wait_event, mock_thread, mock_process, threaded, blocking
-):
+@mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events")
+def test_rattlesnake_init(mock_wait_event, threaded, blocking):
+    mock_wait_event.return_value = None
     with (
         mock.patch("rattlesnake.engine.mp.Process"),
         mock.patch("rattlesnake.engine.threading.Thread"),
-        mock.patch("rattlesnake.engine.RattlesnakeController.wait_for_events"),
     ):
-        mock_wait_event.return_value = None
         rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
         if not blocking:
             rattlesnake.clear_blocking()
