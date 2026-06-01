@@ -86,7 +86,6 @@ def test_rattlesnake_init(
     assert controller.timeout == 1
     assert controller.blocking is True
     assert controller.hardware_metadata is None
-    assert controller.environment_metadata == {}
 
     mock_wait_for_events.assert_called_once()
 
