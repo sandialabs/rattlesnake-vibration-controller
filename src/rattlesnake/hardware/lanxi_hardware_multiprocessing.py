@@ -61,6 +61,7 @@ IPV6_PATTERN = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
 # TODO Get responses each time a get or put is done so we know if it was successful
 # TODO Shut down the data acquisition more quickly
 
+
 # region Metadata
 class LanXIMetadata(HardwareMetadata):
     def __init__(
@@ -69,7 +70,7 @@ class LanXIMetadata(HardwareMetadata):
         sample_rate: int,
         time_per_read: float,
         time_per_write: float,
-        output_oversample,
+        output_oversample: float,
         maximum_acquisition_processes,
     ):
         super().__init__(
@@ -81,28 +82,83 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
-        
+
     # endregion
 
     # region Validation
     def validate(self):
         return super().validate()
-    
+
     # region Loading
     def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
-        pass
+        super().save_metadata_to_netcdf(netcdf_dataset)
+
+        netcdf_dataset.maximum_acquisition_processes = (
+            self.maximum_acquisition_processes
+        )
 
     @classmethod
     def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
-        pass
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_netcdf(netcdf_dataset)
+
+        maximum_acquisition_processes = netcdf_dataset.maximum_acquisition_processes
+
+        return cls(
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            maximum_acquisition_processes,
+        )
 
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
-        pass
+        super().save_metadata_to_workbook(workbook)
+
+        hardware_worksheet = workbook["Hardware"]
+        hardware_worksheet.cell(6, 2, self.maximum_acquisition_processes)
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
-        pass
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_workbook(workbook)
+
+        maximum_acqusition_processes = None
+
+        hardware_worksheet = workbook["Hardware"]
+        for row in hardware_worksheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            if value is None or value == "":
+                continue
+            match name:
+                case "Maximum Acquisition Processes":
+                    maximum_acquisition_processes = value
+                case _:
+                    continue
+
+        return cls(
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            maximum_acquisition_processes,
+        )
+
     # endregion
+
 
 class LanXIError(Exception):
     """Exception to signify an error using LAN-XI"""
@@ -248,7 +304,10 @@ def lanxi_multisocket_reader(
     except LanXIError:
         for socket_handle, data_queue in zip(socket_handles, data_queues):
             # The socket has closed, so gracefully close down
-            ip, port = socket_handle.getpeername()
+            try:
+                ip, port = socket_handle.getpeername()
+            except OSError:
+                ip, port = "<disconnected>", -1
             print(f"Closing Socket {ip}:{port}")
             while True:
                 try:
@@ -467,7 +526,7 @@ class LanXIAcquisition(HardwareAcquisition):
     process, and must define how to get data from the test hardware into the
     controller."""
 
-    def __init__(self):
+    def __init__(self, queue=None):
         """
         Constructs the LAN-XI Acquisition class and specifies values to null.
         """
@@ -765,7 +824,9 @@ class LanXIAcquisition(HardwareAcquisition):
         for host in list(self.slave_addresses) + [self.master_address]:
             requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
 
+
 # endregion
+
 
 # region Output
 class LanXIOutput(HardwareOutput):
@@ -776,7 +837,7 @@ class LanXIOutput(HardwareOutput):
     process, and must define how to get write data to the hardware from the
     control system"""
 
-    def __init__(self):
+    def __init__(self, queue=None):
         """Method to start up the hardware"""
         self.sockets = {}
         self.acquisition_map = {}
@@ -793,7 +854,6 @@ class LanXIOutput(HardwareOutput):
         self.generator_sample_rate = None
         self.buffer_size = 5
         self.ready_signal_factor = BUFFER_SIZE
-        
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         self.maximum_processes = test_data.maximum_acquisition_processes
@@ -1332,4 +1392,6 @@ class LanXIOutput(HardwareOutput):
     def _reboot_all(self):
         for host in list(self.slave_addresses) + [self.master_address]:
             requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
+
+
 # endregion

@@ -19,7 +19,7 @@ from rattlesnake.process.streaming import StreamType
 THREADED = False
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.TRANSIENT
+ENVIRONMENT_TYPE = EnvironmentType.NONE
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False

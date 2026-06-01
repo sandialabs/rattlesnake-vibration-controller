@@ -1,6 +1,6 @@
 from rattlesnake.environment.environment_utilities import EnvironmentType
 
-UNIMPLEMENTED_ENVIRONMENT = []
+UNIMPLEMENTED_ENVIRONMENT = [EnvironmentType.NONE]
 
 ENVIRONMENT_COMMANDS = {}
 ENVIRONMENT_METADATA = {}

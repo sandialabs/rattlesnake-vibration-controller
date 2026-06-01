@@ -2,9 +2,6 @@ from rattlesnake.hardware.hardware_utilities import HardwareType
 
 UNIMPLEMENTED_HARDWARE = [
     HardwareType.NONE,
-    HardwareType.DP_QUATTRO,
-    HardwareType.DP_900,
-    HardwareType.EXODUS,
 ]
 
 

@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
@@ -177,51 +178,9 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.hardware.close()
 
         hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
-        match metadata.hardware_type:
-            case HardwareType.NI_DAQMX:
-                self.hardware = hardware_acquisition_class()
-
-            case HardwareType.LAN_XI:
-                self.hardware = hardware_acquisition_class()
-
-            case HardwareType.DP_QUATTRO:
-                # from .data_physics_hardware import DataPhysicsAcquisition
-
-                # self.hardware = DataPhysicsAcquisition(
-                #     data_acquisition_parameters.hardware_file,
-                #     self.queue_container.single_process_hardware_queue,
-                # )
-                pass
-            case HardwareType.DP_900:
-                # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
-
-                # self.hardware = DataPhysicsDP900Acquisition(
-                #     data_acquisition_parameters.hardware_file,
-                #     self.queue_container.single_process_hardware_queue,
-                # )
-                pass
-            case HardwareType.EXODUS:
-                # from .exodus_modal_solution_hardware import ExodusAcquisition
-
-                # self.hardware = ExodusAcquisition(
-                #     data_acquisition_parameters.hardware_file,
-                #     self.queue_container.single_process_hardware_queue,
-                # )
-                pass
-            case HardwareType.STATE_SPACE:
-                self.hardware = hardware_acquisition_class(
-                    self.queue_container.single_process_hardware_queue,
-                )
-            case HardwareType.SDYNPY_SYSTEM:
-                self.hardware = hardware_acquisition_class(
-                    self.queue_container.single_process_hardware_queue,
-                )
-            case HardwareType.SDYNPY_FRF:
-                self.hardware = hardware_acquisition_class(
-                    self.queue_container.single_process_hardware_queue,
-                )
-            case _:
-                raise TypeError(f"{metadata.hardware_type} has not been implemented")
+        self.hardware = hardware_acquisition_class(
+            self.queue_container.single_process_hardware_queue,
+        )
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
         # Set up warning and abort limits

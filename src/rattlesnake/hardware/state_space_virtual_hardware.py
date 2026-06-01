@@ -33,11 +33,16 @@ import numpy as np
 import scipy.signal as signal
 from scipy.io import loadmat
 
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareMetadata,
+    HardwareAcquisition,
+    HardwareOutput,
+)
 from rattlesnake.utilities import flush_queue
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 
 HARDWARE_TYPE = HardwareType.STATE_SPACE
+
 
 # region Metadata
 class StateSpaceMetadata(HardwareMetadata):
@@ -65,7 +70,7 @@ class StateSpaceMetadata(HardwareMetadata):
     # region Validation
     def validate(self):
         return super().validate()
-    
+
     # endregion
 
     # region Loading
@@ -122,7 +127,7 @@ class StateSpaceMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "hardware_file":
+                case "Hardware File":
                     hardware_file = value
                 case _:
                     continue
@@ -136,7 +141,9 @@ class StateSpaceMetadata(HardwareMetadata):
             hardware_file,
         )
 
+
 # endregion
+
 
 # region Acqusition
 class StateSpaceAcquisition(HardwareAcquisition):
@@ -208,7 +215,6 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.system = signal.StateSpace(data["A"], data["B"], data["C"], data["D"])
         self.times = None
         self.state = np.zeros(data["A"].shape[0])
-
 
         self.create_response_channels(test_data.channel_list)
         self.set_parameters(test_data)
@@ -350,7 +356,9 @@ class StateSpaceAcquisition(HardwareAcquisition):
     def close(self):
         """Method to close down the hardware"""
 
+
 # endregion
+
 
 # region Output
 class StateSpaceOutput(HardwareOutput):
@@ -429,5 +437,6 @@ class StateSpaceOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
+
 
 # endregion

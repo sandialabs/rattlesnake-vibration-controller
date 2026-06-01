@@ -1378,11 +1378,43 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     maximum_acquisition_processes,
                 )
             case HardwareType.DP_QUATTRO:
-                return
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    hardware_file,
+                )
             case HardwareType.DP_900:
-                return
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    hardware_file,
+                )
             case HardwareType.EXODUS:
-                return
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
             case HardwareType.STATE_SPACE:
                 sample_rate = self.sample_rate_selector.value()
                 time_per_read = self.buffer_size_selector.value()
