@@ -4,9 +4,9 @@ from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.testing.mock_hardware import (
     MockHardwareMetadata,
-    output_dict,
-    metadata_attr_dict,
-    UNIMPLEMENTED_HARDWARE,
+    hardware_metadata_dict,
+    hardware_output_dict,
+    IMPLEMENTED_HARDWARE,
 )
 from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
 from rattlesnake.testing.mock_utilities import (
@@ -17,11 +17,6 @@ import pytest
 import multiprocessing as mp
 import numpy as np
 from unittest import mock
-
-# region: Fixtures
-IMPLEMENTED_HARDWARE = [
-    hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE
-]
 
 
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
@@ -72,15 +67,12 @@ def test_output_properties(output):
 # @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 # def test_output_process_initialize_hardware(mock_log, hardware_type, output):
 #     hardware_metadata = MockHardwareMetadata()
-#     hardware_lookup = output_dict()
-#     attr_lookup = metadata_attr_dict()
+#     hardware_lookup = hardware_output_dict()
 #     hardware_metadata.hardware_type = hardware_type
 #     mock_existing_hardware = mock.MagicMock()
 #     output.hardware = mock_existing_hardware
 
 #     with mock.patch(hardware_lookup[hardware_type]) as mock_hardware:
-#         for attr in attr_lookup[hardware_type]:
-#             setattr(hardware_metadata, attr, 0)
 
 #         output.clear_ready()
 #         output.initialize_hardware(hardware_metadata)

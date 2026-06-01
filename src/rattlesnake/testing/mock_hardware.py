@@ -10,26 +10,35 @@ from rattlesnake.hardware.abstract_hardware import (
     HardwareOutput,
 )
 from rattlesnake.hardware.hardware_utilities import HardwareType
-from rattlesnake.hardware.hardware_registry import UNIMPLEMENTED_HARDWARE
+from rattlesnake.hardware.hardware_registry import (
+    UNIMPLEMENTED_HARDWARE,
+    HARDWARE_METADATA,
+    HARDWARE_ACQUISITION,
+    HARDWARE_OUTPUT,
+)
 
 # IMPLEMENTED_HARDWARE = [
 #     hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE
 # ]
-IMPLEMENTED_HARDWARE = [HardwareType.NONE, HardwareType.SDYNPY_SYSTEM]
+IMPLEMENTED_HARDWARE = [HardwareType.NONE]
 
 
-def metadata_attr_dict():
-    _metadata_attr_dict = {
-        HardwareType.NI_DAQMX: ["task_trigger", "output_trigger_generator"],
-        HardwareType.LAN_XI: ["maximum_acquisition_processes"],
-        HardwareType.DP_QUATTRO: ["hardware_file"],
-        HardwareType.DP_900: ["hardware_file"],
-        HardwareType.EXODUS: ["hardware_file"],
-        HardwareType.STATE_SPACE: ["hardware_file"],
-        HardwareType.SDYNPY_SYSTEM: ["hardware_file"],
-        HardwareType.SDYNPY_FRF: ["hardware_file"],
-    }
-    return _metadata_attr_dict
+def hardware_metadata_dict():
+    hardware_metadata_dict = HARDWARE_METADATA
+    hardware_metadata_dict[HardwareType.NONE] = MockHardwareMetadata
+    return hardware_metadata_dict
+
+
+def hardware_acqusition_dict():
+    hardware_acqusition_dict = HARDWARE_ACQUISITION
+    hardware_acqusition_dict[HardwareType.NONE] = MockHardwareAcquisition
+    return hardware_acqusition_dict
+
+
+def hardware_output_dict():
+    hardware_output_dict = HARDWARE_OUTPUT
+    hardware_output_dict[HardwareType.NONE] = MockHardwareOutput
+    return hardware_output_dict
 
 
 # region Import
