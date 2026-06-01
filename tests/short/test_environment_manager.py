@@ -5,14 +5,14 @@ from rattlesnake.environment.abstract_environment import (
     EnvironmentMetadata,
     EnvironmentInstructions,
 )
-from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_environment import (
+from rattlesnake.testing.mock_hardware import MockHardwareMetadata
+from rattlesnake.testing.mock_environment import (
     MockEnvironmentType,
     MockEnvironmentMetadata,
     MockEnvironmentInstructions,
     IMPLEMENTED_ENVIRONMENT,
 )
-from mock_objects.mock_utilities import (
+from rattlesnake.testing.mock_utilities import (
     mock_queue_container,
     mock_event_container,
     fake_time,

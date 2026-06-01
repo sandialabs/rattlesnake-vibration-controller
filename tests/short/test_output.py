@@ -2,17 +2,25 @@ from rattlesnake.process.output import OutputProcess, output_process
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_hardware import MockHardwareMetadata, output_dict, metadata_attr_dict, UNIMPLEMENTED_HARDWARE
-from mock_objects.mock_environment import MockEnvironmentMetadata
-from mock_objects.mock_utilities import mock_queue_container, mock_event_container
+from rattlesnake.testing.mock_hardware import (
+    MockHardwareMetadata,
+    output_dict,
+    UNIMPLEMENTED_HARDWARE,
+)
+from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
+from rattlesnake.testing.mock_utilities import (
+    mock_queue_container,
+    mock_event_container,
+)
 import pytest
 import multiprocessing as mp
 import numpy as np
 from unittest import mock
 
-
 # region: Fixtures
-IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE]
+IMPLEMENTED_HARDWARE = [
+    hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE
+]
 
 
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
@@ -64,14 +72,11 @@ def test_output_properties(output):
 def test_output_process_initialize_hardware(mock_log, hardware_type, output):
     hardware_metadata = MockHardwareMetadata()
     hardware_lookup = output_dict()
-    attr_lookup = metadata_attr_dict()
     hardware_metadata.hardware_type = hardware_type
     mock_existing_hardware = mock.MagicMock()
     output.hardware = mock_existing_hardware
 
     with mock.patch(hardware_lookup[hardware_type]) as mock_hardware:
-        for attr in attr_lookup[hardware_type]:
-            setattr(hardware_metadata, attr, 0)
 
         output.clear_ready()
         output.initialize_hardware(hardware_metadata)
@@ -106,7 +111,9 @@ def test_output_process_initialize_environment(mock_log, output):
     assert output.environment_shutting_down_flags["Environment 0"] == False
     assert output.environment_first_data["Environment 0"] == False
     assert output.environment_output_channels["Environment 0"] == [0]
-    np.testing.assert_array_equal(output.environment_data_out_remainders["Environment 0"], np.zeros((1, 0)))
+    np.testing.assert_array_equal(
+        output.environment_data_out_remainders["Environment 0"], np.zeros((1, 0))
+    )
     assert output.ready_event.is_set()
 
 

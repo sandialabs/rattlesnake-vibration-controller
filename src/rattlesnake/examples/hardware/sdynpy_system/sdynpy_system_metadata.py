@@ -1,7 +1,7 @@
 import openpyxl
 import netCDF4 as nc4
 
-import defaults
+import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system_virtual_hardware import (

@@ -1,15 +1,21 @@
 import openpyxl
 import netCDF4 as nc4
 
-import defaults
+import rattlesnake.examples.defaults as defaults
 
-from rattlesnake.environment.modal_environment import ModalCommands, ModalMetadata, ModalInstructions
+from rattlesnake.environment.modal_environment import (
+    ModalCommands,
+    ModalMetadata,
+    ModalInstructions,
+)
 
 ENVIRONMENT_NAME = "Modal 0"
+
 
 def modal_instructions():
     modal_instructions = ModalInstructions(ENVIRONMENT_NAME)
     return modal_instructions
+
 
 def worksheet_modal_metadata(hardware_metadata):
     worksheet_dir = defaults.DIRECTORY + "/environment/modal/modal.xlsx"
@@ -17,9 +23,12 @@ def worksheet_modal_metadata(hardware_metadata):
     worksheet = workbook[ENVIRONMENT_NAME]
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
-    metadata = ModalMetadata.load_metadata_from_worksheet(worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
+    metadata = ModalMetadata.load_metadata_from_worksheet(
+        worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
 
     return metadata
+
 
 def netcdf_modal_metadata(hardware_metadata):
     netcdf_dir = defaults.DIRECTORY + "/environment/modal/modal.nc4"
@@ -27,9 +36,12 @@ def netcdf_modal_metadata(hardware_metadata):
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
-    metadata = ModalMetadata.load_metadata_from_netcdf(netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
+    metadata = ModalMetadata.load_metadata_from_netcdf(
+        netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
 
     return metadata
+
 
 def manual_modal_metadata(hardware_metadata):
     channel_list_bools = [True] * len(hardware_metadata.channel_list)

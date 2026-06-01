@@ -1,5 +1,9 @@
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, log_file_task
-from mock_objects.mock_utilities import fake_time, clear_log_queue, clear_verbose_queue
+from rattlesnake.testing.mock_utilities import (
+    fake_time,
+    clear_log_queue,
+    clear_verbose_queue,
+)
 import multiprocessing as mp
 import threading
 import queue as thqueue

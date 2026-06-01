@@ -3,8 +3,8 @@ from rattlesnake.utilities import GlobalCommands, RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.streaming import StreamMetadata
-from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_environment import MockEnvironmentMetadata
+from rattlesnake.testing.mock_hardware import MockHardwareMetadata
+from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
 import pytest
 from unittest import mock
 

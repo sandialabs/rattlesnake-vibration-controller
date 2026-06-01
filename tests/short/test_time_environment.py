@@ -5,8 +5,8 @@ import netCDF4 as nc4
 import numpy as np
 import pytest
 
-from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_utilities import (
+from rattlesnake.testing.mock_hardware import MockHardwareMetadata
+from rattlesnake.testing.mock_utilities import (
     mock_channel_list_bools,
     mock_event_container,
     mock_queue_container,

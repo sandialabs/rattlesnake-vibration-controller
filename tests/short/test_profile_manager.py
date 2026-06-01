@@ -2,8 +2,8 @@ from unittest import mock
 
 import pytest
 
-from mock_objects.mock_utilities import fake_time, mock_queue_container
-from mock_objects.mock_environment import MockEnvironmentInstructions
+from rattlesnake.testing.mock_utilities import fake_time, mock_queue_container
+from rattlesnake.testing.mock_environment import MockEnvironmentInstructions
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.time_environment import TimeCommands
 from rattlesnake.profile_manager import (

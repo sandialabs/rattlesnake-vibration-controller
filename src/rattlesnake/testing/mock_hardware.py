@@ -3,7 +3,7 @@ from unittest import mock
 
 import numpy as np
 
-from mock_objects.mock_utilities import mock_channel_list
+from rattlesnake.testing.mock_utilities import mock_channel_list
 from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareMetadata,

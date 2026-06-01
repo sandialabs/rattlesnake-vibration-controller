@@ -2,7 +2,7 @@ import numpy as np
 import netCDF4 as nc4
 import openpyxl
 
-import defaults
+import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,

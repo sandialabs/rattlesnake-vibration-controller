@@ -1,4 +1,4 @@
-from example_registry import (
+from rattlesnake.examples.example_registry import (
     HARDWARE_DICT,
     ENVIRONMENT_DICT,
     SYSID_DICT,

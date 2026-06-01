@@ -1,5 +1,5 @@
 from rattlesnake.hardware.hardware_utilities import Channel
-from mock_objects.mock_utilities import mock_channel_list
+from rattlesnake.testing.mock_utilities import mock_channel_list
 import pytest
 
 

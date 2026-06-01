@@ -1,47 +1,47 @@
-from hardware.sdynpy_system.sdynpy_system_metadata import (
+from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
     manual_sdynpy_system_metadata,
     netcdf_sdynpy_system_metadata,
     worksheet_sdynpy_system_metadata,
 )
-from hardware.stream_metadata import (
+from rattlesnake.examples.hardware.stream_metadata import (
     stream_metadata_no,
     stream_metadata_immediate,
     stream_metadata_manual,
     stream_metadata_profile,
     stream_metadata_test_level,
 )
-from environment.time.time_metadata import (
+from rattlesnake.examples.environment.time.time_metadata import (
     manual_time_metadata,
     netcdf_time_metadata,
     worksheet_time_metadata,
     time_event_list,
     time_instructions,
 )
-from environment.modal.modal_metadata import (
+from rattlesnake.examples.environment.modal.modal_metadata import (
     manual_modal_metadata,
     netcdf_modal_metadata,
     worksheet_modal_metadata,
     modal_instructions,
 )
-from environment.sine.sine_metadata import (
+from rattlesnake.examples.environment.sine.sine_metadata import (
     manual_sine_metadata,
     worksheet_sine_metadata,
     netcdf_sine_metadata,
     sine_instructions,
 )
-from environment.sysid.sysid_metadata import (
+from rattlesnake.examples.environment.sysid.sysid_metadata import (
     manual_sysid_metadata,
     worksheet_sysid_metadata,
     netcdf_sysid_metadata,
     netcdf_sysid_data_package,
 )
-from environment.random.random_metadata import (
+from rattlesnake.examples.environment.random.random_metadata import (
     manual_random_metadata,
     netcdf_random_metadata,
     worksheet_random_metadata,
     random_instructions,
 )
-from environment.transient.transient_metadata import (
+from rattlesnake.examples.environment.transient.transient_metadata import (
     netcdf_transient_metadata,
     manual_transient_metadata,
     worksheet_transient_metadata,

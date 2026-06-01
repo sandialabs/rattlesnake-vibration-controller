@@ -4,13 +4,16 @@ from unittest import mock
 import numpy as np
 import pytest
 
-from mock_objects.mock_environment import MockEnvironmentMetadata
-from mock_objects.mock_hardware import (
+from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
+from rattlesnake.testing.mock_hardware import (
     IMPLEMENTED_HARDWARE,
     MockHardwareMetadata,
     acquisition_dict,
 )
-from mock_objects.mock_utilities import mock_event_container, mock_queue_container
+from rattlesnake.testing.mock_utilities import (
+    mock_event_container,
+    mock_queue_container,
+)
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.process.acquisition import AcquisitionProcess, acquisition_process

@@ -1,6 +1,10 @@
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_utilities import mock_queue_container, mock_event_container, fake_time
+from rattlesnake.testing.mock_utilities import (
+    mock_queue_container,
+    mock_event_container,
+    fake_time,
+)
 import pytest
 import multiprocessing as mp
 from unittest import mock
@@ -45,7 +49,9 @@ def test_message_process_properties(abstract_message_process):
     abstract_message_process.log_file_queue
 
     assert abstract_message_process.process_name == "Process Name"
-    assert abstract_message_process.command_map == {GlobalCommands.QUIT: abstract_message_process.quit}
+    assert abstract_message_process.command_map == {
+        GlobalCommands.QUIT: abstract_message_process.quit
+    }
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.datetime")
@@ -55,7 +61,9 @@ def test_message_process_log(mock_time, abstract_message_process):
     mock_time.now = fake_time
     abstract_message_process.log("Test Message")
 
-    mock_log_file_queue.put.assert_called_once_with("Datetime: Process Name -- Test Message\n")
+    mock_log_file_queue.put.assert_called_once_with(
+        "Datetime: Process Name -- Test Message\n"
+    )
 
 
 def test_message_process_set_ready(abstract_message_process):
@@ -101,7 +109,9 @@ def test_abstract_message_process_map_command(abstract_message_process):
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.get")
 # Prevent from storing to log_file_queue
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
-def test_abstract_message_process_run(mock_log, mock_get, mock_function, mock_key, abstract_message_process):
+def test_abstract_message_process_run(
+    mock_log, mock_get, mock_function, mock_key, abstract_message_process
+):
     # Create a command_map
     abstract_message_process._command_map = {
         mock_key: mock_function,

@@ -5,7 +5,7 @@ from unittest import mock
 import netCDF4 as nc4
 import pytest
 
-from mock_objects.mock_environment import (
+from rattlesnake.testing.mock_environment import (
     IMPLEMENTED_ENVIRONMENT,
     MockEnvironment,
     MockEnvironmentInstructions,
@@ -14,8 +14,8 @@ from mock_objects.mock_environment import (
     environment_metadata_dict,
     build_environment,
 )
-from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_utilities import (
+from rattlesnake.testing.mock_hardware import MockHardwareMetadata
+from rattlesnake.testing.mock_utilities import (
     fake_time,
     mock_channel_list,
     mock_channel_list_bools,

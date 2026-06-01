@@ -1,9 +1,13 @@
 import openpyxl
 import netCDF4 as nc4
 
-import defaults
+import rattlesnake.examples.defaults as defaults
 
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata, SysIdDataPackage
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdMetadata,
+    SysIdDataPackage,
+)
+
 
 def netcdf_sysid_data_package():
     netcdf_dir = defaults.DIRECTORY + "/environment/sysid/sysid_data.nc4"
@@ -13,22 +17,29 @@ def netcdf_sysid_data_package():
 
     return data_package
 
+
 def netcdf_sysid_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sysid/random_sysid.nc4" # TODO Fix this
+    netcdf_dir = (
+        defaults.DIRECTORY + "/environment/sysid/random_sysid.nc4"
+    )  # TODO Fix this
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups["Random 0"]
     metadata = SysIdMetadata.load_metadata_from_netcdf(netcdf_group, hardware_metadata)
 
     return metadata
 
+
 def worksheet_sysid_metadata(hardware_metadata):
     worksheet_dir = defaults.DIRECTORY + "/environment/sysid/sysid.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook["sysid"]
 
-    metadata = SysIdMetadata.load_metadata_from_worksheet(worksheet, hardware_metadata, start_row=1)
+    metadata = SysIdMetadata.load_metadata_from_worksheet(
+        worksheet, hardware_metadata, start_row=1
+    )
 
     return metadata
+
 
 def manual_sysid_metadata(hardware_metadata):
     sample_rate = hardware_metadata.sample_rate

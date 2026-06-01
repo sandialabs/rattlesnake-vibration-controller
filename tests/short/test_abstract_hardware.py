@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
 
-from mock_objects.mock_hardware import (
+from rattlesnake.testing.mock_hardware import (
     MockHardwareAcquisition,
     MockHardwareMetadata,
     MockHardwareOutput,
 )
-from mock_objects.mock_utilities import mock_channel_list
+from rattlesnake.testing.mock_utilities import mock_channel_list
 from rattlesnake.utilities import RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,

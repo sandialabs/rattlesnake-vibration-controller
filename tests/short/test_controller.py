@@ -2,7 +2,10 @@ from rattlesnake.process.controller import ControllerProcess, controller_process
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_utilities import mock_queue_container, mock_event_container
+from rattlesnake.testing.mock_utilities import (
+    mock_queue_container,
+    mock_event_container,
+)
 import pytest
 import multiprocessing as mp
 from unittest import mock

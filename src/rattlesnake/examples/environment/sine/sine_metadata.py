@@ -2,13 +2,18 @@ import numpy as np
 import openpyxl
 import netCDF4 as nc4
 
-import defaults
+import rattlesnake.examples.defaults as defaults
 
-from rattlesnake.environment.sine_sys_id_environment import SineCommands, SineMetadata, SineInstructions
+from rattlesnake.environment.sine_sys_id_environment import (
+    SineCommands,
+    SineMetadata,
+    SineInstructions,
+)
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 
 ENVIRONMENT_NAME = "Sine 0"
 # ENVIRONMENT_NAME = "sysid"
+
 
 def sine_instructions():
     control_test_level = 0
@@ -17,12 +22,12 @@ def sine_instructions():
     control_start_time = None
 
     instructions = SineInstructions(
-                        ENVIRONMENT_NAME,
-                        control_test_level,
-                        control_tones,
-                        control_start_time,
-                        control_end_time
-                    )
+        ENVIRONMENT_NAME,
+        control_test_level,
+        control_tones,
+        control_start_time,
+        control_end_time,
+    )
     return instructions
 
 
@@ -32,11 +37,14 @@ def worksheet_sine_metadata(hardware_metadata):
     worksheet = workbook[ENVIRONMENT_NAME]
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
-    metadata = SineMetadata.load_metadata_from_worksheet(worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
+    metadata = SineMetadata.load_metadata_from_worksheet(
+        worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
     specifications = create_sine_specification()
     metadata.specifications = specifications
-    
+
     return metadata
+
 
 def netcdf_sine_metadata(hardware_metadata):
     netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine.nc4"
@@ -44,9 +52,12 @@ def netcdf_sine_metadata(hardware_metadata):
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
-    metadata = SineMetadata.load_metadata_from_netcdf(netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata)
+    metadata = SineMetadata.load_metadata_from_netcdf(
+        netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
 
     return metadata
+
 
 def manual_sine_metadata(hardware_metadata):
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
@@ -103,6 +114,7 @@ def manual_sine_metadata(hardware_metadata):
         response_transformation_matrix=response_transformation_matrix,
         output_transformation_matrix=output_transformation_matrix,
     )
+
 
 def create_sine_specification():
     specification = SineSpecification(

@@ -2,7 +2,7 @@ import numpy as np
 import openpyxl
 import netCDF4 as nc4
 
-import defaults
+import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
