@@ -40,14 +40,13 @@ def test_rattlesnake_init(
     mock_wait_event, mock_manager, mock_thread, mock_process, threaded, blocking
 ):
     mock_wait_event.return_value = None
-    with ():
-        rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
-        if not blocking:
-            rattlesnake.clear_blocking()
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=1)
+    if not blocking:
+        rattlesnake.clear_blocking()
 
-        assert isinstance(rattlesnake, RattlesnakeController)
-        if blocking:
-            mock_wait_event.assert_called()
+    assert isinstance(rattlesnake, RattlesnakeController)
+    if blocking:
+        mock_wait_event.assert_called()
 
 
 # import pytest
