@@ -1765,7 +1765,7 @@ class IPAddressManager(QtWidgets.QDialog):
 
                 if valid_row:
                     self.ip_addresses[row_idx].host_name = host_name
-                    (valid_row, _, ipv6_address) = self.get_ip_addresses(host_name)
+                    valid_row, _, ipv6_address = self.get_ip_addresses(host_name)
                     self.ip_addresses[row_idx].ipv6_address = ipv6_address
                     self.ip_addresses[row_idx].valid_ip = valid_row
                     continue
@@ -1780,7 +1780,7 @@ class IPAddressManager(QtWidgets.QDialog):
 
                 if valid_row:
                     self.ip_addresses[row_idx].host_name = host_name
-                    (valid_row, ipv4_address, _) = self.get_ip_addresses(host_name)
+                    valid_row, ipv4_address, _ = self.get_ip_addresses(host_name)
                     self.ip_addresses[row_idx].ipv4_address = ipv4_address
                     self.ip_addresses[row_idx].valid_ip = valid_row
                     continue
@@ -2392,10 +2392,6 @@ class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
         rect = super().boundingRect()
         rect.adjust(0, 0, 0, 20)  # Add 20 pixels to bottom
         return rect
-
-
-import os
-from PyQt5 import QtWidgets, uic
 
 
 class SysIdSelector(QtWidgets.QDialog):
