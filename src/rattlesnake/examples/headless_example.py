@@ -18,13 +18,13 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.RANDOM
+HARDWARE_TYPE = HardwareType.SDYNPY_FRF
+ENVIRONMENT_TYPE = EnvironmentType.TIME
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False
-START_HARDWARE = False
-START_ENVIRONMENT = False
+START_HARDWARE = True
+START_ENVIRONMENT = True
 RUN_PROFILE = False
 
 
@@ -47,8 +47,6 @@ def build_rattlesnake_object(
         hardware_metadata
     )
     environment_name = getattr(environment_metadata, "environment_name", None)
-    sysid_metadata = SYSID_DICT[import_method](hardware_metadata)
-    sysid_package = SYSID_LOAD_DICT["netcdf"]()
     stream_metadata = STREAM_DICT[stream_type](environment_name)
     event_list = EVENT_DICT[environment_type]()
     instructions = INSTRUCTIONS_DICT[environment_type]()
@@ -67,11 +65,14 @@ def build_rattlesnake_object(
     rattlesnake.initialize_profile_event_list(event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
 
+    # Run System Identification
     if environment_type in SYSID_ENVIRONMENTS:
+        sysid_metadata = SYSID_DICT[import_method](hardware_metadata)
         rattlesnake.initialize_system_id(sysid_metadata, environment_name)
         if run_sysid:
             rattlesnake.run_system_id(sysid_metadata, environment_name)
         if load_sysid:
+            sysid_package = SYSID_LOAD_DICT["netcdf"]()
             rattlesnake.load_system_id_from_package(environment_name, sysid_package)
 
     # Start Acquisition

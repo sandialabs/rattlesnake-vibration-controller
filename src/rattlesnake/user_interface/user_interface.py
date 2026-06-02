@@ -642,9 +642,42 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.add_empty_channel_table_rows()
 
         match hardware_metadata.hardware_type:
+            case HardwareType.EXODUS:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("Exodus Modal Solution...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.integration_oversample_selector.setValue(
+                    hardware_metadata.output_oversample
+                )
+            case HardwareType.STATE_SPACE:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("State Space Integration...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.integration_oversample_selector.setValue(
+                    hardware_metadata.output_oversample
+                )
             case HardwareType.SDYNPY_SYSTEM:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("SDynPy System Integration...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.integration_oversample_selector.setValue(
+                    hardware_metadata.output_oversample
+                )
+            case HardwareType.SDYNPY_FRF:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("SDynPy FRF Convolution...")
                 self.hardware_selector.blockSignals(False)
                 self.update_hardware_widget_visibility()
                 self.hardware_file = hardware_metadata.hardware_file
@@ -1111,7 +1144,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
         if hardware_type in UI_ASK_FOR_FILE:
             filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
-                self, "Load a SDynPy System", filter="Numpy File (*.npz)"
+                self,
+                "Load a System File",
+                filter="Numpy File (*.npz), Matlab File (*.mat), Exodus File (*.exo)",
             )
             # Check for 'cancel' dialog
             if filename == "" or filename is None:
@@ -1123,8 +1158,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         else:
             self.hardware_file = None
 
-        if self.assist_channel_table_checkbox.isChecked():
-            self.assist_channel_table_init(True)
+        # if self.assist_channel_table_checkbox.isChecked():
+        #     self.assist_channel_table_init(True)
 
         self.update_hardware_widget_visibility()
 
@@ -1447,14 +1482,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 sample_rate = self.sample_rate_selector.value()
                 time_per_read = self.buffer_size_selector.value()
                 time_per_write = self.buffer_size_selector.value()
-                output_oversample = self.integration_oversample_selector.value()
                 hardware_file = self.hardware_file
                 return hardware_metadata_class(
                     channel_list,
                     sample_rate,
                     time_per_read,
                     time_per_write,
-                    output_oversample,
                     hardware_file,
                 )
             case _:

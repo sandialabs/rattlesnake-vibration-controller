@@ -3,6 +3,16 @@ from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
     netcdf_sdynpy_system_metadata,
     worksheet_sdynpy_system_metadata,
 )
+from rattlesnake.examples.hardware.sdynpy_frf.sdynpy_frf_metadata import (
+    manual_sdynpy_frf_metadata,
+    netcdf_sdynpy_frf_metadata,
+    worksheet_sdynpy_frf_metadata,
+)
+from rattlesnake.examples.hardware.state_space.state_space_metadata import (
+    manual_state_space_metadata,
+    netcdf_state_space_metadata,
+    worksheet_state_space_metadata,
+)
 from rattlesnake.examples.hardware.stream_metadata import (
     stream_metadata_no,
     stream_metadata_immediate,
@@ -65,9 +75,20 @@ SDYNPY_SYSTEM_DICT = {
     "netcdf": netcdf_sdynpy_system_metadata,
     "manual": manual_sdynpy_system_metadata,
 }
+SDYNPY_FRF_DICT = {
+    "worksheet": worksheet_sdynpy_frf_metadata,
+    "netcdf": netcdf_sdynpy_frf_metadata,
+    "manual": manual_sdynpy_frf_metadata,
+}
+STATE_SPACE_DICT = {
+    "worksheet": worksheet_state_space_metadata,
+    "netcdf": netcdf_state_space_metadata,
+    "manual": manual_state_space_metadata,
+}
 HARDWARE_DICT[HardwareType.NONE] = BLANK_HARDWARE_DICT
 HARDWARE_DICT[HardwareType.SDYNPY_SYSTEM] = SDYNPY_SYSTEM_DICT
-
+HARDWARE_DICT[HardwareType.SDYNPY_FRF] = SDYNPY_FRF_DICT
+HARDWARE_DICT[HardwareType.STATE_SPACE] = STATE_SPACE_DICT
 
 # Environment
 ENVIRONMENT_DICT = {}

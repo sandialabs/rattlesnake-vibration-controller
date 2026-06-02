@@ -65,7 +65,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
         sample_rate: int,
         time_per_read: float,
         time_per_write: float,
-        output_oversample: int,
         hardware_file: str,
     ):
         super().__init__(
@@ -74,7 +73,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample=output_oversample,
         )
         self.hardware_file = hardware_file
 
@@ -110,7 +108,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample,
             hardware_file,
         )
 
@@ -150,7 +147,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample,
             hardware_file,
         )
 

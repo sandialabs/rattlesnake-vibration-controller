@@ -1,0 +1,69 @@
+import openpyxl
+import netCDF4 as nc4
+
+import rattlesnake.examples.defaults as defaults
+
+from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.state_space_virtual_hardware import (
+    StateSpaceMetadata,
+)
+
+HARDWARE_FILE = defaults.DIRECTORY + "/hardware/state_space/state_space.npz"
+
+
+def worksheet_state_space_metadata():
+    worksheet_dir = defaults.DIRECTORY + "/hardware/state_space/state_space.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    metadata = StateSpaceMetadata.load_metadata_from_workbook(workbook)
+    metadata.hardware_file = HARDWARE_FILE
+    workbook.close()
+    return metadata
+
+
+def netcdf_state_space_metadata():
+    netcdf_dir = defaults.DIRECTORY + "/hardware/state_space/state_space.nc4"
+    netcdf_dataset = nc4.Dataset(netcdf_dir)
+    metadata = StateSpaceMetadata.load_metadata_from_netcdf(netcdf_dataset)
+    metadata.hardware_file = HARDWARE_FILE
+    netcdf_dataset.close()
+    return metadata
+
+
+def manual_state_space_metadata():
+    directions = ["X+", "Y+", "Z+"]
+    force_nodes = [13, 131, 135]
+    excitation_nodes = [1004, 1020, 1065, 1049]
+
+    channel_list = []
+    for node in excitation_nodes:
+        for direction in directions:
+            channel = Channel(
+                node_number=node,
+                node_direction=direction,
+                comment=f"{node}{direction}",
+                physical_device="Virtual",
+                channel_type="Acceleration",
+            )
+            channel_list.append(channel)
+
+    for node in force_nodes:
+        for direction in directions:
+            channel = Channel(
+                node_number=node,
+                node_direction=direction,
+                comment="Force",
+                physical_device="Virtual",
+                channel_type="Force",
+                feedback_device="Input",
+            )
+            channel_list.append(channel)
+
+    metadata = StateSpaceMetadata(
+        channel_list=channel_list,
+        sample_rate=defaults.SAMPLE_RATE,
+        time_per_read=defaults.BUFFER_SIZE,
+        time_per_write=defaults.BUFFER_SIZE,
+        output_oversample=defaults.OUTPUT_OVERSAMPLE,
+        hardware_file=HARDWARE_FILE,
+    )
+    return metadata
