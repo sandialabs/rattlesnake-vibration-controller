@@ -1,18 +1,11 @@
-"""
-Minimum Working Example of a Test Framework
-
-This module provides a basic test to verify that the project's testing
-infrastructure is working correctly.
-"""
-
-from rattlesnake import hello
+"""This is a minimum working example of a test framework."""
 
 # import pytest  # unused import
 
+from rattlesnake import hello
+
 
 def test_greet():
-    """
-    Test the greet function from the short path.
-    """
-    print("tests/short/test_hello_short.py")
+    """Test the greet function from the long path."""
+    print("tests/long/test_hello_long.py")
     assert hello.greet("World") == "Hello, World!"

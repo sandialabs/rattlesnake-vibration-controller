@@ -23,227 +23,66 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import socket
-import sys
 import numpy as np
 import pyqtgraph
 import requests
+import time
+import threading
+
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
-from scipy.interpolate import interp1d
+from qtpy.QtCore import Qt
 from scipy.io import loadmat
 from enum import Enum
 
-from rattlesnake.environment.environment_utilities import (
-    ControlTypes,
-    environment_long_names,
-)
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
+    DIRECTORY,
     coherence,
-    error_message_qt,
     load_csv_matrix,
     save_csv_matrix,
     trac,
+    VerboseMessageQueue,
+    GlobalCommands,
 )
 
+TASK_NAME = "UI"
 
+
+# region Global
 class UICommands(Enum):
     ERROR = -1
-    MONITOR = 0
-    UPDATE_METADATA = 1
-    STOP = 2
-    ENABLE = 3
-    DISABLE = 4
-    ENABLE_TAB = 5
-    DISABLE_TAB = 6
+    ENABLE = 0
+    DISABLE = 1
+    MONITOR = 2
+    ENABLE_TAB = 3
+    DISABLE_TAB = 4
+    SET_ATTR = 5
+    STOP = 6
+    HARDWARE_STARTED = 7
+    HARDWARE_ENDED = 8
+    SET_ENVIRONMENT_INSTRUCTIONS = 9
+    COMPLETED_SYSTEM_ID = 10
+    ENVIRONMENT_STARTED = 11
+    ENVIRONMENT_ENDED = 12
+    GUI_SETUP_FINISHED = 13
+
+    @property
+    def label(self):
+        """Used by UI as names for"""
+        return self.name.replace("_", " ").title()
 
 
-ACQUISITION_FRAMES_TO_DISPLAY = 4
-
-
-# Define paths to the User Interface UI Files
-this_path = os.path.split(__file__)[0]
-environment_definition_ui_paths = {}
-environment_prediction_ui_paths = {}
-environment_run_ui_paths = {}
-# This is true if running from an executable and the UI is embedded in the executable
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    directory = sys._MEIPASS  # pylint: disable=protected-access
-else:
-    directory = this_path
-
-# Base Controller UI
-directory = os.path.join(directory, "ui_files")
-ui_path = os.path.join(directory, "combined_environments_controller.ui")
-environment_select_ui_path = os.path.join(directory, "environment_selector.ui")
-control_select_ui_path = os.path.join(directory, "control_select.ui")
-# Random Vibration Environment
-environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(
-    directory, "random_vibration_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(
-    directory, "random_vibration_prediction.ui"
-)
-environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "random_vibration_run.ui")
-system_identification_ui_path = os.path.join(directory, "system_identification.ui")
-transformation_matrices_ui_path = os.path.join(directory, "transformation_matrices.ui")
-# Time Environment
-environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_definition.ui")
-environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_run.ui")
-# Transient Environment
-environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-    directory, "transient_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-    directory, "transient_prediction.ui"
-)
-environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "transient_run.ui")
-# Sine Environment
-environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_definition.ui")
-environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_prediction.ui")
-environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.ui")
-sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
-filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
-# Modal Environments
-environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_definition.ui")
-environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_run.ui")
-modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
-
-
-class ProfileTimer(QTimer):
-    """A timer class that allows storage of controller instruction information"""
-
-    def __init__(self, environment: str, operation: str, data: str):
-        """
-        A timer class that allows storage of controller instruction information
-
-        When the timer times out, the environment, operation, and any data can
-        be collected by the callback by accessing the self.sender().environment,
-        .operation, or .data attributes.
-
-        Parameters
-        ----------
-        environment : str
-            The name of the environment (or 'Global') that the instruction will
-            be sent to
-        operation : str
-            The operation that the environment will be instructed to perform
-        data : str
-            Any data corresponding to that operation that is required
-
-
-        """
-        super().__init__()
-        self.environment = environment
-        self.operation = operation
-        self.data = data
-
-
-def get_table_strings(tablewidget: QtWidgets.QTableWidget):
-    """Collect a table of strings from a QTableWidget
+def error_message_qt(title, message):
+    """Helper class to create an error dialog.
 
     Parameters
     ----------
-    tablewidget : QtWidgets.QTableWidget
-        A table widget to pull the strings from
-
-    Returns
-    -------
-    string_array : list[list[str]]
-        A nested list of strings from the table items
+    title : str :
+        Title of the window that the error message will appear in.
+    message : str :
+        Error message that will be displayed.
 
     """
-    string_array = []
-    for row_idx in range(tablewidget.rowCount()):
-        string_array.append([])
-        for col_idx in range(tablewidget.columnCount()):
-            value = tablewidget.item(row_idx, col_idx).text()
-            string_array[-1].append(value)
-    return string_array
-
-
-def get_table_bools(tablewidget: QtWidgets.QTableWidget):
-    """Collect a table of booleans from a QTableWidget full of QCheckBoxes
-
-    Parameters
-    ----------
-    tablewidget : QtWidgets.QTableWidget
-        A table widget to pull the strings from
-
-    Returns
-    -------
-    bool_array : list[list[bool]]
-        A nested list of booleans from the table widgets
-
-    """
-    bool_array = []
-    for row_idx in range(tablewidget.rowCount()):
-        bool_array.append([])
-        for col_idx in range(tablewidget.columnCount()):
-            value = tablewidget.cellWidget(row_idx, col_idx).isChecked()
-            bool_array[-1].append(value)
-    return bool_array
-
-
-def load_time_history(signal_path, sample_rate):
-    """Loads a time history from a given file
-
-    The signal can be loaded from numpy files (.npz, .npy) or matlab files (.mat).
-    For .mat and .npz files, the time data can be included in the file in the
-    't' field, or it can be excluded and the sample_rate input argument will
-    be used.  If time data is specified, it will be linearly interpolated to the
-    sample rate of the controller.
-    For these file types, the signal should be stored in the 'signal'
-    field.  For .npy files, only one array is stored, so it is treated as the
-    signal, and the sample_rate input argument is used to construct the time
-    data.
-
-    Parameters
-    ----------
-    signal_path : str:
-        Path to the file from which to load the time history
-
-    sample_rate : str:
-        The sample rate of the loaded signal.
-
-    Returns
-    -------
-    signal : np.ndarray:
-        A signal loaded from the file
-
-    """
-    _, extension = os.path.splitext(signal_path)
-    if extension.lower() == ".npy":
-        signal = np.load(signal_path)
-    elif extension.lower() == ".npz":
-        data = np.load(signal_path)
-        signal = data["signal"]
-        try:
-            times = data["t"].squeeze()
-            fn = interp1d(times, signal)
-            abscissa = np.arange(0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate)
-            abscissa = abscissa[abscissa <= max(times)]
-            signal = fn(abscissa)
-        except KeyError:
-            pass
-    elif extension.lower() == ".mat":
-        data = loadmat(signal_path)
-        signal = data["signal"]
-        try:
-            times = data["t"].squeeze()
-            fn = interp1d(times, signal)
-            abscissa = np.arange(0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate)
-            abscissa = abscissa[abscissa <= max(times)]
-            signal = fn(abscissa)
-        except KeyError:
-            pass
-    else:
-        raise ValueError(
-            f"Could Not Determine the file type from the filename {signal_path}: {extension}"
-        )
-    if signal.shape[-1] % 2 == 1:
-        signal = signal[..., :-1]
-    return signal
+    QtWidgets.QMessageBox.critical(None, title, message)
 
 
 colororder = [
@@ -312,7 +151,9 @@ def multiline_plotter(
             pen = {"color": colororder[i % len(colororder)]}
             pen.update(other_pen_options)
             handles.append(
-                plot_item.plot(x, this_y, pen=pen, name=None if names is None else names[i])
+                plot_item.plot(
+                    x, this_y, pen=pen, name=None if names is None else names[i]
+                )
             )
         return handles
     elif curve_list is not None:
@@ -348,64 +189,56 @@ def blended_scatter_plot(xy, widget=None, curve_list=None, names=None, symbol="o
         raise ValueError("Either Widget or list of curves must be specified")
 
 
-class ControlSelect(QtWidgets.QDialog):
-    """Environment selector dialog box to select the control type for the test"""
+class UpdaterSignals(QtCore.QObject):
+    """Defines the signals that will be sent from the GUI Updater to the GUI
 
-    def __init__(self, parent=None):
+    Supported signals are:
+
+    finished
+        empty
+
+    update
+        `tuple` (widget_id,data)
+    """
+
+    finished = QtCore.Signal()
+    update = QtCore.Signal(tuple)
+
+
+class Updater(QtCore.QRunnable):
+    """Updater thread to collect results from the subsystems and reflect the
+    changes in the GUI
+    """
+
+    def __init__(self, update_queue):
         """
-        Selects the environment type that gets used for the test.
-
-        This function reads from the environment control types to populate the
-        radiobuttons on the dialog.
+        Initializes the updater with the queue and signals that will be emitted
+        when the queue has data in it.
 
         Parameters
         ----------
-        parent : QWidget, optional
-            Parent of the dialog box. The default is None.
+        update_queue : mp.queues.Queue
+            Queue from which events will be captured.
 
         """
-        super(QtWidgets.QDialog, self).__init__(parent)
-        uic.loadUi(control_select_ui_path, self)
-        self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
+        super(Updater, self).__init__()
+        self.update_queue = update_queue
+        self.signals = UpdaterSignals()
+        self.verbose_queue = isinstance(self.update_queue, VerboseMessageQueue)
 
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        self.control_select_buttongroup = QtWidgets.QButtonGroup()
-
-        # Go through and create radiobuttons for each control type
-        control_types_sorted = sorted(
-            [(control_type.value, control_type) for control_type in ControlTypes]
-        )
-
-        for value, control_type in control_types_sorted[1:] + control_types_sorted[:1]:
-            radiobutton = QtWidgets.QRadioButton(environment_long_names[control_type])
-            self.control_select_buttongroup.addButton(radiobutton, value)
-            if value == ControlTypes.RANDOM.value:
-                radiobutton.setChecked(True)
-            self.environment_radiobutton_layout.addWidget(radiobutton)
-
-    @staticmethod
-    def select_control(parent=None):
-        """Create the dialog box and parse the output
-
-        Parameters
-        ----------
-        parent : QWidget
-            Parent of the dialog box (Default value = None)
-
-        Returns
-        -------
-        button_id : int
-            The index of the button that was pressed
-        result : bool
-            True if dialog was accepted, otherwise false if cancelled.
-        """
-        dialog = ControlSelect(parent)
-        result = dialog.exec_() == QtWidgets.QDialog.Accepted
-        index = dialog.control_select_buttongroup.checkedId()
-        button_id = ControlTypes(index)
-        # print(button_id)
-        return (button_id, result)
+    @QtCore.Slot()
+    def run(self):
+        """Continually capture update events from the queue"""
+        while True:
+            if self.verbose_queue:
+                queue_data = self.update_queue.get(TASK_NAME)
+            else:
+                queue_data = self.update_queue.get()
+            if queue_data[0] == GlobalCommands.QUIT:
+                break
+            self.signals.update.emit(queue_data)
+        self.signals.finished.emit()
+        time.sleep(1)
 
 
 class PlotWindow(QtWidgets.QDialog):
@@ -514,7 +347,9 @@ class PlotWindow(QtWidgets.QDialog):
                     "style": PlotWindow.ABORT_LINESTYLE,
                 },
             )
-        self.curve = plot_item.plot(self.frequencies, self.data, pen={"color": "r", "width": 1})
+        self.curve = plot_item.plot(
+            self.frequencies, self.data, pen={"color": "r", "width": 1}
+        )
         self.setWindowTitle(f"{datatype_name} {row_name} / {column_name}")
         self.show()
 
@@ -595,7 +430,9 @@ class PlotTimeWindow(QtWidgets.QDialog):
         plot_item.plot(self.times, self.spec_data, pen={"color": "b", "width": 1})
         plot_item.setLabel("left", "TRAC: 0.0")
         self.plot_item = plot_item
-        self.curve = plot_item.plot(self.times, self.data, pen={"color": "r", "width": 1})
+        self.curve = plot_item.plot(
+            self.times, self.data, pen={"color": "r", "width": 1}
+        )
         self.setWindowTitle(f"{index_name}")
         self.show()
 
@@ -626,7 +463,9 @@ class PlotTimeWindow(QtWidgets.QDialog):
         """
         data = self.reduce_matrix(data)
         self.curve.setData(self.times, data)
-        self.plot_item.setLabel("left", f"TRAC: {trac(data, self.spec_data).squeeze():0.2f}")
+        self.plot_item.setLabel(
+            "left", f"TRAC: {trac(data, self.spec_data).squeeze():0.2f}"
+        )
 
 
 class TransformationMatrixWindow(QtWidgets.QDialog):
@@ -660,6 +499,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
 
         """
         super().__init__(parent)
+        transformation_matrices_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "transformation_matrices.ui"
+        )
         uic.loadUi(transformation_matrices_ui_path, self)
         self.setWindowTitle("Transformation Matrix Definition")
 
@@ -675,10 +517,14 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
             for row_idx, row in enumerate(current_response_transformation_matrix):
                 for col_idx, col in enumerate(row):
                     try:
-                        self.response_transformation_matrix.item(row_idx, col_idx).setText(str(col))
+                        self.response_transformation_matrix.item(
+                            row_idx, col_idx
+                        ).setText(str(col))
                     except AttributeError:
                         item = QtWidgets.QTableWidgetItem(str(col))
-                        self.response_transformation_matrix.setItem(row_idx, col_idx, item)
+                        self.response_transformation_matrix.setItem(
+                            row_idx, col_idx, item
+                        )
         if current_output_transformation_matrix is None:
             self.set_output_transformation_identity()
         else:
@@ -688,10 +534,14 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
             for row_idx, row in enumerate(current_output_transformation_matrix):
                 for col_idx, col in enumerate(row):
                     try:
-                        self.output_transformation_matrix.item(row_idx, col_idx).setText(str(col))
+                        self.output_transformation_matrix.item(
+                            row_idx, col_idx
+                        ).setText(str(col))
                     except AttributeError:
                         item = QtWidgets.QTableWidgetItem(str(col))
-                        self.output_transformation_matrix.setItem(row_idx, col_idx, item)
+                        self.output_transformation_matrix.setItem(
+                            row_idx, col_idx, item
+                        )
 
         # Callbacks
         self.ok_button.clicked.connect(self.accept)
@@ -791,8 +641,11 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
             ]
         )
         if all(
-            val == response_transformation.shape[0] for val in response_transformation.shape
-        ) and np.allclose(response_transformation, np.eye(response_transformation.shape[0])):
+            val == response_transformation.shape[0]
+            for val in response_transformation.shape
+        ) and np.allclose(
+            response_transformation, np.eye(response_transformation.shape[0])
+        ):
             response_transformation = None
         output_transformation = np.array(
             [
@@ -802,7 +655,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         )
         if all(
             val == output_transformation.shape[0] for val in output_transformation.shape
-        ) and np.allclose(output_transformation, np.eye(output_transformation.shape[0])):
+        ) and np.allclose(
+            output_transformation, np.eye(output_transformation.shape[0])
+        ):
             output_transformation = None
         return (response_transformation, output_transformation, result)
 
@@ -821,7 +676,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
 
     def save_response_transformation_matrix(self):
         """Saves the response transformation matrix to a csv file"""
-        string_array = self.get_table_strings(self.response_transformation_matrix)
+        string_array = get_table_strings(self.response_transformation_matrix)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save Response Transformation",
@@ -872,7 +727,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 if col_idx == num_cols:
                     break
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(value)
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
+                        value
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(value)
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -888,7 +745,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 else:
                     value = 0.0
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
+                        str(value)
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -928,7 +787,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
+                        str(value)
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -968,7 +829,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
+                        str(value)
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -988,7 +851,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
 
     def save_output_transformation_matrix(self):
         """Saves output transformation matrix to a CSV file"""
-        string_array = self.get_table_strings(self.output_transformation_matrix)
+        string_array = get_table_strings(self.output_transformation_matrix)
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save Output Transformation", filter="Comma-separated Values (*.csv)"
         )
@@ -1037,7 +900,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 if col_idx == num_cols:
                     break
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(value)
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
+                        value
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(value)
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -1053,7 +918,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 else:
                     value = 0.0
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
+                        str(value)
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -1092,7 +959,9 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
+                        str(value)
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -1131,23 +1000,982 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
+                        str(value)
+                    )
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
 
 
+def get_table_strings(tablewidget: QtWidgets.QTableWidget):
+    """Collect a table of strings from a QTableWidget
+
+    Parameters
+    ----------
+    tablewidget : QtWidgets.QTableWidget
+        A table widget to pull the strings from
+
+    Returns
+    -------
+    string_array : list[list[str]]
+        A nested list of strings from the table items
+
+    """
+    string_array = []
+    for row_idx in range(tablewidget.rowCount()):
+        string_array.append([])
+        for col_idx in range(tablewidget.columnCount()):
+            value = tablewidget.item(row_idx, col_idx).text()
+            string_array[-1].append(value)
+    return string_array
+
+
+class ChannelMonitor(QtWidgets.QDialog):
+    """Class defining a subwindow that displays specific channel information"""
+
+    def __init__(self, parent, hardware_metadata):
+        """
+        Creates a window showing CPSD matrix information for a single channel.
+
+        Parameters
+        ----------
+        parent : QWidget
+            Parent of the window.
+        """
+        super(QtWidgets.QDialog, self).__init__(parent)
+        self.setWindowFlags(self.windowFlags() & Qt.Tool)
+        self.channels = hardware_metadata.channel_list
+        # Set up the window
+        self.graphics_layout_widget = pyqtgraph.GraphicsLayoutWidget(self)
+        self.push_button = QtWidgets.QPushButton("Clear Alerts", self)
+        self.channels_per_row_label = QtWidgets.QLabel("Channels per Row: ", self)
+        self.channels_per_row_selector = QtWidgets.QSpinBox(self)
+        self.channels_per_row_selector.setMinimum(2)
+        self.channels_per_row_selector.setMaximum(100)
+        self.channels_per_row_selector.setValue(20)
+        self.channels_per_row_selector.setKeyboardTracking(False)
+        layout = QtWidgets.QVBoxLayout()
+        control_layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.graphics_layout_widget)
+        control_layout.addWidget(self.channels_per_row_label)
+        control_layout.addWidget(self.channels_per_row_selector)
+        control_layout.addStretch()
+        control_layout.addWidget(self.push_button)
+        layout.addLayout(control_layout)
+        self.setLayout(layout)
+        # Set up defaults for the channel ranges
+        self.channel_ranges = None
+        self.channel_warning_limits = None
+        self.channel_abort_limits = None
+        self.background_bars = None
+        self.history_bars = None
+        self.level_bars = None
+        self.history_last_update = None
+        self.history_hold_frames = int(
+            np.ceil(
+                10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read
+            )
+        )
+        self.aborted_channels = None
+        # Set up defaults for the plot
+        self.plots = None
+        self.bar_channel_indices = None
+        self.pen = pyqtgraph.mkPen(color=(0, 0, 0, 255), width=1)
+        self.background_brush = pyqtgraph.mkBrush((255, 255, 255))
+        self.history_brush = pyqtgraph.mkBrush((124, 124, 255))
+        self.current_brush = pyqtgraph.mkBrush((34, 139, 34))
+        self.limit_brush = pyqtgraph.mkBrush((145, 197, 17))
+        self.abort_brush = pyqtgraph.mkBrush((145, 70, 17))
+        self.limit_background_brush = pyqtgraph.mkBrush(
+            (
+                255,
+                255,
+                0,
+            )
+        )
+        self.abort_background_brush = pyqtgraph.mkBrush((255, 0, 0))
+        self.limit_history_brush = pyqtgraph.mkBrush((190, 190, 128))
+        self.abort_history_brush = pyqtgraph.mkBrush((190, 62, 128))
+        # Connect everything and do final builds
+        self.connect_callbacks()
+        self.build_plot()
+        self.setWindowTitle("Channel Monitor")
+        self.resize(400, 300)
+        self.show()
+
+    def connect_callbacks(self):
+        """Connects callback functions to the respective widgets"""
+        self.channels_per_row_selector.valueChanged.connect(self.build_plot)
+        self.push_button.clicked.connect(self.clear_alerts)
+
+    def update_channel_list(self, hardware_metadata):
+        """Updates the channel list in the test"""
+        self.channels = hardware_metadata.channel_list
+        self.history_hold_frames = int(
+            np.ceil(
+                10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read
+            )
+        )
+        self.build_plot()
+
+    def clear_alerts(self):
+        """Clears any alerts that have been triggered by high values"""
+        self.aborted_channels = [False for val in self.aborted_channels]
+        for current_bar in self.level_bars:
+            current_bar.setOpts(brushes=[self.current_brush])
+        for history_bar in self.history_bars:
+            history_bar.setOpts(brushes=[self.history_brush])
+        for background_bar in self.background_bars:
+            background_bar.setOpts(brushes=[self.background_brush])
+
+    def build_plot(self):
+        """Builds the channel monitor window and plots"""
+        # TODO Need to get the values from the bars before deleting them so we
+        # can maintain the levels from before the value was changed
+        self.graphics_layout_widget.clear()
+        num_channels = len(self.channels)
+        num_bars = int(np.ceil(num_channels / self.channels_per_row_selector.value()))
+        # Compute number of channels per bar
+        channels_per_bar = [0 for i in range(num_bars)]
+        for i in range(num_channels):
+            channels_per_bar[i % num_bars] += 1
+
+        # print('Channels per Bar {:}'.format(channels_per_bar))
+        # Now let's actually make the plots
+        self.plots = [
+            self.graphics_layout_widget.addPlot(i, 0) for i in range(num_bars)
+        ]
+
+        # Now parse the channel ranges
+        self.channel_ranges = []
+        self.channel_warning_limits = []
+        self.channel_abort_limits = []
+        for channel in self.channels:
+            try:
+                max_abs_volt = np.min(
+                    np.abs([float(channel.maximum_value), float(channel.minimum_value)])
+                )
+            except (ValueError, TypeError):
+                max_abs_volt = 10  # Assume 10 V range on DAQ
+            try:
+                sensitivity = float(channel.sensitivity) / 1000  # mV -> V
+            except (ValueError, TypeError):
+                sensitivity = 0.01  # Assume 10 mV/EU
+            max_abs_eu = max_abs_volt / sensitivity
+            try:
+                warning_limit = float(channel.warning_level)
+            except (ValueError, TypeError):
+                warning_limit = max_abs_eu * 0.9  # Put out warning at 90% the max range
+            try:
+                abort_limit = float(channel.abort_level)
+            except (ValueError, TypeError):
+                abort_limit = max_abs_eu  # Never abort on this channel if not specified
+            self.channel_ranges.append(max_abs_eu)
+            self.channel_warning_limits.append(warning_limit)
+            self.channel_abort_limits.append(abort_limit)
+        self.channel_ranges = np.array(self.channel_ranges)
+        self.channel_warning_limits = np.array(self.channel_warning_limits)
+        self.channel_abort_limits = np.array(self.channel_abort_limits)
+        # Display abort limit as range rather than channel if it is lower
+        abort_lower = self.channel_ranges > self.channel_abort_limits
+        self.channel_ranges[abort_lower] = self.channel_abort_limits[abort_lower]
+
+        # Now build the plots
+        self.bar_channel_indices = []
+        for i, num_channels in enumerate(channels_per_bar):
+            try:
+                next_starting_index = self.bar_channel_indices[-1][-1] + 1
+            except IndexError:
+                next_starting_index = 0
+            self.bar_channel_indices.append(
+                next_starting_index + np.arange(num_channels)
+            )
+        # print(self.bar_channel_indices)
+        self.background_bars = []
+        self.history_bars = []
+        self.level_bars = []
+        self.history_last_update = []
+        self.aborted_channels = []
+        for indices, plot in zip(self.bar_channel_indices, self.plots):
+            plot.hideAxis("left")
+            for _, index in enumerate(indices):
+                background_bar = pyqtgraph.BarGraphItem(
+                    x=[index + 1],
+                    height=1.0,
+                    width=0.9,
+                    pen=self.pen,
+                    brush=self.background_brush,
+                )
+                plot.addItem(background_bar)
+                self.background_bars.append(background_bar)
+                history_bar = pyqtgraph.BarGraphItem(
+                    x=[index + 1],
+                    height=0,
+                    width=0.9,
+                    pen=self.pen,
+                    brush=self.history_brush,
+                )
+                plot.addItem(history_bar)
+                self.history_bars.append(history_bar)
+                current_bar = pyqtgraph.BarGraphItem(
+                    x=[index + 1],
+                    height=0,
+                    width=0.9,
+                    pen=self.pen,
+                    brush=self.current_brush,
+                )
+                plot.addItem(current_bar)
+                self.level_bars.append(current_bar)
+                self.history_last_update.append(0)
+                self.aborted_channels.append(False)
+
+    def update(self, channel_levels):
+        """Updates the level data in each bar"""
+        # print('Data {:}'.format(channel_levels.shape))
+        # print(channel_levels)
+        for index, (
+            level,
+            current_bar,
+            history_bar,
+            background_bar,
+            history_last_update,
+            warning,
+            abort,
+            value_range,
+            aborted,
+        ) in enumerate(
+            zip(
+                channel_levels,
+                self.level_bars,
+                self.history_bars,
+                self.background_bars,
+                self.history_last_update,
+                self.channel_warning_limits,
+                self.channel_abort_limits,
+                self.channel_ranges,
+                self.aborted_channels,
+            )
+        ):
+            # Set the current bar height
+            current_height = level / value_range
+            current_bar.setOpts(height=current_height if current_height < 1 else 1)
+            # Now look at the history bar
+            last_history_height = history_bar.opts.get("height")
+            # print(last_history_height)
+            if history_last_update > self.history_hold_frames:
+                desired_history_height = (
+                    last_history_height - 1 / self.history_hold_frames
+                )
+            else:
+                desired_history_height = last_history_height
+            if desired_history_height < current_height:
+                desired_history_height = current_height
+                self.history_last_update[index] = 0
+            else:
+                self.history_last_update[index] += 1
+            history_bar.setOpts(
+                height=1 if desired_history_height > 1 else desired_history_height
+            )
+            # Now look at the pen color
+            if level > abort or aborted:
+                current_bar.setOpts(brushes=[self.abort_brush])
+                background_bar.setOpts(brushes=[self.abort_background_brush])
+                history_bar.setOpts(brushes=[self.abort_history_brush])
+                self.aborted_channels[index] = True
+            elif level > warning:
+                current_bar.setOpts(brushes=[self.limit_brush])
+                background_bar.setOpts(brushes=[self.limit_background_brush])
+                history_bar.setOpts(brushes=[self.limit_history_brush])
+
+
+class VaryingNumberOfLinePlot:
+    """A plot that can have a dynamic number of lines assigned,
+    adding or removing lines as necessary"""
+
+    def __init__(self, plot_item, initial_abscissa=None, initial_ordinate=None):
+        self.plot_item = plot_item
+        self.lines = []
+        if initial_abscissa is not None and initial_ordinate is not None:
+            self.set_data(initial_abscissa, initial_ordinate)
+
+    def set_data(self, abscissa, ordinate):
+        """Sets the data of the plot
+
+        Parameters
+        ----------
+        abscissa : np.ndarray
+            A 2D dataset where each row is a different plot and the columns are the abscissa values
+            of each curve
+        ordinate : np.ndarray
+            A 2D dataset where each row is a different plot and the columns are the ordinate values
+            of each curve
+        """
+        for i, (this_ordinate, this_abscissa) in enumerate(zip(ordinate, abscissa)):
+            try:
+                self.lines[i].setData(this_abscissa, this_ordinate)
+            except IndexError:
+                pen = {"color": colororder[i % len(colororder)]}
+                self.lines.append(
+                    self.plot_item.plot(this_abscissa, this_ordinate, pen=pen)
+                )
+
+        # Remove extra lines
+        extra_lines = len(self.lines) - len(ordinate)
+        for i in range(extra_lines):
+            line = self.lines.pop()
+            self.plot_item.removeItem(line)
+
+    def clear(self):
+        """Clears all data from the plots"""
+        self.lines = []
+        self.plot_item.clear()
+
+
+class EventWatcherError(Exception):
+    """
+    The UI prints these errors to console instead of to the
+    user interface.
+    """
+
+    pass
+
+
+class EventWatcher(QtCore.QObject):
+    ready = QtCore.Signal()
+    error = QtCore.Signal(object)
+
+    def __init__(
+        self,
+        ready_event_list,
+        active_event_list,
+        *,
+        active_event_check: bool = None,
+        timeout=None,
+    ):
+        super().__init__()
+        self.ready_event_list = ready_event_list
+        self.active_event_list = active_event_list
+        self.active_event_check = active_event_check
+        self.timeout = timeout
+        self._cancel_event = threading.Event()
+
+    def cancel(self):
+        self._cancel_event.set()
+
+    def run(self):
+        start = time.time()
+
+        try:
+            while True:
+
+                ready_ok = all(event.is_set() for event in self.ready_event_list)
+                active_ok = all(
+                    event.is_set() == self.active_event_check
+                    for event in self.active_event_list
+                )
+
+                if ready_ok and active_ok:
+                    self.ready.emit()
+                    return
+
+                if self.timeout and (time.time() - start) > self.timeout:
+                    for event in self.ready_event_list:
+                        event.set()
+
+                    self.error.emit(
+                        EventWatcherError(
+                            "EventWatcher has timed out while waiting for a response"
+                        )
+                    )
+                    return
+
+                if self._cancel_event.is_set():
+                    self.error.emit(
+                        EventWatcherError(
+                            "EventWatcher was overridden by a new watcher"
+                        )
+                    )
+                    return
+
+                time.sleep(0.05)
+        except Exception as e:
+            self.error.emit(e)
+
+
+# endregion
+
+
+# region Hardware
+class HardwareAssistModules(Enum):
+    NONE = 0
+    COMBOBOX = 2
+    SPINBOX = 1
+
+
+class IPAddress:
+    """Container for information about IPAddress, mainly used to make
+    sure each address has a values for relevant information"""
+
+    def __init__(
+        self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False
+    ):
+        self.host_name = host_name
+        self.ipv4_address = ipv4_address
+        self.ipv6_address = ipv6_address
+        self.valid_ip = valid_ip
+
+
+class IPAddressManager(QtWidgets.QDialog):
+    """A class to manage IP addresses"""
+
+    def __init__(self, ip_addresses: list[IPAddress] = None, parent=None):
+        if ip_addresses is None:
+            ip_addresses = []
+        super().__init__(parent)
+        ip_manager_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "ip_manager.ui"
+        )
+        uic.loadUi(ip_manager_ui_path, self)
+
+        self.ip_address_table.setColumnWidth(0, 200)
+        self.ip_address_table.setColumnWidth(1, 200)
+        self.ip_address_table.setColumnWidth(2, 250)
+
+        self.ip_addresses = []
+        self.unique_indices = []
+        for ind, address in enumerate(ip_addresses):
+            self.add_ip_address()
+            self.ip_addresses[ind] = address
+
+        self.validation_timeout = 0.5
+        self.selected_index = -1
+
+        self.refresh_ip_table()
+        self.loading_bar.hide()
+
+        self.connect_callbacks()
+
+        self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
+
+    def connect_callbacks(self):
+        """Connects callbacks to the widgets"""
+        self.add_ip_address_button.clicked.connect(self.add_ip_address)
+        self.remove_ip_address_button.clicked.connect(self.remove_ip_address)
+        self.validate_ip_address_button.clicked.connect(self.validate_button_pressed)
+
+        self.button_box.accepted.disconnect()
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+    def set_row_count(self, row_count):
+        """Sets the number of rows in the table"""
+        while self.ip_address_table.rowCount() < row_count:
+            clicked = False
+            self.add_ip_address(clicked)
+
+    def add_ip_address(
+        self, clicked=None, append_list=True
+    ):  # pylint: disable=unused-argument
+        """Adds a new IP address to the manager"""
+        if append_list:
+            new_ip = IPAddress()
+            self.ip_addresses.append(new_ip)
+
+            unique_index = 0
+            while unique_index in self.unique_indices:
+                unique_index += 1
+            self.unique_indices.append(unique_index)
+
+        # Add new row to list
+        current_row = self.ip_address_table.rowCount()
+        self.ip_address_table.setRowCount(len(self.unique_indices))
+
+        # Add a host name line edit with move up and move down buttons
+        host_name_widget = QtWidgets.QWidget()
+        host_name_layout = QtWidgets.QHBoxLayout(host_name_widget)
+        host_name_layout.setContentsMargins(0, 0, 0, 0)
+        host_name_layout.setSpacing(0)
+
+        move_button_layout = QtWidgets.QVBoxLayout()
+        move_button_layout.setContentsMargins(0, 0, 0, 0)
+        move_button_layout.setSpacing(0)
+
+        up_button = QtWidgets.QToolButton()
+        up_button.setArrowType(QtCore.Qt.UpArrow)
+        up_button.setFixedSize(30, 15)
+        up_button.clicked.connect(lambda: self.move_address_up(unique_index))
+
+        down_button = QtWidgets.QToolButton()
+        down_button.setArrowType(QtCore.Qt.DownArrow)
+        down_button.setFixedSize(30, 15)
+        down_button.clicked.connect(lambda: self.move_address_down(unique_index))
+
+        move_button_layout.addWidget(up_button)
+        move_button_layout.addWidget(down_button)
+
+        host_name_input = QtWidgets.QLineEdit()
+        host_name_input.setFixedHeight(45)
+        host_name_input.setPlaceholderText("BK<Type>-<Serial>")
+        host_name_input.textChanged.connect(
+            lambda text: self.host_name_changed(text, unique_index)
+        )
+        host_name_input.focusInEvent = lambda event: self.ip_input_focused(
+            event, unique_index
+        )
+
+        host_name_layout.addLayout(move_button_layout)
+        host_name_layout.addWidget(host_name_input)
+
+        self.ip_address_table.setCellWidget(current_row, 0, host_name_widget)
+
+        ipv4_input = QtWidgets.QLineEdit()
+        ipv4_input.setFixedHeight(45)
+        ipv4_input.setPlaceholderText("169.254.001.001")
+        ipv4_input.textChanged.connect(
+            lambda text: self.ipv4_address_changed(text, unique_index)
+        )
+        ipv4_input.focusInEvent = lambda event: self.ip_input_focused(
+            event, unique_index
+        )
+
+        self.ip_address_table.setCellWidget(current_row, 1, ipv4_input)
+
+        ipv6_input = QtWidgets.QLineEdit()
+        ipv6_input.setFixedHeight(45)
+        ipv6_input.setPlaceholderText("[<Unicast>%<Network>]")
+        ipv6_input.textChanged.connect(
+            lambda text: self.ipv6_address_changed(text, unique_index)
+        )
+        ipv6_input.focusInEvent = lambda event: self.ip_input_focused(
+            event, unique_index
+        )
+
+        self.ip_address_table.setCellWidget(current_row, 2, ipv6_input)
+
+    def host_name_changed(self, text: str, unique_index: int):
+        """Updates the host name"""
+        try:
+            current_row = self.unique_indices.index(unique_index)
+        except ValueError:
+            return
+        self.ip_addresses[current_row].host_name = text
+        self.ip_addresses[current_row].valid_ip = False
+
+    def ipv4_address_changed(self, text: str, unique_index: int):
+        """Updates the IPv4 Address"""
+        try:
+            current_row = self.unique_indices.index(unique_index)
+        except ValueError:
+            return
+        self.ip_addresses[current_row].ipv4_address = text
+        self.ip_addresses[current_row].valid_ip = False
+
+    def ipv6_address_changed(self, text: str, unique_index: int):
+        """Updates the IPv6 Address"""
+        try:
+            current_row = self.unique_indices.index(unique_index)
+        except ValueError:
+            return
+        self.ip_addresses[current_row].ipv6_address = text
+        self.ip_addresses[current_row].valid_ip = False
+
+    def ip_input_focused(
+        self, event, unique_index: int
+    ):  # pylint: disable=unused-argument
+        """Updates the selected index based on the window focus"""
+        self.selected_index = unique_index
+
+    def remove_ip_address(self):
+        """Removes the currently selected IP Address"""
+        try:
+            current_row = self.unique_indices.index(self.selected_index)
+        except ValueError:
+            return
+        if 0 <= current_row < len(self.unique_indices):
+            self.ip_address_table.removeRow(
+                current_row,
+            )
+            self.ip_addresses.pop(current_row)
+            self.unique_indices.pop(current_row)
+            self.selected_index = -1
+
+    def move_address_up(self, ip_index):
+        """Shifts values up one line edit"""
+        # Just shifts text values up one LineEdit, unique_indices correspond
+        # to LineEdit objects which dont shift therefore the unique_indices dont change
+        try:
+            current_row = self.unique_indices.index(ip_index)
+        except ValueError:
+            return
+        if current_row > 0:
+            move_ip = self.ip_addresses.pop(current_row)
+            self.ip_addresses.insert(current_row - 1, move_ip)
+            self.refresh_ip_table([current_row - 1, current_row])
+
+    def move_address_down(self, ip_index):
+        """Shifts the addresses down one line edit"""
+        # Just shifts text values down one LineEdit, unique_indices correspond
+        # to LineEdit objects which dont shift therefore the unique_indices dont change
+        try:
+            current_row = self.unique_indices.index(ip_index)
+        except ValueError:
+            return
+        if current_row < len(self.unique_indices) - 1:
+            move_ip = self.ip_addresses.pop(current_row)
+            self.ip_addresses.insert(current_row + 1, move_ip)
+            self.refresh_ip_table([current_row, current_row + 1])
+
+    def refresh_ip_table(self, rows: list[int] = None):
+        """Refreshes the IP address table"""
+        if rows is None:
+            rows = range(len(self.unique_indices))
+
+        # This is slower than just deleting widgets and refreshing them but I do
+        # this to keep a consistent unique indice corresponding to rows
+        for row_idx in rows:
+            if row_idx >= self.ip_address_table.rowCount():
+                return
+
+            host_name = (
+                str(self.ip_addresses[row_idx].host_name)
+                if self.ip_addresses[row_idx].host_name is not None
+                else ""
+            )
+            host_name_widget = self.ip_address_table.cellWidget(row_idx, 0)
+            host_name_input = host_name_widget.findChild(QtWidgets.QLineEdit)
+            host_name_input.blockSignals(True)
+            host_name_input.setText(host_name)
+            host_name_input.blockSignals(False)
+
+            ipv4_address = (
+                str(self.ip_addresses[row_idx].ipv4_address)
+                if self.ip_addresses[row_idx].ipv4_address is not None
+                else ""
+            )
+            ipv4_input = self.ip_address_table.cellWidget(row_idx, 1)
+            ipv4_input.blockSignals(True)
+            ipv4_input.setText(ipv4_address)
+            ipv4_input.blockSignals(False)
+
+            ipv6_address = (
+                str(self.ip_addresses[row_idx].ipv6_address)
+                if self.ip_addresses[row_idx].ipv6_address is not None
+                else ""
+            )
+            ipv6_input = self.ip_address_table.cellWidget(row_idx, 2)
+            ipv6_input.blockSignals(True)
+            ipv6_input.setText(ipv6_address)
+            ipv6_input.blockSignals(False)
+
+    def get_ip_addresses(self, host_name: str = None):
+        """Gets valid IP Addresses given the host name"""
+        valid_host_name = False
+        ipv4_address = None
+        ipv6_address = None
+        try:
+            # Get the address info for the hostname
+            socket_info = socket.getaddrinfo(host_name, None)
+            ipv4 = socket_info[1]
+            ipv4_address = ipv4[4][0]
+            ipv6 = socket_info[0]
+            ipv6_address = f"[{ipv6[4][0]}%{ipv6[4][3]}]"
+
+            valid_host_name = self.validate_ip_address(ipv6_address)
+        except (socket.gaierror, IndexError):
+            # print(f'Error retrieving info')
+            pass
+
+        return (valid_host_name, ipv4_address, ipv6_address)
+
+    def get_host_name(self, ip_address: str = None):
+        """Gets the host name from an IP address"""
+        host_name = None
+        host = "http://" + ip_address
+        valid_ip = self.validate_ip_address(ip_address)
+        if valid_ip:
+            try:
+                response = requests.get(host + "/rest/rec/module/info", timeout=1)
+                info = response.json()
+                host_name = (
+                    f"BK{info['module']['type']['number']}-{info['module']['serial']}"
+                )
+            except Exception:
+                valid_ip = False
+                host_name = None
+
+        return (valid_ip, host_name)
+
+    def validate_ip_address(self, ip_address: str = None):
+        """Checks if IP addresses are valid"""
+        valid_ip = False
+        host = "http://" + ip_address
+        try:
+            response = requests.put(
+                host + "/rest/rec/open", timeout=self.validation_timeout
+            )
+            if response.status_code == 200:
+                valid_ip = True
+        except requests.exceptions.Timeout:
+            pass
+        except requests.exceptions.ConnectionError:
+            pass
+        except requests.exceptions.RequestException:
+            pass
+
+        return valid_ip
+
+    def autofill_ip_addresses(self):
+        """This function validates the ip address and autofills the other values.
+        If multiple inputs are valid but correspond to different devices, the
+        priority is host_name > ipv4 > ipv6
+        Note: Having 2 of the same host names may not validate correctly due to weird
+        socket waiting requirements
+        """
+        self.loading_bar.setValue(0)
+        self.loading_bar.show()
+        num_rows = len(self.unique_indices)
+        for row_idx in range(num_rows):
+            valid_row = self.ip_addresses[row_idx].valid_ip
+            percent_complete = round((row_idx + 1) / num_rows * 100)
+            self.loading_bar.setValue(percent_complete)
+
+            # Check if you can pull information from hostname
+            host_name = (
+                str(self.ip_addresses[row_idx].host_name)
+                if self.ip_addresses[row_idx].host_name is not None
+                else ""
+            )
+            if not valid_row and host_name != "":
+                valid_row, ipv4_address, ipv6_address = self.get_ip_addresses(host_name)
+
+                if valid_row:
+                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
+                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
+                    self.ip_addresses[row_idx].valid_ip = valid_row
+                    continue
+
+            ipv4_address = (
+                str(self.ip_addresses[row_idx].ipv4_address)
+                if self.ip_addresses[row_idx].ipv4_address is not None
+                else ""
+            )
+            if not valid_row and ipv4_address is not None:
+                valid_row, host_name = self.get_host_name(ipv4_address)
+
+                if valid_row:
+                    self.ip_addresses[row_idx].host_name = host_name
+                    (valid_row, _, ipv6_address) = self.get_ip_addresses(host_name)
+                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
+                    self.ip_addresses[row_idx].valid_ip = valid_row
+                    continue
+
+            ipv6_address = (
+                str(self.ip_addresses[row_idx].ipv6_address)
+                if self.ip_addresses[row_idx].ipv6_address is not None
+                else ""
+            )
+            if not valid_row and ipv6_address is not None:
+                valid_row, host_name = self.get_host_name(ipv6_address)
+
+                if valid_row:
+                    self.ip_addresses[row_idx].host_name = host_name
+                    (valid_row, ipv4_address, _) = self.get_ip_addresses(host_name)
+                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
+                    self.ip_addresses[row_idx].valid_ip = valid_row
+                    continue
+
+        self.loading_bar.hide()
+
+    def validate_button_pressed(self):
+        """Validates the IP Addresses"""
+        self.autofill_ip_addresses()
+        self.refresh_ip_table()
+
+        valid_ip_list = [ip.valid_ip for ip in self.ip_addresses]
+        if not all(valid_ip_list):
+            invalid_ip_rows = [
+                row for row, valid_bool in enumerate(valid_ip_list) if not valid_bool
+            ]
+            message = (
+                f"Invalid IP address at rows: {invalid_ip_rows}.\n\n  "
+                f"If IPv4 connection is unstable, try inputting host name."
+            )
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Invalid IP Addresses",
+                message,
+                QtWidgets.QMessageBox.Ok,
+                QtWidgets.QMessageBox.Ok,
+            )
+
+    def closeEvent(self, a0):  # pylint: disable=unused-argument,invalid-name
+        """Returns the IP addresses"""
+        return self.ip_addresses
+
+
+class EditableCombobox(QtWidgets.QComboBox):
+    def __init__(self, texts=[], value=None, parent=None):
+        super().__init__(parent)
+
+        if "" not in texts:
+            texts.insert(0, "")
+
+        value = str(value) if value is not None else ""
+        if value not in texts:
+            texts.insert(0, value)
+
+        self.setItems(texts)
+        self.setCurrentText(value)
+
+    def setItems(self, texts: list[str]):
+        if "" not in texts:
+            texts.insert(0, "")
+
+        super().clear()
+        super().addItems(texts)
+
+    def setCurrentText(self, value: str):
+        value = str(value) if value is not None else ""
+
+        super().blockSignals(True)
+        super().setCurrentText(value)
+        super().blockSignals(False)
+
+    def blockSignals(self, block: bool):
+        return super().blockSignals(block)
+
+
+class EditableSpinBox(QtWidgets.QSpinBox):
+    stringValueChanged = QtCore.Signal(str)
+
+    def __init__(self, parent=None, text=""):
+        super().__init__(parent)
+
+        # Initialize attributes
+        self.pause_signals = False
+        self.int_value = 0
+        self.str_value = ""
+
+        # If text is number, assign to number
+        text = str(text) if text is not None else ""
+        self.valueFromText(text)
+
+        self.setRange(-1000000, 1000000)
+        self.setValue(self.str_value)
+
+    def valueFromText(self, text):
+        """Convert text to a value."""
+
+        self.str_value = str(text)
+        # Try to convert text to digit, if so check if its in range
+        try:
+            self.int_value = int(self.str_value)
+            min_value = self.minimum()
+            max_value = self.maximum()
+            # If out of range, store the max/min range to int_value
+            if self.int_value > max_value:
+                self.int_value = max_value
+            elif self.int_value < min_value:
+                self.int_value = min_value
+        # If text wasnt an integer, keep previous value
+        except ValueError:
+            pass
+
+        if not self.pause_signals:
+            self.stringValueChanged.emit(self.str_value)
+
+        return self.int_value
+
+    def textFromValue(self, value):
+        """Convert a value to text."""
+        if self.int_value != value:
+            self.int_value = value
+            self.str_value = str(value)
+
+        if not self.pause_signals:
+            self.stringValueChanged.emit(self.str_value)
+
+        return self.str_value
+
+    def setValue(self, text):
+        text = str(text) if text is not None else ""
+        self.str_value = text
+
+        prev_pause_state = self.pause_signals
+        self.blockSignals(True)
+        value = self.valueFromText(text)
+        self.blockSignals(prev_pause_state)
+
+        return super().setValue(value)
+
+    def validate(self, text, pos):
+        """Allow letters and numbers in the input."""
+        return QtGui.QValidator.Acceptable, text, pos
+
+    def blockSignals(self, state: bool):
+        """Blocks or enables signals"""
+        self.pause_signals = state
+        return super().blockSignals(state)
+
+
+# endregion
+
+
+# region Profile
+class ProfileTimer(QtCore.QTimer):
+    """A timer class that allows storage of controller instruction information"""
+
+    def __init__(
+        self, timestamp: float, environment_name: str, command: str, data: str
+    ):
+        """
+        A timer class that allows storage of controller instruction information
+
+        When the timer times out, the environment, operation, and any data can
+        be collected by the callback by accessing the self.sender().environment,
+        .operation, or .data attributes.
+
+        Parameters
+        ----------
+        environment : str
+            The name of the environment (or 'Global') that the instruction will
+            be sent to
+        operation : str
+            The operation that the environment will be instructed to perform
+        data : str
+            Any data corresponding to that operation that is required
+
+
+        """
+        super().__init__()
+        self.timestamp = timestamp
+        self.environment_name = environment_name
+        self.command = command
+        self.data = data
+
+
+# endregion
+
+
+# region Modal
 class ModalMDISubWindow(QtWidgets.QWidget):
     """A window that shows modal data"""
 
     def __init__(self, parent):
         super().__init__(parent)
+        modal_mdi_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "modal_acquisition_window.ui"
+        )
         uic.loadUi(modal_mdi_ui_path, self)
 
         self.parent = parent
         self.channel_names = self.parent.channel_names
         self.reference_names = np.array(
-            [self.parent.channel_names[i] for i in self.parent.reference_channel_indices]
+            [
+                self.parent.channel_names[i]
+                for i in self.parent.reference_channel_indices
+            ]
         )
         self.response_names = np.array(
             [self.parent.channel_names[i] for i in self.parent.response_channel_indices]
@@ -1239,7 +2067,9 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         """Updates the second view box based on the view from the first box"""
         if self.twinx_viewbox is None:
             return
-        self.twinx_viewbox.setGeometry(self.twinx_original_plotitem.vb.sceneBoundingRect())
+        self.twinx_viewbox.setGeometry(
+            self.twinx_original_plotitem.vb.sceneBoundingRect()
+        )
         # self.twinx_viewbox.linkedViewChanged(
         #     self.twinx_original_plotitem.vb, self.twinx_viewbox.XAxis)
 
@@ -1370,19 +2200,25 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         if current_index in [0, 1]:  # Time history
             if self.parent.last_frame is None:
                 return
-            data = self.parent.last_frame[self.response_coordinate_selector.currentIndex()]
+            data = self.parent.last_frame[
+                self.response_coordinate_selector.currentIndex()
+            ]
             if current_index == 1:
                 data = data * self.parent.window_function
             self.primary_plotdataitem.setData(self.parent.time_abscissa, data)
         elif current_index == 2:  # Spectrum
             if self.parent.last_spectrum is None:
                 return
-            data = self.parent.last_spectrum[self.response_coordinate_selector.currentIndex()]
+            data = self.parent.last_spectrum[
+                self.response_coordinate_selector.currentIndex()
+            ]
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 3:  # Autospectrum
             if self.parent.last_autospectrum is None:
                 return
-            data = self.parent.last_autospectrum[self.response_coordinate_selector.currentIndex()]
+            data = self.parent.last_autospectrum[
+                self.response_coordinate_selector.currentIndex()
+            ]
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 4 or current_index == 6:  # FRF or FRF Coherence
             if self.parent.last_frf is None:
@@ -1393,24 +2229,42 @@ class ModalMDISubWindow(QtWidgets.QWidget):
                 self.reference_coordinate_selector.currentIndex(),
             ]
             if self.data_type_selector.currentIndex() == 0:  # Magnitude
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.abs(data)
+                )
             elif self.data_type_selector.currentIndex() == 1:  # Magnitude/Phase
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.angle(data))
-                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.angle(data)
+                )
+                self.secondary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.abs(data)
+                )
             elif self.data_type_selector.currentIndex() == 2:  # Real
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.real(data)
+                )
             elif self.data_type_selector.currentIndex() == 3:  # Imag
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.imag(data)
+                )
             elif self.data_type_selector.currentIndex() == 4:  # Real/Imag
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
-                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.real(data)
+                )
+                self.secondary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.imag(data)
+                )
             if current_index == 6:
-                data = self.parent.last_coh[self.response_coordinate_selector.currentIndex()]
+                data = self.parent.last_coh[
+                    self.response_coordinate_selector.currentIndex()
+                ]
                 self.twinx_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 5:  # Coherence
             if self.parent.last_coh is None:
                 return
-            data = self.parent.last_coh[self.response_coordinate_selector.currentIndex()]
+            data = self.parent.last_coh[
+                self.response_coordinate_selector.currentIndex()
+            ]
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 7:  # FRF or FRF Coherence
             if self.parent.last_frf is None:
@@ -1418,15 +2272,23 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             resp_ind = self.response_coordinate_selector.currentIndex()
             ref_ind = self.reference_coordinate_selector.currentIndex()
             data = self.parent.last_frf[:, self.reciprocal_responses[resp_ind], ref_ind]
-            compare_data = self.parent.last_frf[:, self.reciprocal_responses[ref_ind], resp_ind]
+            compare_data = self.parent.last_frf[
+                :, self.reciprocal_responses[ref_ind], resp_ind
+            ]
             if self.data_type_selector.currentIndex() == 0:  # Magnitude
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.abs(data)
+                )
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.abs(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 1:  # Magnitude/Phase
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.angle(data))
-                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.angle(data)
+                )
+                self.secondary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.abs(data)
+                )
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.angle(compare_data)
                 )
@@ -1434,18 +2296,26 @@ class ModalMDISubWindow(QtWidgets.QWidget):
                     self.parent.frequency_abscissa, np.abs(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 2:  # Real
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.real(data)
+                )
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.real(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 3:  # Imag
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.imag(data)
+                )
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.imag(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 4:  # Real/Imag
-                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
-                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
+                self.primary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.real(data)
+                )
+                self.secondary_plotdataitem.setData(
+                    self.parent.frequency_abscissa, np.imag(data)
+                )
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.real(compare_data)
                 )
@@ -1462,669 +2332,132 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             self.response_coordinate_selector.setCurrentIndex(new_index)
 
 
-class ChannelMonitor(QtWidgets.QDialog):
-    """Class defining a subwindow that displays specific channel information"""
-
-    def __init__(self, parent, daq_settings: DataAcquisitionParameters):
-        """
-        Creates a window showing CPSD matrix information for a single channel.
-
-        Parameters
-        ----------
-        parent : QWidget
-            Parent of the window.
-        """
-        super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowFlags(self.windowFlags() & Qt.Tool)
-        self.channels = daq_settings.channel_list
-        # Set up the window
-        self.graphics_layout_widget = pyqtgraph.GraphicsLayoutWidget(self)
-        self.push_button = QtWidgets.QPushButton("Clear Alerts", self)
-        self.channels_per_row_label = QtWidgets.QLabel("Channels per Row: ", self)
-        self.channels_per_row_selector = QtWidgets.QSpinBox(self)
-        self.channels_per_row_selector.setMinimum(2)
-        self.channels_per_row_selector.setMaximum(100)
-        self.channels_per_row_selector.setValue(20)
-        self.channels_per_row_selector.setKeyboardTracking(False)
-        layout = QtWidgets.QVBoxLayout()
-        control_layout = QtWidgets.QHBoxLayout()
-        layout.addWidget(self.graphics_layout_widget)
-        control_layout.addWidget(self.channels_per_row_label)
-        control_layout.addWidget(self.channels_per_row_selector)
-        control_layout.addStretch()
-        control_layout.addWidget(self.push_button)
-        layout.addLayout(control_layout)
-        self.setLayout(layout)
-        # Set up defaults for the channel ranges
-        self.channel_ranges = None
-        self.channel_warning_limits = None
-        self.channel_abort_limits = None
-        self.background_bars = None
-        self.history_bars = None
-        self.level_bars = None
-        self.history_last_update = None
-        self.history_hold_frames = int(
-            np.ceil(10 * daq_settings.sample_rate / daq_settings.samples_per_read)
-        )
-        self.aborted_channels = None
-        # Set up defaults for the plot
-        self.plots = None
-        self.bar_channel_indices = None
-        self.pen = pyqtgraph.mkPen(color=(0, 0, 0, 255), width=1)
-        self.background_brush = pyqtgraph.mkBrush((255, 255, 255))
-        self.history_brush = pyqtgraph.mkBrush((124, 124, 255))
-        self.current_brush = pyqtgraph.mkBrush((34, 139, 34))
-        self.limit_brush = pyqtgraph.mkBrush((145, 197, 17))
-        self.abort_brush = pyqtgraph.mkBrush((145, 70, 17))
-        self.limit_background_brush = pyqtgraph.mkBrush(
-            (
-                255,
-                255,
-                0,
-            )
-        )
-        self.abort_background_brush = pyqtgraph.mkBrush((255, 0, 0))
-        self.limit_history_brush = pyqtgraph.mkBrush((190, 190, 128))
-        self.abort_history_brush = pyqtgraph.mkBrush((190, 62, 128))
-        # Connect everything and do final builds
-        self.connect_callbacks()
-        self.build_plot()
-        self.setWindowTitle("Channel Monitor")
-        self.resize(400, 300)
-        self.show()
-
-    def connect_callbacks(self):
-        """Connects callback functions to the respective widgets"""
-        self.channels_per_row_selector.valueChanged.connect(self.build_plot)
-        self.push_button.clicked.connect(self.clear_alerts)
-
-    def update_channel_list(self, daq_settings):
-        """Updates the channel list in the test"""
-        self.channels = daq_settings.channel_list
-        self.history_hold_frames = int(
-            np.ceil(10 * daq_settings.sample_rate / daq_settings.samples_per_read)
-        )
-        self.build_plot()
-
-    def clear_alerts(self):
-        """Clears any alerts that have been triggered by high values"""
-        self.aborted_channels = [False for val in self.aborted_channels]
-        for current_bar in self.level_bars:
-            current_bar.setOpts(brushes=[self.current_brush])
-        for history_bar in self.history_bars:
-            history_bar.setOpts(brushes=[self.history_brush])
-        for background_bar in self.background_bars:
-            background_bar.setOpts(brushes=[self.background_brush])
-
-    def build_plot(self):
-        """Builds the channel monitor window and plots"""
-        # TODO Need to get the values from the bars before deleting them so we
-        # can maintain the levels from before the value was changed
-        self.graphics_layout_widget.clear()
-        num_channels = len(self.channels)
-        num_bars = int(np.ceil(num_channels / self.channels_per_row_selector.value()))
-        # Compute number of channels per bar
-        channels_per_bar = [0 for i in range(num_bars)]
-        for i in range(num_channels):
-            channels_per_bar[i % num_bars] += 1
-
-        # print('Channels per Bar {:}'.format(channels_per_bar))
-        # Now let's actually make the plots
-        self.plots = [self.graphics_layout_widget.addPlot(i, 0) for i in range(num_bars)]
-
-        # Now parse the channel ranges
-        self.channel_ranges = []
-        self.channel_warning_limits = []
-        self.channel_abort_limits = []
-        for channel in self.channels:
-            try:
-                max_abs_volt = np.min(
-                    np.abs([float(channel.maximum_value), float(channel.minimum_value)])
-                )
-            except (ValueError, TypeError):
-                max_abs_volt = 10  # Assume 10 V range on DAQ
-            try:
-                sensitivity = float(channel.sensitivity) / 1000  # mV -> V
-            except (ValueError, TypeError):
-                sensitivity = 0.01  # Assume 10 mV/EU
-            max_abs_eu = max_abs_volt / sensitivity
-            try:
-                warning_limit = float(channel.warning_level)
-            except (ValueError, TypeError):
-                warning_limit = max_abs_eu * 0.9  # Put out warning at 90% the max range
-            try:
-                abort_limit = float(channel.abort_level)
-            except (ValueError, TypeError):
-                abort_limit = max_abs_eu  # Never abort on this channel if not specified
-            self.channel_ranges.append(max_abs_eu)
-            self.channel_warning_limits.append(warning_limit)
-            self.channel_abort_limits.append(abort_limit)
-        self.channel_ranges = np.array(self.channel_ranges)
-        self.channel_warning_limits = np.array(self.channel_warning_limits)
-        self.channel_abort_limits = np.array(self.channel_abort_limits)
-        # Display abort limit as range rather than channel if it is lower
-        abort_lower = self.channel_ranges > self.channel_abort_limits
-        self.channel_ranges[abort_lower] = self.channel_abort_limits[abort_lower]
-
-        # Now build the plots
-        self.bar_channel_indices = []
-        for i, num_channels in enumerate(channels_per_bar):
-            try:
-                next_starting_index = self.bar_channel_indices[-1][-1] + 1
-            except IndexError:
-                next_starting_index = 0
-            self.bar_channel_indices.append(next_starting_index + np.arange(num_channels))
-        # print(self.bar_channel_indices)
-        self.background_bars = []
-        self.history_bars = []
-        self.level_bars = []
-        self.history_last_update = []
-        self.aborted_channels = []
-        for indices, plot in zip(self.bar_channel_indices, self.plots):
-            plot.hideAxis("left")
-            for _, index in enumerate(indices):
-                background_bar = pyqtgraph.BarGraphItem(
-                    x=[index + 1],
-                    height=1.0,
-                    width=0.9,
-                    pen=self.pen,
-                    brush=self.background_brush,
-                )
-                plot.addItem(background_bar)
-                self.background_bars.append(background_bar)
-                history_bar = pyqtgraph.BarGraphItem(
-                    x=[index + 1],
-                    height=0,
-                    width=0.9,
-                    pen=self.pen,
-                    brush=self.history_brush,
-                )
-                plot.addItem(history_bar)
-                self.history_bars.append(history_bar)
-                current_bar = pyqtgraph.BarGraphItem(
-                    x=[index + 1],
-                    height=0,
-                    width=0.9,
-                    pen=self.pen,
-                    brush=self.current_brush,
-                )
-                plot.addItem(current_bar)
-                self.level_bars.append(current_bar)
-                self.history_last_update.append(0)
-                self.aborted_channels.append(False)
-
-    def update(self, channel_levels):
-        """Updates the level data in each bar"""
-        # print('Data {:}'.format(channel_levels.shape))
-        # print(channel_levels)
-        for index, (
-            level,
-            current_bar,
-            history_bar,
-            background_bar,
-            history_last_update,
-            warning,
-            abort,
-            value_range,
-            aborted,
-        ) in enumerate(
-            zip(
-                channel_levels,
-                self.level_bars,
-                self.history_bars,
-                self.background_bars,
-                self.history_last_update,
-                self.channel_warning_limits,
-                self.channel_abort_limits,
-                self.channel_ranges,
-                self.aborted_channels,
-            )
-        ):
-            # Set the current bar height
-            current_height = level / value_range
-            current_bar.setOpts(height=current_height if current_height < 1 else 1)
-            # Now look at the history bar
-            last_history_height = history_bar.opts.get("height")
-            # print(last_history_height)
-            if history_last_update > self.history_hold_frames:
-                desired_history_height = last_history_height - 1 / self.history_hold_frames
-            else:
-                desired_history_height = last_history_height
-            if desired_history_height < current_height:
-                desired_history_height = current_height
-                self.history_last_update[index] = 0
-            else:
-                self.history_last_update[index] += 1
-            history_bar.setOpts(height=1 if desired_history_height > 1 else desired_history_height)
-            # Now look at the pen color
-            if level > abort or aborted:
-                current_bar.setOpts(brushes=[self.abort_brush])
-                background_bar.setOpts(brushes=[self.abort_background_brush])
-                history_bar.setOpts(brushes=[self.abort_history_brush])
-                self.aborted_channels[index] = True
-            elif level > warning:
-                current_bar.setOpts(brushes=[self.limit_brush])
-                background_bar.setOpts(brushes=[self.limit_background_brush])
-                history_bar.setOpts(brushes=[self.limit_history_brush])
+# endregion
 
 
-class VaryingNumberOfLinePlot:
-    """A plot that can have a dynamic number of lines assigned,
-    adding or removing lines as necessary"""
+# region System Id
+class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
+    """Plot axis labels that can be rotated by some value"""
 
-    def __init__(self, plot_item, initial_abscissa=None, initial_ordinate=None):
-        self.plot_item = plot_item
-        self.lines = []
-        if initial_abscissa is not None and initial_ordinate is not None:
-            self.set_data(initial_abscissa, initial_ordinate)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_height = self.height()
+        self._angle = None
 
-    def set_data(self, abscissa, ordinate):
-        """Sets the data of the plot
+    def setAngle(self, angle):  # pylint: disable=invalid-name
+        """Sets the angle and ensures it's between -180 and 180"""
+        self._angle = angle
+        self._angle = (self._angle + 180) % 360 - 180
 
-        Parameters
-        ----------
-        abscissa : np.ndarray
-            A 2D dataset where each row is a different plot and the columns are the abscissa values
-            of each curve
-        ordinate : np.ndarray
-            A 2D dataset where each row is a different plot and the columns are the ordinate values
-            of each curve
-        """
-        for i, (this_ordinate, this_abscissa) in enumerate(zip(ordinate, abscissa)):
-            try:
-                self.lines[i].setData(this_abscissa, this_ordinate)
-            except IndexError:
-                pen = {"color": colororder[i % len(colororder)]}
-                self.lines.append(self.plot_item.plot(this_abscissa, this_ordinate, pen=pen))
+    def drawPicture(self, p, axisSpec, tickSpecs, textSpecs):
+        """UPdated draw picture method that includes the rotation of the text"""
+        profiler = pyqtgraph.debug.Profiler()
+        max_width = 0
 
-        # Remove extra lines
-        extra_lines = len(self.lines) - len(ordinate)
-        for i in range(extra_lines):
-            line = self.lines.pop()
-            self.plot_item.removeItem(line)
+        # draw long line along axis
+        pen, p1, p2 = axisSpec
+        p.setPen(pen)
+        p.drawLine(p1, p2)
+        # draw ticks
+        for pen, p1, p2 in tickSpecs:
+            p.setPen(pen)
+            p.drawLine(p1, p2)
+        profiler("draw ticks")
 
-    def clear(self):
-        """Clears all data from the plots"""
-        self.lines = []
-        self.plot_item.clear()
+        for rect, flags, text in textSpecs:
+            p.save()  # save the painter state
+
+            p.translate(rect.center())  # move coordinate system to center of text rect
+            p.rotate(self._angle)  # rotate text
+            p.translate(-rect.center())  # revert coordinate system
+
+            x_offset = np.ceil(np.fabs(np.sin(np.radians(self._angle)) * rect.width()))
+            if self._angle < 0:
+                x_offset = -x_offset
+            p.translate(
+                x_offset / 2, 0
+            )  # Move the coordinate system (relatively) downwards
+
+            p.drawText(rect, flags, text)
+            p.restore()  # restore the painter state
+            offset = np.fabs(x_offset)
+            max_width = offset if max_width < offset else max_width
+
+        profiler("draw text")
+        #  Adjust the height
+        self.setHeight(self._original_height + max_width)
+
+    def boundingRect(self):
+        """Sets the bounding rectangle of the item to give more space at the bottom"""
+        rect = super().boundingRect()
+        rect.adjust(0, 0, 0, 20)  # Add 20 pixels to bottom
+        return rect
 
 
-class IPAddress:
-    """Container for information about IPAddress, mainly used to make
-    sure each address has a values for relevant information"""
-
-    def __init__(self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False):
-        self.host_name = host_name
-        self.ipv4_address = ipv4_address
-        self.ipv6_address = ipv6_address
-        self.valid_ip = valid_ip
+import os
+from PyQt5 import QtWidgets, uic
 
 
-this_path = os.path.split(__file__)[0]
-ip_manager_ui_path = os.path.join(this_path, "ip_manager.ui")
-
-
-class IPAddressManager(QtWidgets.QDialog):
-    """A class to manage IP addresses"""
-
-    def __init__(self, ip_addresses: list[IPAddress] = None, parent=None):
-        if ip_addresses is None:
-            ip_addresses = []
+class SysIdSelector(QtWidgets.QDialog):
+    def __init__(self, source_environments, target_environments, parent=None):
         super().__init__(parent)
-        uic.loadUi(ip_manager_ui_path, self)
 
-        self.ip_address_table.setColumnWidth(0, 200)
-        self.ip_address_table.setColumnWidth(1, 200)
-        self.ip_address_table.setColumnWidth(2, 250)
+        sysid_selector_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "system_identification_selector.ui"
+        )
+        uic.loadUi(sysid_selector_ui_path, self)
 
-        self.ip_addresses = []
-        self.unique_indices = []
-        for ind, address in enumerate(ip_addresses):
-            self.add_ip_address()
-            self.ip_addresses[ind] = address
+        # Store data
+        self.source_environments = list(source_environments)
+        self.target_environments = list(target_environments)
 
-        self.validation_timeout = 0.5
-        self.selected_index = -1
+        # Setup tables
+        self._setup_tables()
+        self._populate_tables()
 
-        self.refresh_ip_table()
-        self.loading_bar.hide()
+    def _setup_tables(self):
+        # LEFT: single selection
+        self.file_table_widget.setSelectionMode(
+            QtWidgets.QAbstractItemView.SingleSelection
+        )
+        self.file_table_widget.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
+        self.file_table_widget.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
 
-        self.connect_callbacks()
+        # RIGHT: multi selection
+        self.current_table_widget.setSelectionMode(
+            QtWidgets.QAbstractItemView.MultiSelection
+        )
+        self.current_table_widget.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
+        self.current_table_widget.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
 
-        self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
+    def _populate_tables(self):
+        # File environments (left)
+        self.file_table_widget.setRowCount(len(self.source_environments))
+        for row, name in enumerate(self.source_environments):
+            item = QtWidgets.QTableWidgetItem(str(name))
+            self.file_table_widget.setItem(row, 0, item)
 
-    def connect_callbacks(self):
-        """Connects callbacks to the widgets"""
-        self.add_ip_address_button.clicked.connect(self.add_ip_address)
-        self.remove_ip_address_button.clicked.connect(self.remove_ip_address)
-        self.validate_ip_address_button.clicked.connect(self.validate_button_pressed)
+        # Current environments (right)
+        self.current_table_widget.setRowCount(len(self.target_environments))
+        for row, name in enumerate(self.target_environments):
+            item = QtWidgets.QTableWidgetItem(str(name))
+            self.current_table_widget.setItem(row, 0, item)
 
-        self.button_box.accepted.disconnect()
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
+    def get_selection(self):
+        # LEFT (single)
+        file_items = self.file_table_widget.selectedItems()
+        load_from = file_items[0].text() if file_items else None
 
-    def set_row_count(self, row_count):
-        """Sets the number of rows in the table"""
-        while self.ip_address_table.rowCount() < row_count:
-            clicked = False
-            self.add_ip_address(clicked)
+        # RIGHT (multi)
+        current_items = self.current_table_widget.selectedItems()
+        load_to = [item.text() for item in current_items]
 
-    def add_ip_address(self, clicked=None, append_list=True):  # pylint: disable=unused-argument
-        """Adds a new IP address to the manager"""
-        if append_list:
-            new_ip = IPAddress()
-            self.ip_addresses.append(new_ip)
-
-            unique_index = 0
-            while unique_index in self.unique_indices:
-                unique_index += 1
-            self.unique_indices.append(unique_index)
-
-        # Add new row to list
-        current_row = self.ip_address_table.rowCount()
-        self.ip_address_table.setRowCount(len(self.unique_indices))
-
-        # Add a host name line edit with move up and move down buttons
-        host_name_widget = QtWidgets.QWidget()
-        host_name_layout = QtWidgets.QHBoxLayout(host_name_widget)
-        host_name_layout.setContentsMargins(0, 0, 0, 0)
-        host_name_layout.setSpacing(0)
-
-        move_button_layout = QtWidgets.QVBoxLayout()
-        move_button_layout.setContentsMargins(0, 0, 0, 0)
-        move_button_layout.setSpacing(0)
-
-        up_button = QtWidgets.QToolButton()
-        up_button.setArrowType(QtCore.Qt.UpArrow)
-        up_button.setFixedSize(30, 15)
-        up_button.clicked.connect(lambda: self.move_address_up(unique_index))
-
-        down_button = QtWidgets.QToolButton()
-        down_button.setArrowType(QtCore.Qt.DownArrow)
-        down_button.setFixedSize(30, 15)
-        down_button.clicked.connect(lambda: self.move_address_down(unique_index))
-
-        move_button_layout.addWidget(up_button)
-        move_button_layout.addWidget(down_button)
-
-        host_name_input = QtWidgets.QLineEdit()
-        host_name_input.setFixedHeight(45)
-        host_name_input.setPlaceholderText("BK<Type>-<Serial>")
-        host_name_input.textChanged.connect(lambda text: self.host_name_changed(text, unique_index))
-        host_name_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
-
-        host_name_layout.addLayout(move_button_layout)
-        host_name_layout.addWidget(host_name_input)
-
-        self.ip_address_table.setCellWidget(current_row, 0, host_name_widget)
-
-        ipv4_input = QtWidgets.QLineEdit()
-        ipv4_input.setFixedHeight(45)
-        ipv4_input.setPlaceholderText("169.254.001.001")
-        ipv4_input.textChanged.connect(lambda text: self.ipv4_address_changed(text, unique_index))
-        ipv4_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
-
-        self.ip_address_table.setCellWidget(current_row, 1, ipv4_input)
-
-        ipv6_input = QtWidgets.QLineEdit()
-        ipv6_input.setFixedHeight(45)
-        ipv6_input.setPlaceholderText("[<Unicast>%<Network>]")
-        ipv6_input.textChanged.connect(lambda text: self.ipv6_address_changed(text, unique_index))
-        ipv6_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
-
-        self.ip_address_table.setCellWidget(current_row, 2, ipv6_input)
-
-    def host_name_changed(self, text: str, unique_index: int):
-        """Updates the host name"""
-        try:
-            current_row = self.unique_indices.index(unique_index)
-        except ValueError:
-            return
-        self.ip_addresses[current_row].host_name = text
-        self.ip_addresses[current_row].valid_ip = False
-
-    def ipv4_address_changed(self, text: str, unique_index: int):
-        """Updates the IPv4 Address"""
-        try:
-            current_row = self.unique_indices.index(unique_index)
-        except ValueError:
-            return
-        self.ip_addresses[current_row].ipv4_address = text
-        self.ip_addresses[current_row].valid_ip = False
-
-    def ipv6_address_changed(self, text: str, unique_index: int):
-        """Updates the IPv6 Address"""
-        try:
-            current_row = self.unique_indices.index(unique_index)
-        except ValueError:
-            return
-        self.ip_addresses[current_row].ipv6_address = text
-        self.ip_addresses[current_row].valid_ip = False
-
-    def ip_input_focused(self, event, unique_index: int):  # pylint: disable=unused-argument
-        """Updates the selected index based on the window focus"""
-        self.selected_index = unique_index
-
-    def remove_ip_address(self):
-        """Removes the currently selected IP Address"""
-        try:
-            current_row = self.unique_indices.index(self.selected_index)
-        except ValueError:
-            return
-        if 0 <= current_row < len(self.unique_indices):
-            self.ip_address_table.removeRow(
-                current_row,
-            )
-            self.ip_addresses.pop(current_row)
-            self.unique_indices.pop(current_row)
-            self.selected_index = -1
-
-    def move_address_up(self, ip_index):
-        """Shifts values up one line edit"""
-        # Just shifts text values up one LineEdit, unique_indices correspond
-        # to LineEdit objects which dont shift therefore the unique_indices dont change
-        try:
-            current_row = self.unique_indices.index(ip_index)
-        except ValueError:
-            return
-        if current_row > 0:
-            move_ip = self.ip_addresses.pop(current_row)
-            self.ip_addresses.insert(current_row - 1, move_ip)
-            self.refresh_ip_table([current_row - 1, current_row])
-
-    def move_address_down(self, ip_index):
-        """Shifts the addresses down one line edit"""
-        # Just shifts text values down one LineEdit, unique_indices correspond
-        # to LineEdit objects which dont shift therefore the unique_indices dont change
-        try:
-            current_row = self.unique_indices.index(ip_index)
-        except ValueError:
-            return
-        if current_row < len(self.unique_indices) - 1:
-            move_ip = self.ip_addresses.pop(current_row)
-            self.ip_addresses.insert(current_row + 1, move_ip)
-            self.refresh_ip_table([current_row, current_row + 1])
-
-    def refresh_ip_table(self, rows: list[int] = None):
-        """Refreshes the IP address table"""
-        if rows is None:
-            rows = range(len(self.unique_indices))
-
-        # This is slower than just deleting widgets and refreshing them but I do
-        # this to keep a consistent unique indice corresponding to rows
-        for row_idx in rows:
-            if row_idx >= self.ip_address_table.rowCount():
-                return
-
-            host_name = (
-                str(self.ip_addresses[row_idx].host_name)
-                if self.ip_addresses[row_idx].host_name is not None
-                else ""
-            )
-            host_name_widget = self.ip_address_table.cellWidget(row_idx, 0)
-            host_name_input = host_name_widget.findChild(QtWidgets.QLineEdit)
-            host_name_input.blockSignals(True)
-            host_name_input.setText(host_name)
-            host_name_input.blockSignals(False)
-
-            ipv4_address = (
-                str(self.ip_addresses[row_idx].ipv4_address)
-                if self.ip_addresses[row_idx].ipv4_address is not None
-                else ""
-            )
-            ipv4_input = self.ip_address_table.cellWidget(row_idx, 1)
-            ipv4_input.blockSignals(True)
-            ipv4_input.setText(ipv4_address)
-            ipv4_input.blockSignals(False)
-
-            ipv6_address = (
-                str(self.ip_addresses[row_idx].ipv6_address)
-                if self.ip_addresses[row_idx].ipv6_address is not None
-                else ""
-            )
-            ipv6_input = self.ip_address_table.cellWidget(row_idx, 2)
-            ipv6_input.blockSignals(True)
-            ipv6_input.setText(ipv6_address)
-            ipv6_input.blockSignals(False)
-
-    def get_ip_addresses(self, host_name: str = None):
-        """Gets valid IP Addresses given the host name"""
-        valid_host_name = False
-        ipv4_address = None
-        ipv6_address = None
-        try:
-            # Get the address info for the hostname
-            ipv4_info = socket.getaddrinfo(host_name, None, socket.AF_INET)
-            ipv6_info = socket.getaddrinfo(host_name, None, socket.AF_INET6)
-            ipv4 = ipv4_info[0]
-            ipv4_address = ipv4[4][0]
-            ipv6 = ipv6_info[0]
-            ipv6_address = f"[{ipv6[4][0]}%{ipv6[4][3]}]"
-
-            valid_host_name = self.validate_ip_address(ipv6_address)
-        except (socket.gaierror, IndexError):
-            # print(f'Error retrieving info')
-            pass
-
-        return (valid_host_name, ipv4_address, ipv6_address)
-
-    def get_host_name(self, ip_address: str = None):
-        """Gets the host name from an IP address"""
-        host_name = None
-        host = "http://" + ip_address
-        valid_ip = self.validate_ip_address(ip_address)
-        if valid_ip:
-            try:
-                response = requests.get(host + "/rest/rec/module/info", timeout=1)
-                info = response.json()
-                host_name = f"BK{info['module']['type']['number']}-{info['module']['serial']}"
-            except Exception:
-                valid_ip = False
-                host_name = None
-
-        return (valid_ip, host_name)
-
-    def validate_ip_address(self, ip_address: str = None):
-        """Checks if IP addresses are valid"""
-        valid_ip = False
-        host = "http://" + ip_address
-        try:
-            response = requests.put(host + "/rest/rec/open", timeout=self.validation_timeout)
-            if response.status_code == 200:
-                valid_ip = True
-        except requests.exceptions.Timeout:
-            pass
-        except requests.exceptions.ConnectionError:
-            pass
-        except requests.exceptions.RequestException:
-            pass
-
-        return valid_ip
-
-    def autofill_ip_addresses(self):
-        """This function validates the ip address and autofills the other values.
-        If multiple inputs are valid but correspond to different devices, the
-        priority is host_name > ipv4 > ipv6
-        Note: Having 2 of the same host names may not validate correctly due to weird
-        socket waiting requirements
-        """
-        self.loading_bar.setValue(0)
-        self.loading_bar.show()
-        num_rows = len(self.unique_indices)
-        for row_idx in range(num_rows):
-            valid_row = self.ip_addresses[row_idx].valid_ip
-            percent_complete = round((row_idx + 1) / num_rows * 100)
-            self.loading_bar.setValue(percent_complete)
-
-            # Check if you can pull information from hostname
-            host_name = (
-                str(self.ip_addresses[row_idx].host_name)
-                if self.ip_addresses[row_idx].host_name is not None
-                else ""
-            )
-            if not valid_row and host_name != "":
-                valid_row, ipv4_address, ipv6_address = self.get_ip_addresses(host_name)
-
-                if valid_row:
-                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
-                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
-                    self.ip_addresses[row_idx].valid_ip = valid_row
-                    continue
-
-            ipv4_address = (
-                str(self.ip_addresses[row_idx].ipv4_address)
-                if self.ip_addresses[row_idx].ipv4_address is not None
-                else ""
-            )
-            if not valid_row and ipv4_address is not None:
-                valid_row, host_name = self.get_host_name(ipv4_address)
-
-                if valid_row:
-                    self.ip_addresses[row_idx].host_name = host_name
-                    (valid_row, _, ipv6_address) = self.get_ip_addresses(host_name)
-                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
-                    self.ip_addresses[row_idx].valid_ip = valid_row
-                    continue
-
-            ipv6_address = (
-                str(self.ip_addresses[row_idx].ipv6_address)
-                if self.ip_addresses[row_idx].ipv6_address is not None
-                else ""
-            )
-            if not valid_row and ipv6_address is not None:
-                valid_row, host_name = self.get_host_name(ipv6_address)
-
-                if valid_row:
-                    self.ip_addresses[row_idx].host_name = host_name
-                    (valid_row, ipv4_address, _) = self.get_ip_addresses(host_name)
-                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
-                    self.ip_addresses[row_idx].valid_ip = valid_row
-                    continue
-
-        self.loading_bar.hide()
-
-    def validate_button_pressed(self):
-        """Validates the IP Addresses"""
-        self.autofill_ip_addresses()
-        self.refresh_ip_table()
-
-        valid_ip_list = [ip.valid_ip for ip in self.ip_addresses]
-        if not all(valid_ip_list):
-            invalid_ip_rows = [
-                row for row, valid_bool in enumerate(valid_ip_list) if not valid_bool
-            ]
-            message = (
-                f"Invalid IP address at rows: {invalid_ip_rows}.\n\n  "
-                f"If IPv4 connection is unstable, try inputting host name."
-            )
-            reply = QtWidgets.QMessageBox.question(
-                self,
-                "Invalid IP Addresses",
-                message,
-                QtWidgets.QMessageBox.Ok,
-                QtWidgets.QMessageBox.Ok,
-            )
-
-    def closeEvent(self, a0):  # pylint: disable=unused-argument,invalid-name
-        """Returns the IP addresses"""
-        return self.ip_addresses
+        return load_from, load_to

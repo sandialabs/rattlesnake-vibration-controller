@@ -1,0 +1,51 @@
+import time
+
+import pytest
+
+from rattlesnake.examples.headless_example import build_rattlesnake_object
+from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.process.streaming import StreamType
+
+
+@pytest.mark.parametrize("threaded", [False])
+@pytest.mark.parametrize("import_method", ["manual"])
+@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+@pytest.mark.parametrize(
+    "environment_type",
+    [
+        EnvironmentType.TIME,
+        EnvironmentType.MODAL,
+        EnvironmentType.SINE,
+        EnvironmentType.RANDOM,
+        EnvironmentType.TRANSIENT,
+    ],
+)
+# @pytest.mark.parametrize("test_type", ["environment", "profile"])
+@pytest.mark.parametrize("test_type", ["environment"])
+def test_rattlesnake_qualification(
+    threaded, import_method, hardware_type, environment_type, test_type
+):
+    run_profile = False
+    start_environment = False
+    if test_type == "environment":
+        start_environment = True
+    elif test_type == "profile":
+        run_profile = True
+
+    rattlesnake = build_rattlesnake_object(
+        threaded=threaded,
+        import_method=import_method,
+        hardware_type=hardware_type,
+        environment_type=environment_type,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=False,
+        run_sysid=True,
+        start_hardware=True,
+        start_environment=start_environment,
+        run_profile=run_profile,
+    )
+    time.sleep(10)
+    rattlesnake.shutdown()
+
+    assert True

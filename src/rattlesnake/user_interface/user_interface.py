@@ -23,398 +23,354 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import copy
-import datetime
+import ctypes
 import multiprocessing as mp
-
-# pyqtgraph.setConfigOption('leftButtonPan',False)
 import os
 import re
+import sys
 import time
 import traceback
+from typing import Any
+from datetime import datetime
 
 import netCDF4
 import numpy as np
 import openpyxl
 import pyqtgraph
-from qtpy import QtGui, QtWidgets, uic
-from qtpy.QtCore import (  # pylint: disable=no-name-in-module
-    QDir,
-    QEvent,
-    QObject,
-    QRunnable,
-    QThreadPool,
-    QTimer,
-    Signal,
-    Slot,
-)
+from qtpy import QtCore, QtGui, QtWidgets, uic
 
-from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS as all_environment_UIs
-from rattlesnake.user_interface.ui_utilities import ui_path, UICommands
+from rattlesnake.engine import RattlesnakeState, RattlesnakeController
+from rattlesnake.utilities import (
+    DIRECTORY,
+    RattlesnakeError,
+    GlobalCommands,
+)
+from rattlesnake.load_utilities import (
+    save_rattlesnake_to_workbook,
+    save_profile_to_workbook,
+    load_profile_from_workbook,
+)
+from rattlesnake.profile_manager import VALID_COMMANDS, ProfileEvent
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions
+from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.user_interface.ui_utilities import (
+    error_message_qt,
+    UICommands,
+    EventWatcherError,
+    EventWatcher,
+    Updater,
+    ProfileTimer,
     ChannelMonitor,
     IPAddress,
     IPAddressManager,
-    ProfileTimer,
-    get_table_bools,
 )
-from rattlesnake.utilities import (
-    Channel,
-    DataAcquisitionParameters,
-    GlobalCommands,
-    QueueContainer,
-    VerboseMessageQueue,
-    error_message_qt,
+from rattlesnake.user_interface.ui_registry import (
+    UI_HARDWARE_OPTIONS,
+    UI_ASK_FOR_FILE,
+    UI_HARDWARE_WIDGETS,
+    ENVIRONMENT_UIS,
+    UI_ENVIRONMENT_OPTIONS,
 )
 
+# region Defaults
+# pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
 pyqtgraph.setConfigOption("foreground", "k")
-
-directory = os.path.split(__file__)[0]
-QDir.addSearchPath("images", os.path.join(directory, "themes", "images"))
-
+QtCore.QDir.addSearchPath(
+    "images", os.path.join(DIRECTORY, "user_interface", "themes", "images")
+)
 TASK_NAME = "UI"
+VERSION = "3.1.1"
+RATTLESNAKE_UI_PATH = os.path.join(
+    DIRECTORY, "user_interface", "ui_files", "combined_environments_controller.ui"
+)
+BUFFER_ROWS = 10
+MIN_ROWS = 30
 
 
-class UpdaterSignals(QObject):
-    """Defines the signals that will be sent from the GUI Updater to the GUI
+# region User Interface
+class RattlesnakeUI(QtWidgets.QMainWindow):
+    """Main user interface from which the rattlesnake controller object is controlled."""
 
-    Supported signals are:
-
-    finished
-        empty
-
-    update
-        `tuple` (widget_id,data)
-    """
-
-    finished = Signal()
-    update = Signal(tuple)
-
-
-class Updater(QRunnable):
-    """Updater thread to collect results from the subsystems and reflect the
-    changes in the GUI
-    """
-
-    def __init__(self, update_queue):
+    def __init__(self, rattlesnake: RattlesnakeController):
         """
-        Initializes the updater with the queue and signals that will be emitted
-        when the queue has data in it.
+        Initializes user interface from an existing rattlesnake controller object.
+
+        The rattlesnake controller object is created outside the UI so that the
+        window can close without having to wait for the full rattlesnake.shutdown event to
+        occur.
 
         Parameters
         ----------
-        update_queue : mp.queues.Queue
-            Queue from which events will be captured.
-
+        rattlesnake : RattlesnakeController
+            The rattlesnake controller object that the UI is going to represent.
         """
-        super(Updater, self).__init__()
-        self.update_queue = update_queue
-        self.signals = UpdaterSignals()
-        self.verbose_queue = isinstance(self.update_queue, VerboseMessageQueue)
+        super(RattlesnakeUI, self).__init__()
 
-    @Slot()
-    def run(self):
-        """Continually capture update events from the queue"""
-        while True:
-            if self.verbose_queue:
-                queue_data = self.update_queue.get(TASK_NAME)
-            else:
-                queue_data = self.update_queue.get()
-            if queue_data[0] == GlobalCommands.QUIT:
-                break
-            self.signals.update.emit(queue_data)
-        self.signals.finished.emit()
-        time.sleep(1)
+        uic.loadUi(RATTLESNAKE_UI_PATH, self)
+        self.channel_monitor_window = None
 
+        # Communication objects
+        self.rattlesnake = rattlesnake
+        self.environment_uis = {}
+        self.profile_table_list = []
+        self.profile_timer_list = []
+        self.theme = "Light"
 
-class Ui(QtWidgets.QMainWindow):
-    """Main user interface from which the controller will be controlled."""
+        # Updater process
+        self.event_thread = None
+        self.event_watcher = None
+        self.threadpool = QtCore.QThreadPool()
+        self.gui_updater = Updater(self.gui_update_queue)
+        self.threadpool.start(self.gui_updater)
+        self.gui_updater.signals.update.connect(self.update_gui)
 
-    def __init__(self, environments, queue_container: QueueContainer, profile_file=None):
+        # Storage properties
+        self.hardware_file = None
+        self.lanxi_ip_addresses = []
+
+        # Complete UI layout
+        self.connect_callbacks()
+        self.complete_ui()
+
+        # Store any presets to the UI
+        self.load_ui_from_rattlesnake()
+
+        # Show UI
+        self.show()
+
+        # Tell Rattlesnake it now has a gui
+        self.gui_update_queue.put((UICommands.GUI_SETUP_FINISHED, None))
+
+    def complete_ui(self):
         """
-        Create the user interface with the specified parameters and queues
-
-        Parameters
-        ----------
-        environments : iterable
-            Iterable of control_type,control_name values to use to set up the
-            environments.
-        queue_container : QueueContainer
-            Namespace containing the queues that are used by the controller.
-        profile_file : str, optional
-            File path to an optional profile file that will be loaded to set
-            up the controller. The default is None.
-
+        Helper function to set up the default format of the user interface.
         """
-        try:
-            # Store input data
-            self._updated_size = False
-            self.queue_container = queue_container
-            self.environment_types = {name: control_type for control_type, name in environments}
-            self.environments = [name for control_type, name in environments]
-            self.environment_metadata = {name: None for name in self.environments}
-            self.profile_events = None
-            self.profile_timers = None
-            self.profile_list_update_timer = None
-            self.channel_monitor_window = None
-            self.lanxi_ip_addresses = []
-
-            # Create the user interface
-            super(Ui, self).__init__()
-            uic.loadUi(ui_path, self)
-
-            # Add tabs to the empty widgets based on the environments
-            self.environment_uis = {}
-            for environment_name, environment_type in self.environment_types.items():
-                environment_ui = all_environment_UIs[environment_type]
-                self.environment_uis[environment_name] = environment_ui(
-                    environment_name,
-                    self.environment_definition_environment_tabs,
-                    self.system_id_environment_tabs,
-                    self.test_prediction_environment_tabs,
-                    self.run_environment_tabs,
-                    self.queue_container.environment_command_queues[environment_name],
-                    self.queue_container.controller_communication_queue,
-                    self.queue_container.log_file_queue,
-                )
-
-            # Remove the system ID and test prediction tab if not used.
-            if self.system_id_environment_tabs.count() == 0:
-                self.rattlesnake_tabs.removeTab(self.rattlesnake_tabs.indexOf(self.system_id_tab))
-                self.has_system_id = False
-                self.complete_system_ids = None
-            else:
-                self.has_system_id = True
-                self.complete_system_ids = {
-                    self.system_id_environment_tabs.tabText(i): False
-                    for i in range(self.system_id_environment_tabs.count())
-                }
-            if self.test_prediction_environment_tabs.count() == 0:
-                self.rattlesnake_tabs.removeTab(
-                    self.rattlesnake_tabs.indexOf(self.test_prediction_tab)
-                )
-                self.has_test_predictions = False
-            else:
-                self.has_test_predictions = True
-
-            # I might add this back in later, but for now we will just always show
-            # this tab.
-            # # If there is only one environment, remove the test profile tab
-            # if len(self.environments) == 1:
-            #     self.rattlesnake_tabs.removeTab(self.rattlesnake_tabs.indexOf(self.profile_tab))
-            #     # Also remove profile information from the run test page
-            #     self.run_profile_widget.hide()
-            #     self.has_test_profile = False
-            # else:
-            #     self.has_test_profile = True
-
-            self.streaming_environment_select_combobox.addItems(self.environments)
-
-            self.manual_streaming_trigger_button.setVisible(False)
-
-            for i in range(self.run_environment_tabs.count()):
-                self.run_environment_tabs.widget(i).setEnabled(False)
-
-            self.threadpool = QThreadPool()
-            self.gui_updater = Updater(self.queue_container.gui_update_queue)
-            # Create a side thread to collect global messages
-            self.controller_instructions_collector = Updater(
-                self.queue_container.controller_communication_queue
+        # Universal
+        self.setMinimumWidth(500)
+        # Disable all tabs except the first
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.channel_monitor_button.setVisible(False)
+        # Set icons and window
+        icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
+        self.tray_icon = QtWidgets.QSystemTrayIcon(self)
+        self.tray_icon.setIcon(icon)
+        self.tray_icon.show()
+        if sys.platform.startswith(
+            "win"
+        ):  # This fixes windows treating taskbar icon as python.exe
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                f"sandia.rattlesnake.{VERSION}"
             )
+        self.setWindowIcon(icon)
+        self.setWindowTitle("Rattlesnake Vibration Controller")
+        self.change_color_theme(self.theme)
 
-            # Start Workers
-            self.threadpool.start(self.gui_updater)
-            self.threadpool.start(self.controller_instructions_collector)
+        # Channel Table
+        self.table_layout.setStretch(0, 5)  # Channel table
+        self.table_layout.setStretch(1, 1)  # Environments table
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
 
-            # Complete the remaining user interface
-            self.complete_ui()
-            self.connect_callbacks()
+        # Hardware
+        available_hardware = UI_HARDWARE_OPTIONS.keys()
+        self.hardware_widgets = {
+            "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
+            "lanxi_ip": [self.lanxi_ip_address_button],
+            "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
+            "buffer_size": [self.buffer_size_label, self.buffer_size_selector],
+            "lanxi_processes": [
+                self.lanxi_maximum_acquisition_processes_label,
+                self.lanxi_maximum_acquisition_processes_selector,
+            ],
+            "integration_oversample": [
+                self.integration_oversample_label,
+                self.integration_oversample_selector,
+            ],
+            "damping_ratio": [self.damping_ratio_label, self.damping_ratio_selector],
+            "task_trigger": [self.task_trigger_label, self.task_trigger_selector],
+            "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
+            "select_file": [self.select_file_button],
+        }
+        self.hardware_selector.addItems(available_hardware)
+        self.update_hardware_widget_visibility()
 
-            # Create the command map for profile instructions
-            self.command_map = {
-                "Start Streaming": self.start_streaming,
-                "Stop Streaming": self.stop_streaming,
-                "Disarm DAQ": self.disarm_test,
-            }
+        # Environment
+        available_environments = UI_ENVIRONMENT_OPTIONS.keys()
+        self.add_environment_combobox.addItems(available_environments)
+        self.environment_channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.environment_channel_table.horizontalHeader().setVisible(True)
+        self.environment_channel_table.verticalHeader().setVisible(True)
+        self.environment_channel_table.setColumnCount(0)
+        self.environment_channel_table.hide()
 
-            # Create a field to hold the loaded hardware file
-            self.hardware_file = None
-            self.setWindowIcon(QtGui.QIcon("logo/Rattlesnake_Icon.png"))
-            self.setWindowTitle("Rattlesnake Vibration Controller")
-            self.show()
+        # Acquisition
+        self.streaming_widgets = [
+            self.no_streaming_radiobutton,
+            self.profile_streaming_radiobutton,
+            self.test_level_streaming_radiobutton,
+            self.streaming_environment_select_combobox,
+            self.immediate_streaming_radiobutton,
+            self.select_streaming_file_button,
+            self.manual_streaming_radiobutton,
+            self.manual_streaming_trigger_button,
+        ]
+        self.manual_streaming_trigger_button.hide()
 
-            # Hide the task trigger fields if necessary
-            self.task_trigger_update()
+        # Profile
+        # Create blank timer incase profile list is invalid and it never gets initialized
+        self.profile_list_update_timer = QtCore.QTimer()
+        self.profile_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.run_profile_widget.setEnabled(False)
 
-            # If there is a loaded profile file, we need to handle it
-            # print('Loading Profile')
-            if profile_file is not None:
-                # Channel Table
-                # print('Loading Channel Table')
-                self.load_channel_table(None, profile_file)
-                # print('Loading Workbook')
-                workbook = openpyxl.load_workbook(profile_file, data_only=True)
-                # Hardware
-                # print('Setting Hardware')
-                hardware_sheet = workbook["Hardware"]
-                for i, row in enumerate(hardware_sheet.rows):
-                    if i == 0:
-                        hardware_index = int(row[1].value)
-                        self.hardware_selector.blockSignals(True)
-                        self.hardware_selector.setCurrentIndex(hardware_index)
-                        self.hardware_selector.blockSignals(False)
-                        self.hardware_update(select_file=False)
-                    elif i == 1:
-                        self.hardware_file = row[1].value
-                    elif i == 2:
-                        sample_rate = int(row[1].value)
-                        self.lanxi_sample_rate_selector.setCurrentIndex(
-                            round(np.log2(sample_rate / 4096))
-                        )
-                        self.sample_rate_selector.setValue(sample_rate)
-                    elif i == 3:
-                        self.time_per_read_selector.setValue(row[1].value)
-                    elif i == 4:
-                        self.time_per_write_selector.setValue(row[1].value)
-                    # The rest of these are named variables
-                    else:
-                        name = str(row[0].value).lower().strip().replace(" ", "_")
-                        if name == "":
-                            continue
-                        value = row[1].value
-                        if name == "integration_oversampling":
-                            self.integration_oversample_selector.setValue(int(value))
-                        elif name == "task_trigger":
-                            self.task_trigger_selector.setCurrentIndex(int(value))
-                        elif name == "task_trigger_output_channel":
-                            self.task_trigger_output_selector.setText(str(value))
-                        elif name == "maximum_acquisition_processes":
-                            self.lanxi_maximum_acquisition_processes_selector.setValue(int(value))
-                        else:
-                            print(f"Hardware sheet entry {row[0].value} not recognized")
-                # print('Initializing Data Acquisition')
-                self.initialize_data_acquisition()
-                # Now go through and do the environments
-                for environment_name, environment_ui in self.environment_uis.items():
-                    # print('Setting Environment {:}'.format(environment_name))
-                    environment_ui.set_parameters_from_template(workbook[environment_name])
-                    # TODO: maybe uncomment this later (auto-load FRF matrix to system id
-                    # tab if using frf virtual hardware)
-                    # NOTE: would need to fix an order of operations bug in the transient module
-                    # if hardware_index == 7 and isinstance(environment_ui, AbstractSysIdUI):
-                    #     try:
-                    #         environment_ui.load_sysid_matrix_file(self.hardware_file, popup=False)
-                    #     except KeyError:
-                    #         pass
-                # print('Initializing Environments')
-                self.initialize_environment_parameters()
-                # Now the profile
-                # print('Setting Test Profile')
-                profile_sheet = workbook["Test Profile"]
-                index = 2
-                profile_timestamps = []
-                profile_environment_names = []
-                profile_operation_names = []
-                profile_data_names = []
-                while True:
-                    timestamp = profile_sheet.cell(index, 1).value
-                    environment = profile_sheet.cell(index, 2).value
-                    operation = profile_sheet.cell(index, 3).value
-                    data = profile_sheet.cell(index, 4).value
-                    if timestamp is None or (
-                        isinstance(timestamp, str) and timestamp.strip() == ""
-                    ):
-                        break
-                    # print('Adding Profile Event {:}, {:}, {:}, {:}'.format(
-                    #     timestamp,environment,operation,data))
-                    # self.add_profile_event(None,timestamp,environment,operation,data)
-                    profile_timestamps.append(timestamp)
-                    profile_environment_names.append(environment)
-                    profile_operation_names.append(operation)
-                    profile_data_names.append(data)
-                    index += 1
-                # print('Closing Workbook')
-                workbook.close()
-                # start_time = time.time()
-                self.profile_table.setRowCount(len(profile_timestamps))
-                # insert_row_time = time.time()
-                # print('Time to Insert Row: {:}'.format(insert_row_time-start_time))
-                for selected_row, (
-                    timestamp,
-                    environment,
-                    operation,
-                    data,
-                ) in enumerate(
-                    zip(
-                        profile_timestamps,
-                        profile_environment_names,
-                        profile_operation_names,
-                        profile_data_names,
-                    )
-                ):
-                    timestamp_spinbox = QtWidgets.QDoubleSpinBox()
-                    timestamp_spinbox.setMaximum(1e6)
-                    timestamp_spinbox.setValue(float(timestamp))
-                    self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
-                    # create_spinbox_time = time.time()
-                    # print('Time to Create Spinbox: {:}'.format(
-                    #     create_spinbox_time-insert_row_time))
-                    # Next a combobox sets the environment
-                    environment_combobox = QtWidgets.QComboBox()
-                    environment_combobox.addItem("Global")
-                    for environment_name in self.environments:
-                        environment_combobox.addItem(environment_name)
-                    environment_combobox.setCurrentIndex(environment_combobox.findText(environment))
-                    self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
-                    # create_environment_combobox_time = time.time()
-                    # print('Time to Create Environment Combobox: {:}'.format(
-                    #     create_environment_combobox_time-create_spinbox_time))
-                    # Next a combobox sets the operation
-                    if environment_combobox.currentIndex() == 0:
-                        operations = [operation for operation in self.command_map]
-                    else:
-                        environment_name = self.environments[
-                            environment_combobox.currentIndex() - 1
-                        ]
-                        operations = [
-                            op for op in self.environment_uis[environment_name].command_map
-                        ]
-                    operation_combobox = QtWidgets.QComboBox()
-                    for op in operations:
-                        operation_combobox.addItem(op)
-                    operation_combobox.setCurrentIndex(operation_combobox.findText(operation))
-                    self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
-                    # create_operation_combobox_time = time.time()
-                    # print('Time to Create Operation Combobox: {:}'.format(
-                    #     create_operation_combobox_time-create_environment_combobox_time))
-                    data_item = QtWidgets.QTableWidgetItem()
-                    data_item.setText(str(data))
-                    self.profile_table.setItem(selected_row, 3, data_item)
-                    # create_data_entry_time = time.time()
-                    # print('Time to Data Entry: {:}'.format(
-                    #     create_data_entry_time-create_operation_combobox_time))
-                    timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
-                    environment_combobox.currentIndexChanged.connect(self.update_operations)
-                    operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
-                    # connect_callbacks_time = time.time()
-                    # print('Time to Connect Callbacks: {:}'.format(
-                    #     connect_callbacks_time-create_data_entry_time))
-                    # insert_row_time = connect_callbacks_time
-                self.update_profile_plot()
-            self.profile_table.itemChanged.connect(self.update_profile_plot)
+    def connect_callbacks(self):
+        """
+        Helper function to connect callbacks to widgets in the user interface.
+        """
+        # Universal
+        self.channel_monitor_button.clicked.connect(self.show_channel_monitor)
+        self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
+        self.load_test_file_button.clicked.connect(self.load_ui_from_test_file)
+        self.save_template_button.clicked.connect(self.save_template_from_ui)
 
-        except Exception:  # pylint: disable=broad-exception-caught
-            print(traceback.format_exc())
+        # Channel Table
+        # self.sample_rate_selector.valueChanged.connect(self.sample_rate_update)
+        self.lanxi_ip_address_button.clicked.connect(self.ip_lookup)
+        self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
+        channel_table_scroll = self.channel_table.verticalScrollBar()
+        channel_table_scroll.valueChanged.connect(self.sync_environment_table)
+        self.load_channel_table_button.clicked.connect(
+            self.load_channel_table_from_file
+        )
+        self.save_channel_table_button.clicked.connect(self.save_channel_table_to_file)
+        # self.assist_channel_table_checkbox.stateChanged.connect(
+        #     self.assist_channel_table_init
+        # )
+        # Copy
+        self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
+        self.channel_table_action_copy.setShortcut("Ctrl+C")
+        self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
+        self.channel_table.addAction(self.channel_table_action_copy)
+        # Paste
+        self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
+        self.channel_table_action_paste.setShortcut("Ctrl+V")
+        self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
+        self.channel_table.addAction(self.channel_table_action_paste)
+        # Delete
+        self.channel_table_action_delete = QtWidgets.QAction(
+            "Delete", self.channel_table
+        )
+        self.channel_table_action_delete.setShortcut("Del")
+        self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
+        self.channel_table.addAction(self.channel_table_action_delete)
+        # Insert Row
+        self.channel_table_action_insert_row = QtWidgets.QAction(
+            "Insert Row", self.channel_table
+        )
+        self.channel_table_action_insert_row.triggered.connect(
+            self.channel_table_insert_row
+        )
+        self.channel_table.addAction(self.channel_table_action_insert_row)
+        # Delete Row
+        self.channel_table_action_delete_row = QtWidgets.QAction(
+            "Delete Row", self.channel_table
+        )
+        self.channel_table_action_delete_row.triggered.connect(
+            self.channel_table_delete_row
+        )
+        self.channel_table.addAction(self.channel_table_action_delete_row)
 
-    def event(self, event):
-        """Overload event to capture the initial resizing of the window"""
-        was_processed = super().event(event)
-        if event.type() == QEvent.LayoutRequest:
-            if not self._updated_size:
-                print("Updating Size of Window")
-                self.resize(1500, 667)
-                self._updated_size = True
-        return was_processed
+        # Hardware
+        self.hardware_selector.currentTextChanged.connect(self.hardware_update)
+        self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+        self.select_file_button.clicked.connect(self.select_hardware_file)
+
+        # Environments
+        environment_table_scroll = self.environment_channel_table.verticalScrollBar()
+        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+        self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
+        self.remove_environment_button.clicked.connect(self.remove_environment)
+        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
+            self.rename_environment
+        )
+        self.initialize_environments_button.clicked.connect(
+            self.initialize_environments
+        )
+
+        # Acquisition
+        self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
+        self.arm_test_button.clicked.connect(self.start_acquisition)
+        self.disarm_test_button.clicked.connect(self.stop_acquisition)
+        self.manual_streaming_radiobutton.toggled.connect(
+            self.show_hide_manual_streaming
+        )
+        self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
+
+        # Profiles
+        self.add_profile_event_button.clicked.connect(self.add_profile_event)
+        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
+        self.save_profile_button.clicked.connect(self.save_profile_list)
+        self.load_profile_button.clicked.connect(self.load_profile_list)
+        self.initialize_profile_button.clicked.connect(self.initialize_profile)
+        self.start_profile_button.clicked.connect(self.start_profile)
+        self.stop_profile_button.clicked.connect(self.stop_profile)
+
+    def change_color_theme(self, text: str):
+        """Updates the color scheme of the UI"""
+        if text == "Light":
+            self.setStyleSheet("")
+        elif text == "Dark":
+            dark_theme_path = os.path.join(
+                DIRECTORY, "user_interface", "themes", "dark_theme.txt"
+            )
+            with open(dark_theme_path, encoding="utf-8") as file:
+                stylesheet = file.read()
+            images_path = os.path.join(
+                DIRECTORY, "user_interface", "themes", "images"
+            ).replace("\\", "/")
+            print(f"Images Path: {images_path}")
+            stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
+            self.setStyleSheet(stylesheet)
+
+    # endregion
+
+    # region Process
+    @property
+    def gui_update_queue(self):
+        return self.rattlesnake.queue_container.gui_update_queue
+
+    @property
+    def log_file_queue(self):
+        return self.rattlesnake.queue_container.log_file_queue
+
+    @property
+    def timeout(self):
+        return self.rattlesnake.timeout
+
+    @property
+    def has_system_id(self):
+        if self.system_id_environment_tabs.count() != 0:
+            return True
+        return False
+
+    @property
+    def has_test_pred(self):
+        if self.test_prediction_environment_tabs.count() != 0:
+            return True
+        return False
 
     def log(self, string):
         """Pass a message to the log_file_queue along with date/time and task name
@@ -425,479 +381,534 @@ class Ui(QtWidgets.QMainWindow):
             Message that will be written to the queue
 
         """
-        self.queue_container.log_file_queue.put(
-            f"{datetime.datetime.now()}: {TASK_NAME} -- {string}\n"
+        self.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {string}\n")
+
+    def display_error(self, error):
+        tb = traceback.format_exc()
+        self.log(f"ERROR\n\n {tb}")
+        if isinstance(error, RattlesnakeError):
+            self.gui_update_queue.put(
+                (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
+            )
+        elif isinstance(error, EventWatcherError):
+            # Just print event watcher errors to console line to avoid double showing errors in UI
+            print(error)
+        elif isinstance(error, str):
+            self.gui_update_queue.put(
+                (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
+            )
+        else:
+            self.gui_update_queue.put(
+                (UICommands.ERROR, ("Unknown Error", f"ERROR:\n\n{tb}"))
+            )
+
+    def create_event_watcher(
+        self,
+        ready_event_list,
+        active_event_list,
+        *,
+        active_event_check: bool = None,
+        timeout: float = None,
+    ):
+        if timeout is None:
+            timeout = self.timeout
+
+        if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            self.event_watcher.cancel()
+            self.cleanup_event_watcher()
+        self.event_thread = QtCore.QThread()
+        self.event_watcher = EventWatcher(
+            ready_event_list,
+            active_event_list,
+            active_event_check=active_event_check,
+            timeout=timeout,
         )
+        self.event_watcher.moveToThread(self.event_thread)
+        self.event_thread.started.connect(self.event_watcher.run)
 
-    def complete_ui(self):
-        """Helper function to complete setting up of the User Interface"""
-        self.ip_lookup_button.hide()
-        self.lanxi_sample_rate_selector.hide()
-        self.lanxi_maximum_acquisition_processes_label.hide()
-        self.lanxi_maximum_acquisition_processes_selector.hide()
-        self.integration_oversample_selector.hide()
-        self.integration_oversample_label.hide()
+    def cleanup_event_watcher(self):
+        if getattr(self, "event_thread", None):
+            self.event_thread.quit()
+            self.event_thread.wait()
+            self.event_thread.deleteLater()
+            self.event_thread = None
+        if getattr(self, "event_watcher", None):
+            self.event_watcher.deleteLater()
+            self.event_watcher = None
 
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-        # Fill in the channel table with empty strings
-        for row_idx in range(self.channel_table.rowCount()):
-            for col_idx in range(self.channel_table.columnCount()):
-                item = QtWidgets.QTableWidgetItem("")
-                self.channel_table.setItem(row_idx, col_idx, item)
-
-        # Disable all tabs except the first
-        for i in range(1, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
-
-        # Reindex button groups
-        self.streaming_button_group.setId(self.immediate_streaming_radiobutton, 0)
-        self.streaming_button_group.setId(self.test_level_streaming_radiobutton, 1)
-        self.streaming_button_group.setId(self.no_streaming_radiobutton, 2)
-        self.streaming_button_group.setId(self.profile_streaming_radiobutton, 3)
-
-        # Put values into the environment channel table
-        self.environment_channels_table.setColumnCount(len(self.environments))
-        self.environment_channels_table.setHorizontalHeaderLabels(self.environments)
-        for row in range(self.environment_channels_table.rowCount()):
-            for col in range(self.environment_channels_table.columnCount()):
-                checkbox = QtWidgets.QCheckBox()
-                if len(self.environments) == 1:
-                    checkbox.setChecked(True)
-                self.environment_channels_table.setCellWidget(row, col, checkbox)
-        if len(self.environments) == 1:
-            self.environment_channels_table.hide()
-        max_cpus = mp.cpu_count()
-        self.lanxi_maximum_acquisition_processes_selector.setMaximum(max_cpus)
-        self.lanxi_maximum_acquisition_processes_selector.setValue(
-            max_cpus - len(self.environments) if max_cpus > len(self.environments) else 1
-        )
-
-    def connect_callbacks(self):
-        """Helper function to connect callbacks to widgets in the user interface"""
-        # Stop program
-        self.stop_program_button.clicked.connect(self.stop_program)
-        # Channel Monitor
-        self.channel_monitor_button.clicked.connect(self.show_channel_monitor)
-        self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
-        # Channel Table Tab
-        self.ip_lookup_button.clicked.connect(self.ip_lookup)
-        self.load_channel_table_button.clicked.connect(self.load_channel_table)
-        self.save_channel_table_button.clicked.connect(self.save_channel_table)
-        self.initialize_data_acquisition_button.clicked.connect(self.initialize_data_acquisition)
-        self.load_test_file_button.clicked.connect(self.load_test_file)
-        self.hardware_selector.currentIndexChanged.connect(self.hardware_update)
-        self.task_trigger_selector.currentIndexChanged.connect(self.task_trigger_update)
-        self.sample_rate_selector.valueChanged.connect(self.sample_rate_update)
-        channel_table_scroll = self.channel_table.verticalScrollBar()
-        channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        environment_table_scroll = self.environment_channels_table.verticalScrollBar()
-        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
-        # Copy
-        self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
-        self.channel_table_action_copy.setShortcut("Ctrl+C")
-        self.channel_table_action_copy.triggered.connect(self.channel_table_copy)
-        self.channel_table.addAction(self.channel_table_action_copy)
-        # Paste
-        self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
-        self.channel_table_action_paste.setShortcut("Ctrl+V")
-        self.channel_table_action_paste.triggered.connect(self.channel_table_paste)
-        self.channel_table.addAction(self.channel_table_action_paste)
-        # Delete
-        self.channel_table_action_delete = QtWidgets.QAction("Delete", self.channel_table)
-        self.channel_table_action_delete.setShortcut("Del")
-        self.channel_table_action_delete.triggered.connect(self.channel_table_delete)
-        self.channel_table.addAction(self.channel_table_action_delete)
-
-        # Control Definition Tab
-        self.initialize_environments_button.clicked.connect(self.initialize_environment_parameters)
-
-        # Profile Callbacks
-        self.initialize_profile_button.clicked.connect(self.initialize_profile)
-        self.save_profile_button.clicked.connect(self.save_profile)
-        self.load_profile_button.clicked.connect(self.load_profile)
-        self.add_profile_event_button.clicked.connect(self.add_profile_event)
-        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
-
-        # Run Test Tab
-        self.select_streaming_file_button.clicked.connect(self.select_control_streaming_file)
-        self.arm_test_button.clicked.connect(self.arm_test)
-        self.disarm_test_button.clicked.connect(self.disarm_test)
-        self.start_profile_button.clicked.connect(self.start_profile)
-        self.stop_profile_button.clicked.connect(self.stop_profile)
-        self.manual_streaming_radiobutton.toggled.connect(self.show_hide_manual_streaming)
-        self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
-
-        # GUI Updater Signals
-        self.gui_updater.signals.update.connect(self.update_gui)
-        self.controller_instructions_collector.signals.update.connect(
-            self.handle_controller_instructions
-        )
-
-    # %% Utility Functions
-    def get_channel_table_strings(self):
-        """Collect the strings in the channel table"""
-        string_array = []
-        for row_idx in range(self.channel_table.rowCount()):
-            string_array.append([])
-            for col_idx in range(self.channel_table.columnCount()):
-                value = self.channel_table.item(row_idx, col_idx).text()
-                string_array[-1].append(value)
-        return string_array
-
-    # %% Data Acquisition Callbacks
-
-    def load_channel_table(self, clicked, filename=None):  # pylint: disable=unused-argument
-        """Loads a channel table using a file dialog or the specified filename
+    def update_gui(self, queue_data: tuple[UICommands, Any]):
+        """Update the graphical interface for the main controller
 
         Parameters
         ----------
-        clicked :
-            The clicked event that triggered the callback.
-        filename :
-            File name defining the channel table for bypassing the callback when
-            loading from a file (Default value = None).
-
+        queue_data : tuple[UICommands, Any]
+            A 2-tuple consisting of ``(message, data)`` pairs where the message
+            denotes what to change and the data contains the information needed
+            to be displayed.
         """
-        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        num_environments = len(self.environments)
-        if filename is None:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self, "Load Channel Table", filter="Spreadsheets (*.xlsx *.csv *.txt)"
-            )
-            if filename == "":
-                return
-        self.log(f"Loading Channel Table {filename}")
-        _, file_type = os.path.splitext(filename)
-        if file_type == ".xlsx":
-            workbook = openpyxl.load_workbook(filename, read_only=True, data_only=True)
-            sheets = workbook.sheetnames
-            if len(sheets) > 1:
-                sheets = [sheet for sheet in sheets if "channel" in sheet.lower()]
-            if len(sheets) > 1:
-                error_dialog = QtWidgets.QErrorMessage()
-                error_dialog.showMessage(
-                    "Could not identify channel table in Excel Spreadsheet\n"
-                    'If multiple sheets exist, only 1 should have the word "channel" in it'
-                )
-                return
-            worksheet = workbook[sheets[0]]
-            data_array = []
-            environment_names = [worksheet.cell(2, 24 + i).value for i in range(num_environments)]
-            for row in worksheet.iter_rows(min_row=3, max_col=23 + num_environments):
-                data_array.append([])
-                for col_idx, cell in enumerate(row):
-                    data_array[-1].append(cell.value)
-                if data_array[-1][0] is None:
-                    data_array = data_array[:-1]
-                    break
-            workbook.close()
-        elif file_type == ".csv" or file_type == ".txt":
-            with open(filename, "r", encoding="utf-8") as f:
-                data_array = []
-                for row_idx, line in enumerate(f):
-                    if row_idx < 1:
-                        continue
-                    elif row_idx == 1:
-                        environment_names = [val.strip() for val in line.split(",")][23:]
-                        continue
-                    data_array.append([val.strip() for val in line.split(",")])
-            # Now split the data array off into the environment table
-        channel_table_data_array = [row[:23] for row in data_array]
-        environment_data_array = [row[23:] for row in data_array]
-        # Now complete the table
-        for row_idx, row_data in enumerate(channel_table_data_array):
-            for col_idx, cell_data in enumerate(row_data):
-                if col_idx == 0:
-                    continue
-                self.channel_table.item(row_idx, col_idx - 1).setText(
-                    "" if cell_data is None else str(cell_data)
-                )
-        if num_environments > 1:
-            for environment_index, environment_name in enumerate(environment_names):
-                try:
-                    environment_table_column = self.environments.index(environment_name)
-                except ValueError:
-                    error_message_qt(
-                        "Invalid Environment Name",
-                        "Invalid Environment Name {environment_name}, Valid Environments are "
-                        "{self.environments}.\n\nEnvironment channels not defined.",
-                    )
-                    return
-                for row_index, table_row in enumerate(environment_data_array):
-                    try:
-                        value = not (
-                            table_row[environment_index] == ""
-                            or table_row[environment_index] is None
-                        )
-                    except IndexError:
-                        value = False
-                    self.environment_channels_table.cellWidget(
-                        row_index, environment_table_column
-                    ).setChecked(value)
-
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
-        )
-
-    def save_channel_table(self):
-        """Save the channel table to a file"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            "Save Channel Table",
-            filter="Excel File (*.xlsx);;Comma-separated Values (*.csv)",
-        )
-        if filename == "":
+        command, data = queue_data
+        if command in self.environment_uis.keys():
+            self.environment_uis[command].update_gui(data)
             return
-        self.log(f"Saving Channel Table {filename}")
-        string_array = self.get_channel_table_strings()
-        _, file_type = os.path.splitext(filename)
-        if file_type == ".xlsx":
-            # Create the header
-            workbook = openpyxl.Workbook()
-            worksheet = workbook.active
-            worksheet.title = "Channel Table"
-            # Create the header
-            worksheet.cell(row=1, column=2, value="Test Article Definition")
-            worksheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
-            worksheet.cell(row=1, column=5, value="Instrument Definition")
-            worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
-            worksheet.cell(row=1, column=12, value="Channel Definition")
-            worksheet.merge_cells(start_row=1, start_column=12, end_row=1, end_column=19)
-            worksheet.cell(row=1, column=20, value="Output Feedback")
-            worksheet.merge_cells(start_row=1, start_column=20, end_row=1, end_column=21)
-            worksheet.cell(row=1, column=22, value="Limits")
-            worksheet.merge_cells(start_row=1, start_column=22, end_row=1, end_column=23)
-            for col_idx, val in enumerate(
-                [
-                    "Channel Index",
-                    "Node Number",
-                    "Node Direction",
-                    "Comment",
-                    "Serial Number",
-                    "Triax DoF",
-                    "Sensitivity  (mV/EU)",
-                    "Engineering Unit",
-                    "Make",
-                    "Model",
-                    "Calibration Exp Date",
-                    "Physical Device",
-                    "Physical Channel",
-                    "Type",
-                    "Minimum Value (V)",
-                    "Maximum Value (V)",
-                    "Coupling",
-                    "Current Excitation Source",
-                    "Current Excitation Value",
-                    "Physical Device",
-                    "Physical Channel",
-                    "Warning Level (EU)",
-                    "Abort Level (EU)",
-                ]
-            ):
-                worksheet.cell(row=2, column=1 + col_idx, value=val)
-            for row_idx, row in enumerate(string_array):
-                worksheet.cell(row=row_idx + 3, column=1, value=row_idx + 1)
-                for col_idx, col in enumerate(row):
-                    if col == "":
-                        continue
-                    worksheet.cell(row=row_idx + 3, column=col_idx + 2, value=col)
-            # Now do the environment
-            if len(self.environments) > 1:
-                bool_array = get_table_bools(self.environment_channels_table)
-                worksheet.cell(row=1, column=24, value="Environments")
-                for index, name in enumerate(self.environments):
-                    worksheet.cell(row=2, column=24 + index, value=name)
-                for row_idx, row in enumerate(bool_array):
-                    for col_idx, col in enumerate(row):
-                        if col:
-                            worksheet.cell(row=row_idx + 3, column=col_idx + 24, value="X")
-            workbook.save(filename)
-        elif file_type == ".csv" or file_type == ".txt":
-            error_message_qt("Not Implemented!", "Output to CSV Not Implemented Yet!")
 
-    def load_test_file(self, filename, hardware=True):
-        """Loads a test file using a file dialog"""
-        if not filename:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+        match command:
+            case UICommands.ERROR:
+                dialog_title, error_message = data
+                error_message_qt(dialog_title, error_message)
+            case UICommands.HARDWARE_STARTED:
+                self.display_acquisition_started()
+            case UICommands.HARDWARE_ENDED:
+                self.display_acquisition_ended()
+            case UICommands.COMPLETED_SYSTEM_ID:
+                environment, _ = data
+                print(f"System Id Completed for {environment}")
+                self.rattlesnake_tabs.setTabEnabled(3, True)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
+            case UICommands.MONITOR:
+                if self.channel_monitor_window is not None:
+                    if not self.channel_monitor_window.isVisible():
+                        self.channel_monitor_window = None
+                    else:
+                        self.channel_monitor_window.update(data)
+            case UICommands.STOP:
+                self.disarm_test()
+            case UICommands.ENABLE:
+                widget = getattr(self, data)
+                widget.setEnabled(True)
+            case UICommands.DISABLE:
+                widget = getattr(self, data)
+                widget.setEnabled(False)
+            case UICommands.ENABLE_TAB:
+                self.rattlesnake_tabs.setTabEnabled(data, True)
+                self.rattlesnake_tabs.setCurrentIndex(data)
+            case UICommands.DISABLE_TAB:
+                self.rattlesnake_tabs.setTabEnabled(data, False)
+            case UICommands.GUI_SETUP_FINISHED:
+                self.rattlesnake.setup_gui()
+            case _:
+                widget = getattr(self, command)
+                if isinstance(widget, QtWidgets.QDoubleSpinBox):
+                    widget.setValue(data)
+                elif isinstance(widget, QtWidgets.QSpinBox):
+                    widget.setValue(data)
+                elif isinstance(widget, QtWidgets.QLineEdit):
+                    widget.setText(data)
+                elif isinstance(widget, QtWidgets.QListWidget):
+                    widget.clear()
+                    widget.addItems([f"{d:.3f}" for d in data])
+
+    # endregion
+
+    # region Loading
+    def load_ui_from_test_file(self, filepath=None):
+        """
+        Callback to select file path, verify existance and load that file to
+        the user interface.
+        """
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self,
-                "Load Test NetCDF File",
-                filter="NetCDF File (*.nc4);;All Files (*.*)",
+                "Load Rattlesnake Template File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
             )
-            if filename == "":
+            if filepath == "":
                 return
-        dataset = netCDF4.Dataset(filename)  # pylint: disable=no-member
-        # Channel Table
-        channel_table = dataset["channels"]
-        # Node Number
-        data = channel_table["node_number"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 0).setText(value)
-        # Node Direction
-        data = channel_table["node_direction"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 1).setText(value)
-        # Comment
-        data = channel_table["comment"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 2).setText(value)
-        # SN
-        data = channel_table["serial_number"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 3).setText(value)
-        # Triax Dof
-        data = channel_table["triax_dof"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 4).setText(value)
-        # Sensitivity
-        data = channel_table["sensitivity"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 5).setText(str(value))
-        # Units
-        data = channel_table["unit"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 6).setText(value)
-        # Make
-        data = channel_table["make"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 7).setText(value)
-        # Model
-        data = channel_table["model"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 8).setText(value)
-        # Expiration Date
-        data = channel_table["expiration"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 9).setText(value)
-        # Read Device
-        data = channel_table["physical_device"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 10).setText(value)
-        # Read Channel
-        data = channel_table["physical_channel"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 11).setText(value)
-        # Type
-        data = channel_table["channel_type"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 12).setText(value)
-        # Min Volts
-        data = channel_table["minimum_value"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 13).setText(str(value))
-        # Max Volts
-        data = channel_table["maximum_value"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 14).setText(str(value))
-        # Coupling
-        data = channel_table["coupling"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 15).setText(value)
-        # Excitation Source
-        data = channel_table["excitation_source"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 16).setText(value)
-        # Excitation
-        data = channel_table["excitation"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 17).setText(str(value))
-        # Output Device
-        data = channel_table["feedback_device"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 18).setText(value)
-        # Output Channel
-        data = channel_table["feedback_channel"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 19).setText(value)
-        # Output Device
-        data = channel_table["warning_level"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 20).setText(value)
-        # Output Channel
-        data = channel_table["abort_level"][...]
-        for row_idx, value in enumerate(data):
-            self.channel_table.item(row_idx, 21).setText(value)
-        # Environment Table
-        for saved_environment_index, saved_environment_name in enumerate(
-            dataset.variables["environment_names"][...]
-        ):
-            try:
-                environment_index = self.environments.index(saved_environment_name)
-            except ValueError:
-                if len(dataset.variables["environment_names"][...]) == 1:
-                    environment_index = 0
-                    print(
-                        f"Warning: saved environment ({saved_environment_name}) is different from "
-                        f"current environment ({self.environments[environment_index]})"
-                    )
-            for channel_index, bool_row in enumerate(
-                dataset.variables["environment_active_channels"][:, saved_environment_index]
-            ):
-                boolean = bool(bool_row)
-                widget = self.environment_channels_table.cellWidget(
-                    channel_index, environment_index
-                )
-                widget.setChecked(boolean)
-        if hardware:
-            # Hardware
-            self.hardware_selector.blockSignals(True)
-            try:
-                self.hardware_selector.setCurrentIndex(dataset.hardware)
-                self.hardware_file = (
-                    None if dataset.hardware_file == "None" else dataset.hardware_file
-                )
-            except AttributeError:
-                self.hardware_selector.setCurrentIndex(0)
-                self.hardware_file = None
-            self.hardware_selector.blockSignals(False)
-            # Show the right widgets
-            self.hardware_update(select_file=False)
-        if self.hardware_selector.currentIndex() == 1:
-            self.lanxi_sample_rate_selector.setCurrentIndex(np.log2(dataset.sample_rate // 4096))
-            self.lanxi_maximum_acquisition_processes_selector.setValue(
-                dataset.maximum_acquisition_processes
-            )
-        else:
-            self.sample_rate_selector.setValue(dataset.sample_rate)
-        self.integration_oversample_selector.setValue(dataset.output_oversample)
-        self.time_per_read_selector.setValue(dataset.time_per_read)
-        self.time_per_write_selector.setValue(dataset.time_per_write)
-        # Initialize files
-        self.initialize_data_acquisition()
-        # Set the test parameters
-        for environment in self.environments:
-            self.environment_uis[environment].retrieve_metadata(dataset)
-        self.initialize_environment_parameters()
 
-    def channel_table_paste(self):
-        """Function to paste clipboard starting from top left cell"""
-        selection_range = self.channel_table.selectedRanges()
-        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        if selection_range:
-            # Get top left cell
-            top_left_row = selection_range[0].topRow()
-            top_left_column = selection_range[0].leftColumn()
-            # Get clipboard text
-            clipboard = QtWidgets.QApplication.clipboard()
-            if clipboard.mimeData().hasText():
-                clipboard_text = clipboard.text()
-                # Split clipboard text with newlines between rows
-                rows = clipboard_text.splitlines()
-                # Split clipboard text with tabs between columns
-                array_text = [row.split("\t") for row in rows]
-                # Paste the text into the table
-                for i, row in enumerate(array_text):
-                    for j, cell_text in enumerate(row):
-                        cell_text = cell_text if cell_text is not None else ""
-                        item = QtWidgets.QTableWidgetItem(cell_text)
-                        self.channel_table.setItem(top_left_row + i, top_left_column + j, item)
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
+        try:
+            self.rattlesnake.load_rattlesnake_from_template(filepath)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
+            return
+
+        self.load_ui_from_rattlesnake()
+
+    def load_ui_from_rattlesnake(self):
+        """
+        Gets the current state of the rattlesnake object and formats
+        user interface to represent that state.
+        """
+        # Get rattlesnake state
+        state = self.rattlesnake.state
+        has_profile = self.rattlesnake.has_profile
+        has_streamed = self.rattlesnake.has_streamed
+
+        # Reset UI
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+
+        environment_names = list(self.environment_uis.keys())
+        for environment_name in environment_names:
+            self.remove_environment(None, environment_name)
+
+        for event_idx in reversed(range(self.profile_table.rowCount())):
+            self.remove_profile_event(None, event_idx)
+
+        # Stores state to UI
+        match state:
+            case RattlesnakeState.INIT:
+                return
+            case RattlesnakeState.HARDWARE_STORE:
+                self.load_ui_from_hardware()
+            case RattlesnakeState.ENVIRONMENT_STORE:
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
+                # Enable next tab (sysid/profile)
+                if self.has_system_id:
+                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                    self.rattlesnake_tabs.setCurrentIndex(2)
+                else:
+                    self.rattlesnake_tabs.setTabEnabled(4, True)
+                    self.rattlesnake_tabs.setCurrentIndex(4)
+                if has_profile:
+                    self.load_ui_from_profile()
+                    self.initialize_profile()
+                if has_streamed:
+                    self.load_ui_from_stream_metadata()
+            case RattlesnakeState.SYS_ID_ACTIVE:
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
+                # Enable sys id tab
+                self.rattlesnake_tabs.setTabEnabled(2, True)
+                self.rattlesnake_tabs.setCurrentIndex(2)
+                if has_profile:
+                    self.load_ui_from_profile()
+                if has_streamed:
+                    self.load_ui_from_stream_metadata()
+            case RattlesnakeState.HARDWARE_ACTIVE:
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
+                if self.has_system_id:
+                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                if self.has_test_pred:
+                    self.rattlesnake_tabs.setTabEnabled(3, True)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
+                if has_profile:
+                    self.load_ui_from_profile()
+                self.initialize_profile()
+                self.load_ui_from_stream_metadata()
+                self.display_acquisition_started()
+                self.rattlesnake_tabs.setCurrentIndex(5)
+            case RattlesnakeState.ENVIRONMENT_ACTIVE:
+                self.load_ui_from_hardware()
+                self.load_ui_from_environments()
+                if self.has_system_id:
+                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                if self.has_test_pred:
+                    self.rattlesnake_tabs.setTabEnabled(3, True)
+                self.rattlesnake_tabs.setTabEnabled(4, True)
+                if has_profile:
+                    self.load_ui_from_profile()
+                self.initialize_profile()
+                self.load_ui_from_stream_metadata()
+                self.display_acquisition_started()
+                self.rattlesnake_tabs.setCurrentIndex(5)
+                # Display environment started for each active environment
+                for (
+                    queue_name,
+                    active_event,
+                ) in self.rattlesnake.event_container.environment_active_events.items():
+                    if active_event.is_set():
+                        environment_name = (
+                            self.rattlesnake.environment_manager.environment_names[
+                                queue_name
+                            ]
+                        )
+                        self.environment_uis[
+                            environment_name
+                        ].display_environment_started()
+
+    def load_ui_from_hardware(self):
+        """
+        Loads the channel table and hardware setup values from the hardware
+        metadata object owned by the rattlesnake object to the user interface.
+        """
+        hardware_metadata = self.rattlesnake.hardware_metadata
+
+        # Fill out channel table
+        channel_list = hardware_metadata.channel_list
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+        match hardware_metadata.hardware_type:
+            case HardwareType.SDYNPY_SYSTEM:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("SDynPy System Integration...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.integration_oversample_selector.setValue(
+                    hardware_metadata.output_oversample
+                )
+            case _:
+                self.display_error(
+                    f"Loading from {hardware_metadata.hardware_type} is not yet implemented"
+                )
+
+    def load_ui_from_environments(self):
+        """
+        Loads the environment metadata list from the rattlesnake object to
+        the user interface.
+        """
+        hardware_metadata = self.rattlesnake.hardware_metadata
+        environment_metadata_dict = self.rattlesnake.environment_metadata
+
+        for environment_idx, environment_metadata in enumerate(
+            environment_metadata_dict.values()
+        ):
+            # Add environments
+            environment_type = environment_metadata.environment_type
+            self.add_environment(environment_type)
+
+            environment_name = environment_metadata.environment_name
+            if (
+                environment_name not in self.environment_uis.keys()
+            ):  # Dont rename if they were already using default name
+                self.rename_environment(environment_idx, environment_name)
+
+            self.environment_uis[environment_name].initialize_hardware(
+                hardware_metadata
+            )
+            # QtWidgets.QApplication.processEvents()
+            self.environment_uis[environment_name].set_environment_metadata(
+                environment_metadata
+            )
+            # QtWidgets.QApplication.processEvents()
+            self.environment_uis[environment_name].initialize_environment(
+                environment_metadata
+            )
+
+        self.update_environment_tabs()
+        streaming_environment_items = [""] + list(self.environment_uis.keys())
+        self.streaming_environment_select_combobox.clear()
+        self.streaming_environment_select_combobox.addItems(streaming_environment_items)
+        self.rattlesnake_tabs.setTabEnabled(1, True)
+
+    def load_ui_from_profile(self):
+        """
+        Loads the profile event list from the rattlesnake object to the
+        user interface.
+        """
+        profile_event_list = self.rattlesnake.last_profile_event_list
+
+        for profile_event in profile_event_list:
+            timestamp = profile_event.timestamp
+            environment_name = profile_event.environment_name
+            command = profile_event.command
+            data = profile_event.data
+
+            # If command is START_ENVIRONMENT, add the instructions command so that
+            # the user can remove those instructions if they desire
+            if command is GlobalCommands.START_ENVIRONMENT and isinstance(
+                data, EnvironmentInstructions
+            ):
+                self.add_profile_event()
+                row = self.profile_table.rowCount() - 1
+                timestamp_spinbox = self.profile_table.cellWidget(row, 0)
+                timestamp_spinbox.setValue(timestamp)
+                environment_combobox = self.profile_table.cellWidget(row, 1)
+                environment_combobox.setCurrentText(environment_name)
+                command_combobox = self.profile_table.cellWidget(row, 2)
+                command_combobox.setCurrentText(
+                    UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label
+                )
+                data_item = QtWidgets.QTableWidgetItem("")
+                data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
+                self.profile_table.setItem(row, 3, data_item)
+                data = None
+
+            data = str(data) if data is not None else ""
+            data = data if data.strip() != "" else ""
+
+            self.add_profile_event()
+            row = self.profile_table.rowCount() - 1
+            timestamp_spinbox = self.profile_table.cellWidget(row, 0)
+            timestamp_spinbox.setValue(timestamp)
+            environment_combobox = self.profile_table.cellWidget(row, 1)
+            environment_combobox.setCurrentText(environment_name)
+            command_combobox = self.profile_table.cellWidget(row, 2)
+            command_combobox.setCurrentText(command.label)
+            data_item = QtWidgets.QTableWidgetItem(data)
+            self.profile_table.setItem(row, 3, data_item)
+
+    def load_ui_from_stream_metadata(self):
+        """
+        Loads the stream metadata object from the rattlesnake object to
+        the user interface.
+        """
+        stream_metadata = self.rattlesnake.last_stream_metadata
+
+        match stream_metadata.stream_type:
+            case StreamType.NO_STREAM:
+                self.no_streaming_radiobutton.setChecked(True)
+            case StreamType.PROFILE_INSTRUCTION:
+                self.profile_streaming_radiobutton.setChecked(True)
+            case StreamType.TEST_LEVEL:
+                self.test_level_streaming_radiobutton.setChecked(True)
+                self.streaming_environment_select_combobox.setCurrentText(
+                    stream_metadata.test_level_environment_name
+                )
+            case StreamType.IMMEDIATELY:
+                self.immediate_streaming_radiobutton.setChecked(True)
+            case StreamType.MANUAL:
+                self.manual_streaming_radiobutton.setChecked(True)
+
+        self.streaming_file_display.setText(stream_metadata.stream_file)
+
+    def save_template_from_ui(self):
+        """
+        Saves an excel template from the current rattlesnake object state. Inputs
+        current saved values into the template.
+        TODO implement blank environment template loading~
+        """
+        filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Combined Environments Template",
+            filter="Excel File (*.xlsx)",
+        )
+        if filepath == "":
+            return
+
+        try:
+            # Hardware
+            hardware_metadata = self.get_hardware_metadata_no_channels()
+            channel_list = self.get_channel_list()
+            hardware_metadata.channel_list = channel_list
+
+            # Environments
+            environment_metadata_list = []
+            for environment_ui in self.environment_uis.values():
+                metadata = environment_ui.get_environment_metadata(channel_list)
+                environment_metadata_list.append(metadata)
+
+            # Profiles
+            profile_event_list = []
+            num_rows = self.profile_table.rowCount()
+            for row in range(num_rows):
+                timestamp = self.profile_table.cellWidget(row, 0).value()
+                environment_name = self.profile_table.cellWidget(row, 1).currentText()
+                command = self.profile_table.cellWidget(row, 2).currentData()
+                data_item = self.profile_table.item(row, 3)
+                data_text = data_item.text() if data_item is not None else ""
+
+                # Skip environment instructions
+                if command == "Set Environment Instructions":
+                    continue
+
+                event = ProfileEvent(timestamp, environment_name, command, data_text)
+
+                profile_event_list.append(event)
+
+            workbook = openpyxl.Workbook()
+            save_rattlesnake_to_workbook(
+                workbook,
+                hardware_metadata,
+                environment_metadata_list,
+                profile_event_list,
+            )
+            workbook.save(filepath)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
+            return
+
+    # endregion
+
+    # region Channel Table
+    def get_channel(self, row):
+        channel = Channel()
+        channel_attr_list = channel.channel_attr_list
+        for col in range(self.channel_table.columnCount()):
+            attr = channel_attr_list[col]
+            item = self.channel_table.item(row, col)
+            # Check if item exists and has text
+            if item and item.text().strip():
+                setattr(channel, attr, item.text())
+
+        return channel
+
+    def get_channel_list(self):
+        channel_list = []
+        channel_attr_list = Channel().channel_attr_list
+        for row in range(self.channel_table.rowCount()):
+            channel = Channel()
+            for col in range(self.channel_table.columnCount()):
+                attr = channel_attr_list[col]
+                item = self.channel_table.item(row, col)
+                # Check if item exists and has text
+                if item and item.text().strip():
+                    setattr(channel, attr, item.text())
+
+            if channel.is_empty:
+                break
+
+            channel_list.append(channel)
+
+        return channel_list
+
+    def sync_channel_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.channel_table.verticalScrollBar().setValue(
+            self.environment_channel_table.verticalScrollBar().value()
         )
 
-    def channel_table_copy(self):
+    def sync_environment_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.environment_channel_table.verticalScrollBar().setValue(
+            self.channel_table.verticalScrollBar().value()
+        )
+
+    def add_empty_channel_table_rows(self, item=None):
+        self.channel_table.blockSignals(True)
+        num_rows = self.channel_table.rowCount()
+        last_row = -1
+        for row_idx in reversed(range(num_rows)):
+            channel = self.get_channel(row_idx)
+
+            if not channel.is_empty:
+                last_row = row_idx + 1
+                break
+
+        desired_rows = max(last_row + BUFFER_ROWS, MIN_ROWS)
+        if self.channel_table.rowCount() != desired_rows:
+            self.channel_table.setRowCount(desired_rows)
+            self.set_environment_table_row_count(desired_rows)
+
+        if self.assist_channel_table_checkbox.isChecked():
+            widget_range = range(num_rows, desired_rows)
+            self.assist_channel_table_init(True, widget_range)
+
+        self.channel_table.blockSignals(False)
+
+    def set_environment_table_row_count(self, desired_rows):
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        self.environment_channel_table.setRowCount(desired_rows)
+        if desired_rows > num_rows:
+            for row in range(num_rows, desired_rows):
+                for col in range(num_cols):
+                    checkbox = QtWidgets.QCheckBox()
+                    checkbox.setChecked(False)
+                    self.environment_channel_table.setCellWidget(row, col, checkbox)
+
+    def copy_channel_table(self):
         """Function to copy text from channel table in a format that Excel recognizes"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for copy functionality")
+            return
+
         clipboard = QtWidgets.QApplication.clipboard()
         selected_ranges = self.channel_table.selectedRanges()
         if selected_ranges:
@@ -905,7 +916,9 @@ class Ui(QtWidgets.QMainWindow):
             selected_range = selected_ranges[0]
             copied_text = ""
             rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
-            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
             # Put tabs inbetween columns, newlines inbetween rows
             copied_text = []
             for row in rows:
@@ -919,15 +932,65 @@ class Ui(QtWidgets.QMainWindow):
             copied_text = "\n".join(copied_text)  # Newline between rows
             clipboard.setText(copied_text)
 
-    def channel_table_delete(self):
-        """Function to delete text from a channel table when delete is pressed"""
+    def paste_channel_table(self):
+        """Function to paste clipboard starting from top left cell"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for paste functionality")
+            return
+
+        self.channel_table.blockSignals(True)
         selection_range = self.channel_table.selectedRanges()
-        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
+        if selection_range:
+            # Get top left cell
+            top_left_row = selection_range[0].topRow()
+            top_left_column = selection_range[0].leftColumn()
+            # Get clipboard text
+            clipboard = QtWidgets.QApplication.clipboard()
+            if clipboard.mimeData().hasText():
+                clipboard_text = clipboard.text()
+                # Split clipboard text with newlines between rows
+                rows = clipboard_text.splitlines()
+                # Split clipboard text with tabs between columns
+                array_text = [row.split("\t") for row in rows]
+                num_row = len(array_text)
+                bottom_row = top_left_row + num_row
+                if self.channel_table.rowCount() < bottom_row:
+                    self.channel_table.setRowCount(bottom_row)
+                # Paste the text into the table
+                for i, row in enumerate(array_text):
+                    for j, cell_text in enumerate(row):
+                        cell_text = cell_text if cell_text is not None else ""
+                        item = QtWidgets.QTableWidgetItem(cell_text)
+                        self.channel_table.setItem(
+                            top_left_row + i, top_left_column + j, item
+                        )
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def delete_channel_table(self):
+        """Function to delete text from a channel table when delete is pressed"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for delete functionality")
+            return
+
+        self.channel_table.blockSignals(True)
+        selection_range = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Fixed
+        )
         if selection_range:
             # Get the selected range
             selected_range = selection_range[0]
             rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
-            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
+            )
             # Clear the selected cells
             for row in rows:
                 for column in columns:
@@ -936,164 +999,144 @@ class Ui(QtWidgets.QMainWindow):
         self.channel_table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeToContents
         )
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
 
-    def hardware_update(self, current_index=None, select_file=True):
+    def channel_table_insert_row(self):
+        """Function to insert row in right click menu on channel table"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for insert functionality")
+            return
+
+        selection_range = self.channel_table.selectedRanges()
+
+        if selection_range:
+            # Find the top row and insert row above it
+            top_row = selection_range[0].topRow()
+            self.channel_table.insertRow(top_row)
+            self.environment_channel_table.insertRow(top_row)
+            num_col = self.environment_channel_table.columnCount()
+            for col in range(num_col):
+                checkbox = QtWidgets.QCheckBox()
+                checkbox.setChecked(False)
+                self.environment_channel_table.setCellWidget(top_row, col, checkbox)
+
+            # Update vertical header for both tables
+            row_count = self.channel_table.rowCount()
+            indices = [str(i + 1) for i in range(row_count)]
+            self.channel_table.setVerticalHeaderLabels(indices)
+            self.environment_channel_table.setVerticalHeaderLabels(indices)
+
+        self.add_empty_channel_table_rows()
+
+    def channel_table_delete_row(self):
+        """Function to delete row in right click menu on channel table"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for delete functionality")
+            return
+
+        selected_ranges = self.channel_table.selectedRanges()
+        # If channel table is clicked delete rows starting from highest index
+        if selected_ranges:
+            selected_range = selected_ranges[0]
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            for row_idx in reversed(rows):
+                self.channel_table.removeRow(row_idx)
+                self.environment_channel_table.removeRow(row_idx)
+
+        self.add_empty_channel_table_rows()
+
+    def load_channel_table_from_file(self):
+        """
+        Loads a channel table using a file dialog or the specified filename
+        """
+        filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Load Rattlesnake Template File",
+            filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+        )
+        if filepath == "":
+            return
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        filename, filetype = os.path.splitext(filepath)
+
+        match filetype:
+            case ".nc4":
+                dataset = netCDF4.Dataset(filepath)
+                channel_list = HardwareMetadata.load_channel_table_from_netcdf(dataset)
+            case ".xlsx":
+                workbook = openpyxl.load_workbook(filepath, read_only=True)
+                channel_list = HardwareMetadata.load_channel_table_from_workbook(
+                    workbook
+                )
+
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def save_channel_table_to_file(self):
+        """Save the channel table to a file"""
+        filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Combined Environments Template",
+            filter="Excel File (*.xlsx)",
+        )
+        if filepath == "":
+            return
+
+        channel_list = self.get_channel_list()
+        workbook = openpyxl.Workbook()
+        HardwareMetadata.save_channel_table_to_workbook(channel_list, workbook)
+        workbook.save(filepath)
+
+    # endregion
+
+    # region Hardware
+
+    def hardware_update(self, hardware_text):
         """Callback to provide options when hardware is selected"""
-        current_index = self.hardware_selector.currentIndex()
-        if current_index == 0:  # NIDAQmx
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.show()
-            self.task_trigger_selector.show()
-            self.hardware_file = None
-        elif current_index == 1:  # LAN-XI
-            self.sample_rate_selector.hide()
-            self.ip_lookup_button.show()
-            self.lanxi_sample_rate_selector.show()
-            self.lanxi_maximum_acquisition_processes_label.show()
-            self.lanxi_maximum_acquisition_processes_selector.show()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-            self.hardware_file = None
-        elif current_index == 2:  # DP Quattro
-            # Load in the library file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self, "Data Physics API", filter="Quattro API (DpQuattro.dll)"
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-            self.sample_rate_update()
-        elif current_index == 3:  # DP 900
-            # Load in the library file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self, "Data Physics API", filter="DP900 API (Dp900Matlab.dll)"
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.hide()
-            self.integration_oversample_label.hide()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 4:  # Exodus
-            # Load in an exodus file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self,
-                    "Load Exodus File with Eigensolution",
-                    filter="Exodus File (*.exo *.e)",
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 5:  # State Space File
-            # Load in a state space file
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self,
-                    "Load Numpy or Matlab File with State Space Matrices A B C D",
-                    filter="Matlab or Numpy File (*.mat *.npz)",
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 6:
-            # Load in an sdynpy system
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self, "Load a SDynPy System", filter="Numpy File (*.npz)"
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        elif current_index == 7:
-            if select_file:
-                filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                    self,
-                    "Load a SDynPy TransferFunctionArray",
-                    filter="Numpy File (*.npz)",
-                )
-                if filename == "":
-                    self.hardware_selector.setCurrentIndex(0)
-                    return
-                else:
-                    self.hardware_file = filename
-            self.sample_rate_selector.show()
-            self.ip_lookup_button.hide()
-            self.lanxi_sample_rate_selector.hide()
-            self.lanxi_maximum_acquisition_processes_label.hide()
-            self.lanxi_maximum_acquisition_processes_selector.hide()
-            self.integration_oversample_selector.show()
-            self.integration_oversample_label.show()
-            self.task_trigger_label.hide()
-            self.task_trigger_selector.hide()
-        else:
-            error_message_qt(
-                "Invalid Hardware Type!",
-                "You have selected an invalid hardware type.  How did you do this?!",
+        hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
+        if hardware_type in UI_ASK_FOR_FILE:
+            filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+                self, "Load a SDynPy System", filter="Numpy File (*.npz)"
             )
-        self.task_trigger_update()
+            # Check for 'cancel' dialog
+            if filename == "" or filename is None:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("Select Hardware")
+                self.hardware_selector.blockSignals(False)
+                return
+            self.hardware_file = filename
+        else:
+            self.hardware_file = None
+
+        if self.assist_channel_table_checkbox.isChecked():
+            self.assist_channel_table_init(True)
+
+        self.update_hardware_widget_visibility()
+
+    def update_hardware_widget_visibility(self):
+        """Helper function to update the visibility of the sampling parameters group box"""
+        hardware_text = self.hardware_selector.currentText()
+        hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
+        visible_widgets = UI_HARDWARE_WIDGETS.get(hardware_type, set())
+
+        for name, widgets in self.hardware_widgets.items():
+            for widget in widgets:
+                widget.setVisible(name in visible_widgets)
 
     def ip_lookup(self):
         """Creates an IP Lookup window"""
@@ -1111,7 +1154,11 @@ class Ui(QtWidgets.QMainWindow):
 
         # Loop through table devices and append unique IP addresses
         for row in range(self.channel_table.rowCount()):
-            table_text = self.channel_table.item(row, 10).text()
+            table_item = self.channel_table.item(row, 10)
+            if table_item is None:
+                table_text = ""
+            else:
+                table_text = table_item.text()
             if re.search(ipv4_pattern, table_text) is not None:
                 if table_text not in ipv4:
                     stored_addresses.append(IPAddress(None, table_text, None))
@@ -1126,630 +1173,596 @@ class Ui(QtWidgets.QMainWindow):
                     bknum.append(table_text)
 
         ip_manager = IPAddressManager(stored_addresses)
-        # TODO: I don't think the check for equality does anything here.  Show isn't blocking, so
-        # the dialog wouldn't have been accepted yet.
-        # ok_clicked = ip_manager.show() == QtWidgets.QDialog.Accepted
-        ip_manager.show()
+        ip_manager.exec()
 
-    def sample_rate_update(self):
-        """Updates the sample rate selector based on valid available rates"""
-        if self.hardware_selector.currentIndex() == 2:
-            current_value = self.sample_rate_selector.value()
-            valid_dp_sample_rates = np.array(
-                [
-                    16,
-                    20,
-                    25,
-                    32,
-                    40,
-                    50,
-                    64,
-                    80,
-                    100,
-                    128,
-                    160,
-                    200,
-                    256,
-                    320,
-                    400,
-                    512,
-                    640,
-                    800,
-                    1024,
-                    1280,
-                    1600,
-                    2048,
-                    2560,
-                    3200,
-                    4096,
-                    5120,
-                    6400,
-                    8192,
-                    10240,
-                    12800,
-                    20480,
-                    25600,
-                    40960,
-                    51200,
-                    102400,
+    # def sample_rate_update(self):
+    #     """Updates the sample rate selector based on valid available rates"""
+    #     if self.hardware_selector.currentIndex() == 2:
+    #         current_value = self.sample_rate_selector.value()
+    #         valid_dp_sample_rates = np.array(
+    #             [
+    #                 16,
+    #                 20,
+    #                 25,
+    #                 32,
+    #                 40,
+    #                 50,
+    #                 64,
+    #                 80,
+    #                 100,
+    #                 128,
+    #                 160,
+    #                 200,
+    #                 256,
+    #                 320,
+    #                 400,
+    #                 512,
+    #                 640,
+    #                 800,
+    #                 1024,
+    #                 1280,
+    #                 1600,
+    #                 2048,
+    #                 2560,
+    #                 3200,
+    #                 4096,
+    #                 5120,
+    #                 6400,
+    #                 8192,
+    #                 10240,
+    #                 12800,
+    #                 20480,
+    #                 25600,
+    #                 40960,
+    #                 51200,
+    #                 102400,
+    #             ]
+    #         )
+    #         closest_index = np.argmin(abs(valid_dp_sample_rates - current_value))
+    #         closest_rate = valid_dp_sample_rates[closest_index]
+    #         # Check if it is either one above or one below a previous rate
+    #         if (
+    #             current_value - closest_rate == 1
+    #             and closest_index != len(valid_dp_sample_rates) - 1
+    #         ):
+    #             closest_index += 1
+    #             closest_rate = valid_dp_sample_rates[closest_index]
+    #         elif current_value - closest_rate == -1 and closest_index != 0:
+    #             closest_index -= 1
+    #             closest_rate = valid_dp_sample_rates[closest_index]
+    #         self.sample_rate_selector.blockSignals(True)
+    #         self.sample_rate_selector.setValue(closest_rate)
+    #         self.sample_rate_selector.blockSignals(False)
+
+    # def task_trigger_update(self):
+    #     """Updates task trigger widgets based on other widget's selections"""
+    #     if (
+    #         self.hardware_selector.currentIndex() == 0
+    #         and self.task_trigger_selector.currentIndex() == 2
+    #     ):
+    #         self.task_trigger_output_selector.show()
+    #         self.task_trigger_output_label.show()
+    #     else:
+    #         self.task_trigger_output_selector.hide()
+    #         self.task_trigger_output_label.hide()
+
+    def select_hardware_file(self):
+        filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Load a SDynPy System", filter="Numpy File (*.npz)"
+        )
+        # Check for 'cancel' dialog
+        if filename == "" or filename is None:
+            return
+        self.hardware_file = filename
+
+    def initialize_hardware(self):
+        self.log("Initializing Hardware")
+
+        # Prevent user from initializing multiple times
+        self.initialize_hardware_button.setEnabled(False)
+
+        try:
+            # Build hardware metadata
+            hardware_metadata = self.get_hardware_metadata_no_channels()
+            if hardware_metadata is None:
+                return self.initialize_hardware_error("Invalid hardware type chosen.")
+
+            # Get channel list from UI
+            channel_list = self.get_channel_list()
+            hardware_metadata.channel_list = channel_list
+
+            # Send hardware metadata to rattlesnake
+            self.rattlesnake.initialize_hardware(hardware_metadata)
+
+            environment_channel_list = self.get_environment_channel_list()
+            for environment_name, environment_ui in self.environment_uis.items():
+                hardware_metadata.channel_list = environment_channel_list[
+                    environment_name
                 ]
-            )
-            closest_index = np.argmin(abs(valid_dp_sample_rates - current_value))
-            closest_rate = valid_dp_sample_rates[closest_index]
-            # Check if it is either one above or one below a previous rate
-            if (
-                current_value - closest_rate == 1
-                and closest_index != len(valid_dp_sample_rates) - 1
-            ):
-                closest_index += 1
-                closest_rate = valid_dp_sample_rates[closest_index]
-            elif current_value - closest_rate == -1 and closest_index != 0:
-                closest_index -= 1
-                closest_rate = valid_dp_sample_rates[closest_index]
-            self.sample_rate_selector.blockSignals(True)
-            self.sample_rate_selector.setValue(closest_rate)
-            self.sample_rate_selector.blockSignals(False)
+                environment_ui.initialize_hardware(hardware_metadata)
 
-    def task_trigger_update(self):
-        """Updates task trigger widgets based on other widget's selections"""
-        if (
-            self.hardware_selector.currentIndex() == 0
-            and self.task_trigger_selector.currentIndex() == 2
-        ):
-            self.task_trigger_output_selector.show()
-            self.task_trigger_output_label.show()
+        except Exception as e:
+            self.initialize_hardware_error(e)
+            return
+
+        # Block until hardware metadata has been stored
+        ready_event_list = [
+            self.rattlesnake.event_container.acquisition_ready_event,
+            self.rattlesnake.event_container.output_ready_event,
+            *self.rattlesnake.environment_manager.ready_event_list,
+        ]
+        active_event_list = []
+        self.create_event_watcher(ready_event_list, active_event_list)
+        self.event_watcher.ready.connect(
+            lambda metadata=hardware_metadata: self.initialize_hardware_ready(metadata)
+        )
+        self.event_watcher.error.connect(self.initialize_hardware_error)
+        self.event_thread.start()
+
+    def initialize_hardware_ready(self, metadata):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Update rattlesnake state
+        self.rattlesnake.hardware_metadata = metadata
+
+        # Unlock UI
+        self.initialize_hardware_button.setEnabled(True)
+        self.update_environment_tabs()
+        num_environments = len(self.environment_uis)
+        if num_environments == 0:
+            self.rattlesnake_tabs.setTabEnabled(1, False)
         else:
-            self.task_trigger_output_selector.hide()
-            self.task_trigger_output_label.hide()
+            self.rattlesnake_tabs.setTabEnabled(1, True)
+            self.rattlesnake_tabs.setCurrentIndex(1)
 
-    def initialize_data_acquisition(self):
-        """Initializes the data acquisition hardware
+    def initialize_hardware_error(self, error_message):
+        # Clear QThread
+        self.cleanup_event_watcher()
 
-        This function collects the information from the channel table as well
-        as the hardware information to create a DataAcquisitionParameters object
-        that gets passed to each environment through its command queue.
-
-        It also sends the data acquisition parameters to the acquisition and
-        output subtasks.
-        """
-        self.log("Initializing Data Acquisition")
-        channels = []
-        environment_booleans = []
-        channel_table_strings = self.get_channel_table_strings()
-        environment_channels = get_table_bools(self.environment_channels_table)
-        #        print('User Interface {:} Channels'.format(len(channel_table_strings)))
-        for index, (row, environment_bools) in enumerate(
-            zip(channel_table_strings, environment_channels)
+        # Lock UI
+        # If not acquiring, disable future tabs
+        if self.rattlesnake.state in (
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
         ):
-            try:
-                channel = Channel.from_channel_table_row(row)
-            except ValueError as e:
-                self.log(f"Bad Entry in Channel {index + 1}, {e}")
-                error_message_qt(
-                    "Channel Table Error",
-                    f"Bad Entry in Channel {index + 1}\n\n{e}",
+            for i in range(1, self.rattlesnake_tabs.count() - 1):
+                self.rattlesnake_tabs.setTabEnabled(i, False)
+
+        # Unlock UI
+        self.initialize_hardware_button.setEnabled(True)
+        self.display_error(error_message)
+
+    def get_hardware_metadata_no_channels(self):
+
+        hardware_text = self.hardware_selector.currentText()
+        hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
+        if hardware_type == "Select":
+            return None
+
+        channel_list = []
+        hardware_metadata_class = HARDWARE_METADATA[hardware_type]
+        match hardware_type:
+            case HardwareType.NI_DAQMX:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                task_trigger = self.task_trigger_selector.currentIndex()
+                output_trigger_generator = self.trigger_output_selector.text()
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    task_trigger,
+                    output_trigger_generator,
                 )
-                return
-            if channel is not None:
-                channels.append(channel)
-                environment_booleans.append(environment_bools)
-        # Go through and initialize the channel information for each environment
-        environment_booleans = np.array(environment_booleans)
-        environment_channel_indices = {}
-        extra_parameters = {}
-        if self.hardware_selector.currentIndex() == 0:
-            sample_rate = self.sample_rate_selector.value()
-            extra_parameters["task_trigger"] = self.task_trigger_selector.currentIndex()
-            extra_parameters["task_trigger_output_channel"] = (
-                self.task_trigger_output_selector.text()
-            )
-            output_oversample = 1
-        elif self.hardware_selector.currentIndex() == 1:
-            sample_rate = 2 ** self.lanxi_sample_rate_selector.currentIndex() * 4096
-            output_oversample = 16384 // sample_rate
-            if output_oversample == 0:
-                output_oversample = 1
-            extra_parameters["maximum_acquisition_processes"] = (
-                self.lanxi_maximum_acquisition_processes_selector.value()
-            )
-        elif self.hardware_selector.currentIndex() in [4, 5, 6, 7]:
-            sample_rate = self.sample_rate_selector.value()
-            output_oversample = self.integration_oversample_selector.value()
-        else:
-            sample_rate = self.sample_rate_selector.value()
-            output_oversample = 1
-        for environment_index, environment in enumerate(self.environments):
-            environment_channel_list = copy.deepcopy(
-                [
-                    channel
-                    for channel, environment_bool in zip(channels, environment_booleans)
-                    if environment_bool[environment_index]
-                ]
-            )
-            environment_channel_indices[environment] = [
-                index
-                for index, environment_bool in enumerate(environment_booleans)
-                if environment_bool[environment_index]
-            ]
-            environment_daq_parameters = DataAcquisitionParameters(
-                environment_channel_list,
-                sample_rate,
-                round(sample_rate * self.time_per_read_selector.value()),
-                round(sample_rate * self.time_per_write_selector.value() * output_oversample),
-                self.hardware_selector.currentIndex(),
-                self.hardware_file,
-                self.environments,
-                environment_booleans,
-                output_oversample,
-                **extra_parameters,
-            )
-            self.queue_container.environment_command_queues[environment].put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-                    environment_daq_parameters,
-                ),
-            )
-            self.environment_uis[environment].initialize_data_acquisition(
-                environment_daq_parameters
-            )
-        self.global_daq_parameters = DataAcquisitionParameters(
-            channels,
-            sample_rate,
-            round(sample_rate * self.time_per_read_selector.value()),
-            round(sample_rate * self.time_per_write_selector.value() * output_oversample),
-            self.hardware_selector.currentIndex(),
-            self.hardware_file,
-            self.environments,
-            environment_booleans,
-            output_oversample,
-            **extra_parameters,
-        )
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME,
-            (
-                GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-                (self.global_daq_parameters, environment_channel_indices),
-            ),
-        )
-        self.queue_container.output_command_queue.put(
-            TASK_NAME,
-            (
-                GlobalCommands.INITIALIZE_DATA_ACQUISITION,
-                (self.global_daq_parameters, environment_channel_indices),
-            ),
-        )
-        self.channel_monitor_button.setEnabled(True)
-        if self.channel_monitor_window is not None:
-            self.channel_monitor_window.update_channel_list(self.global_daq_parameters)
-        for i in range(2, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.setTabEnabled(1, True)
-        self.rattlesnake_tabs.setCurrentIndex(1)
 
-    # %% Test Parameters Callbacks
+            case HardwareType.LAN_XI:
+                sample_rate = 2 ** self.lanxi_sample_rate_selector.currentIndex() * 4096
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = 16384 // sample_rate
+                if output_oversample == 0:
+                    output_oversample = 1
+                maximum_acquisition_processes = (
+                    self.lanxi_maximum_acquisition_processes_selector.value()
+                )
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    maximum_acquisition_processes,
+                )
+            case HardwareType.DP_QUATTRO:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    hardware_file,
+                )
+            case HardwareType.DP_900:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    hardware_file,
+                )
+            case HardwareType.EXODUS:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
+            case HardwareType.STATE_SPACE:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
+            case HardwareType.SDYNPY_SYSTEM:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
+            case HardwareType.SDYNPY_FRF:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                return hardware_metadata_class(
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                    output_oversample,
+                    hardware_file,
+                )
+            case _:
+                return None
 
-    def initialize_environment_parameters(self):
-        """Initializes the environment parameters
+    # endregion
 
-        This function initializes the environment-specific parameters for each
-        environment by calling the initialize_environment function of each
-        environment-specific user interface."""
-        for environment in self.environments:
-            environment_parameters = self.environment_uis[environment].initialize_environment()
-            self.environment_metadata[environment] = environment_parameters
-            self.queue_container.environment_command_queues[environment].put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS,
-                    environment_parameters,
-                ),
-            )
+    # region Environment
+    def get_environment_channel_list(self):
+        channel_list = self.get_channel_list()
+        environment_channel_list = {}
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        for col in range(num_cols):
+            header_item = self.environment_channel_table.horizontalHeaderItem(col)
+            environment_name = header_item.text()
+            selected_channels = []
 
-        # Enable the next section
-        self.rattlesnake_tabs.setTabEnabled(2, True)
-        self.rattlesnake_tabs.setCurrentIndex(2)
+            for row in range(num_rows):
+                checkbox = self.environment_channel_table.cellWidget(row, col)
+                if checkbox is None:
+                    continue
+                if checkbox.isChecked():
+                    if row < len(channel_list):
+                        selected_channels.append(channel_list[row])
+            environment_channel_list[environment_name] = selected_channels
 
-        # If there are test predictions
-        if self.has_test_predictions:
-            self.rattlesnake_tabs.setTabEnabled(3, True)
+        return environment_channel_list
 
-    # %% Run test callbacks
-    def select_control_streaming_file(self):
-        """Selects a file to stream data to disk"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            "Select NetCDF File to Save Control Data",
-            filter="NetCDF File (*.nc4)",
-        )
-        if filename == "":
-            return
-        self.streaming_file_display.setText(filename)
+    def update_environment_tabs(self):
 
-    def arm_test(self):
-        """Starts the data acquisition running in preparation for control"""
-        if (
-            not self.no_streaming_radiobutton.isChecked()
-            and len(self.streaming_file_display.text()) == 0
-        ):
-            error_message_qt(
-                "No Streaming File Selected",
-                "Please select a file into which data will be streamed.",
-            )
-            return
-        self.log("Arming Test Hardware")
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.RUN_HARDWARE, None)
-        )
-        self.no_streaming_radiobutton.setEnabled(False)
-        self.profile_streaming_radiobutton.setEnabled(False)
-        self.test_level_streaming_radiobutton.setEnabled(False)
-        self.streaming_environment_select_combobox.setEnabled(False)
-        self.immediate_streaming_radiobutton.setEnabled(False)
-        self.select_streaming_file_button.setEnabled(False)
-        self.manual_streaming_radiobutton.setEnabled(False)
-        self.manual_streaming_trigger_button.setEnabled(True)
-        self.arm_test_button.setEnabled(False)
-        self.disarm_test_button.setEnabled(True)
-        self.start_profile_button.setEnabled(True)
-        self.stop_profile_button.setEnabled(True)
-        for i in range(self.run_environment_tabs.count()):
-            self.run_environment_tabs.widget(i).setEnabled(True)
-        for _, ui in self.environment_uis.items():
-            try:
-                ui.disable_system_id_daq_armed()
-            except AttributeError:
-                pass
-        if (
-            self.profile_streaming_radiobutton.isChecked()
-            or self.test_level_streaming_radiobutton.isChecked()
-            or self.immediate_streaming_radiobutton.isChecked()
-            or self.manual_streaming_radiobutton.isChecked()
-        ):
-            file_path = self.streaming_file_display.text()
-            self.queue_container.streaming_command_queue.put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_STREAMING,
-                    (file_path, self.global_daq_parameters, self.environment_metadata),
-                ),
-            )
-        if self.immediate_streaming_radiobutton.isChecked():
-            self.start_streaming()
+        # Definition tabs
+        self.environment_definition_environment_tabs.setCurrentIndex(-1)
+        self.environment_definition_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            definition_widget = environment_ui.definition_widget
+            if definition_widget is not None:
+                self.environment_definition_environment_tabs.addTab(
+                    definition_widget, environment_name
+                )
 
-    def disarm_test(self):
-        """Stops the data acquisition from running and shuts down all environments"""
-        self.log("Disarming Test Hardware")
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
-        )
-        for _, ui in self.environment_uis.items():
-            ui.stop_control()
-        # for environment,queue in self.queue_container.environment_command_queues.items():
-        #     queue.put(TASK_NAME,(GlobalCommands.STOP_ENVIRONMENT,None))
-        self.no_streaming_radiobutton.setEnabled(True)
-        self.profile_streaming_radiobutton.setEnabled(True)
-        self.test_level_streaming_radiobutton.setEnabled(True)
-        self.streaming_environment_select_combobox.setEnabled(True)
-        self.immediate_streaming_radiobutton.setEnabled(True)
-        self.manual_streaming_radiobutton.setEnabled(True)
-        self.manual_streaming_trigger_button.setEnabled(False)
-        self.manual_streaming_trigger_button.setText("Start\nStreaming")
-        self.select_streaming_file_button.setEnabled(True)
-        self.arm_test_button.setEnabled(True)
-        self.disarm_test_button.setEnabled(False)
-        self.start_profile_button.setEnabled(False)
-        self.stop_profile_button.setEnabled(False)
+        # System Identification tab
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.system_id_environment_tabs.setCurrentIndex(-1)
+        self.system_id_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            system_id_widget = environment_ui.system_id_widget
+            if system_id_widget is not None:
+                self.system_id_environment_tabs.addTab(
+                    system_id_widget, environment_name
+                )
+                self.rattlesnake_tabs.tabBar().setTabVisible(2, True)
+
+        # Prediction tab
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.test_prediction_environment_tabs.setCurrentIndex(-1)
+        self.test_prediction_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            prediction_widget = environment_ui.prediction_widget
+            if prediction_widget is not None:
+                self.test_prediction_environment_tabs.addTab(
+                    prediction_widget, environment_name
+                )
+                self.rattlesnake_tabs.tabBar().setTabVisible(3, True)
+
+        # Run tab
+        self.run_environment_tabs.setCurrentIndex(-1)
+        self.run_environment_tabs.clear()
+        for environment_name, environment_ui in self.environment_uis.items():
+            run_widget = environment_ui.run_widget
+            if run_widget is not None:
+                self.run_environment_tabs.addTab(run_widget, environment_name)
+
+        # Disable run tabs
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(False)
-        for _, ui in self.environment_uis.items():
-            try:
-                ui.enable_system_id_daq_disarmed()
-            except AttributeError:
-                pass
 
-    def start_profile(self):
-        """Starts running the test profile"""
-        self.log("Running Profile")
-        # Create the QTimers
-        self.profile_timers = []
-        for timestamp, environment_name, operation, data in self.profile_events:
-            timer = ProfileTimer(environment_name, operation, data)
-            timer.setSingleShot(True)
-            timer.timeout.connect(self.fire_profile_event)
-            timer.start(int(timestamp * 1000))
-            self.profile_timers.append(timer)
-        self.profile_list_update_timer = QTimer()
-        self.profile_list_update_timer.timeout.connect(self.update_profile_list)
-        self.profile_list_update_timer.start(250)
+    def add_environment(self, environment_type: str | EnvironmentType):
+        """Function used to add an environment"""
+        # If comming from UI, environment_type will be text in combobox
+        if isinstance(environment_type, str):
+            environment_type = UI_ENVIRONMENT_OPTIONS[environment_type]
 
-    def fire_profile_event(self):
-        """Activates a given profile event"""
-        widget = self.sender()
-        environment_name = widget.environment
-        operation = widget.operation
-        data = widget.data
-        self.log(f"Profile Firing Event {environment_name} {operation} {data}")
-        if self.show_profile_change_checkbox.isChecked():
-            if not environment_name == "Global":
-                environment_index = self.environments.index(environment_name)
-                self.run_environment_tabs.setCurrentIndex(environment_index)
-        if environment_name == "Global":
-            if operation == "Start Streaming" and (
-                not self.profile_streaming_radiobutton.isChecked()
-            ):
+        if environment_type is None:
+            return
+
+        idx = 0
+        environment_name = f"{environment_type.name} {idx}"
+        while environment_name in self.environment_uis.keys():
+            idx += 1
+            environment_name = f"{environment_type.name} {idx}"
+
+        environment_ui_class = ENVIRONMENT_UIS[environment_type]
+        environment_ui = environment_ui_class(environment_name, self.rattlesnake)
+
+        # Update environment UIs and channel table
+        self.environment_uis[environment_name] = environment_ui
+        new_col = self.environment_channel_table.columnCount()
+        self.environment_channel_table.insertColumn(new_col)
+        self.environment_channel_table.setHorizontalHeaderItem(
+            new_col, QtWidgets.QTableWidgetItem(environment_name)
+        )
+        self.environment_channel_table.show()
+
+        # Set checkboxes
+        channel_list = self.get_channel_list()
+        num_channels = len(channel_list)
+        num_rows = self.environment_channel_table.rowCount()
+        for row in range(num_rows):
+            checkbox = QtWidgets.QCheckBox()
+            checkbox.setChecked(row < num_channels)
+            self.environment_channel_table.setCellWidget(row, new_col, checkbox)
+
+        # Reset add environment combobox
+        self.add_environment_combobox.setCurrentIndex(0)
+
+    def remove_environment(self, clicked=None, environment_name=None):
+        # Find selected ranges on the environment channel table
+        if environment_name:
+            for col in range(self.environment_channel_table.columnCount()):
+                item = self.environment_channel_table.horizontalHeaderItem(col)
+                if item and item.text() == environment_name:
+                    columns = [col]
+        else:
+            selected_ranges = self.environment_channel_table.selectedRanges()
+            if not selected_ranges:
+                self.display_error(
+                    "Please select an environment in environment channel table to remove"
+                )
                 return
-            self.command_map[operation]()
-        elif operation in ["Start Control", "Stop Control"]:
-            self.environment_uis[environment_name].command_map[operation]()
-        else:
-            self.environment_uis[environment_name].command_map[operation](data)
-
-    def update_profile_list(self):
-        """Updates the list of upcoming profile events."""
-        profile_representation = []
-        for timer, profile_event in zip(self.profile_timers, self.profile_events):
-            remaining_time = timer.remainingTime() / 1000
-            if remaining_time > 0:
-                profile_representation.append([remaining_time] + profile_event[1:])
-        self.upcoming_instructions_list.clear()
-        self.upcoming_instructions_list.addItems(
-            [
-                "{:0.2f} {:} {:} {:}".format(  # pylint: disable=consider-using-f-string
-                    *profile_event
-                )
-                for profile_event in sorted(profile_representation)
-            ]
-        )
-        if len(profile_representation) == 0:
-            self.stop_profile()
-
-    def stop_profile(self):
-        """Stops running the profile"""
-        for timer in self.profile_timers:
-            timer.stop()
-        self.profile_list_update_timer.stop()
-
-    def initialize_profile(self):
-        """Initializes the profile list in the controller"""
-        self.profile_events = []
-        for row in range(self.profile_table.rowCount()):
-            self.profile_events.append(
-                [
-                    float(self.profile_table.cellWidget(row, 0).value()),
-                    self.profile_table.cellWidget(row, 1).currentText(),
-                    self.profile_table.cellWidget(row, 2).currentText(),
-                    self.profile_table.item(row, 3).text(),
-                ]
+            # Remove selected columns from environment table and environment_uis
+            selected_range = selected_ranges[0]
+            columns = range(
+                selected_range.leftColumn(), selected_range.rightColumn() + 1
             )
-        if len(self.profile_events) == 0:
-            self.run_profile_widget.hide()
-        else:
-            self.run_profile_widget.show()
-        self.upcoming_instructions_list.clear()
-        self.upcoming_instructions_list.addItems(
-            [
-                "{:0.2f} {:} {:} {:}".format(  # pylint: disable=consider-using-f-string
-                    *profile_event
-                )
-                for profile_event in sorted(self.profile_events)
-            ]
-        )
-        for i in range(self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, True)
 
-        self.rattlesnake_tabs.setCurrentIndex(self.rattlesnake_tabs.count() - 2)
+        for col in sorted(columns, reverse=True):
+            header_item = self.environment_channel_table.horizontalHeaderItem(col)
+            environment_name = header_item.text()
+            self.environment_uis.pop(environment_name)
+            self.environment_channel_table.removeColumn(col)
 
-    def save_profile(self):
-        """Save the profile to a spreadsheet file"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Test Profile", filter="Excel File (*.xlsx)"
-        )
-        if filename == "":
-            return
-        workbook = openpyxl.Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Test Profile"
-        worksheet.cell(1, 1, "Time (s)")
-        worksheet.cell(1, 2, "Environment")
-        worksheet.cell(1, 3, "Operation")
-        worksheet.cell(1, 4, "Data")
-        for row in range(self.profile_table.rowCount()):
-            worksheet.cell(row + 2, 1, float(self.profile_table.cellWidget(row, 0).value()))
-            worksheet.cell(row + 2, 2, self.profile_table.cellWidget(row, 1).currentText())
-            worksheet.cell(row + 2, 3, self.profile_table.cellWidget(row, 2).currentText())
-            worksheet.cell(row + 2, 4, self.profile_table.item(row, 3).text())
-        workbook.save(filename)
+        # If all environments are removed, hide environment channel table
+        if len(self.environment_uis) == 0:
+            self.environment_channel_table.hide()
 
-    def load_profile(self):
-        """Load a profile from a spreadsheet file"""
-        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Load Test Profile", filter="Excel File (*.xlsx)"
-        )
-        if filename == "":
-            return
-        workbook = openpyxl.load_workbook(filename)
-        profile_sheet = workbook["Test Profile"]
-        index = 2
-        while True:
-            timestamp = profile_sheet.cell(index, 1).value
-            environment = profile_sheet.cell(index, 2).value
-            operation = profile_sheet.cell(index, 3).value
-            data = profile_sheet.cell(index, 4).value
-            if timestamp is None or (isinstance(timestamp, str) and timestamp.strip() == ""):
-                break
-            self.add_profile_event(None, timestamp, environment, operation, data)
-            index += 1
-
-    def add_profile_event(
-        self,
-        clicked=None,  # pylint: disable=unused-argument
-        timestamp=None,
-        environment=None,
-        operation=None,
-        data=None,
-    ):
-        """Adds an event to the profile either by clicking a button or by specifying it
+    def rename_environment(self, col_idx: int, new_name: str = None):
+        """Function to rename an environment
 
         Parameters
         ----------
-        clicked :
-            The clicked event. (Default value = None)
-        timestamp :
-            Optional timestamp to give to the controller (Default value = None)
-        environment :
-            Optional environment the profile instruction corresponds to
-            (Default value = None)
-        operation :
-            Optional operation specified by the profile instruction
-            (Default value = None)
-        data :
-            Optional data needed by the operation (Default value = None)
-
+        index : int :
+            The index of the environment to rename
         """
-        # start_time = time.time()
-        # Create the row in the profile table
-        selected_row = self.profile_table.rowCount()
-        self.profile_table.insertRow(selected_row)
-        # insert_row_time = time.time()
-        # print('Time to Insert Row: {:}'.format(insert_row_time-start_time))
-        # First entry is a spinbox
-        timestamp_spinbox = QtWidgets.QDoubleSpinBox()
-        timestamp_spinbox.setMaximum(1e6)
-        self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
-        # create_spinbox_time = time.time()
-        # print('Time to Create Spinbox: {:}'.format(create_spinbox_time-insert_row_time))
-        # Next a combobox sets the environment
-        environment_combobox = QtWidgets.QComboBox()
-        environment_combobox.addItem("Global")
-        for environment_name in self.environments:
-            environment_combobox.addItem(environment_name)
-        self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
-        # create_environment_combobox_time = time.time()
-        # print('Time to Create Environment Combobox: {:}'.format(
-        #    create_environment_combobox_time-create_spinbox_time))
-        # Next a combobox sets the operation
-        operation_combobox = QtWidgets.QComboBox()
-        for op in self.command_map:
-            operation_combobox.addItem(op)
-        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
-        # create_operation_combobox_time = time.time()
-        # print('Time to Create Operation Combobox: {:}'.format(
-        #     create_operation_combobox_time-create_environment_combobox_time))
-        data_item = QtWidgets.QTableWidgetItem()
-        self.profile_table.setItem(selected_row, 3, data_item)
-        # create_data_entry_time = time.time()
-        # print('Time to Data Entry: {:}'.format(
-        #    create_data_entry_time-create_operation_combobox_time))
-        # Connect the callbacks
-        timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
-        environment_combobox.currentIndexChanged.connect(self.update_operations)
-        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
-        # connect_callbacks_time = time.time()
-        # print('Time to Connect Callbacks: {:}'.format(
-        #    connect_callbacks_time-create_data_entry_time))
-        # Initialize parameters if necessary
-        if timestamp is not None:
-            timestamp_spinbox.setValue(float(timestamp))
-        # initialize_time_time = time.time()
-        # print('Time to Initialize Timestamp: {:}'.format(
-        #     initialize_time_time-connect_callbacks_time))
-        if environment is not None:
-            environment_combobox.setCurrentIndex(environment_combobox.findText(environment))
-        # initialize_environment_time = time.time()
-        # print('Time to Initialize Timestamp: {:}'.format(
-        #     initialize_environment_time-initialize_time_time))
-        if operation is not None:
-            operation_combobox.setCurrentIndex(operation_combobox.findText(operation))
-        # initialize_operation_time = time.time()
-        # print('Time to Initialize Timestamp: {:}'.format(
-        #     initialize_operation_time-initialize_environment_time))
-        if data is not None:
-            data_item.setText(str(data))
-        # initialize_data_time = time.time()
-        # print('Time to Initialize Data: {:}'.format(
-        #     initialize_data_time-initialize_operation_time))
-        # Update the plot
-        self.update_profile_plot()
-        # update_plot_time = time.time()
-        # print('Time to Update Plot: {:}'.format(update_plot_time-initialize_data_time))
 
-    def update_operations(self):
-        """Update profile operations given a selected environment"""
-        widget = self.sender()
-        if widget.currentIndex() == 0:
-            operations = [operation for operation in self.command_map]
+        # Pull header text from environment_channel_table
+        header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
+        current_name = header_item.text()
+
+        # If name not given, ask user for a name
+        if not new_name:
+            # Create dialog box to get a new name
+            new_name, ok_chosen = QtWidgets.QInputDialog.getText(
+                self, "Rename Tab", "Enter new tab name:", text=current_name
+            )
+            if not ok_chosen:
+                return
+            new_name = new_name.strip()
+            if not new_name:
+                return
+
+        # Make sure name does not already exist
+        if new_name in self.environment_uis:
+            self.display_error(
+                "The new name already exists. Please choose a different name."
+            )
+            return
+
+        # Replace old name in dict with new name while keeping order
+        # This is scuffed but is very specific to this case
+        ordered_dict = {}
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_name == current_name:
+                environment_ui.environment_name = new_name
+                ordered_dict[new_name] = environment_ui
+            else:
+                ordered_dict[environment_name] = environment_ui
+        self.environment_uis = ordered_dict
+        header_item.setText(new_name)
+
+    def initialize_environments(self):
+        self.log("Initializing Environment")
+
+        # Prevent user from initializing multiple times
+        self.initialize_environments_button.setEnabled(False)
+
+        try:
+            # Build environment metadata list
+            environment_metadata_list = []
+            for environment_ui in self.environment_uis.values():
+                metadata = environment_ui.get_environment_metadata(
+                    self.rattlesnake.hardware_metadata.channel_list
+                )
+                environment_ui.initialize_environment(metadata)
+                environment_metadata_list.append(metadata)
+
+            # Send hardware metadata to rattlesnake
+            environment_metadata = self.rattlesnake.initialize_environments(
+                environment_metadata_list
+            )
+
+        except Exception as e:
+            self.initialize_environments_error(e)
+            return
+
+        # Block until environment metadata has been stored
+        ready_event_list = [
+            self.rattlesnake.event_container.acquisition_ready_event,
+            self.rattlesnake.event_container.output_ready_event,
+            *self.rattlesnake.environment_manager.ready_event_list,
+        ]
+        active_event_list = []
+        self.create_event_watcher(ready_event_list, active_event_list)
+        self.event_watcher.ready.connect(
+            lambda metadata=environment_metadata: self.initialize_environments_ready(
+                metadata
+            )
+        )
+        self.event_watcher.error.connect(self.initialize_environments_error)
+        self.event_thread.start()
+
+    def initialize_environments_ready(self, metadata):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Update rattlesnake state
+        self.rattlesnake.environment_metadata = metadata
+
+        # Unlock UI
+        streaming_environment_items = [""] + list(self.environment_uis.keys())
+        self.streaming_environment_select_combobox.clear()
+        self.streaming_environment_select_combobox.addItems(streaming_environment_items)
+        self.initialize_environments_button.setEnabled(True)
+
+        if self.has_system_id:
+            self.rattlesnake_tabs.setTabEnabled(2, True)
+            self.rattlesnake_tabs.setCurrentIndex(2)
+        elif self.has_test_pred:
+            self.rattlesnake_tabs.setTabEnabled(3, True)
+            self.rattlesnake_tabs.setCurrentIndex(3)
         else:
-            environment_name = self.environments[widget.currentIndex() - 1]
-            operations = [
-                operation for operation in self.environment_uis[environment_name].command_map
+            self.rattlesnake_tabs.setTabEnabled(4, True)
+            self.rattlesnake_tabs.setCurrentIndex(4)
+
+    def initialize_environments_error(self, error_message):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Update rattlesnake state
+        self.rattlesnake.environment_metadata = []
+
+        # Lock future UI
+        self.streaming_environment_select_combobox.clear()
+        # If not acquiring, disable future tabs
+        if self.rattlesnake.state in (
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            for i in range(2, self.rattlesnake_tabs.count() - 1):
+                self.rattlesnake_tabs.setTabEnabled(i, False)
+
+        # Unlock UI
+        self.initialize_environments_button.setEnabled(True)
+        self.display_error(error_message)
+
+    # endregion
+
+    # region Acquisition
+    def enable_ready_run_tabs(self):
+        for i in range(self.run_environment_tabs.count()):
+            environment_name = self.run_environment_tabs.tabText(i)
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+                environment_name
             ]
-        for row in range(self.profile_table.rowCount()):
-            if widget is self.profile_table.cellWidget(row, 1):
-                print(f"Found Widget at {row}")
-                break
-        operation_combobox = self.profile_table.cellWidget(row, 2)
-        operation_combobox.blockSignals(True)
-        operation_combobox.clear()
-        for operation in operations:
-            operation_combobox.addItem(operation)
-        operation_combobox.blockSignals(False)
-        self.update_profile_plot()
-
-    def update_profile_plot(self):
-        """Updates the plot of profile events"""
-        plot_item = self.profile_timeline_plot.getPlotItem()
-        plot_item.clear()
-        plot_item.showGrid(True, True, 0.25)
-        plot_item.disableAutoRange()
-        max_time = 0
-        for row in range(self.profile_table.rowCount()):
-            time_val = self.profile_table.cellWidget(row, 0).value()
-            if time_val > max_time:
-                max_time = time_val
-            plot_item.plot(
-                [time_val],
-                [self.profile_table.cellWidget(row, 1).currentIndex()],
-                pen=None,
-                symbol="o",
-                pxMode=True,
+            bool_ready = (
+                self.rattlesnake.environment_manager.acquisition_ready_environments[
+                    queue_name
+                ]
             )
-            text_item = pyqtgraph.TextItem(
-                f"{row + 1}: "
-                + self.profile_table.cellWidget(row, 2).currentText()
-                + (
-                    ": " + self.profile_table.item(row, 3).text()
-                    if self.profile_table.item(row, 3).text().strip() != ""
-                    else ""
-                ),
-                color=(0, 0, 0),
-                angle=-15,
+
+            if bool_ready:
+                self.run_environment_tabs.widget(i).setEnabled(True)
+            else:
+                self.run_environment_tabs.widget(i).setEnabled(False)
+
+    def show_channel_monitor(self):
+        """
+        Shows the channel monitor window.
+        """
+        if (self.channel_monitor_window is None) or (
+            not self.channel_monitor_window.isVisible()
+        ):
+            self.channel_monitor_window = ChannelMonitor(
+                None, self.global_daq_parameters
             )
-            plot_item.addItem(text_item)
-            text_item.setPos(time_val, self.profile_table.cellWidget(row, 1).currentIndex())
-        axis = plot_item.getAxis("left")
-        axis.setTicks([[(i, name) for i, name in enumerate(["Global"] + self.environments)], []])
-        plot_item.setXRange(0, max_time * 1.1)
-        plot_item.setYRange(-1, len(self.environments))
-
-    def remove_profile_event(self):
-        """Removes a profile event from the list of events"""
-        selected_row = self.profile_table.currentRow()
-        if selected_row >= 0:
-            self.profile_table.removeRow(selected_row)
-        self.update_profile_plot()
-
-    def start_streaming(self):
-        """Tells acquisition to start sending data to streaming"""
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME, (GlobalCommands.START_STREAMING, None)
-        )
-
-    def stop_streaming(self):
-        """Tells the acquisition to stop sending data to streaming"""
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
-        )
+        else:
+            pass  # TODO Need to raise the window to the front, or close and reopen
 
     def show_hide_manual_streaming(self):
         """Shows or hides the manual streaming button depending on which streaming type is chosen"""
@@ -1762,215 +1775,595 @@ class Ui(QtWidgets.QMainWindow):
         """Starts or stops streaming manually"""
         if self.manual_streaming_trigger_button.text() == "Stop\nStreaming":
             self.manual_streaming_trigger_button.setText("Start\nStreaming")
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
-            )
+            self.rattlesnake.stop_streaming()
         else:
             self.manual_streaming_trigger_button.setText("Stop\nStreaming")
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.START_STREAMING, None)
+            self.rattlesnake.start_streaming()
+
+    def get_stream_metadata(self):
+        stream_file = self.streaming_file_display.text()
+
+        if self.no_streaming_radiobutton.isChecked():
+            stream_type = StreamType.NO_STREAM
+            stream_metadata = StreamMetadata(stream_type)
+        elif self.profile_streaming_radiobutton.isChecked():
+            stream_type = StreamType.PROFILE_INSTRUCTION
+            stream_metadata = StreamMetadata(stream_type, stream_file)
+        elif self.test_level_streaming_radiobutton.isChecked():
+            stream_type = StreamType.TEST_LEVEL
+            test_level_environment_name = (
+                self.streaming_environment_select_combobox.currentText()
             )
-
-    # %% Other Callbacks
-    def sync_environment_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.environment_channels_table.verticalScrollBar().setValue(
-            self.channel_table.verticalScrollBar().value()
-        )
-
-    def sync_channel_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.channel_table.verticalScrollBar().setValue(
-            self.environment_channels_table.verticalScrollBar().value()
-        )
-
-    def stop_program(self):
-        """Callback to stop the entire program"""
-        self.close()
-
-    def update_gui(self, queue_data):
-        """Update the graphical interface for the main controller
-
-        Parameters
-        ----------
-        queue_data :
-            A 2-tuple consisting of ``(message,data)`` pairs where the message
-            denotes what to change and the data contains the information needed
-            to be displayed.
-
-        """
-        message, data = queue_data
-        #        self.log('Updating GUI {:}'.format(message))
-        if message == UICommands.ERROR:
-            error_message_qt(data[0], data[1])
-            return
-        elif message in self.environments:
-            self.environment_uis[message].update_gui(data)
-        elif message == UICommands.MONITOR:
-            if self.channel_monitor_window is not None:
-                if not self.channel_monitor_window.isVisible():
-                    self.channel_monitor_window = None
-                else:
-                    self.channel_monitor_window.update(data)
-        elif message == UICommands.UPDATE_METADATA:
-            environment_name, metadata = data
-            self.environment_metadata[environment_name] = metadata
-        elif message == UICommands.STOP:
-            self.disarm_test()
-        elif message == UICommands.ENABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(True)
-        elif message == UICommands.DISABLE:
-            widget = getattr(self, data)
-            widget.setEnabled(False)
-        elif message == UICommands.ENABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, True)
-            self.rattlesnake_tabs.setCurrentIndex(data)
-        elif message == UICommands.DISABLE_TAB:
-            self.rattlesnake_tabs.setTabEnabled(data, False)
+            stream_metadata = StreamMetadata(
+                stream_type, stream_file, test_level_environment_name
+            )
+        elif self.immediate_streaming_radiobutton.isChecked():
+            stream_type = StreamType.IMMEDIATELY
+            stream_metadata = StreamMetadata(stream_type, stream_file)
+        elif self.manual_streaming_radiobutton.isChecked():
+            stream_type = StreamType.MANUAL
+            stream_metadata = StreamMetadata(stream_type, stream_file)
         else:
-            widget = getattr(self, message)
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
+            stream_metadata = StreamMetadata()  # Default incase of error
 
-    #        self.log('Update took {:} seconds'.format(time.time()-start_time))
+        return stream_metadata
 
-    def handle_controller_instructions(self, queue_data):
-        """Handler function for global controller instructions
+    def select_streaming_file(self):
+        """Selects a file to stream data to disk"""
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Select NetCDF File to Save Control Data",
+            filter="NetCDF File (*.nc4)",
+        )
+        if filename == "":
+            return
+        self.streaming_file_display.setText(filename)
 
-        Parameters
-        ----------
-        queue_data :
-            A 2-tuple consisting of ``(message,data)`` pairs where the message
-            denotes what to change and the data contains the information needed
-            to be displayed.
+    def display_acquisition_started(self):
+        # Acquisition
+        self.arm_test_button.setEnabled(False)
+        self.disarm_test_button.setEnabled(True)
+        # Environment
+        self.enable_ready_run_tabs()
+        # Streaming
+        for widget in self.streaming_widgets:
+            widget.setEnabled(False)
+        self.manual_streaming_trigger_button.setEnabled(True)
+        # Profile
+        self.run_profile_widget.setEnabled(True)
 
-        """
-        message, data = queue_data
-        self.log(f"Received Global Instruction {message.name}")
-        if message == GlobalCommands.QUIT:
-            self.stop_program()
-        elif message == GlobalCommands.INITIALIZE_DATA_ACQUISITION:
-            self.initialize_data_acquisition()
-        elif message == GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS:
-            self.initialize_environment_parameters()
-        elif message == GlobalCommands.UPDATE_METADATA:
-            environment, metadata = data
-            self.environment_metadata[environment] = metadata
-        elif message == GlobalCommands.RUN_HARDWARE:
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.RUN_HARDWARE, data)
-            )
-            self.queue_container.output_command_queue.put(
-                TASK_NAME, (GlobalCommands.RUN_HARDWARE, data)
-            )
-        elif message == GlobalCommands.STOP_HARDWARE:
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.STOP_HARDWARE, data)
-            )
-            self.queue_container.output_command_queue.put(
-                TASK_NAME, (GlobalCommands.STOP_HARDWARE, data)
-            )
-        elif message == GlobalCommands.INITIALIZE_STREAMING:
-            self.queue_container.streaming_command_queue.put(
-                TASK_NAME,
-                (
-                    GlobalCommands.INITIALIZE_STREAMING,
-                    (data, self.global_daq_parameters, self.environment_metadata),
-                ),
-            )
-        elif message == GlobalCommands.STREAMING_DATA:
-            self.queue_container.streaming_command_queue.put(
-                TASK_NAME, (GlobalCommands.STREAMING_DATA, data)
-            )
-        elif message == GlobalCommands.FINALIZE_STREAMING:
-            self.queue_container.streaming_command_queue.put(
-                TASK_NAME, (GlobalCommands.FINALIZE_STREAMING, data)
-            )
-        elif message == GlobalCommands.START_ENVIRONMENT:
-            self.queue_container.output_command_queue.put(
-                TASK_NAME, (GlobalCommands.START_ENVIRONMENT, data)
-            )
-        elif message == GlobalCommands.STOP_ENVIRONMENT:
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, data)
-            )
-        elif message == GlobalCommands.START_STREAMING:
-            self.start_streaming()
-        elif message == GlobalCommands.STOP_STREAMING:
-            self.queue_container.acquisition_command_queue.put(
-                TASK_NAME, (GlobalCommands.STOP_STREAMING, data)
-            )
-        elif message == GlobalCommands.COMPLETED_SYSTEM_ID:
-            environment, _ = data
-            self.complete_system_ids[environment] = True
-            if all([flag for environment, flag in self.complete_system_ids.items()]):
-                if self.has_test_predictions:
-                    self.rattlesnake_tabs.setTabEnabled(4, True)
-                else:
-                    self.rattlesnake_tabs.setTabEnabled(3, True)
-        elif message == GlobalCommands.AT_TARGET_LEVEL:
-            environment_name = data
-            if (
-                self.test_level_streaming_radiobutton.isChecked()
-                and self.streaming_environment_select_combobox.currentText() == environment_name
-            ):
-                self.start_streaming()
+    def display_acquisition_ended(self):
+        # Acquisition
+        self.arm_test_button.setEnabled(True)
+        self.disarm_test_button.setEnabled(False)
+        # Environment
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+        # Streaming
+        for widget in self.streaming_widgets:
+            widget.setEnabled(True)
+        self.manual_streaming_trigger_button.setEnabled(False)
+        # Profile
+        self.run_profile_widget.setEnabled(False)
 
-    def closeEvent(self, event):  # pylint: disable=invalid-name
-        """Event triggered when closing the software to gracefully shut down.
+    def start_acquisition(self):
+        self.log("Starting hardware acquistion")
+        self.arm_test_button.setEnabled(False)
+        for widget in self.streaming_widgets:
+            widget.setEnabled(False)
 
-        Parameters
-        ----------
-        event :
-            The close event, which is accepted.
+        try:
+            stream_metadata = self.get_stream_metadata()
 
-        """
-        for (
-            _,
-            command_queue,
-        ) in self.queue_container.environment_command_queues.items():
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+            self.rattlesnake.start_acquisition(stream_metadata)
+        except Exception as e:
+            self.start_acquisition_error(e)
 
-        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
-        self.queue_container.controller_communication_queue.put(
-            TASK_NAME, (GlobalCommands.QUIT, None)
+        ready_event_list = [
+            self.rattlesnake.event_container.streaming_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+        ]
+        self.create_event_watcher(
+            ready_event_list, active_event_list, active_event_check=True
+        )
+        self.event_watcher.ready.connect(self.start_acqusition_ready)
+        self.event_watcher.error.connect(self.start_acquisition_error)
+        self.event_thread.start()
+
+    def start_acqusition_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.display_acquisition_started()
+
+    def start_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+        else:
+            self.display_acquisition_ended()
+
+    def stop_acquisition(self):
+        # Stop acquisition is a special case where this needs to stop the test no matter what
+        self.stop_profile()
+        self.log("Stopping hardware acquisition")
+        self.disarm_test_button.setEnabled(False)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+        self.manual_streaming_trigger_button.setEnabled(False)
+
+        try:
+            self.rattlesnake.stop_acquisition()
+        except Exception as e:
+            self.stop_acquisition_error(e)
+
+        # Make sure event watcher will work since disarm daq is usually an "oh crap" moment
+        ready_event_list = [
+            self.rattlesnake.event_container.controller_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+            *self.rattlesnake.environment_manager.active_event_list,
+        ]
+        self.create_event_watcher(
+            ready_event_list, active_event_list, active_event_check=False
+        )
+        self.event_watcher.ready.connect(self.stop_acquistion_ready)
+        self.event_watcher.error.connect(self.stop_acquisition_error)
+        self.event_thread.start()
+
+    def stop_acquistion_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.display_acquisition_ended()
+
+    def stop_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+        else:
+            self.display_acquisition_ended()
+
+    # endregion
+
+    # region Profile
+    def load_profile_list(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Profile Excel File",
+                filter="Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        environment_types = {
+            environment_name: self.environment_uis[environment_name].environment_type
+            for environment_name in self.environment_uis.keys()
+        }
+        filename, filetype = os.path.splitext(filepath)
+        match filetype:
+            case ".nc4":
+                self.display_error(f"Netcdf files do not store profile lists")
+            case ".xlsx":
+                workbook = openpyxl.load_workbook(filepath, read_only=True)
+                profile_event_list = load_profile_from_workbook(
+                    workbook, environment_types
+                )
+                self.rattlesnake.initialize_profile_event_list(profile_event_list)
+                self.load_ui_from_profile()
+
+    def save_profile_list(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save Combined Environments Template",
+                filter="Excel File (*.xlsx)",
+            )
+        if filepath == "":
+            return
+
+        profile_event_list = []
+        num_rows = self.profile_table.rowCount()
+        for row in range(num_rows):
+            timestamp = self.profile_table.cellWidget(row, 0).value()
+            environment_name = self.profile_table.cellWidget(row, 1).currentText()
+            command = self.profile_table.cellWidget(row, 2).currentData()
+            data_item = self.profile_table.item(row, 3)
+            data_text = data_item.text() if data_item is not None else ""
+
+            # Skip environment instructions
+            if command == "Set Environment Instructions":
+                continue
+
+            event = ProfileEvent(timestamp, environment_name, command, data_text)
+
+            profile_event_list.append(event)
+
+        workbook = openpyxl.Workbook()
+        save_profile_to_workbook(workbook, profile_event_list)
+        workbook.save(filepath)
+
+    def add_profile_event(self, clicked=None):
+        # Dont let user run profile until they intialize
+        self.run_profile_widget.hide()
+        # Create new row in profile table
+        selected_row = self.profile_table.rowCount()
+        self.profile_table.insertRow(selected_row)
+
+        # Add spinbox to select time
+        timestamp_spinbox = QtWidgets.QDoubleSpinBox()
+        timestamp_spinbox.setMaximum(1e6)
+        self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
+        timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
+
+        # Add combobox with environment names
+        environment_combobox = QtWidgets.QComboBox()
+        environment_combobox.addItem("Global")
+        for environment_name in self.environment_uis.keys():
+            environment_combobox.addItem(environment_name)
+        self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
+        environment_combobox.currentTextChanged.connect(
+            lambda text, row=selected_row: self.update_profile_operations(text, row)
         )
 
-        for command_queue in [
-            self.queue_container.acquisition_command_queue,
-            self.queue_container.output_command_queue,
-            self.queue_container.streaming_command_queue,
-        ]:
-            command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
+        operation_combobox = QtWidgets.QComboBox()
+        valid_commands = VALID_COMMANDS["Global"]
+        valid_operations = [command.label for command in valid_commands]
+        for command, operation in zip(valid_commands, valid_operations):
+            operation_combobox.addItem(operation, userData=command)
+        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
+        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
+
+        data_item = QtWidgets.QTableWidgetItem()
+        self.profile_table.setItem(selected_row, 3, data_item)
+
+        self.update_profile_plot()
+
+    def remove_profile_event(self, clicked=None, selected_row=None):
+        # Dont let user run profile until they intialize
+        self.run_profile_widget.hide()
+
+        # Find selected row
+        if selected_row is None:
+            selected_row = self.profile_table.currentRow()
+
+        # Remove selected row
+        if selected_row >= 0:
+            self.profile_table.removeRow(selected_row)
+
+        self.update_profile_plot()
+
+    def update_profile_operations(self, environment_name, row):
+        """Update profile operations given a selected environment"""
+        if environment_name == "Global":
+            environment_type = "Global"
+        else:
+            environment_type = self.environment_uis[environment_name].environment_type
+
+        # Find valid commands for that environment type
+        valid_commands = VALID_COMMANDS[environment_type]
+        valid_operations = [command.label for command in valid_commands]
+
+        # Set operation combobox to those commands
+        operation_combobox = self.profile_table.cellWidget(row, 2)
+        operation_combobox.blockSignals(True)
+        operation_combobox.clear()
+        for command, operation in zip(valid_commands, valid_operations):
+            operation_combobox.addItem(operation, userData=command)
+        operation_combobox.blockSignals(False)
+
+        self.update_profile_plot()
+
+    def update_profile_plot(self):
+        """Updates the plot of profile events"""
+        # Format plot
+        plot_item = self.profile_timeline_plot.getPlotItem()
+        plot_item.clear()
+        plot_item.showGrid(True, True, 0.25)
+        plot_item.disableAutoRange()
+
+        if self.theme == "Light":
+            text_color = (0, 0, 0)
+        else:
+            text_color = (255, 255, 255)
+        max_time = 0
+        for row in range(self.profile_table.rowCount()):
+            timestamp = self.profile_table.cellWidget(row, 0).value()
+            environment_index = self.profile_table.cellWidget(row, 1).currentIndex()
+            operation = self.profile_table.cellWidget(row, 2).currentText()
+            data_item = self.profile_table.item(row, 3)
+            data = data_item.text() if data_item is not None else ""
+            data = data if data.strip() != "" else ""
+
+            # Add point and text to plot at correct location
+            plot_item.plot(
+                [timestamp], [environment_index], pen=None, symbol="o", pxMode=True
+            )
+            text_item = pyqtgraph.TextItem(
+                f"{row + 1}: " + operation + (": " + data), color=text_color, angle=-15
+            )
+            plot_item.addItem(text_item)
+            text_item.setPos(timestamp, environment_index)
+
+            if timestamp > max_time:
+                max_time = timestamp
+
+        # Label axis and scale range
+        environment_names = list(self.environment_uis.keys())
+        axis = plot_item.getAxis("left")
+        axis.setTicks(
+            [[(i, name) for i, name in enumerate(["Global"] + environment_names)], []]
+        )
+        plot_item.setXRange(0, max_time * 1.1)
+        plot_item.setYRange(-1, len(environment_names))
+
+    def display_event_strings(self, event_string_list):
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(event_string_list)
+
+    def reset_profile_ui_timers(self):
+        profile_timer_list = []
+        event_string_list = []
+        for event in self.profile_table_list:
+            timestamp = event.timestamp
+            environment_name = event.environment_name
+            command = event.command
+            data_item = event.data
+            data_text = data_item.text() if data_item is not None else ""
+
+            timer = ProfileTimer(timestamp, environment_name, command, data_text)
+            timer.setSingleShot(True)
+            timer.timeout.connect(
+                lambda name=environment_name: self.switch_profile_environment(name)
+            )
+            profile_timer_list.append(timer)
+
+            event_string = (
+                f"{timestamp:0.2f} {environment_name} {command.label} {data_text}"
+            )
+            event_string_list.append(event_string)
+
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(event_string_list)
+        self.profile_timer_list = profile_timer_list
+
+    def start_profile_event_timers(self):
+        for timer in self.profile_timer_list:
+            timer.start(int(timer.timestamp * 1000))
+
+        self.profile_list_update_timer = QtCore.QTimer()
+        self.profile_list_update_timer.timeout.connect(self.update_profile_list)
+        self.profile_list_update_timer.start(250)
+
+    def update_profile_list(self):
+        """Updates the list of upcoming profile events."""
+        event_string_list = []
+        for timer in self.profile_timer_list:
+            remaining_time = timer.remainingTime() / 1000
+            environment_name = timer.environment_name
+            command = timer.command
+            data = timer.data
+
+            if remaining_time > 0:
+                event_string = (
+                    f"{remaining_time:0.2f} {environment_name} {command.label} {data}"
+                )
+                event_string_list.append(event_string)
+
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(event_string_list)
+        if not event_string_list:
+            self.reset_profile_ui_timers()
+            self.profile_list_update_timer.stop()
+
+    def switch_profile_environment(self, environment_name):
+        if self.show_profile_change_checkbox.isChecked():
+            for i in range(self.run_environment_tabs.count()):
+                if self.run_environment_tabs.tabText(i) == environment_name:
+                    self.run_environment_tabs.setCurrentIndex(i)
+                    break
+
+    def initialize_profile(self):
+        self.log("Initializing Profile Event List")
+        sort_list = []
+        num_rows = self.profile_table.rowCount()
+        for row in range(num_rows):
+            timestamp = self.profile_table.cellWidget(row, 0).value()
+            environment_name = self.profile_table.cellWidget(row, 1).currentText()
+            command = self.profile_table.cellWidget(row, 2).currentData()
+            data_item = self.profile_table.item(row, 3)
+            data_text = data_item.text() if data_item is not None else ""
+
+            profile_event = ProfileEvent(
+                timestamp, environment_name, command, data_item
+            )
+
+            sort_list.append((timestamp, row, profile_event))
+
+        # Order profile table in ascending timestamp, then row number
+        sort_list.sort(key=lambda x: (x[0], x[1]))
+        profile_table_list = [row[2] for row in sort_list]
+        self.profile_table_list = profile_table_list
+
+        # Build timers and reset event list in run tab
+        self.reset_profile_ui_timers()
+
+        # Unlock UI
+        if len(profile_table_list) == 0:
+            self.run_profile_widget.hide()
+        else:
+            self.run_profile_widget.show()
+        self.rattlesnake_tabs.setTabEnabled(5, True)
+        self.rattlesnake_tabs.setCurrentIndex(5)
+
+    def start_profile(self):
+        """
+        Build valid profile_event_list and give it to the controller.
+
+        This function starts by walking through the initialized event list and storing information/building
+        instructions so that the event list is adaptive to the user's inputs into the run tab UI.
+        """
+        self.start_profile_button.setEnabled(False)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+        try:
+            # Figure out initial environment UI
+            initial_instructions = {}
+            for environment_name, environment_ui in self.environment_uis.items():
+                environment_instructions = environment_ui.get_environment_instructions()
+                initial_instructions[environment_name] = environment_instructions
+
+            # Walk through events and store to UI/build event.data
+            profile_event_list = []
+            max_timestamp = 0
+            for event in self.profile_table_list:
+                timestamp = event.timestamp
+                environment_name = event.environment_name
+                command = event.command
+                data_item = event.data
+
+                # For start_environment pull instruction from current UI
+                if command is GlobalCommands.START_ENVIRONMENT:
+                    data = self.environment_uis[
+                        environment_name
+                    ].get_environment_instructions()
+                elif (
+                    command is UICommands.SET_ENVIRONMENT_INSTRUCTIONS
+                ):  # Store data to the UI but dont add it as an event
+                    data = data_item.data(QtCore.Qt.ItemDataRole.UserRole)
+                    self.environment_uis[environment_name].set_environment_instructions(
+                        data
+                    )
+                    continue
+                elif isinstance(command, GlobalCommands):
+                    data = None
+                else:  # Convert data str to correct data type
+                    data = data_item.text() if data_item is not None else ""
+                    data = data if data.strip() != "" else ""
+                    validator = command.valid_data()[
+                        command
+                    ]  # This syntax is a weird consequence of enums
+                    try:
+                        if validator is type(None):
+                            data = None
+                        else:
+                            data = validator(data)
+                    except:
+                        raise RattlesnakeError(
+                            f"{environment_name} profile event {command} requires {validator} data type"
+                        )
+
+                # Update environment ui
+                if environment_name != "Global" and command not in (
+                    GlobalCommands.START_ENVIRONMENT,
+                    GlobalCommands.STOP_ENVIRONMENT,
+                ):
+                    self.environment_uis[environment_name].update_gui((command, data))
+
+                # Add to profile_event_list
+                profile_event = ProfileEvent(timestamp, environment_name, command, data)
+                profile_event_list.append(profile_event)
+
+                if timestamp > max_timestamp:
+                    max_timestamp = timestamp
+
+            # Reset UI to initial UI
+            for environment_name, instruction in initial_instructions.items():
+                self.environment_uis[environment_name].set_environment_instructions(
+                    instruction
+                )
+
+            # Start Rattlesnake from profile_event_list
+            self.rattlesnake.start_profile(profile_event_list)
+            self.start_profile_event_timers()
+        except Exception as e:
+            self.start_profile_error(e)
+            return
+
+        ready_event_list = [self.rattlesnake.event_container.controller_ready_event]
+        active_event_list = []
+        self.create_event_watcher(
+            ready_event_list, active_event_list, timeout=max_timestamp + self.timeout
+        )
+        self.event_watcher.ready.connect(self.profile_closed_out)
+        self.event_watcher.error.connect(self.start_profile_error)
+        self.event_thread.start()
+
+        self.stop_profile_button.setEnabled(True)
+
+    def profile_closed_out(self):
+        self.cleanup_event_watcher()
+
+        self.reset_profile_ui_timers()
+        self.profile_list_update_timer.stop()
+
+        self.enable_ready_run_tabs()
+        self.start_profile_button.setEnabled(True)
+        self.stop_profile_button.setEnabled(False)
+
+    def start_profile_error(self, error):
+        self.cleanup_event_watcher()
+
+        self.reset_profile_ui_timers()
+        self.profile_list_update_timer.stop()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        self.start_profile_button.setEnabled(True)
+        self.enable_ready_run_tabs()
+
+    def stop_profile(self):
+        self.stop_profile_button.setEnabled(False)
+        try:
+            self.rattlesnake.stop_profile()
+        except Exception as e:
+            self.stop_profile_error(e)
+            return
+
+    def stop_profile_error(self, error):
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        self.stop_profile_button.setEnabled(True)
+
+    # endregion
+
+    # region Shutdown
+    def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
+        """
+        Event triggered when closing the software to gracefully shut down.
+
+        Parameters
+        ----------
+        event : QtGui.QCloseEvent
+            The close event, which is accepted.
+        """
+        self.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.threadpool.waitForDone()
 
         event.accept()
 
-    def change_color_theme(self, text: str):
-        """Updates the color scheme of the UI"""
-        if text == "Light":
-            self.setStyleSheet("")
-        elif text == "Dark":
-            dark_theme_path = os.path.join(directory, "themes", "dark_theme.txt")
-            with open(dark_theme_path, encoding="utf-8") as file:
-                stylesheet = file.read()
-            images_path = os.path.join(directory, "themes", "images").replace("\\", "/")
-            print(f"Images Path: {images_path}")
-            stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
-            self.setStyleSheet(stylesheet)
-
-    def show_channel_monitor(self):
-        """
-        Shows the channel monitor window
-        """
-        if (self.channel_monitor_window is None) or (not self.channel_monitor_window.isVisible()):
-            self.channel_monitor_window = ChannelMonitor(None, self.global_daq_parameters)
-        else:
-            pass  # TODO Need to raise the window to the front, or close and reopen
+    # endregion
