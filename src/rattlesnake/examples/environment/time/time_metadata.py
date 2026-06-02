@@ -83,23 +83,23 @@ def time_event_list():
     command = GlobalCommands.START_STREAMING
     start_stream_event = ProfileEvent(timestamp, "Global", command)
 
-    timestamp = 2
+    timestamp = 0
     command = GlobalCommands.START_ENVIRONMENT
     instructions = time_instructions()
     start_environment_event = ProfileEvent(
         timestamp, ENVIRONMENT_NAME, command, instructions
     )
 
-    timestamp = 4
+    timestamp = 5
     command = TimeCommands.SET_TEST_LEVEL
     data = 2
     set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
-    timestamp = 7
+    timestamp = 10
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
-    timestamp = 8
+    timestamp = 10
     command = GlobalCommands.STOP_STREAMING
     stop_stream_event = ProfileEvent(timestamp, "Global", command)
 

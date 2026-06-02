@@ -8,8 +8,8 @@ if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
 else:
     DIRECTORY = this_path
 
-NUM_CHANNELS = 21;
-NUM_FORCES = 9;
-SAMPLE_RATE = 2048;
-BUFFER_SIZE = 0.05;
-OUTPUT_OVERSAMPLE = 10;
+NUM_CHANNELS = 21
+NUM_FORCES = 9
+SAMPLE_RATE = 2048
+BUFFER_SIZE = 0.1
+OUTPUT_OVERSAMPLE = 10
