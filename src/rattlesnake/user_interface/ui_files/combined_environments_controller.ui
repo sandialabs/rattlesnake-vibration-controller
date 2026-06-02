@@ -645,7 +645,14 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="damping_ratio_selector"/>
+              <widget class="QDoubleSpinBox" name="damping_ratio_selector">
+               <property name="maximum">
+                <double>10.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QLabel" name="task_trigger_label">
@@ -1460,7 +1467,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
      <x>0</x>
      <y>0</y>
      <width>2107</width>
-     <height>22</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>

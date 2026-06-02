@@ -301,6 +301,13 @@ class HardwareMetadata:
             "Only used if Task Triggers is 2.  Only used for NI hardware.  "
             "This row can be deleted if it is not used.",
         )
+        hardware_worksheet.cell(10, 1, "Damping Ratio")
+        hardware_worksheet.cell(
+            10,
+            3,
+            "# Damping ratio for Exodus Modal Solution virtual hardware. Only fill out if you ",
+            "are using Exodus Modal Solution virtual hardware.",
+        )
 
     @classmethod
     @abstractmethod

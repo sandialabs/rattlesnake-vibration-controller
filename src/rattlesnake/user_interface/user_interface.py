@@ -642,6 +642,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.add_empty_channel_table_rows()
 
         match hardware_metadata.hardware_type:
+            case HardwareType.NI_DAQMX:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("NI DAQmx")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.task_trigger_selector.setIndex(hardware_metadata.task_trigger)
+                self.trigger_output_selector.setText(
+                    hardware_metadata.output_trigger_generator
+                )
             case HardwareType.EXODUS:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("Exodus Modal Solution...")
@@ -653,6 +664,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.integration_oversample_selector.setValue(
                     hardware_metadata.output_oversample
                 )
+                self.damping_ratio_selector.setValue(hardware_metadata.damping_ratio)
             case HardwareType.STATE_SPACE:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("State Space Integration...")
@@ -1441,6 +1453,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 time_per_read = self.buffer_size_selector.value()
                 time_per_write = self.buffer_size_selector.value()
                 output_oversample = self.integration_oversample_selector.value()
+                damping_ratio = self.damping_ratio_selector.value()
                 hardware_file = self.hardware_file
                 return hardware_metadata_class(
                     channel_list,
@@ -1449,6 +1462,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     time_per_write,
                     output_oversample,
                     hardware_file,
+                    damping_ratio,
                 )
             case HardwareType.STATE_SPACE:
                 sample_rate = self.sample_rate_selector.value()

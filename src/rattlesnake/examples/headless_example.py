@@ -18,8 +18,8 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_FRF
-ENVIRONMENT_TYPE = EnvironmentType.TIME
+HARDWARE_TYPE = HardwareType.NONE
+ENVIRONMENT_TYPE = EnvironmentType.NONE
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False
@@ -40,7 +40,7 @@ def build_rattlesnake_object(
     start_environment=START_ENVIRONMENT,
     run_profile=RUN_PROFILE,
 ):
-    rattlesnake = RattlesnakeController(threaded=threaded, timeout=120)
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=10)
 
     hardware_metadata = HARDWARE_DICT[hardware_type][import_method]()
     environment_metadata = ENVIRONMENT_DICT[environment_type][import_method](

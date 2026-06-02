@@ -73,6 +73,7 @@ class ExodusMetadata(HardwareMetadata):
         time_per_write: float,
         output_oversample: int,
         hardware_file: str,
+        damping_ratio: float,
     ):
         super().__init__(
             HARDWARE_TYPE,
@@ -83,6 +84,7 @@ class ExodusMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.hardware_file = hardware_file
+        self.damping_ratio = damping_ratio
 
     # region Validation
     def validate(self):
@@ -95,6 +97,7 @@ class ExodusMetadata(HardwareMetadata):
         super().save_metadata_to_netcdf(netcdf_dataset)
 
         netcdf_dataset.hardware_file = self.hardware_file
+        netcdf_dataset.damping_ratio = self.damping_ratio
 
     @classmethod
     def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
@@ -108,6 +111,7 @@ class ExodusMetadata(HardwareMetadata):
         ) = super().load_metadata_from_netcdf(netcdf_dataset)
 
         hardware_file = netcdf_dataset.hardware_file
+        damping_ratio = netcdf_dataset.damping_ratio
 
         return cls(
             channel_list,
@@ -116,6 +120,7 @@ class ExodusMetadata(HardwareMetadata):
             time_per_write,
             output_oversample,
             hardware_file,
+            damping_ratio,
         )
 
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
@@ -124,6 +129,7 @@ class ExodusMetadata(HardwareMetadata):
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(2, 2, self.hardware_file)
         hardware_worksheet.cell(7, 2, self.output_oversample)
+        hardware_worksheet.cell(10, 2, self.damping_ratio)
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
@@ -147,6 +153,8 @@ class ExodusMetadata(HardwareMetadata):
             match name:
                 case "Hardware File":
                     hardware_file = value
+                case "Damping Ratio":
+                    damping_ratio = value
                 case _:
                     continue
 
@@ -157,6 +165,7 @@ class ExodusMetadata(HardwareMetadata):
             time_per_write,
             output_oversample,
             hardware_file,
+            damping_ratio,
         )
 
 
@@ -223,8 +232,8 @@ class ExodusAcquisition(HardwareAcquisition):
 
         """
         self.exo = Exodus(test_data.hardware_file)
-        self.set_parameters(test_data)
         self.create_response_channels(test_data.channel_list)
+        self.set_parameters(test_data)
 
     def create_response_channels(self, channel_data: List[Channel]):
         """Method to set up response channels
@@ -241,11 +250,6 @@ class ExodusAcquisition(HardwareAcquisition):
         #        print('{:} Channels'.format(len(channel_data)))
         displacements = self.exo.get_displacements()
         node_numbers = self.exo.get_node_num_map()
-        try:
-            self.damping = float(channel_data[0].comment)
-            print(f"{self.damping} Damping")
-        except ValueError:
-            self.damping = 0.01
         self.response_channels = np.array(
             [
                 channel.feedback_device is None or channel.feedback_device == ""
@@ -263,7 +267,7 @@ class ExodusAcquisition(HardwareAcquisition):
         # the read size
         self.force_buffer = np.zeros((0, np.sum(~self.response_channels)))
 
-    def set_parameters(self, test_data: HardwareMetadata):
+    def set_parameters(self, test_data: ExodusMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -276,6 +280,13 @@ class ExodusAcquisition(HardwareAcquisition):
             controller set by the user.
 
         """
+        # Store damping
+        try:
+            self.damping = float(test_data.damping_ratio)
+            print(f"{self.damping} Damping")
+        except ValueError:
+            self.damping = 0.01
+
         # Get the number of modes that we will keep (bandwidth*1.5)
         frequencies = self.exo.get_times()
         frequencies[frequencies < 0] = 0  # Eliminate any negative frequencies

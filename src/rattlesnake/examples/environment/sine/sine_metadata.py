@@ -81,8 +81,8 @@ def manual_sine_metadata(hardware_metadata):
     control_python_script = None
     control_python_class = None
     control_python_parameters = ""
-    control_channel_indices = [9]
-    output_channel_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    control_channel_indices = [0]
+    output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     response_transformation_matrix = None
     output_transformation_matrix = None
 

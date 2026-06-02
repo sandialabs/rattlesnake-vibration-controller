@@ -13,6 +13,11 @@ from rattlesnake.examples.hardware.state_space.state_space_metadata import (
     netcdf_state_space_metadata,
     worksheet_state_space_metadata,
 )
+from rattlesnake.examples.hardware.exodus.exodus_metadata import (
+    manual_exodus_metadata,
+    netcdf_exodus_metadata,
+    worksheet_exodus_metadata,
+)
 from rattlesnake.examples.hardware.stream_metadata import (
     stream_metadata_no,
     stream_metadata_immediate,
@@ -85,10 +90,16 @@ STATE_SPACE_DICT = {
     "netcdf": netcdf_state_space_metadata,
     "manual": manual_state_space_metadata,
 }
+EXODUS_DICT = {
+    "worksheet": worksheet_exodus_metadata,
+    "netcdf": netcdf_exodus_metadata,
+    "manual": manual_exodus_metadata,
+}
 HARDWARE_DICT[HardwareType.NONE] = BLANK_HARDWARE_DICT
 HARDWARE_DICT[HardwareType.SDYNPY_SYSTEM] = SDYNPY_SYSTEM_DICT
 HARDWARE_DICT[HardwareType.SDYNPY_FRF] = SDYNPY_FRF_DICT
 HARDWARE_DICT[HardwareType.STATE_SPACE] = STATE_SPACE_DICT
+HARDWARE_DICT[HardwareType.EXODUS] = EXODUS_DICT
 
 # Environment
 ENVIRONMENT_DICT = {}
