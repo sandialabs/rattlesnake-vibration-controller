@@ -129,26 +129,26 @@ def create_sine_specification():
     table[0]["frequency"] = 1
     table[0]["sweep_type"] = 0  # 0 = linear
     table[0]["sweep_rate"] = 1
-    table[0]["amplitude"][0] = 0
-    table[0]["phase"][0] = 0  # radians
+    table[0]["amplitude"][0] = [0, 0, 0]
+    table[0]["phase"][0] = [0, 0, 0]
 
     table[1]["frequency"] = 10
     table[1]["sweep_type"] = 0
-    table[1]["sweep_rate"] = 1
-    table[1]["amplitude"][0] = 1
-    table[1]["phase"][0] = 0
+    table[1]["sweep_rate"] = 2
+    table[1]["amplitude"][0] = [1, 1, 1]
+    table[1]["phase"][0] = [0, 0, 0]
 
     table[2]["frequency"] = 15
     table[2]["sweep_type"] = 0
-    table[2]["sweep_rate"] = 1
-    table[2]["amplitude"][0] = 1
-    table[2]["phase"][0] = 0
+    table[2]["sweep_rate"] = 2
+    table[2]["amplitude"][0] = [1, 1, 1]
+    table[2]["phase"][0] = [0, 0, 0]
 
     table[3]["frequency"] = 20
-    table[3]["sweep_type"] = 0
-    table[3]["sweep_rate"] = 1
-    table[3]["amplitude"][0] = 0.5
-    table[3]["phase"][0] = 0
+    table[3]["sweep_type"] = 1
+    table[3]["sweep_rate"] = 10
+    table[3]["amplitude"][:] = [0.5, 0.5, 0.5]
+    table[3]["phase"][0] = [0, 0, 0]
 
     table["warning"][:] = np.nan
     table["abort"][:] = np.nan
