@@ -2,7 +2,8 @@ import openpyxl
 import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
-
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.modal_environment import (
     ModalCommands,
     ModalMetadata,
@@ -12,9 +13,6 @@ from rattlesnake.environment.modal_environment import (
 ENVIRONMENT_NAME = "Modal 0"
 
 
-def modal_instructions():
-    modal_instructions = ModalInstructions(ENVIRONMENT_NAME)
-    return modal_instructions
 
 
 def worksheet_modal_metadata(hardware_metadata):
@@ -106,3 +104,42 @@ def manual_modal_metadata(hardware_metadata):
         output_oversample,
         exponential_window_value_at_frame_end,
     )
+
+
+def modal_instructions():
+    modal_instructions = ModalInstructions(ENVIRONMENT_NAME)
+    return modal_instructions
+
+def modal_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = modal_instructions()
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 10
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        start_environment_event,
+        stop_environment_event,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+
+    return event_list

@@ -37,6 +37,7 @@ from rattlesnake.examples.environment.modal.modal_metadata import (
     netcdf_modal_metadata,
     worksheet_modal_metadata,
     modal_instructions,
+    modal_event_list,
 )
 from rattlesnake.examples.environment.sine.sine_metadata import (
     manual_sine_metadata,
@@ -161,7 +162,7 @@ STREAM_DICT[StreamType.TEST_LEVEL] = stream_metadata_test_level
 EVENT_DICT = {}
 EVENT_DICT[EnvironmentType.NONE] = lambda: []
 EVENT_DICT[EnvironmentType.TIME] = time_event_list
-EVENT_DICT[EnvironmentType.MODAL] = lambda: []
+EVENT_DICT[EnvironmentType.MODAL] = modal_event_list
 EVENT_DICT[EnvironmentType.SINE] = lambda: []
 EVENT_DICT[EnvironmentType.RANDOM] = lambda: []
 EVENT_DICT[EnvironmentType.TRANSIENT] = lambda: []
