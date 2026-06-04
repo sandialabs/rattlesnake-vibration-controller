@@ -305,7 +305,7 @@ class HardwareMetadata:
         hardware_worksheet.cell(
             10,
             3,
-            "# Damping ratio for Exodus Modal Solution virtual hardware. Only fill out if you ",
+            "# Damping ratio for Exodus Modal Solution virtual hardware. Only fill out if you "
             "are using Exodus Modal Solution virtual hardware.",
         )
 

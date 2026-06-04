@@ -16,10 +16,10 @@ ENVIRONMENT_NAME = "Time 0"
 
 
 def create_time_signal():
-    num_samples = defaults.SAMPLE_RATE * 5
+    num_samples = defaults.SAMPLE_RATE * 3
     frequency = 2  # Hz sine wave
-    t = np.arange(num_samples) / defaults.SAMPLE_RATE
-    signal = np.zeros((defaults.NUM_FORCES, num_samples))
+    t = np.arange(num_samples*defaults.OUTPUT_OVERSAMPLE) / (defaults.SAMPLE_RATE*defaults.OUTPUT_OVERSAMPLE)
+    signal = np.zeros((defaults.NUM_FORCES, num_samples*defaults.OUTPUT_OVERSAMPLE))
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
     return signal
@@ -57,7 +57,7 @@ def manual_time_metadata(hardware_metadata):
     # Create signal array
     signal = create_time_signal()
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
-    cancel_rampdown_time = 0.5
+    cancel_rampdown_time = 5
 
     metadata = TimeMetadata(
         environment_name=ENVIRONMENT_NAME,

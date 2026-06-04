@@ -585,7 +585,7 @@ class ExodusOutput(HardwareOutput):
         return self.queue.empty()
 
 
-# region Error
+# region Exodus Reader
 class ExodusError(Exception):
     """An exception to specify an error has occured in the Exodus reader"""
 
