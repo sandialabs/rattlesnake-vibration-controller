@@ -193,10 +193,9 @@ class OutputProcess(AbstractMessageProcess):
             self.environment_first_data[queue_name] = False
 
             # Build output mapping dicts
-            environment_channel_indices = metadata.map_channel_indices()
             common_indices, out_inds, _ = np.intersect1d(
                 hardware_output_indices,
-                environment_channel_indices,
+                metadata.channel_indices,
                 return_indices=True,
             )
             self.environment_output_channels[queue_name] = out_inds

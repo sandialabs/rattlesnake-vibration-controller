@@ -128,7 +128,8 @@ class EnvironmentMetadata(ABC):
             None  # Unique name used to track specific environment. Used for queues.
         )
 
-    def map_channel_indices(self):
+    @property
+    def channel_indices(self):
         """Method to return the row indices of the hardware_channel_list that
         contains channels in the environment_channel_list"""
         channel_bools = self.channel_list_bools
@@ -138,6 +139,10 @@ class EnvironmentMetadata(ABC):
             if environment_bool
         ]
         return channel_indices
+    
+    def environment_channel_list(self, channel_list):
+        environment_channel_list = [channel for channel, channel_bool in zip(channel_list, self.channel_list_bools) if channel_bool]
+        return environment_channel_list
 
     # endregion
 

@@ -56,6 +56,7 @@ from rattlesnake.examples.environment.random.random_metadata import (
     netcdf_random_metadata,
     worksheet_random_metadata,
     random_instructions,
+    random_event_list,
 )
 from rattlesnake.examples.environment.transient.transient_metadata import (
     netcdf_transient_metadata,
@@ -164,7 +165,7 @@ EVENT_DICT[EnvironmentType.NONE] = lambda: []
 EVENT_DICT[EnvironmentType.TIME] = time_event_list
 EVENT_DICT[EnvironmentType.MODAL] = modal_event_list
 EVENT_DICT[EnvironmentType.SINE] = lambda: []
-EVENT_DICT[EnvironmentType.RANDOM] = lambda: []
+EVENT_DICT[EnvironmentType.RANDOM] = random_event_list
 EVENT_DICT[EnvironmentType.TRANSIENT] = lambda: []
 
 # Instructions

@@ -28,6 +28,7 @@ import time
 from enum import Enum
 
 import numpy as np
+import netCDF4 as nc4
 
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIDAnalysisProcess,
@@ -54,6 +55,7 @@ class RandomVibrationDataAnalysisCommands(Enum):
     PERFORM_CONTROL_PREDICTION = 2
     RUN_CONTROL = 3
     STOP_CONTROL = 4
+    SAVE_CONTROL_DATA = 5
 
 
 class RandomVibrationDataAnalysisUICommands(Enum):
@@ -106,6 +108,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         self.map_command(
             RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_control
         )
+        self.map_command(RandomVibrationDataAnalysisCommands.SAVE_CONTROL_DATA, self.save_spectral_data)
         self.map_command(
             ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
@@ -586,6 +589,77 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
+    def save_spectral_data(self, data):
+        filename = data
+        netcdf_dataset = nc4.Dataset(
+            filename, "a", format="NETCDF4"
+        )
+        netcdf_handle = netcdf_dataset.groups[self.environment_name]
+        netcdf_handle.createDimension(
+            "drive_channels", self.sysid_data.sysid_frf.shape[2]
+        )
+        var = netcdf_handle.createVariable(
+            "frf_data_real",
+            "f8",
+            ("fft_lines", "specification_channels", "drive_channels"),
+        )
+        var[...] = self.sysid_data.sysid_frf.real
+        var = netcdf_handle.createVariable(
+            "frf_data_imag",
+            "f8",
+            ("fft_lines", "specification_channels", "drive_channels"),
+        )
+        var[...] = self.sysid_data.sysid_frf.imag
+        var = netcdf_handle.createVariable(
+            "frf_coherence", "f8", ("fft_lines", "specification_channels")
+        )
+        var[...] = self.sysid_data.sysid_coherence.real
+        var = netcdf_handle.createVariable(
+            "response_cpsd_real",
+            "f8",
+            ("fft_lines", "specification_channels", "specification_channels"),
+        )
+        var[...] = self.sysid_data.sysid_response_cpsd.real
+        var = netcdf_handle.createVariable(
+            "response_cpsd_imag",
+            "f8",
+            ("fft_lines", "specification_channels", "specification_channels"),
+        )
+        var[...] = self.sysid_data.sysid_response_cpsd.imag
+        var = netcdf_handle.createVariable(
+            "drive_cpsd_real", "f8", ("fft_lines", "drive_channels", "drive_channels")
+        )
+        var[...] = self.sysid_data.sysid_reference_cpsd.real
+        var = netcdf_handle.createVariable(
+            "drive_cpsd_imag", "f8", ("fft_lines", "drive_channels", "drive_channels")
+        )
+        var[...] = self.sysid_data.sysid_reference_cpsd.imag
+        var = netcdf_handle.createVariable(
+            "response_noise_cpsd_real",
+            "f8",
+            ("fft_lines", "specification_channels", "specification_channels"),
+        )
+        var[...] = self.sysid_data.sysid_response_noise.real
+        var = netcdf_handle.createVariable(
+            "response_noise_cpsd_imag",
+            "f8",
+            ("fft_lines", "specification_channels", "specification_channels"),
+        )
+        var[...] = self.sysid_data.sysid_response_noise.imag
+        var = netcdf_handle.createVariable(
+            "drive_noise_cpsd_real",
+            "f8",
+            ("fft_lines", "drive_channels", "drive_channels"),
+        )
+        var[...] = self.sysid_data.sysid_reference_noise.real
+        var = netcdf_handle.createVariable(
+            "drive_noise_cpsd_imag",
+            "f8",
+            ("fft_lines", "drive_channels", "drive_channels"),
+        )
+        var[...] = self.sysid_data.sysid_reference_noise.imag
+
+        netcdf_dataset.close()
 # endregion
 
 # region Process

@@ -1371,23 +1371,6 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         """
         self.run_widget.current_test_level_selector.setValue(float(test_level))
 
-    # def change_specification_from_profile(self, new_specification_file):
-    #     """
-    #     Loads in a new specification and starts controlling to it
-
-    #     Parameters
-    #     ----------
-    #     new_specification_file : str
-    #         File path to a new specification file
-
-    #     """
-    #     self.select_spec_file(None, new_specification_file)
-    #     environment_parameters = self.initialize_environment()
-    #     self.environment_command_queue.put(
-    #         self.log_name,
-    #         (GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS, environment_parameters),
-    #     )
-
     def show_magnitude_window(self, item):
         """Creates a window showing the magnitude of a signal when an item is double-clicked"""
         index = self.run_widget.test_response_error_list.row(item)
@@ -1498,10 +1481,6 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         for window in self.plot_windows:
             window.close()
 
-    def save_control_data_from_profile(self, filename):
-        """Saves the control data to a file when requested by a profile argument"""
-        self.save_spectral_data(None, filename)
-
     def save_spectral_data(self, clicked, filename=None):
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -1511,78 +1490,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
         if filename == "":
             return
-        netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
-            filename, "w", format="NETCDF4", clobber=True
-        )
-        if self.environment_name not in netcdf_dataset.groups:
-            netcdf_handle = netcdf_dataset.createGroup(self.environment_name)
-        else:
-            netcdf_handle = netcdf_dataset.groups[self.environment_name]
-        self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
-        netcdf_handle.createDimension(
-            "drive_channels", self.sysid_data.sysid_frf.shape[2]
-        )
-        var = netcdf_handle.createVariable(
-            "frf_data_real",
-            "f8",
-            ("fft_lines", "specification_channels", "drive_channels"),
-        )
-        var[...] = self.sysid_data.sysid_frf.real
-        var = netcdf_handle.createVariable(
-            "frf_data_imag",
-            "f8",
-            ("fft_lines", "specification_channels", "drive_channels"),
-        )
-        var[...] = self.sysid_data.sysid_frf.imag
-        var = netcdf_handle.createVariable(
-            "frf_coherence", "f8", ("fft_lines", "specification_channels")
-        )
-        var[...] = self.sysid_data.sysid_coherence.real
-        var = netcdf_handle.createVariable(
-            "response_cpsd_real",
-            "f8",
-            ("fft_lines", "specification_channels", "specification_channels"),
-        )
-        var[...] = self.sysid_data.sysid_response_cpsd.real
-        var = netcdf_handle.createVariable(
-            "response_cpsd_imag",
-            "f8",
-            ("fft_lines", "specification_channels", "specification_channels"),
-        )
-        var[...] = self.sysid_data.sysid_response_cpsd.imag
-        var = netcdf_handle.createVariable(
-            "drive_cpsd_real", "f8", ("fft_lines", "drive_channels", "drive_channels")
-        )
-        var[...] = self.sysid_data.sysid_reference_cpsd.real
-        var = netcdf_handle.createVariable(
-            "drive_cpsd_imag", "f8", ("fft_lines", "drive_channels", "drive_channels")
-        )
-        var[...] = self.sysid_data.sysid_reference_cpsd.imag
-        var = netcdf_handle.createVariable(
-            "response_noise_cpsd_real",
-            "f8",
-            ("fft_lines", "specification_channels", "specification_channels"),
-        )
-        var[...] = self.sysid_data.sysid_response_noise.real
-        var = netcdf_handle.createVariable(
-            "response_noise_cpsd_imag",
-            "f8",
-            ("fft_lines", "specification_channels", "specification_channels"),
-        )
-        var[...] = self.sysid_data.sysid_response_noise.imag
-        var = netcdf_handle.createVariable(
-            "drive_noise_cpsd_real",
-            "f8",
-            ("fft_lines", "drive_channels", "drive_channels"),
-        )
-        var[...] = self.sysid_data.sysid_reference_noise.real
-        var = netcdf_handle.createVariable(
-            "drive_noise_cpsd_imag",
-            "f8",
-            ("fft_lines", "drive_channels", "drive_channels"),
-        )
-        var[...] = self.sysid_data.sysid_reference_noise.imag
-        netcdf_dataset.close()
+        
+        self.rattlesnake.send_environment_command(self.environment_name, RandomVibrationCommands.SAVE_CONTROL_DATA, filename)
 
     # endregion
 
@@ -1766,6 +1675,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     item.setBackground(QColor(255, 125, 125))
             case RandomVibrationUICommands.ENABLE_CONTROL:
                 self.enable_control(True)
+            case RandomVibrationUICommands.CHANGE_SPECIFICATION:
+                filename, environment_metadata = data
+                self.select_spec_file(None, filename)
+                self.initialize_environment(environment_metadata)
+            case RandomVibrationUICommands.ADJUST_TEST_LEVEL:
+                self.run_widget.current_test_level_selector.blockSignals(True)
+                self.run_widget.current_test_level_selector.setValue(data)
+                self.run_widget.current_test_level_selector.blockSignals(False)
             case UICommands.ENABLE:
                 widget = None
                 for parent in [

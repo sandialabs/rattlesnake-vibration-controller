@@ -99,21 +99,23 @@ class RandomVibrationCommands(EnvironmentCommands):
     """Valid random vibration commands"""
 
     ADJUST_TEST_LEVEL = 0
-    START_CONTROL = 1
-    STOP_CONTROL = 2
-    CHECK_FOR_COMPLETE_SHUTDOWN = 3
-    RECOMPUTE_PREDICTION = 4
-    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
+    CHECK_FOR_COMPLETE_SHUTDOWN = 1
+    RECOMPUTE_PREDICTION = 2
+    CHANGE_SPECIFICATION = 3
+    SAVE_CONTROL_DATA = 4
 
-    VALID_PROFILE_COMMANDS = ()
+    VALID_PROFILE_COMMANDS = (ADJUST_TEST_LEVEL, CHANGE_SPECIFICATION, SAVE_CONTROL_DATA)
     VALID_DATA = {
-        START_CONTROL: type(None),
-        STOP_CONTROL: type(None),
+        ADJUST_TEST_LEVEL: float,
+        CHANGE_SPECIFICATION: str,
+        SAVE_CONTROL_DATA: str
     }
 
 
 class RandomVibrationUICommands(Enum):
     ENABLE_CONTROL = 0
+    CHANGE_SPECIFICATION = 1
+    ADJUST_TEST_LEVEL = 2
 
 
 # endregion
@@ -285,6 +287,36 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
     # endregion
 
     # region Loading
+    def load_specification(self, environment_channel_list, filename):
+        coord_dtype = np.dtype([("node", "<u8"), ("direction", "i1")])
+        if self.response_transformation_matrix is not None:
+            control_coordinate = None
+        else:
+            control_coordinate = np.array(
+                [
+                    (
+                        environment_channel_list[i].node_number,
+                        _direction_map[
+                            environment_channel_list[i].node_direction
+                        ],
+                    )
+                    for i in self.control_channel_indices
+                ],
+                dtype=coord_dtype,
+            )
+
+        (
+            self.specification_frequency_lines,
+            self.specification_cpsd_matrix,
+            self.specification_warning_matrix,
+            self.specification_abort_matrix,
+        ) = load_specification(
+            filename,
+            self.fft_lines,
+            self.frequency_spacing,
+            control_coordinate,
+        )
+
     def save_metadata_to_netcdf(
         self,
         netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
@@ -779,316 +811,6 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
 
         return metadata
 
-    # def set_parameters_from_template(
-    #     self, worksheet: openpyxl.worksheet.worksheet.Worksheet
-    # ):
-    #     """
-    #     Collects parameters for the user interface from the Excel template file
-
-    #     This function reads a filled out template worksheet to create an
-    #     environment.  Cells on this worksheet contain parameters needed to
-    #     specify the environment, so this function should read those cells and
-    #     update the UI widgets with those parameters.
-
-    #     This function is the "read" counterpart to the
-    #     ``create_environment_template`` function in the ``RandomVibrationUI`` class,
-    #     which writes a template file that can be filled out by a user.
-
-    #     Parameters
-    #     ----------
-    #     worksheet : openpyxl.worksheet.worksheet.Worksheet
-    #         An openpyxl worksheet that contains the environment template.
-    #         Cells on this worksheet should contain the parameters needed for the
-    #         user interface.
-
-    #     """
-    #     self.definition_widget.samples_per_frame_selector.setValue(
-    #         int(worksheet.cell(2, 2).value)
-    #     )
-    #     self.definition_widget.ramp_time_spinbox.setValue(
-    #         float(worksheet.cell(3, 2).value)
-    #     )
-    #     self.definition_widget.cola_window_selector.setCurrentIndex(
-    #         self.definition_widget.cola_window_selector.findText(
-    #             worksheet.cell(4, 2).value
-    #         )
-    #     )
-    #     self.definition_widget.cola_overlap_percentage_selector.setValue(
-    #         float(worksheet.cell(5, 2).value)
-    #     )
-    #     self.definition_widget.cola_exponent_selector.setValue(
-    #         float(worksheet.cell(6, 2).value)
-    #     )
-    #     self.definition_widget.update_transfer_function_during_control_selector.setChecked(
-    #         worksheet.cell(7, 2).value.upper() == "Y"
-    #     )
-    #     self.definition_widget.cpsd_frames_selector.setValue(
-    #         int(worksheet.cell(8, 2).value)
-    #     )
-    #     self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
-    #         self.definition_widget.cpsd_computation_window_selector.findText(
-    #             worksheet.cell(9, 2).value
-    #         )
-    #     )
-    #     self.definition_widget.cpsd_overlap_selector.setValue(
-    #         float(worksheet.cell(10, 2).value)
-    #     )
-    #     self.definition_widget.auto_abort_checkbox.setChecked(
-    #         worksheet.cell(11, 2).value.upper() == "Y"
-    #     )
-    #     self.select_python_module(None, worksheet.cell(12, 2).value)
-    #     self.definition_widget.control_function_input.setCurrentIndex(
-    #         self.definition_widget.control_function_input.findText(
-    #             worksheet.cell(13, 2).value
-    #         )
-    #     )
-    #     self.definition_widget.control_parameters_text_input.setText(
-    #         ""
-    #         if worksheet.cell(14, 2).value is None
-    #         else str(worksheet.cell(14, 2).value)
-    #     )
-    #     column_index = 2
-    #     while True:
-    #         value = worksheet.cell(15, column_index).value
-    #         if value is None or (isinstance(value, str) and value.strip() == ""):
-    #             break
-    #         item = self.definition_widget.control_channels_selector.item(int(value) - 1)
-    #         item.setCheckState(Qt.Checked)
-    #         column_index += 1
-    #     self.system_id_widget.averagingTypeComboBox.setCurrentIndex(
-    #         self.system_id_widget.averagingTypeComboBox.findText(
-    #             worksheet.cell(16, 2).value
-    #         )
-    #     )
-    #     self.system_id_widget.noiseAveragesSpinBox.setValue(
-    #         int(worksheet.cell(17, 2).value)
-    #     )
-    #     self.system_id_widget.systemIDAveragesSpinBox.setValue(
-    #         int(worksheet.cell(18, 2).value)
-    #     )
-    #     self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(
-    #         float(worksheet.cell(19, 2).value)
-    #     )
-    #     self.system_id_widget.estimatorComboBox.setCurrentIndex(
-    #         self.system_id_widget.estimatorComboBox.findText(
-    #             worksheet.cell(20, 2).value
-    #         )
-    #     )
-    #     self.system_id_widget.levelDoubleSpinBox.setValue(
-    #         float(worksheet.cell(21, 2).value)
-    #     )
-    #     # this should be a temporary solution - template file rework needed
-    #     low, high = worksheet.cell(21, 3).value, worksheet.cell(21, 4).value
-    #     sigma = worksheet.cell(21, 5).value
-    #     if low is not None:
-    #         self.system_id_widget.lowFreqCutoffSpinBox.setValue(int(low))
-    #     if high is not None:
-    #         self.system_id_widget.highFreqCutoffSpinBox.setValue(int(high))
-    #     if sigma is not None:
-    #         self.definition_widget.sigma_clipping_selector.setValue(
-    #             float(sigma)
-    #         )  # TODO: sigma clipping and bandwidths should get
-    #         # their own rows, but how to maintain backward compatibility?
-    #     self.system_id_widget.signalTypeComboBox.setCurrentIndex(
-    #         self.system_id_widget.signalTypeComboBox.findText(
-    #             worksheet.cell(22, 2).value
-    #         )
-    #     )
-    #     self.system_id_widget.windowComboBox.setCurrentIndex(
-    #         self.system_id_widget.windowComboBox.findText(worksheet.cell(23, 2).value)
-    #     )
-    #     self.system_id_widget.overlapDoubleSpinBox.setValue(
-    #         float(worksheet.cell(24, 2).value)
-    #     )
-    #     self.system_id_widget.onFractionDoubleSpinBox.setValue(
-    #         float(worksheet.cell(25, 2).value)
-    #     )
-    #     self.system_id_widget.pretriggerDoubleSpinBox.setValue(
-    #         float(worksheet.cell(26, 2).value)
-    #     )
-    #     self.system_id_widget.rampFractionDoubleSpinBox.setValue(
-    #         float(worksheet.cell(27, 2).value)
-    #     )
-
-    #     # Now we need to find the transformation matrices' sizes
-    #     response_channels = self.definition_widget.control_channels_display.value()
-    #     output_channels = self.definition_widget.output_channels_display.value()
-    #     output_transform_row = 30
-    #     if (
-    #         isinstance(worksheet.cell(29, 2).value, str)
-    #         and worksheet.cell(29, 2).value.lower() == "none"
-    #     ):
-    #         self.response_transformation_matrix = None
-    #     else:
-    #         while True:
-    #             if (
-    #                 worksheet.cell(output_transform_row, 1).value
-    #                 == "Output Transformation Matrix:"
-    #             ):
-    #                 break
-    #             output_transform_row += 1
-    #         response_size = output_transform_row - 29
-    #         response_transformation = []
-    #         for i in range(response_size):
-    #             response_transformation.append([])
-    #             for j in range(response_channels):
-    #                 response_transformation[-1].append(
-    #                     float(worksheet.cell(29 + i, 2 + j).value)
-    #                 )
-    #         self.response_transformation_matrix = np.array(response_transformation)
-    #     if (
-    #         isinstance(worksheet.cell(output_transform_row, 2).value, str)
-    #         and worksheet.cell(output_transform_row, 2).value.lower() == "none"
-    #     ):
-    #         self.output_transformation_matrix = None
-    #     else:
-    #         output_transformation = []
-    #         i = 0
-    #         while True:
-    #             if worksheet.cell(output_transform_row + i, 2).value is None or (
-    #                 isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
-    #                 and worksheet.cell(output_transform_row + i, 2).value.strip() == ""
-    #             ):
-    #                 break
-    #             output_transformation.append([])
-    #             for j in range(output_channels):
-    #                 output_transformation[-1].append(
-    #                     float(worksheet.cell(output_transform_row + i, 2 + j).value)
-    #                 )
-    #             i += 1
-    #         self.output_transformation_matrix = np.array(output_transformation)
-    #     self.define_transformation_matrices(None, dialog=False)
-    #     self.select_spec_file(None, worksheet.cell(28, 2).value)
-
-    # def retrieve_metadata(
-    #     self,
-    #     netcdf_handle: nc4._netCDF4.Dataset = None,  # pylint: disable=c-extension-no-member
-    #     environment_name: str = None,
-    # ):
-    #     """Collects environment parameters from a netCDF dataset.
-
-    #     This function retrieves parameters from a netCDF dataset that was written
-    #     by the controller during streaming.  It must populate the widgets
-    #     in the user interface with the proper information.
-
-    #     This function is the "read" counterpart to the store_to_netcdf
-    #     function in the AbstractMetadata class, which will write parameters to
-    #     the netCDF file to document the metadata.
-
-    #     Note that the entire dataset is passed to this function, so the function
-    #     should collect parameters pertaining to the environment from a Group
-    #     in the dataset sharing the environment's name, e.g.
-
-    #     ``group = netcdf_handle.groups[self.environment_name]``
-    #     ``self.definition_widget.parameter_selector.setValue(group.parameter)``
-
-    #     Parameters
-    #     ----------
-    #     netcdf_handle : nc4._netCDF4.Dataset
-    #         The netCDF dataset from which the data will be read.  It should have
-    #         a group name with the enviroment's name.
-    #     environment_name : str (optional)
-    #         name of environment from which to retrieve metadata. Only needed if
-    #         different from current environment.
-
-    #     """
-    #     group = super().retrieve_metadata(netcdf_handle, environment_name)
-
-    #     # Control channels
-    #     try:
-    #         for i in group.variables["control_channel_indices"][...]:
-    #             item = self.definition_widget.control_channels_selector.item(i)
-    #             item.setCheckState(Qt.Checked)
-    #     except KeyError:
-    #         print(
-    #             "no variable control_channel_indices, please select control channels manually"
-    #         )
-    #     # Other data
-    #     try:
-    #         self.response_transformation_matrix = group.variables[
-    #             "response_transformation_matrix"
-    #         ][...].data
-    #     except KeyError:
-    #         self.response_transformation_matrix = None
-    #     try:
-    #         self.output_transformation_matrix = group.variables[
-    #             "reference_transformation_matrix"
-    #         ][...].data
-    #     except KeyError:
-    #         self.output_transformation_matrix = None
-    #     self.define_transformation_matrices(None, dialog=False)
-
-    #     # environment_name is passed when the saved environment doesn't match the
-    #     # current environment
-    #     if environment_name is None:
-    #         # Spinboxes
-    #         self.definition_widget.samples_per_frame_selector.setValue(
-    #             group.samples_per_frame
-    #         )
-    #         self.definition_widget.ramp_time_spinbox.setValue(
-    #             group.test_level_ramp_time
-    #         )
-    #         self.definition_widget.cola_overlap_percentage_selector.setValue(
-    #             group.cola_overlap * 100
-    #         )
-    #         self.definition_widget.cola_exponent_selector.setValue(
-    #             group.cola_window_exponent
-    #         )
-    #         self.definition_widget.cpsd_overlap_selector.setValue(
-    #             group.cpsd_overlap * 100
-    #         )
-    #         self.definition_widget.cpsd_frames_selector.setValue(group.frames_in_cpsd)
-    #         # Checkboxes
-    #         self.definition_widget.update_transfer_function_during_control_selector.setChecked(
-    #             bool(group.update_tf_during_control)
-    #         )
-    #         self.definition_widget.auto_abort_checkbox.setChecked(
-    #             bool(group.allow_automatic_aborts)
-    #         )
-    #         # Comboboxes
-    #         self.definition_widget.cola_window_selector.setCurrentIndex(
-    #             self.definition_widget.cola_window_selector.findText(group.cola_window)
-    #         )
-    #         self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(
-    #             self.definition_widget.cpsd_computation_window_selector.findText(
-    #                 group.cpsd_window
-    #             )
-    #         )
-    #         # Specification
-    #         self.specification_frequency_lines = group.variables[
-    #             "specification_frequency_lines"
-    #         ][...].data
-    #         self.specification_cpsd_matrix = (
-    #             group.variables["specification_cpsd_matrix_real"][...].data
-    #             + 1j * group.variables["specification_cpsd_matrix_imag"][...].data
-    #         )
-    #         self.specification_warning_matrix = group.variables[
-    #             "specification_warning_matrix"
-    #         ][...].data
-    #         self.specification_abort_matrix = group.variables[
-    #             "specification_abort_matrix"
-    #         ][...].data
-    #         self.select_python_module(None, group.control_python_script)
-    #         index = self.definition_widget.control_function_input.findText(
-    #             group.control_python_function
-    #         )
-    #         if (
-    #             index == -1
-    #         ):  # error handling (older revisions of rattlesnake may be missing newer control laws)
-    #             index = 0
-    #             default = self.definition_widget.control_function_input.itemText(index)
-    #             print(
-    #                 f'Warning: control function "{group.control_python_function}" not found, '
-    #                 f'defaulting to "{default}"'
-    #             )
-    #         self.definition_widget.control_function_input.setCurrentIndex(index)
-    #         self.definition_widget.control_parameters_text_input.setText(
-    #             group.control_python_function_parameters
-    #         )
-    #         self.show_specification()
-
-    # endregion
-
 
 # region Instructions
 class RandomVibrationInstructions(EnvironmentInstructions):
@@ -1233,14 +955,14 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             sysid_stored_event,
         )
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
-        self.map_command(RandomVibrationCommands.START_CONTROL, self.start_control)
-        self.map_command(RandomVibrationCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(
             RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_environment
         )
         self.map_command(
             RandomVibrationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
         )
+        self.map_command(RandomVibrationCommands.SAVE_CONTROL_DATA, self.save_spectral_data)
+        self.map_command(RandomVibrationCommands.CHANGE_SPECIFICATION, self.change_specification)
         self.map_command(
             RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN,
             self.check_for_control_shutdown,
@@ -1437,6 +1159,9 @@ class RandomVibrationEnvironment(SysIdEnvironment):
                 (self.environment_metadata.skip_frames, data),
             ),
         )
+        self.gui_update_queue.put((self.environment_name,
+                    (RandomVibrationUICommands.ADJUST_TEST_LEVEL, data),
+                ))
 
     def send_interactive_command(self, command):
         """General method that can be used by an interactive UI object to pass commands and data to
@@ -1602,6 +1327,40 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             self.environment_name,
             (RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None),
         )
+    
+    def save_spectral_data(self, data):
+        filename = data
+        netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
+            filename, "w", format="NETCDF4", clobber=True
+        )
+        if self.environment_name not in netcdf_dataset.groups:
+            netcdf_handle = netcdf_dataset.createGroup(self.environment_name)
+        else:
+            netcdf_handle = netcdf_dataset.groups[self.environment_name]
+        self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
+        netcdf_dataset.close()
+
+        self.data_analysis_command_queue.put(self.environment_name, (RandomVibrationDataAnalysisCommands.SAVE_CONTROL_DATA, filename))
+
+    def change_specification(self, data):
+        """
+        Loads in a new specification and starts controlling to it
+
+        Parameters
+        ----------
+        new_specification_file : str
+            File path to a new specification file
+
+        """
+        filename = data
+        new_metadata = self.environment_metadata
+        new_metadata.load_specification(self.hardware_metadata.channel_list, filename)
+        self.initialize_environment(new_metadata)
+
+        self.gui_update_queue.put((
+                    self.environment_name,
+                    (RandomVibrationUICommands.CHANGE_SPECIFICATION, (filename, new_metadata)),
+                ))
 
     # region Shutdown
     def check_for_control_shutdown(self, data):  # pylint: disable=unused-argument

@@ -3,21 +3,15 @@ import netCDF4 as nc4
 import openpyxl
 
 import rattlesnake.examples.defaults as defaults
-
+from rattlesnake.utilities import GlobalCommands
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationInstructions,
 )
+from rattlesnake.profile_manager import ProfileEvent
 
 ENVIRONMENT_NAME = "Random 0"
-
-
-def random_instructions():
-    control_test_level = 1
-    instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
-
-    return instructions
 
 
 def worksheet_random_metadata(hardware_metadata):
@@ -139,3 +133,74 @@ def create_sine_specification(sample_rate):
         specification_warning_matrix,
         specification_abort_matrix,
     )
+
+def random_instructions():
+    control_test_level = 1
+    instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
+
+    return instructions
+
+def random_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = random_instructions()
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+    
+    timestamp = 5
+    command = RandomVibrationCommands.ADJUST_TEST_LEVEL
+    data = 5
+    adjust_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 15
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 16
+    command = RandomVibrationCommands.SAVE_CONTROL_DATA
+    data = defaults.DIRECTORY + "/environment/random/temp_sysid.nc4"
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 18
+    command = RandomVibrationCommands.CHANGE_SPECIFICATION
+    data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
+    change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 20
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = random_instructions()
+    start_environment_event_2 = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 40
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event_2 = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 40
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 40
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        start_environment_event,
+        adjust_level_event,
+        stop_environment_event,
+        save_event,
+        change_spec_event,
+        start_environment_event_2,
+        stop_environment_event_2,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+
+    return event_list

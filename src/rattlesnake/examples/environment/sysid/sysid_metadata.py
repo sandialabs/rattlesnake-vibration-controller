@@ -20,10 +20,10 @@ def netcdf_sysid_data_package():
 
 def netcdf_sysid_metadata(hardware_metadata):
     netcdf_dir = (
-        defaults.DIRECTORY + "/environment/sysid/random_sysid.nc4"
-    )  # TODO Fix this
+        defaults.DIRECTORY + "/environment/sysid/sysid.nc4"
+    )
     netcdf_dataset = nc4.Dataset(netcdf_dir)
-    netcdf_group = netcdf_dataset.groups["Random 0"]
+    netcdf_group = netcdf_dataset.groups["sysid"]
     metadata = SysIdMetadata.load_metadata_from_netcdf(netcdf_group, hardware_metadata)
 
     return metadata

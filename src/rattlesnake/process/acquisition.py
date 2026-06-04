@@ -234,7 +234,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         for queue_name, metadata in metadata_dict.items():
             self.environment_list.append(queue_name)
             self.environment_acquisition_channels[queue_name] = (
-                metadata.map_channel_indices()
+                metadata.channel_indices
             )
             self.environment_active_flags[queue_name] = False
             self.environment_last_data[queue_name] = False
