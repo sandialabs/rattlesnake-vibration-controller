@@ -68,9 +68,9 @@ def manual_modal_metadata(hardware_metadata):
     signal_generator_max_frequency = 500
     signal_generator_on_percent = 0
     acceptance_function = None
-    reference_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
+    reference_channel_indices = [12, 13, 14]
     response_channel_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    output_channel_indices = [12, 13, 14]
+    output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     output_oversample = hardware_metadata.output_oversample
     exponential_window_value_at_frame_end = 0.25
 

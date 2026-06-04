@@ -19,12 +19,12 @@ from rattlesnake.process.streaming import StreamType
 THREADED = False
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.TIME
+ENVIRONMENT_TYPE = EnvironmentType.MODAL
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = True
 START_HARDWARE = True
-START_ENVIRONMENT = True
+START_ENVIRONMENT = False
 RUN_PROFILE = False
 
 
@@ -73,7 +73,7 @@ def build_rattlesnake_object(
     rattlesnake.initialize_profile_event_list(event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
 
-    # Start Acquisition
+    # Start Hardware
     if not start_hardware:
         return rattlesnake
     rattlesnake.start_acquisition(stream_metadata)

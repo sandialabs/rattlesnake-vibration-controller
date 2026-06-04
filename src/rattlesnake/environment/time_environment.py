@@ -91,6 +91,7 @@ class TimeMetadata(EnvironmentMetadata):
         environment_name: str = "Time",
         channel_list_bools: list = [],
         sample_rate: int = None,
+        output_oversample: float = None,
         output_signal: np.array = None,
         cancel_rampdown_time: float = None,
     ):
@@ -114,6 +115,7 @@ class TimeMetadata(EnvironmentMetadata):
         super().__init__(
             CONTROL_TYPE, environment_name, channel_list_bools, sample_rate
         )
+        self.output_oversample = output_oversample
         self.output_signal = output_signal
         self.cancel_rampdown_time = cancel_rampdown_time
         self._signal_file = None  # This is only used for saving purposes
@@ -131,12 +133,12 @@ class TimeMetadata(EnvironmentMetadata):
     @property
     def signal_time(self):
         """The length of the signal in seconds"""
-        return self.signal_samples / self.sample_rate
+        return self.signal_samples / (self.sample_rate * self.output_oversample)
 
     @property
     def cancel_rampdown_samples(self):
         """The number of samples required to ramp down the signal when cancelled"""
-        return int(self.cancel_rampdown_time * self.sample_rate)
+        return int(self.cancel_rampdown_time * self.sample_rate * self.output_oversample)
 
     @property
     def signal_file(self):
@@ -257,6 +259,7 @@ class TimeMetadata(EnvironmentMetadata):
             environment_name,
             channel_list_bools,
             hardware_metadata.sample_rate,
+            hardware_metadata.output_oversample,
             output_signal,
             cancel_rampdown_time,
         )
@@ -326,6 +329,7 @@ class TimeMetadata(EnvironmentMetadata):
             environment_name,
             channel_list_bools,
             hardware_metadata.sample_rate,
+            hardware_metadata.output_oversample,
             output_signal,
             cancel_rampdown_time,
         )

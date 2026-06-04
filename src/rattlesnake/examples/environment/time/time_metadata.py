@@ -15,11 +15,11 @@ from rattlesnake.environment.time_environment import (
 ENVIRONMENT_NAME = "Time 0"
 
 
-def create_time_signal():
-    num_samples = defaults.SAMPLE_RATE * 3
+def create_time_signal(hardware_metadata):
+    num_samples = hardware_metadata.sample_rate * 3
     frequency = 2  # Hz sine wave
-    t = np.arange(num_samples*defaults.OUTPUT_OVERSAMPLE) / (defaults.SAMPLE_RATE*defaults.OUTPUT_OVERSAMPLE)
-    signal = np.zeros((defaults.NUM_FORCES, num_samples*defaults.OUTPUT_OVERSAMPLE))
+    t = np.arange(num_samples*hardware_metadata.output_oversample) / (hardware_metadata.sample_rate*hardware_metadata.output_oversample)
+    signal = np.zeros((defaults.NUM_FORCES, num_samples*hardware_metadata.output_oversample))
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
     return signal
@@ -35,7 +35,7 @@ def worksheet_time_metadata(hardware_metadata):
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
 
-    signal = create_time_signal()
+    signal = create_time_signal(hardware_metadata)
     metadata.output_signal = signal
     return metadata
 
@@ -55,14 +55,15 @@ def netcdf_time_metadata(hardware_metadata):
 
 def manual_time_metadata(hardware_metadata):
     # Create signal array
-    signal = create_time_signal()
+    signal = create_time_signal(hardware_metadata)
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
-    cancel_rampdown_time = 5
+    cancel_rampdown_time = 0.5
 
     metadata = TimeMetadata(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
         sample_rate=hardware_metadata.sample_rate,
+        output_oversample=hardware_metadata.output_oversample,
         output_signal=signal,
         cancel_rampdown_time=cancel_rampdown_time,
     )
@@ -91,24 +92,38 @@ def time_event_list():
     )
 
     timestamp = 5
-    command = TimeCommands.SET_TEST_LEVEL
-    data = 2
-    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
-
-    timestamp = 10
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 6.5
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = time_instructions()
+    instructions.repeat = False
+    start_environment_event_2 = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 7
+    command = TimeCommands.SET_TEST_LEVEL
+    data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
     timestamp = 10
     command = GlobalCommands.STOP_STREAMING
     stop_stream_event = ProfileEvent(timestamp, "Global", command)
 
+    timestamp = 10
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
     event_list = [
         start_stream_event,
         start_environment_event,
-        set_level_event,
         stop_environment_event,
+        start_environment_event_2,
+        set_level_event,
         stop_stream_event,
+        stop_hardware_event,
     ]
 
     return event_list

@@ -238,13 +238,13 @@ class TimeUI(EnvironmentUI):
         else:
             channel_list_bools = []
 
-        sample_rate = self.definition_widget.output_sample_rate_display.value()
         output_signal = self.signal
         cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
         metadata = TimeMetadata(
             self.environment_name,
             channel_list_bools,
-            sample_rate,
+            self.hardware_metadata.sample_rate,
+            self.hardware_metadata.output_oversample,
             output_signal,
             cancel_rampdown_time,
         )

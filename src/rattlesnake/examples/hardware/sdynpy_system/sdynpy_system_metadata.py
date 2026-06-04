@@ -35,6 +35,17 @@ def manual_sdynpy_system_metadata():
     excitation_nodes = [1004, 1020, 1065, 1049]
 
     channel_list = []
+    for node in excitation_nodes:
+        for direction in directions:
+            channel = Channel(
+                node_number=node,
+                node_direction=direction,
+                comment=f"{node}{direction}",
+                physical_device="Virtual",
+                channel_type="Acceleration",
+            )
+            channel_list.append(channel)
+
     for node in force_nodes:
         for direction in directions:
             channel = Channel(
@@ -44,17 +55,6 @@ def manual_sdynpy_system_metadata():
                 physical_device="Virtual",
                 channel_type="Force",
                 feedback_device="Virtual",
-            )
-            channel_list.append(channel)
-
-    for node in excitation_nodes:
-        for direction in directions:
-            channel = Channel(
-                node_number=node,
-                node_direction=direction,
-                comment=f"{node}{direction}",
-                physical_device="Virtual",
-                channel_type="Acceleration",
             )
             channel_list.append(channel)
 
