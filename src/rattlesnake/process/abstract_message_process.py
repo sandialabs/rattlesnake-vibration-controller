@@ -58,7 +58,7 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
 
-# region: AbstractMessageProcess
+# region AbstractMessageProcess
 class AbstractMessageProcess(ABC):
     """Abstract class for a subprocess of an environment.
 

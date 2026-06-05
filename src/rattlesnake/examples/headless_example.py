@@ -16,14 +16,14 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 from rattlesnake.process.streaming import StreamType
 
 """USER INPUTS"""
-THREADED = False
+THREADED = True
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.SINE
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = True
-RUN_SYSID = False
-START_HARDWARE = True
+LOAD_SYSID = False
+RUN_SYSID = True
+START_HARDWARE = False
 START_ENVIRONMENT = False
 RUN_PROFILE = False
 
@@ -40,7 +40,7 @@ def build_rattlesnake_object(
     start_environment=START_ENVIRONMENT,
     run_profile=RUN_PROFILE,
 ):
-    rattlesnake = RattlesnakeController(threaded=threaded, timeout=20)
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=120)
 
     # Initialize hardware
     if hardware_type is HardwareType.NONE:

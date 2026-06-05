@@ -81,7 +81,7 @@ def manual_sine_metadata(hardware_metadata):
     control_python_script = None
     control_python_class = None
     control_python_parameters = ""
-    control_channel_indices = [0]
+    control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     response_transformation_matrix = None
     output_transformation_matrix = None
@@ -120,7 +120,7 @@ def create_sine_specification():
     specification = SineSpecification(
         name="Sine Tone 1",
         start_time=0,
-        num_control=1,
+        num_control=3,
         num_breakpoints=4,
     )
 
@@ -129,26 +129,26 @@ def create_sine_specification():
     table[0]["frequency"] = 1
     table[0]["sweep_type"] = 0  # 0 = linear
     table[0]["sweep_rate"] = 1
-    table[0]["amplitude"][0] = [0, 0, 0]
-    table[0]["phase"][0] = [0, 0, 0]
+    table[0]["amplitude"][:] = [0, 0, 0]
+    table[0]["phase"][:] = [0, 0, 0]
 
     table[1]["frequency"] = 10
     table[1]["sweep_type"] = 0
     table[1]["sweep_rate"] = 2
-    table[1]["amplitude"][0] = [1, 1, 1]
-    table[1]["phase"][0] = [0, 0, 0]
+    table[1]["amplitude"][:] = [1, 1, 1]
+    table[1]["phase"][:] = [0, 0, 0]
 
     table[2]["frequency"] = 15
     table[2]["sweep_type"] = 0
     table[2]["sweep_rate"] = 2
-    table[2]["amplitude"][0] = [1, 1, 1]
-    table[2]["phase"][0] = [0, 0, 0]
+    table[2]["amplitude"][:] = [1, 1, 1]
+    table[2]["phase"][:] = [0, 0, 0]
 
     table[3]["frequency"] = 20
     table[3]["sweep_type"] = 1
     table[3]["sweep_rate"] = 10
     table[3]["amplitude"][:] = [0.5, 0.5, 0.5]
-    table[3]["phase"][0] = [0, 0, 0]
+    table[3]["phase"][:] = [0, 0, 0]
 
     table["warning"][:] = np.nan
     table["abort"][:] = np.nan
