@@ -84,6 +84,12 @@ def time_event_list():
     command = GlobalCommands.START_STREAMING
     start_stream_event = ProfileEvent(timestamp, "Global", command)
 
+    # This is purely for testing purposes, does not do anything since repeat is set
+    # by headless instructions and not the user interface
+    timestamp = 0
+    command = TimeCommands.SET_REPEAT
+    repeat_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
     timestamp = 0
     command = GlobalCommands.START_ENVIRONMENT
     instructions = time_instructions()
@@ -94,6 +100,10 @@ def time_event_list():
     timestamp = 5
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 5
+    command = TimeCommands.SET_NO_REPEAT
+    no_repeat_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
     timestamp = 6.5
     command = GlobalCommands.START_ENVIRONMENT
@@ -118,8 +128,10 @@ def time_event_list():
 
     event_list = [
         start_stream_event,
+        repeat_event,
         start_environment_event,
         stop_environment_event,
+        no_repeat_event,
         start_environment_event_2,
         set_level_event,
         stop_stream_event,

@@ -44,6 +44,7 @@ from rattlesnake.examples.environment.sine.sine_metadata import (
     worksheet_sine_metadata,
     netcdf_sine_metadata,
     sine_instructions,
+    sine_event_list,
 )
 from rattlesnake.examples.environment.sysid.sysid_metadata import (
     manual_sysid_metadata,
@@ -63,6 +64,7 @@ from rattlesnake.examples.environment.transient.transient_metadata import (
     manual_transient_metadata,
     worksheet_transient_metadata,
     transient_instructions,
+    transient_event_list
 )
 
 from rattlesnake.hardware.hardware_utilities import HardwareType
@@ -164,9 +166,9 @@ EVENT_DICT = {}
 EVENT_DICT[EnvironmentType.NONE] = lambda: []
 EVENT_DICT[EnvironmentType.TIME] = time_event_list
 EVENT_DICT[EnvironmentType.MODAL] = modal_event_list
-EVENT_DICT[EnvironmentType.SINE] = lambda: []
+EVENT_DICT[EnvironmentType.SINE] = sine_event_list
 EVENT_DICT[EnvironmentType.RANDOM] = random_event_list
-EVENT_DICT[EnvironmentType.TRANSIENT] = lambda: []
+EVENT_DICT[EnvironmentType.TRANSIENT] = transient_event_list
 
 # Instructions
 INSTRUCTIONS_DICT = {}

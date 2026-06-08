@@ -2,6 +2,8 @@ import time
 
 import pytest
 
+from rattlesnake.testing.mock_user_interface import launch_temporary_rattlesnake_ui_environment, launch_temporary_rattlesnake_ui_profile
+
 from rattlesnake.examples.headless_example import build_rattlesnake_object
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -49,3 +51,65 @@ def test_rattlesnake_qualification(
     rattlesnake.shutdown()
 
     assert True
+
+@pytest.mark.parametrize("threaded", [False])
+@pytest.mark.parametrize("import_method", ["manual"])
+@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+@pytest.mark.parametrize(
+    "environment_type",
+    [
+        EnvironmentType.TIME,
+        EnvironmentType.MODAL,
+        EnvironmentType.SINE,
+        EnvironmentType.RANDOM,
+        EnvironmentType.TRANSIENT,
+    ],
+)
+def test_rattlesnake_ui_profile_qualification(
+    threaded, import_method, hardware_type, environment_type
+):
+    rattlesnake = build_rattlesnake_object(
+        threaded=threaded,
+        import_method=import_method,
+        hardware_type=hardware_type,
+        environment_type=environment_type,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=True,
+        run_sysid=False,
+        start_hardware=True,
+        start_environment=False,
+        run_profile=False,
+    )
+
+    launch_temporary_rattlesnake_ui_profile(rattlesnake, 60)
+
+@pytest.mark.parametrize("threaded", [False])
+@pytest.mark.parametrize("import_method", ["manual"])
+@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+@pytest.mark.parametrize(
+    "environment_type",
+    [
+        EnvironmentType.TIME,
+        EnvironmentType.MODAL,
+        EnvironmentType.SINE,
+        EnvironmentType.RANDOM,
+        EnvironmentType.TRANSIENT,
+    ],
+)
+def test_rattlesnake_ui_start_environment_qualification(
+    threaded, import_method, hardware_type, environment_type
+):
+    rattlesnake = build_rattlesnake_object(
+        threaded=threaded,
+        import_method=import_method,
+        hardware_type=hardware_type,
+        environment_type=environment_type,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=True,
+        run_sysid=False,
+        start_hardware=True,
+        start_environment=True,
+        run_profile=False,
+    )
+
+    launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)

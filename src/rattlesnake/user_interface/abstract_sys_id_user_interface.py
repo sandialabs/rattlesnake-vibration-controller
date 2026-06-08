@@ -410,7 +410,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     @abstractmethod
     def set_environment_instructions(self, instructions):
-        return
+        super().set_environment_instructions(instructions)
 
     # endregion
 

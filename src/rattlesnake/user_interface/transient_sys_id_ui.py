@@ -508,6 +508,7 @@ class TransientUI(SysIdEnvironmentUI):
     def set_environment_instructions(self, instructions):
         self.run_widget.test_level_selector.setValue(instructions.test_level)
         self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
+        super().set_environment_instructions(instructions)
 
     def set_parameters_from_template(self, worksheet):
         self.definition_widget.ramp_selector.setValue(float(worksheet.cell(3, 2).value))
@@ -1339,11 +1340,11 @@ class TransientUI(SysIdEnvironmentUI):
         """Updates the test level based on a profile event"""
         self.run_widget.test_level_selector.setValue(int(test_level))
 
-    def set_repeat_from_profile(self, data):  # pylint: disable=unused-argument
+    def set_repeat_from_profile(self, data=None):  # pylint: disable=unused-argument
         """Sets whether or not to repeat the signal based on profile events"""
         self.run_widget.repeat_signal_checkbox.setChecked(True)
 
-    def set_norepeat_from_profile(self, data):  # pylint: disable=unused-argument
+    def set_norepeat_from_profile(self, data=None):  # pylint: disable=unused-argument
         """Sets whether or not to repeat the signal based on profile events"""
         self.run_widget.repeat_signal_checkbox.setChecked(False)
 
@@ -1480,7 +1481,7 @@ class TransientUI(SysIdEnvironmentUI):
                 if self.interactive_control_law_widget is not None:
                     self.interactive_control_law_widget.update_ui_control(data)
             case TransientCommands.SET_TEST_LEVEL:
-                self.change_test_level_from_profile()
+                self.change_test_level_from_profile(data)
             case TransientCommands.SET_REPEAT:
                 self.set_repeat_from_profile()
             case TransientCommands.SET_NO_REPEAT:

@@ -15,15 +15,17 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 from rattlesnake.process.streaming import StreamType
 
+from rattlesnake.testing.mock_user_interface import launch_temporary_rattlesnake_ui_environment
+
 """USER INPUTS"""
 THREADED = True
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.SINE
+ENVIRONMENT_TYPE = EnvironmentType.TRANSIENT
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = False
-RUN_SYSID = True
-START_HARDWARE = False
+LOAD_SYSID = True
+RUN_SYSID = False
+START_HARDWARE = True
 START_ENVIRONMENT = False
 RUN_PROFILE = False
 
@@ -93,4 +95,5 @@ if __name__ == "__main__":
     # test_rattlesnake_objects()
     rattlesnake = build_rattlesnake_object()
 
-    launch_rattlesnake_ui(rattlesnake)
+    launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
+    # launch_rattlesnake_ui(rattlesnake)

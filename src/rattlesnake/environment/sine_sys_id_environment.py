@@ -1921,6 +1921,12 @@ class SineEnvironment(SysIdEnvironment):
             self.control_tones = data.control_tones
             self.control_start_time = data.control_start_time
             self.control_end_time = data.control_end_time
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, data),
+                )
+            )
             if self.control_tones is not None and len(self.control_tones) == 0:
                 self.control_tones = None
             if self.control_tones is None:
@@ -2594,7 +2600,10 @@ class SineEnvironment(SysIdEnvironment):
         np.savez(filename, **output_dict)
 
     def set_test_level(self, data):
-        print("Cannot set test level during sine environment")
+        if self.active:
+            print("Cannot set test level during sine environment")
+        else:
+            self.gui_update_queue.put((self.environment_name, (SineCommands.SET_TEST_LEVEL, data)))
 
     # endregion
 

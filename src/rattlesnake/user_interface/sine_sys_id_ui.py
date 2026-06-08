@@ -784,6 +784,8 @@ class SineUI(SysIdEnvironmentUI):
         else:
             self.run_widget.partial_environment_tone_selector.clearSelection()
 
+        super().set_environment_instructions(instructions)
+
     # endregion
 
     # region Definition
@@ -1679,6 +1681,8 @@ class SineUI(SysIdEnvironmentUI):
             case SineCommands.SET_TEST_LEVEL:
                 test_level = int(data)
                 self.change_test_level_from_profile(test_level)
+            case SineCommands.SAVE_CONTROL_DATA:
+                pass
             case SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES:
                 self.log("Sending Prediction Plot Choices...")
                 self.send_response_prediction_plot_choices()

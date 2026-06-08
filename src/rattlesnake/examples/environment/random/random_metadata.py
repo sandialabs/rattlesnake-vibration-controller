@@ -163,7 +163,7 @@ def random_event_list():
 
     timestamp = 16
     command = RandomVibrationCommands.SAVE_CONTROL_DATA
-    data = defaults.DIRECTORY + "/environment/random/temp_sysid.nc4"
+    data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
     save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
     timestamp = 18

@@ -4,6 +4,8 @@ import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
 
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
     TransientMetadata,
@@ -11,10 +13,6 @@ from rattlesnake.environment.transient_sys_id_environment import (
 )
 
 ENVIRONMENT_NAME = "Transient 0"
-
-
-def transient_instructions():
-    pass
 
 
 def netcdf_transient_metadata(hardware_metadata):
@@ -70,3 +68,69 @@ def create_control_signal():
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
     return signal
+
+def transient_instructions():
+    instructions = TransientInstructions(ENVIRONMENT_NAME, test_level=0, repeat=True)
+    return instructions
+
+def transient_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = TransientCommands.SET_REPEAT
+    repeat_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command
+    )
+
+    timestamp = 0
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = transient_instructions()
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 5
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 5
+    command = TransientCommands.SET_NO_REPEAT
+    no_repeat_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 5
+    command = TransientCommands.SET_TEST_LEVEL
+    data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 6.5
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = transient_instructions()
+    instructions.test_level = 5
+    instructions.repeat = False
+    start_environment_event_2 = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 20
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 20
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        repeat_event,
+        start_environment_event,
+        stop_environment_event,
+        no_repeat_event,
+        set_level_event,
+        start_environment_event_2,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+
+    return event_list

@@ -295,6 +295,7 @@ class TimeUI(EnvironmentUI):
         instructions = data
         self.run_widget.test_level_selector.setValue(instructions.current_test_level)
         self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
+        super().set_environment_instructions(instructions)
 
     # endregion
 

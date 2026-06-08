@@ -971,6 +971,12 @@ class TransientEnvironment(SysIdEnvironment):
         if self.startup:
             self.test_level = db2scale(data.test_level)
             self.repeat = data.repeat
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, data),
+                )
+            )
             self.log("Starting Environment")
             self.siggen_shutdown_achieved = False
             # Set up the signal generation

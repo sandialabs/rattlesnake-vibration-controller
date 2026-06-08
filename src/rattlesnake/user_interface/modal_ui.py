@@ -826,7 +826,7 @@ class ModalUI(EnvironmentUI):
         return ModalInstructions(self.environment_name)
 
     def set_environment_instructions(self, instructions):
-        return
+        super().set_environment_instructions(instructions)
 
     # endregion
 

@@ -4,6 +4,8 @@ import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
 
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.sine_sys_id_environment import (
     SineCommands,
     SineMetadata,
@@ -12,24 +14,6 @@ from rattlesnake.environment.sine_sys_id_environment import (
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 
 ENVIRONMENT_NAME = "Sine 0"
-# ENVIRONMENT_NAME = "sysid"
-
-
-def sine_instructions():
-    control_test_level = 0
-    control_tones = None
-    control_end_time = None
-    control_start_time = None
-
-    instructions = SineInstructions(
-        ENVIRONMENT_NAME,
-        control_test_level,
-        control_tones,
-        control_start_time,
-        control_end_time,
-    )
-    return instructions
-
 
 def worksheet_sine_metadata(hardware_metadata):
     worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine.xlsx"
@@ -155,3 +139,69 @@ def create_sine_specification():
 
     specifications = [specification]
     return specifications
+
+
+def sine_instructions():
+    control_test_level = 0
+    control_tones = None
+    control_end_time = None
+    control_start_time = None
+
+    instructions = SineInstructions(
+        ENVIRONMENT_NAME,
+        control_test_level,
+        control_tones,
+        control_start_time,
+        control_end_time,
+    )
+    return instructions
+
+def sine_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = SineCommands.SET_TEST_LEVEL
+    data = 5
+    set_level_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, data
+    )
+
+    timestamp = 0.5
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = sine_instructions()
+    instructions.control_test_level = 5
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 10
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command
+    )
+
+    timestamp = 10
+    command = SineCommands.SAVE_CONTROL_DATA
+    data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        set_level_event,
+        start_environment_event,
+        stop_environment_event,
+        save_event,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+    return event_list

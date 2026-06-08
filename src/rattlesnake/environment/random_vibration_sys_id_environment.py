@@ -90,6 +90,7 @@ from rattlesnake.process.spectral_processing import (
     SpectralProcessingMetadata,
     spectral_processing_process,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 CONTROL_TYPE = EnvironmentType.RANDOM
 
@@ -1197,6 +1198,12 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         """Starts the environment at the specified test level"""
         self.log("Starting Control")
         test_level = db2scale(data.control_test_level)
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, data),
+            )
+        )
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False

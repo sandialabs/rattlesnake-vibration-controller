@@ -723,6 +723,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.run_widget.current_test_level_selector.setValue(
             instructions.control_test_level
         )
+        super().set_environment_instructions(instructions)
 
     # endregion
 
