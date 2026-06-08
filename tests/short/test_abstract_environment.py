@@ -82,8 +82,7 @@ def test_environment_metadata_channel_indices(
 ):
     environment_metadata.channel_list_bools = channel_list_bools
 
-    channel_list_indices = environment_metadata.map_channel_indices()
-    assert channel_list_indices == expected
+    assert environment_metadata.channel_indices == expected
 
 
 @pytest.mark.parametrize(

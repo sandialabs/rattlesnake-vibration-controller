@@ -21,7 +21,7 @@ from rattlesnake.testing.mock_user_interface import launch_temporary_rattlesnake
 THREADED = True
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.TRANSIENT
+ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = True
 RUN_SYSID = False
@@ -95,5 +95,5 @@ if __name__ == "__main__":
     # test_rattlesnake_objects()
     rattlesnake = build_rattlesnake_object()
 
-    launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
-    # launch_rattlesnake_ui(rattlesnake)
+    # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
+    launch_rattlesnake_ui(rattlesnake)

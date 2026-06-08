@@ -228,14 +228,17 @@ class EnvironmentMetadata(ABC):
 
         """
 
-    @staticmethod
+    @classmethod
     @abstractmethod
     def create_blank_worksheet_template(
+        cls,
         worksheet: openpyxl.worksheet.worksheet.Worksheet,
     ):
         """
         Create blank worksheet template for environment metadata to store to excel file
         """
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 3, "v4.0")
 
     @abstractmethod
     def save_metadata_to_worksheet(

@@ -252,12 +252,13 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             netcdf_group_handle, hardware_metadata
         )
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def create_blank_worksheet_template(worksheet):
+    def create_blank_worksheet_template(cls, worksheet):
         """
         Creates blank worksheet template for an excel worksheet
         """
+        super().create_blank_worksheet_template(worksheet)
 
     @abstractmethod
     def save_metadata_to_worksheet(

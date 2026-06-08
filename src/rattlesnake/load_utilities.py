@@ -177,8 +177,7 @@ def save_rattlesnake_to_workbook(
             col_idx = col + 24
             environment_name = environment_metadata.environment_name
             channel_worksheet.cell(row=2, column=col_idx, value=environment_name)
-            bool_indices = environment_metadata.map_channel_indices()
-            for row in bool_indices:
+            for row in environment_metadata.channel_indices:
                 row_idx = row + 3
                 channel_worksheet.cell(row=row_idx, column=col_idx, value="x")
             environment_worksheet = workbook.create_sheet(environment_name)

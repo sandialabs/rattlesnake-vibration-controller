@@ -264,14 +264,14 @@ class TimeMetadata(EnvironmentMetadata):
             cancel_rampdown_time,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Time")
         worksheet.cell(
             1,
             4,
-            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
+            "Note: Fill in second row with information requested by hash marks (#).",
         )
         worksheet.cell(2, 1, "Signal File")
         worksheet.cell(

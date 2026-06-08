@@ -372,9 +372,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             sysid_metadata=sysid_metadata,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Transient")
         worksheet.cell(
             1,

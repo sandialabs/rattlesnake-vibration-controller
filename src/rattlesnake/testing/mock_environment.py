@@ -82,8 +82,8 @@ class MockEnvironmentMetadata(EnvironmentMetadata):
     def validate(self, hardware_metadata):
         return super().validate(hardware_metadata)
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
         return super().create_blank_worksheet_template(worksheet)
 
     @classmethod

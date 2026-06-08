@@ -591,9 +591,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
             sysid_metadata=sysid_metadata,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Sine")
         worksheet.cell(
             1,
@@ -679,15 +679,15 @@ class SineMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(18, 1, "Control Channels (1-based):")
         worksheet.cell(18, 3, "# List of channels, one per cell on this row")
         SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=19)
-        worksheet.cell(33, 1, "Specification File:")
+        worksheet.cell(35, 1, "Specification File:")
         worksheet.cell(
-            33,
+            35,
             3,
             "# Path to the file containing the Specification. Can specify multiple by using multiple columns",
         )
-        worksheet.cell(34, 1, "Response Transformation Matrix:")
+        worksheet.cell(36, 1, "Response Transformation Matrix:")
         worksheet.cell(
-            34,
+            36,
             2,
             (
                 "# Transformation matrix to apply to the response channels.  Type None if there is "
@@ -696,9 +696,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
                 "the number of physical control channels."
             ),
         )
-        worksheet.cell(35, 1, "Output Transformation Matrix:")
+        worksheet.cell(37, 1, "Output Transformation Matrix:")
         worksheet.cell(
-            35,
+            37,
             2,
             "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
@@ -751,7 +751,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             worksheet,
             self.response_transformation_matrix,
             self.output_transformation_matrix,
-            start_row=34,
+            start_row=36,
         )
 
     @classmethod
@@ -823,7 +823,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             worksheet, hardware_metadata, start_row=19
         )
         response_transformation_matrix, output_transformation_matrix = (
-            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=34)
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=36)
         )
 
         # Specification Files

@@ -578,9 +578,9 @@ class ModalMetadata(EnvironmentMetadata):
             exponential_window_value_at_frame_end,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Modal")
         worksheet.cell(2, 1, "Samples Per Frame:")
         worksheet.cell(2, 3, "# Number of Samples per Measurement Frame")
