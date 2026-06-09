@@ -21,7 +21,7 @@ def worksheet_sdynpy_system_metadata():
 
 
 def netcdf_sdynpy_system_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = SDynPySystemMetadata.load_metadata_from_netcdf(netcdf_dataset)
     metadata.hardware_file = HARDWARE_FILE

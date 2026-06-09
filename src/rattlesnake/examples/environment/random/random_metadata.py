@@ -43,13 +43,16 @@ def worksheet_random_metadata(hardware_metadata):
 
 
 def netcdf_random_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/random/random.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/random/random_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     metadata = RandomVibrationMetadata.load_metadata_from_netcdf(
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    metadata.control_python_script = (
+        defaults.DIRECTORY + "/control_laws/control_laws.py"
     )
 
     return metadata
