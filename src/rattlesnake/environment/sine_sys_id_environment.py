@@ -750,7 +750,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
-            self.output_transformation_matrix,
+            self.reference_transformation_matrix,
             start_row=36,
         )
 
@@ -830,9 +830,10 @@ class SineMetadata(SysIdEnvironmentMetadata):
         specification_files = []
         column_index = 2
         while True:
-            filename = worksheet.cell(33, column_index).value
+            filename = worksheet.cell(35, column_index).value
             if filename is None or (
-                isinstance(filename, str) and filename.strip() == ""
+                isinstance(filename, str)
+                and (filename.startswith("#") or filename.strip() == "")
             ):
                 break
             specification_files.append(str(filename))
@@ -926,7 +927,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             isinstance(worksheet.cell(output_transform_row, 2).value, str)
             and worksheet.cell(output_transform_row, 2).value.lower() == "none"
         ):
-            self.output_transformation_matrix = None
+            self.reference_transformation_matrix = None
         else:
             output_transformation = []
             i = 0
@@ -942,7 +943,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
                         float(worksheet.cell(output_transform_row + i, 2 + j).value)
                     )
                 i += 1
-            self.output_transformation_matrix = np.array(output_transformation)
+            self.reference_transformation_matrix = np.array(output_transformation)
         self.define_transformation_matrices(None, dialog=False)
 
         # Load in the specification
@@ -2603,7 +2604,9 @@ class SineEnvironment(SysIdEnvironment):
         if self.active:
             print("Cannot set test level during sine environment")
         else:
-            self.gui_update_queue.put((self.environment_name, (SineCommands.SET_TEST_LEVEL, data)))
+            self.gui_update_queue.put(
+                (self.environment_name, (SineCommands.SET_TEST_LEVEL, data))
+            )
 
     # endregion
 

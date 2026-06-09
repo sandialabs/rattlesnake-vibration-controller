@@ -12,7 +12,7 @@ HARDWARE_FILE = defaults.DIRECTORY + "/hardware/exodus/exodus.exo"
 
 
 def worksheet_exodus_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/exodus/exodus.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/hardware/exodus/exodus_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = ExodusMetadata.load_metadata_from_workbook(workbook)
     metadata.hardware_file = HARDWARE_FILE
@@ -21,7 +21,7 @@ def worksheet_exodus_metadata():
 
 
 def netcdf_exodus_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/exodus/exodus.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/hardware/exodus/exodus_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = ExodusMetadata.load_metadata_from_netcdf(netcdf_dataset)
     metadata.hardware_file = HARDWARE_FILE

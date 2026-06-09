@@ -12,7 +12,7 @@ HARDWARE_FILE = defaults.DIRECTORY + "/hardware/state_space/state_space.npz"
 
 
 def worksheet_state_space_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/state_space/state_space.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/hardware/state_space/state_space_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = StateSpaceMetadata.load_metadata_from_workbook(workbook)
     metadata.hardware_file = HARDWARE_FILE
@@ -21,7 +21,7 @@ def worksheet_state_space_metadata():
 
 
 def netcdf_state_space_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/state_space/state_space.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/hardware/state_space/state_space_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = StateSpaceMetadata.load_metadata_from_netcdf(netcdf_dataset)
     metadata.hardware_file = HARDWARE_FILE

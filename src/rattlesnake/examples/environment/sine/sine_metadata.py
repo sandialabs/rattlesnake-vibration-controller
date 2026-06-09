@@ -5,7 +5,9 @@ import netCDF4 as nc4
 import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sine_sys_id_environment import (
     SineCommands,
     SineMetadata,
@@ -15,8 +17,9 @@ from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 
 ENVIRONMENT_NAME = "Sine 0"
 
+
 def worksheet_sine_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -31,7 +34,7 @@ def worksheet_sine_metadata(hardware_metadata):
 
 
 def netcdf_sine_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -156,6 +159,7 @@ def sine_instructions():
     )
     return instructions
 
+
 def sine_event_list():
     timestamp = 0
     command = GlobalCommands.START_STREAMING
@@ -164,9 +168,7 @@ def sine_event_list():
     timestamp = 0
     command = SineCommands.SET_TEST_LEVEL
     data = 5
-    set_level_event = ProfileEvent(
-        timestamp, ENVIRONMENT_NAME, command, data
-    )
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
     timestamp = 0.5
     command = GlobalCommands.START_ENVIRONMENT
@@ -178,9 +180,7 @@ def sine_event_list():
 
     timestamp = 10
     command = GlobalCommands.STOP_ENVIRONMENT
-    stop_environment_event = ProfileEvent(
-        timestamp, ENVIRONMENT_NAME, command
-    )
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
     timestamp = 10
     command = SineCommands.SAVE_CONTROL_DATA
@@ -204,4 +204,17 @@ def sine_event_list():
         stop_stream_event,
         stop_hardware_event,
     ]
+    return event_list
+
+
+def worksheet_sine_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.SINE,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
+    save_event = event_list[3]
+    save_event.data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
     return event_list
