@@ -19,9 +19,7 @@ def netcdf_sysid_data_package():
 
 
 def netcdf_sysid_metadata(hardware_metadata):
-    netcdf_dir = (
-        defaults.DIRECTORY + "/environment/sysid/sysid.nc4"
-    )
+    netcdf_dir = defaults.DIRECTORY + "/environment/sysid/sysid.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups["sysid"]
     metadata = SysIdMetadata.load_metadata_from_netcdf(netcdf_group, hardware_metadata)
@@ -35,7 +33,7 @@ def worksheet_sysid_metadata(hardware_metadata):
     worksheet = workbook["sysid"]
 
     metadata = SysIdMetadata.load_metadata_from_worksheet(
-        worksheet, hardware_metadata, start_row=1
+        worksheet, hardware_metadata, start_row=2
     )
 
     return metadata

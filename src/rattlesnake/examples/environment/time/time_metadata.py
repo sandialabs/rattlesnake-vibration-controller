@@ -18,8 +18,12 @@ ENVIRONMENT_NAME = "Time 0"
 def create_time_signal(hardware_metadata):
     num_samples = hardware_metadata.sample_rate * 3
     frequency = 2  # Hz sine wave
-    t = np.arange(num_samples*hardware_metadata.output_oversample) / (hardware_metadata.sample_rate*hardware_metadata.output_oversample)
-    signal = np.zeros((defaults.NUM_FORCES, num_samples*hardware_metadata.output_oversample))
+    t = np.arange(num_samples * hardware_metadata.output_oversample) / (
+        hardware_metadata.sample_rate * hardware_metadata.output_oversample
+    )
+    signal = np.zeros(
+        (defaults.NUM_FORCES, num_samples * hardware_metadata.output_oversample)
+    )
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
     return signal
