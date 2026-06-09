@@ -15,11 +15,13 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 from rattlesnake.process.streaming import StreamType
 
-from rattlesnake.testing.mock_user_interface import launch_temporary_rattlesnake_ui_environment
+from rattlesnake.testing.mock_user_interface import (
+    launch_temporary_rattlesnake_ui_environment,
+)
 
 """USER INPUTS"""
 THREADED = True
-IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
+IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
@@ -70,7 +72,7 @@ def build_rattlesnake_object(
             rattlesnake.load_system_id_from_package(environment_name, sysid_package)
 
     # Initialize profile event list and stream metadata in the UI (Don't normally need this for headless)
-    event_list = EVENT_DICT[environment_type]()
+    event_list = EVENT_DICT[environment_type][import_method]()
     stream_metadata = STREAM_DICT[stream_type](environment_name)
     rattlesnake.initialize_profile_event_list(event_list)
     rattlesnake.set_stream_metadata(stream_metadata)

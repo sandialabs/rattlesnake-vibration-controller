@@ -58,13 +58,14 @@ from rattlesnake.examples.environment.random.random_metadata import (
     worksheet_random_metadata,
     random_instructions,
     random_event_list,
+    worksheet_random_event_list,
 )
 from rattlesnake.examples.environment.transient.transient_metadata import (
     netcdf_transient_metadata,
     manual_transient_metadata,
     worksheet_transient_metadata,
     transient_instructions,
-    transient_event_list
+    transient_event_list,
 )
 
 from rattlesnake.hardware.hardware_utilities import HardwareType
@@ -163,12 +164,26 @@ STREAM_DICT[StreamType.TEST_LEVEL] = stream_metadata_test_level
 
 # Event list
 EVENT_DICT = {}
-EVENT_DICT[EnvironmentType.NONE] = lambda: []
-EVENT_DICT[EnvironmentType.TIME] = time_event_list
-EVENT_DICT[EnvironmentType.MODAL] = modal_event_list
-EVENT_DICT[EnvironmentType.SINE] = sine_event_list
-EVENT_DICT[EnvironmentType.RANDOM] = random_event_list
-EVENT_DICT[EnvironmentType.TRANSIENT] = transient_event_list
+BLANK_EVENT_DICT = {
+    "worksheet": lambda x: None,
+    "netcdf": lambda x: None,
+    "manual": lambda x: None,
+}
+TIME_EVENT_DICT = {"manual": time_event_list, "netcdf": time_event_list}
+MODAL_EVENT_DICT = {"manual": modal_event_list, "netcdf": modal_event_list}
+SINE_EVENT_DICT = {"manual": sine_event_list, "netcdf": sine_event_list}
+RANDOM_EVENT_DICT = {
+    "manual": random_event_list,
+    "netcdf": random_event_list,
+    "worksheet": worksheet_random_event_list,
+}
+TRANSIENT_EVENT_DICT = {"manual": transient_event_list, "netcdf": transient_event_list}
+EVENT_DICT[EnvironmentType.NONE] = BLANK_EVENT_DICT
+EVENT_DICT[EnvironmentType.TIME] = TIME_EVENT_DICT
+EVENT_DICT[EnvironmentType.MODAL] = MODAL_EVENT_DICT
+EVENT_DICT[EnvironmentType.SINE] = SINE_EVENT_DICT
+EVENT_DICT[EnvironmentType.RANDOM] = RANDOM_EVENT_DICT
+EVENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_EVENT_DICT
 
 # Instructions
 INSTRUCTIONS_DICT = {}

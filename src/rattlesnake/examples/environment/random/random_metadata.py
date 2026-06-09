@@ -4,12 +4,14 @@ import openpyxl
 
 import rattlesnake.examples.defaults as defaults
 from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationInstructions,
 )
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
 
 ENVIRONMENT_NAME = "Random 0"
 
@@ -24,7 +26,9 @@ def worksheet_random_metadata(hardware_metadata):
     metadata = RandomVibrationMetadata.load_metadata_from_worksheet(
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
-    metadata.control_python_script = defaults.DIRECTORY + "/control_laws/control_laws.py"
+    metadata.control_python_script = (
+        defaults.DIRECTORY + "/control_laws/control_laws.py"
+    )
     metadata.control_python_function = "buzz_control"
     metadata.control_python_function_type = 0
     metadata.control_python_function_parameters = ""
@@ -134,11 +138,13 @@ def create_sine_specification(sample_rate):
         specification_abort_matrix,
     )
 
+
 def random_instructions():
     control_test_level = 1
     instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
 
     return instructions
+
 
 def random_event_list():
     timestamp = 0
@@ -151,7 +157,7 @@ def random_event_list():
     start_environment_event = ProfileEvent(
         timestamp, ENVIRONMENT_NAME, command, instructions
     )
-    
+
     timestamp = 5
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
     data = 5
@@ -203,4 +209,19 @@ def random_event_list():
         stop_hardware_event,
     ]
 
+    return event_list
+
+
+def worksheet_random_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.RANDOM,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
+    save_event = event_list[4]
+    save_event.data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
+    change_spec_event = event_list[5]
+    change_spec_event.data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
     return event_list
