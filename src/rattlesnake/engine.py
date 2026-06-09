@@ -457,8 +457,14 @@ class RattlesnakeController:
                     # Initialize system identification if it exists
                     for environment_metadata in environment_metadata_list:
                         environment_type = environment_metadata.environment_type
-                        if environment_type in SYSID_ENVIRONMENTS and environment_metadata.sysid_metadata is not None:
-                            self.initialize_system_id(environment_metadata.sysid_metadata, environment_metadata.environment_name)
+                        if (
+                            environment_type in SYSID_ENVIRONMENTS
+                            and environment_metadata.sysid_metadata is not None
+                        ):
+                            self.initialize_system_id(
+                                environment_metadata.sysid_metadata,
+                                environment_metadata.environment_name,
+                            )
                     self.initialize_profile_event_list([])
                     self.last_stream_metadata = None
                 case ".xlsx":
@@ -471,8 +477,14 @@ class RattlesnakeController:
                     # Initialize system identification if it exists
                     for environment_metadata in environment_metadata_list:
                         environment_type = environment_metadata.environment_type
-                        if environment_type in SYSID_ENVIRONMENTS and environment_metadata.sysid_metadata is not None:
-                            self.initialize_system_id(environment_metadata.sysid_metadata, environment_metadata.environment_name)
+                        if (
+                            environment_type in SYSID_ENVIRONMENTS
+                            and environment_metadata.sysid_metadata is not None
+                        ):
+                            self.initialize_system_id(
+                                environment_metadata.sysid_metadata,
+                                environment_metadata.environment_name,
+                            )
                     self.initialize_profile_event_list(profile_event_list)
                     self.last_stream_metadata = None
         finally:

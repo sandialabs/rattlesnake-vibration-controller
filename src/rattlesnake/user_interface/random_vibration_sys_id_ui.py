@@ -1491,8 +1491,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
         if filename == "":
             return
-        
-        self.rattlesnake.send_environment_command(self.environment_name, RandomVibrationCommands.SAVE_CONTROL_DATA, filename)
+
+        self.rattlesnake.send_environment_command(
+            self.environment_name, RandomVibrationCommands.SAVE_CONTROL_DATA, filename
+        )
 
     # endregion
 
@@ -1684,6 +1686,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 self.run_widget.current_test_level_selector.blockSignals(True)
                 self.run_widget.current_test_level_selector.setValue(data)
                 self.run_widget.current_test_level_selector.blockSignals(False)
+            case RandomVibrationCommands.ADJUST_TEST_LEVEL:
+                self.run_widget.current_test_level_selector.blockSignals(True)
+                self.run_widget.current_test_level_selector.setValue(data)
+                self.run_widget.current_test_level_selector.blockSignals(False)
+            case RandomVibrationCommands.SAVE_CONTROL_DATA:
+                pass
+            case RandomVibrationCommands.CHANGE_SPECIFICATION:
+                pass
             case UICommands.ENABLE:
                 widget = None
                 for parent in [

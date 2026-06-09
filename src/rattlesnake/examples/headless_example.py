@@ -21,7 +21,7 @@ from rattlesnake.testing.mock_user_interface import (
 
 """USER INPUTS"""
 THREADED = True
-IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
+IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
@@ -94,7 +94,6 @@ def build_rattlesnake_object(
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
-    # test_rattlesnake_objects()
     rattlesnake = build_rattlesnake_object()
 
     # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)

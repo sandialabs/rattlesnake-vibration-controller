@@ -105,11 +105,15 @@ class RandomVibrationCommands(EnvironmentCommands):
     CHANGE_SPECIFICATION = 3
     SAVE_CONTROL_DATA = 4
 
-    VALID_PROFILE_COMMANDS = (ADJUST_TEST_LEVEL, CHANGE_SPECIFICATION, SAVE_CONTROL_DATA)
+    VALID_PROFILE_COMMANDS = (
+        ADJUST_TEST_LEVEL,
+        CHANGE_SPECIFICATION,
+        SAVE_CONTROL_DATA,
+    )
     VALID_DATA = {
         ADJUST_TEST_LEVEL: float,
         CHANGE_SPECIFICATION: str,
-        SAVE_CONTROL_DATA: str
+        SAVE_CONTROL_DATA: str,
     }
 
 
@@ -297,9 +301,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 [
                     (
                         environment_channel_list[i].node_number,
-                        _direction_map[
-                            environment_channel_list[i].node_direction
-                        ],
+                        _direction_map[environment_channel_list[i].node_direction],
                     )
                     for i in self.control_channel_indices
                 ],
@@ -593,7 +595,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(14, 3, "# Extra parameters used in the control law")
         worksheet.cell(15, 1, "Control Channels (1-based):")
         worksheet.cell(16, 1, "Sigma Clipping")
-        worksheet.cell(16, 3, "# Standard-deviation threshold used to reject outlier data.")
+        worksheet.cell(
+            16, 3, "# Standard-deviation threshold used to reject outlier data."
+        )
         SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=17)
         worksheet.cell(33, 1, "Specification File:")
         worksheet.cell(33, 3, "# Path to the file containing the Specification")
@@ -659,7 +663,6 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             self.reference_transformation_matrix,
             start_row=34,
         )
-        
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -726,7 +729,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             column_index += 1
         sigma_clip = float(worksheet.cell(16, 2).value)
 
-        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(worksheet, hardware_metadata, 17)
+        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
+            worksheet, hardware_metadata, 17
+        )
 
         response_transformation_matrix, output_transformation_matrix = (
             cls.load_sysid_matrix_from_worksheet(worksheet, start_row=34)
@@ -966,8 +971,12 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.map_command(
             RandomVibrationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
         )
-        self.map_command(RandomVibrationCommands.SAVE_CONTROL_DATA, self.save_spectral_data)
-        self.map_command(RandomVibrationCommands.CHANGE_SPECIFICATION, self.change_specification)
+        self.map_command(
+            RandomVibrationCommands.SAVE_CONTROL_DATA, self.save_spectral_data
+        )
+        self.map_command(
+            RandomVibrationCommands.CHANGE_SPECIFICATION, self.change_specification
+        )
         self.map_command(
             RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN,
             self.check_for_control_shutdown,
@@ -1155,18 +1164,22 @@ class RandomVibrationEnvironment(SysIdEnvironment):
     def adjust_test_level(self, data):
         """Adjusts the test level of the environment to the specified level"""
         self.queue_container.signal_generation_command_queue.put(
-            self.environment_name, (SignalGenerationCommands.ADJUST_TEST_LEVEL, data)
+            self.environment_name,
+            (SignalGenerationCommands.ADJUST_TEST_LEVEL, db2scale(data)),
         )
         self.queue_container.collector_command_queue.put(
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.environment_metadata.skip_frames, data),
+                (self.environment_metadata.skip_frames, db2scale(data)),
             ),
         )
-        self.gui_update_queue.put((self.environment_name,
-                    (RandomVibrationUICommands.ADJUST_TEST_LEVEL, data),
-                ))
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (RandomVibrationUICommands.ADJUST_TEST_LEVEL, data),
+            )
+        )
 
     def send_interactive_command(self, command):
         """General method that can be used by an interactive UI object to pass commands and data to
@@ -1338,7 +1351,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             self.environment_name,
             (RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None),
         )
-    
+
     def save_spectral_data(self, data):
         filename = data
         netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
@@ -1351,7 +1364,10 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
         netcdf_dataset.close()
 
-        self.data_analysis_command_queue.put(self.environment_name, (RandomVibrationDataAnalysisCommands.SAVE_CONTROL_DATA, filename))
+        self.data_analysis_command_queue.put(
+            self.environment_name,
+            (RandomVibrationDataAnalysisCommands.SAVE_CONTROL_DATA, filename),
+        )
 
     def change_specification(self, data):
         """
@@ -1368,10 +1384,15 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         new_metadata.load_specification(self.hardware_metadata.channel_list, filename)
         self.initialize_environment(new_metadata)
 
-        self.gui_update_queue.put((
-                    self.environment_name,
-                    (RandomVibrationUICommands.CHANGE_SPECIFICATION, (filename, new_metadata)),
-                ))
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (
+                    RandomVibrationUICommands.CHANGE_SPECIFICATION,
+                    (filename, new_metadata),
+                ),
+            )
+        )
 
     # region Shutdown
     def check_for_control_shutdown(self, data):  # pylint: disable=unused-argument

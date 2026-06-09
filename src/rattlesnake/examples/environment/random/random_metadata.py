@@ -140,7 +140,7 @@ def create_sine_specification(sample_rate):
 
 
 def random_instructions():
-    control_test_level = 1
+    control_test_level = 0
     instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
 
     return instructions
@@ -172,7 +172,7 @@ def random_event_list():
     data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
     save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
-    timestamp = 18
+    timestamp = 17
     command = RandomVibrationCommands.CHANGE_SPECIFICATION
     data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
     change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
@@ -180,6 +180,7 @@ def random_event_list():
     timestamp = 20
     command = GlobalCommands.START_ENVIRONMENT
     instructions = random_instructions()
+    instructions.control_test_level = 5
     start_environment_event_2 = ProfileEvent(
         timestamp, ENVIRONMENT_NAME, command, instructions
     )

@@ -734,8 +734,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.environment_uis[environment_name].initialize_environment(
                 environment_metadata
             )
-            if environment_type in SYSID_ENVIRONMENTS and environment_metadata.sysid_metadata is not None:
-                self.environment_uis[environment_name].set_sysid_metadata(environment_metadata.sysid_metadata)
+            if (
+                environment_type in SYSID_ENVIRONMENTS
+                and environment_metadata.sysid_metadata is not None
+            ):
+                self.environment_uis[environment_name].set_sysid_metadata(
+                    environment_metadata.sysid_metadata
+                )
 
         self.update_environment_tabs()
         streaming_environment_items = [""] + list(self.environment_uis.keys())
