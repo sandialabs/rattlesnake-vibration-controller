@@ -77,7 +77,6 @@ from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-impo
     spectral_processing_process,
 )
 
-
 CONTROL_TYPE = EnvironmentType.MODAL
 WAIT_TIME = 0.02
 
@@ -734,7 +733,7 @@ class ModalMetadata(EnvironmentMetadata):
         if self.pretrigger is not None:
             worksheet.cell(13, 2, self.pretrigger)
         if self.trigger_slope_positive is not None:
-            worksheet.cell(14, 2, self.trigger_slope_positive)
+            worksheet.cell(14, 2, "Y" if self.trigger_slope_positive else "N")
         if self.trigger_level is not None:
             worksheet.cell(15, 2, self.trigger_level)
         if self.hysteresis_level is not None:
@@ -1132,7 +1131,7 @@ class ModalEnvironment(Environment):
             if self.environment_metadata.trigger_slope_positive
             else TriggerSlope.NEGATIVE
         )
-        (_, trigger_level, _, trigger_hysteresis) = (
+        _, trigger_level, _, trigger_hysteresis = (
             self.environment_metadata.get_trigger_levels(
                 self.hardware_metadata.channel_list
             )

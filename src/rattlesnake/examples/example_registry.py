@@ -39,6 +39,7 @@ from rattlesnake.examples.environment.modal.modal_metadata import (
     worksheet_modal_metadata,
     modal_instructions,
     modal_event_list,
+    worksheet_modal_event_list,
 )
 from rattlesnake.examples.environment.sine.sine_metadata import (
     manual_sine_metadata,
@@ -175,7 +176,11 @@ TIME_EVENT_DICT = {
     "netcdf": time_event_list,
     "worksheet": worksheet_time_event_list,
 }
-MODAL_EVENT_DICT = {"manual": modal_event_list, "netcdf": modal_event_list}
+MODAL_EVENT_DICT = {
+    "manual": modal_event_list,
+    "netcdf": modal_event_list,
+    "worksheet": worksheet_modal_event_list,
+}
 SINE_EVENT_DICT = {"manual": sine_event_list, "netcdf": sine_event_list}
 RANDOM_EVENT_DICT = {
     "manual": random_event_list,

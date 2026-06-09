@@ -211,7 +211,9 @@ def load_profile_from_workbook(workbook, environment_types):
             command = GlobalCommands[command]
         elif command in ENVIRONMENT_COMMANDS[environment_type].__members__:
             command = ENVIRONMENT_COMMANDS[environment_type][command]
-        elif command == "SET_ENVIRONMENT_INSTRUCTIONS": # This should not be set by workbook.
+        elif (
+            command == "SET_ENVIRONMENT_INSTRUCTIONS"
+        ):  # This should not be set by workbook.
             index += 1
             continue
         else:
