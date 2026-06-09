@@ -5,7 +5,9 @@ import netCDF4 as nc4
 import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.time_environment import (
     TimeCommands,
     TimeMetadata,
@@ -30,7 +32,7 @@ def create_time_signal(hardware_metadata):
 
 
 def worksheet_time_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/time/time.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/time/time_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -45,7 +47,7 @@ def worksheet_time_metadata(hardware_metadata):
 
 
 def netcdf_time_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/time/time.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/time/time_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -142,4 +144,15 @@ def time_event_list():
         stop_hardware_event,
     ]
 
+    return event_list
+
+
+def worksheet_time_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/time/time_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.TIME,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
     return event_list
