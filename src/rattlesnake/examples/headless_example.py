@@ -19,13 +19,13 @@ from rattlesnake.testing.mock_user_interface import launch_temporary_rattlesnake
 
 """USER INPUTS"""
 THREADED = True
-IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
+IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = True
 RUN_SYSID = False
-START_HARDWARE = True
+START_HARDWARE = False
 START_ENVIRONMENT = False
 RUN_PROFILE = False
 
@@ -61,7 +61,7 @@ def build_rattlesnake_object(
 
     # Run System Identification
     if environment_type in SYSID_ENVIRONMENTS:
-        sysid_metadata = SYSID_DICT[import_method](hardware_metadata)
+        sysid_metadata = SYSID_DICT["manual"](hardware_metadata)
         rattlesnake.initialize_system_id(sysid_metadata, environment_name)
         if run_sysid:
             rattlesnake.run_system_id(sysid_metadata, environment_name)

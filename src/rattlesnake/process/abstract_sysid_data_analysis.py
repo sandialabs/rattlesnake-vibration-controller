@@ -357,9 +357,9 @@ class SysIdMetadata:
             worksheet.cell(start_row + 5, 2, self.sysid_estimator)
         if self.sysid_level is not None:
             worksheet.cell(start_row + 6, 2, self.sysid_level)
-        if self.sysid_low_frequency_cutoff:
+        if self.sysid_low_frequency_cutoff is not None:
             worksheet.cell(start_row + 7, 2, self.sysid_low_frequency_cutoff)
-        if self.sysid_high_frequency_cutoff:
+        if self.sysid_high_frequency_cutoff is not None:
             worksheet.cell(start_row + 8, 2, self.sysid_high_frequency_cutoff)
         if self.sysid_level_ramp_time is not None:
             worksheet.cell(start_row + 9, 2, self.sysid_level_ramp_time)
@@ -392,13 +392,15 @@ class SysIdMetadata:
         )
         sysid_estimator = worksheet.cell(start_row + 5, 2).value
         sysid_level = float(worksheet.cell(start_row + 6, 2).value)
-        sysid_level_ramp_time = float(worksheet.cell(start_row + 7, 2).value)
-        sysid_signal_type = worksheet.cell(start_row + 8, 2).value
-        sysid_window = worksheet.cell(start_row + 9, 2).value
-        sysid_overlap = float(worksheet.cell(start_row + 10, 2).value) / 100
-        sysid_burst_on = float(worksheet.cell(start_row + 11, 2).value) / 100
-        sysid_pretrigger = float(worksheet.cell(start_row + 12, 2).value) / 100
-        sysid_burst_ramp_fraction = float(worksheet.cell(start_row + 13, 2).value) / 100
+        sysid_low_frequency_cutoff = worksheet.cell(start_row + 7, 2).value
+        sysid_high_frequency_cutoff = worksheet.cell(start_row + 8, 2).value
+        sysid_level_ramp_time = float(worksheet.cell(start_row + 9, 2).value)
+        sysid_signal_type = worksheet.cell(start_row + 10, 2).value
+        sysid_window = worksheet.cell(start_row + 11, 2).value
+        sysid_overlap = float(worksheet.cell(start_row + 12, 2).value) / 100
+        sysid_burst_on = float(worksheet.cell(start_row + 13, 2).value) / 100
+        sysid_pretrigger = float(worksheet.cell(start_row + 14, 2).value) / 100
+        sysid_burst_ramp_fraction = float(worksheet.cell(start_row + 15, 2).value) / 100
 
         return cls(
             sample_rate=hardware_metadata.sample_rate,
@@ -416,8 +418,8 @@ class SysIdMetadata:
             sysid_burst_on=sysid_burst_on,
             sysid_pretrigger=sysid_pretrigger,
             sysid_burst_ramp_fraction=sysid_burst_ramp_fraction,
-            sysid_low_frequency_cutoff=0,
-            sysid_high_frequency_cutoff=int(hardware_metadata.sample_rate / 2),
+            sysid_low_frequency_cutoff=sysid_low_frequency_cutoff,
+            sysid_high_frequency_cutoff=sysid_high_frequency_cutoff,
             stream_file=None,
             auto_shutdown=False,
         )

@@ -39,6 +39,7 @@ from rattlesnake.process.output import output_process
 from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
 from rattlesnake.process.controller import controller_process
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
+from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 # from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 
@@ -453,6 +454,11 @@ class RattlesnakeController:
                     )
                     self.initialize_hardware(hardware_metadata)
                     self.initialize_environments(environment_metadata_list)
+                    # Initialize system identification if it exists
+                    for environment_metadata in environment_metadata_list:
+                        environment_type = environment_metadata.environment_type
+                        if environment_type in SYSID_ENVIRONMENTS and environment_metadata.sysid_metadata is not None:
+                            self.initialize_system_id(environment_metadata.sysid_metadata, environment_metadata.environment_name)
                     self.initialize_profile_event_list([])
                     self.last_stream_metadata = None
                 case ".xlsx":
@@ -462,6 +468,11 @@ class RattlesnakeController:
                     )
                     self.initialize_hardware(hardware_metadata)
                     self.initialize_environments(environment_metadata_list)
+                    # Initialize system identification if it exists
+                    for environment_metadata in environment_metadata_list:
+                        environment_type = environment_metadata.environment_type
+                        if environment_type in SYSID_ENVIRONMENTS and environment_metadata.sysid_metadata is not None:
+                            self.initialize_system_id(environment_metadata.sysid_metadata, environment_metadata.environment_name)
                     self.initialize_profile_event_list(profile_event_list)
                     self.last_stream_metadata = None
         finally:

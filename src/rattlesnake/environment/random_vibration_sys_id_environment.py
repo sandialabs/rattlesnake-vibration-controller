@@ -592,9 +592,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(14, 1, "Control Parameters:")
         worksheet.cell(14, 3, "# Extra parameters used in the control law")
         worksheet.cell(15, 1, "Control Channels (1-based):")
-        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=16)
-        worksheet.cell(32, 1, "Sigma Clipping")
-        worksheet.cell(32, 3, "# Standard-deviation threshold used to reject outlier data.")
+        worksheet.cell(16, 1, "Sigma Clipping")
+        worksheet.cell(16, 3, "# Standard-deviation threshold used to reject outlier data.")
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=17)
         worksheet.cell(33, 1, "Specification File:")
         worksheet.cell(33, 3, "# Path to the file containing the Specification")
         worksheet.cell(34, 1, "Response Transformation Matrix:")
@@ -650,17 +650,15 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             for idx, channel_ind in enumerate(self.control_channel_indices):
                 col_idx = idx + 2
                 worksheet.cell(15, col_idx, channel_ind + 1)
-        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=16)
         if self.sigma_clip is not None:
-            worksheet.cell(32, 2, self.sigma_clip)
+            worksheet.cell(16, 2, self.sigma_clip)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=17)
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
             self.reference_transformation_matrix,
             start_row=34,
         )
-
-        # TODO Fix the template to include this
         
 
     @classmethod
@@ -713,9 +711,6 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             if worksheet.cell(14, 2).value is not None
             else ""
         )
-
-        sigma_clip = float(worksheet.cell(32, 2).value)
-
         control_channel_indices = []
         column_index = 2
         while True:
@@ -729,25 +724,31 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             except:
                 break
             column_index += 1
+        sigma_clip = float(worksheet.cell(16, 2).value)
+
+        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(worksheet, hardware_metadata, 17)
 
         response_transformation_matrix, output_transformation_matrix = (
             cls.load_sysid_matrix_from_worksheet(worksheet, start_row=34)
         )
 
         # Find python module type
-        python_control_module = load_python_module(control_python_script)
-        function = getattr(python_control_module, control_python_function)
-        control_python_function_type = None
-        if inspect.isgeneratorfunction(function):
-            control_python_function_type = 1
-        elif inspect.isclass(function) and issubclass(
-            function, AbstractControlLawComputation
-        ):
-            control_python_function_type = 2
-        elif inspect.isclass(function):
-            control_python_function_type = 3
+        if control_python_script:
+            python_control_module = load_python_module(control_python_script)
+            function = getattr(python_control_module, control_python_function)
+            control_python_function_type = None
+            if inspect.isgeneratorfunction(function):
+                control_python_function_type = 1
+            elif inspect.isclass(function) and issubclass(
+                function, AbstractControlLawComputation
+            ):
+                control_python_function_type = 2
+            elif inspect.isclass(function):
+                control_python_function_type = 3
+            else:
+                control_python_function_type = 0
         else:
-            control_python_function_type = 0
+            control_python_function_type = None
 
         coord_dtype = np.dtype([("node", "<u8"), ("direction", "i1")])
         if response_transformation_matrix is not None:
@@ -766,8 +767,6 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 dtype=coord_dtype,
             )
 
-        # TODO Fix the template to include this
-        
         metadata = cls(
             environment_name=environment_name,
             channel_list_bools=channel_list_bools,
@@ -797,11 +796,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             specification_abort_matrix=None,
             response_transformation_matrix=response_transformation_matrix,
             output_transformation_matrix=output_transformation_matrix,
-            sysid_metadata=None,
+            sysid_metadata=sysid_metadata,
         )
 
         # Load specification
-        specification_file = worksheet.cell(30, 2).value
+        specification_file = worksheet.cell(33, 2).value
         if specification_file is not None:
             (
                 metadata.specification_frequency_lines,

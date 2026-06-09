@@ -16,7 +16,7 @@ ENVIRONMENT_NAME = "Random 0"
 
 def worksheet_random_metadata(hardware_metadata):
 
-    worksheet_dir = defaults.DIRECTORY + "/environment/random/random.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -24,16 +24,16 @@ def worksheet_random_metadata(hardware_metadata):
     metadata = RandomVibrationMetadata.load_metadata_from_worksheet(
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
+    metadata.control_python_script = defaults.DIRECTORY + "/control_laws/control_laws.py"
+    metadata.control_python_function = "buzz_control"
+    metadata.control_python_function_type = 0
+    metadata.control_python_function_parameters = ""
     (
-        specification_frequency_lines,
-        specification_cpsd_matrix,
-        specification_warning_matrix,
-        specification_abort_matrix,
+        metadata.specification_frequency_lines,
+        metadata.specification_cpsd_matrix,
+        metadata.specification_warning_matrix,
+        metadata.specification_abort_matrix,
     ) = create_sine_specification(hardware_metadata.sample_rate)
-    metadata.specification_frequency_lines = specification_frequency_lines
-    metadata.specification_cpsd_matrix = specification_cpsd_matrix
-    metadata.specification_warning_matrix = specification_warning_matrix
-    metadata.specification_abort_matrix = specification_abort_matrix
 
     return metadata
 

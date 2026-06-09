@@ -339,10 +339,16 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
                 "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
                 "the number of physical output channels in the environment.",
             )
+        else:
+            worksheet.cell(response_row, 2, "None",
+            )
         if output_matrix is not None:
             for i, row in enumerate(output_matrix):
                 for j, value in enumerate(row):
                     worksheet.cell(i + output_row, j + 2, value)
+        else:
+            worksheet.cell(output_row, 2, "None")
+
 
     @classmethod
     def load_sysid_matrix_from_worksheet(cls, worksheet, start_row):

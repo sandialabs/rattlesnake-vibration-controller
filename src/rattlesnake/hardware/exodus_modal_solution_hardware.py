@@ -151,9 +151,9 @@ class ExodusMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Hardware File":
+                case "hardware_file":
                     hardware_file = value
-                case "Damping Ratio":
+                case "damping_ratio":
                     damping_ratio = value
                 case _:
                     continue

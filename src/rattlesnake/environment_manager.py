@@ -397,12 +397,6 @@ class EnvironmentManager:
                 profile_event._queue_name = queue_name
                 profile_event._environment_type = self.environment_types[queue_name]
 
-                if not self.acquisition_ready_environments[queue_name]:
-                    pass
-                    raise RattlesnakeError(
-                        f"{environment_name} requires a system identifcation before performing profile events"
-                    )
-
     # endregion
 
     # region Environment

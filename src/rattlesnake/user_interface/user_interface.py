@@ -75,6 +75,7 @@ from rattlesnake.user_interface.ui_registry import (
     ENVIRONMENT_UIS,
     UI_ENVIRONMENT_OPTIONS,
 )
+from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 # region Defaults
 # pyqtgraph.setConfigOption('leftButtonPan',False)
@@ -727,14 +728,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.environment_uis[environment_name].initialize_hardware(
                 hardware_metadata
             )
-            # QtWidgets.QApplication.processEvents()
             self.environment_uis[environment_name].set_environment_metadata(
                 environment_metadata
             )
-            # QtWidgets.QApplication.processEvents()
             self.environment_uis[environment_name].initialize_environment(
                 environment_metadata
             )
+            if environment_type in SYSID_ENVIRONMENTS and environment_metadata.sysid_metadata is not None:
+                self.environment_uis[environment_name].set_sysid_metadata(environment_metadata.sysid_metadata)
 
         self.update_environment_tabs()
         streaming_environment_items = [""] + list(self.environment_uis.keys())
@@ -2047,7 +2048,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             profile_event_list.append(event)
 
         workbook = openpyxl.Workbook()
-        save_profile_to_workbook(workbook, profile_event_list)
+        profile_sheet = workbook.active
+        profile_sheet.title = "Test Profile"
+        save_profile_to_workbook(profile_sheet, profile_event_list)
         workbook.save(filepath)
 
     def add_profile_event(self, clicked=None):

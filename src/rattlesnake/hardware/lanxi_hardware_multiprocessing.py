@@ -144,7 +144,7 @@ class LanXIMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Maximum Acquisition Processes":
+                case "maximum_acquisition_processes":
                     maximum_acquisition_processes = value
                 case _:
                     continue

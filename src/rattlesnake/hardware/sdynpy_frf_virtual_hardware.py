@@ -137,7 +137,7 @@ class SDynPyFRFMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Hardware File":
+                case "hardware_file":
                     hardware_file = value
                 case _:
                     continue

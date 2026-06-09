@@ -388,21 +388,79 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     def set_sysid_metadata(self, sysid_metadata: SysIdMetadata):
         """
-        Update the user interface with sysid parameters
+        Update the user interface with sysid parameters.
 
-        This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
-
-        Returns
-        -------
-        AbstractMetadata
-            An AbstractMetadata-inheriting object that contains the parameters
-            defining the environment.
-
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            Metadata object containing the system identification parameters.
         """
-        pass
+        self.system_id_widget.samplesPerFrameSpinBox.setValue(
+            sysid_metadata.sysid_frame_size
+        )
+
+        averaging_index = self.system_id_widget.averagingTypeComboBox.findText(
+            sysid_metadata.sysid_averaging_type
+        )
+        if averaging_index >= 0:
+            self.system_id_widget.averagingTypeComboBox.setCurrentIndex(averaging_index)
+
+        self.system_id_widget.noiseAveragesSpinBox.setValue(
+            sysid_metadata.sysid_noise_averages
+        )
+        self.system_id_widget.systemIDAveragesSpinBox.setValue(
+            sysid_metadata.sysid_averages
+        )
+        self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(
+            sysid_metadata.sysid_exponential_averaging_coefficient
+        )
+
+        estimator_index = self.system_id_widget.estimatorComboBox.findText(
+            sysid_metadata.sysid_estimator
+        )
+        if estimator_index >= 0:
+            self.system_id_widget.estimatorComboBox.setCurrentIndex(estimator_index)
+
+        self.system_id_widget.levelDoubleSpinBox.setValue(sysid_metadata.sysid_level)
+        self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(
+            sysid_metadata.sysid_level_ramp_time
+        )
+
+        signal_type_index = self.system_id_widget.signalTypeComboBox.findText(
+            sysid_metadata.sysid_signal_type
+        )
+        if signal_type_index >= 0:
+            self.system_id_widget.signalTypeComboBox.setCurrentIndex(signal_type_index)
+
+        window_index = self.system_id_widget.windowComboBox.findText(
+            sysid_metadata.sysid_window
+        )
+        if window_index >= 0:
+            self.system_id_widget.windowComboBox.setCurrentIndex(window_index)
+
+        self.system_id_widget.overlapDoubleSpinBox.setValue(
+            sysid_metadata.sysid_overlap * 100
+        )
+        self.system_id_widget.onFractionDoubleSpinBox.setValue(
+            sysid_metadata.sysid_burst_on * 100
+        )
+        self.system_id_widget.pretriggerDoubleSpinBox.setValue(
+            sysid_metadata.sysid_pretrigger * 100
+        )
+        self.system_id_widget.rampFractionDoubleSpinBox.setValue(
+            sysid_metadata.sysid_burst_ramp_fraction * 100
+        )
+
+        self.system_id_widget.lowFreqCutoffSpinBox.setValue(
+            sysid_metadata.sysid_low_frequency_cutoff
+        )
+        self.system_id_widget.highFreqCutoffSpinBox.setValue(
+            sysid_metadata.sysid_high_frequency_cutoff
+        )
+
+        self.system_id_widget.transfer_function_stream_file_display.setText(
+            sysid_metadata.stream_file if sysid_metadata.stream_file is not None else ""
+        )
 
     @abstractmethod
     def get_environment_instructions(self):

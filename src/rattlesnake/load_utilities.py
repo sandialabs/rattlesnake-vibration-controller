@@ -12,6 +12,7 @@ from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_METADATA,
     ENVIRONMENT_COMMANDS,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 
 def load_metadata_from_netcdf(dataset):
@@ -185,18 +186,7 @@ def save_rattlesnake_to_workbook(
 
     # Save profile event list
     profile_sheet = workbook.create_sheet("Test Profile")
-    profile_sheet.cell(1, 1, "Time (s)")
-    profile_sheet.cell(1, 2, "Environment")
-    profile_sheet.cell(1, 3, "Operation")
-    profile_sheet.cell(1, 4, "Data")
-    # Fill out values
-    if profile_event_list:
-        for row, event in enumerate(profile_event_list):
-            row_idx = row + 2
-            profile_sheet.cell(row_idx, 1, str(event.timestamp))
-            profile_sheet.cell(row_idx, 2, event.environment_name)
-            profile_sheet.cell(row_idx, 3, event.command.label)
-            profile_sheet.cell(row_idx, 4, str(event.data))
+    save_profile_to_workbook(profile_sheet, profile_event_list)
 
 
 def load_profile_from_workbook(workbook, environment_types):
@@ -221,6 +211,9 @@ def load_profile_from_workbook(workbook, environment_types):
             command = GlobalCommands[command]
         elif command in ENVIRONMENT_COMMANDS[environment_type].__members__:
             command = ENVIRONMENT_COMMANDS[environment_type][command]
+        elif command == "SET_ENVIRONMENT_INSTRUCTIONS": # This should not be set by workbook.
+            index += 1
+            continue
         else:
             raise RattlesnakeError(
                 f"Invalid command: {command} for {environment_name} | {environment_type}"
@@ -237,18 +230,19 @@ def load_profile_from_workbook(workbook, environment_types):
     return profile_event_list
 
 
-def save_profile_to_workbook(workbook, profile_event_list):
-    profile_sheet = workbook.active
-    profile_sheet.title = "Test Profile"
+def save_profile_to_workbook(profile_sheet, profile_event_list):
     profile_sheet.cell(1, 1, "Time (s)")
     profile_sheet.cell(1, 2, "Environment")
     profile_sheet.cell(1, 3, "Operation")
     profile_sheet.cell(1, 4, "Data")
     # Fill out values
     if profile_event_list:
-        for row, event in enumerate(profile_event_list):
-            row_idx = row + 2
+        row_idx = 2
+        for event in profile_event_list:
+            if event.command == UICommands.SET_ENVIRONMENT_INSTRUCTIONS:
+                continue
             profile_sheet.cell(row_idx, 1, str(event.timestamp))
             profile_sheet.cell(row_idx, 2, event.environment_name)
             profile_sheet.cell(row_idx, 3, event.command.label)
             profile_sheet.cell(row_idx, 4, str(event.data))
+            row_idx = row_idx + 1

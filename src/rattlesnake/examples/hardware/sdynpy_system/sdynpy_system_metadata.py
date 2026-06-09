@@ -12,7 +12,7 @@ HARDWARE_FILE = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.npz"
 
 
 def worksheet_sdynpy_system_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = SDynPySystemMetadata.load_metadata_from_workbook(workbook)
     metadata.hardware_file = HARDWARE_FILE

@@ -337,9 +337,9 @@ class NIDAQmxMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Task Trigger":
+                case "task_trigger":
                     task_trigger = value
-                case "Task Trigger Output Channel":
+                case "task_trigger_output_channel":
                     output_trigger_generator = value
                 case _:
                     continue
