@@ -716,6 +716,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         log_file_queue: mp.queues.Queue,
         gui_update_queue: mp.queues.Queue,
         environment_name: str,
+        ping_alive_event: mp.synchronize.Event,
     ):
         """Initialize the environment process
 
@@ -760,6 +761,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.map_command(
             SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, self.load_sysid_data_package
         )
+        self._ping_alive_event = ping_alive_event
         self.environment_name = environment_name
         self.environment_command_queue = environment_command_queue
         self.data_in_queue = data_in_queue
@@ -768,6 +770,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.frames = None
         self.sysid_data = SysIdDataPackage()
         self.startup = True
+
+    def ping_alive(self):
+        self._ping_alive_event.set()
 
     # region State Sync
     def initialize_environment(self, data: str):
@@ -875,6 +880,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.command_queue.put(
                 self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown)
             )
+            self.ping_alive()
 
     def run_sysid_transfer_function(self, auto_shutdown):
         """Starts and runs the system identification
@@ -934,6 +940,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 self.process_name,
                 (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
             )
+            self.ping_alive()
 
     def stop_sysid(self, data):  # pylint: disable=unused-argument
         """Stops the currently running system identification phase
@@ -971,6 +978,7 @@ def sysid_data_analysis_process(
     environment_command_queue: VerboseMessageQueue,
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
+    ping_alive_event: mp.synchronize.Event,
     process_name=None,
 ):
     """An function called by multiprocessing to start up the system identification analysis
@@ -1008,6 +1016,7 @@ def sysid_data_analysis_process(
         log_file_queue,
         gui_update_queue,
         environment_name,
+        ping_alive_event,
     )
 
     data_analysis_instance.run()

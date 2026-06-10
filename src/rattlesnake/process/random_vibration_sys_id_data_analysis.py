@@ -21,6 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import importlib
 import multiprocessing as mp
 import os
@@ -50,6 +51,7 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 # region Commands
 class RandomVibrationDataAnalysisCommands(Enum):
     """Enumeration containing valid commands for the random data analysis process"""
+
     INITIALIZE_ENVIRONMENT = 0
     INITIALIZE_PARAMETERS = 1
     PERFORM_CONTROL_PREDICTION = 2
@@ -67,6 +69,7 @@ class RandomVibrationDataAnalysisUICommands(Enum):
 
 # endregion
 
+
 class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
 
@@ -81,6 +84,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         log_file_queue: mp.queues.Queue,
         gui_update_queue: mp.queues.Queue,
         environment_name: str,
+        ping_alive_event: mp.synchronize.Event,
     ):
         super().__init__(
             process_name,
@@ -91,9 +95,12 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             log_file_queue,
             gui_update_queue,
             environment_name,
+            ping_alive_event,
         )
-        self.map_command(RandomVibrationDataAnalysisCommands.INITIALIZE_ENVIRONMENT, 
-                         self.initialize_environment)
+        self.map_command(
+            RandomVibrationDataAnalysisCommands.INITIALIZE_ENVIRONMENT,
+            self.initialize_environment,
+        )
         self.map_command(
             RandomVibrationDataAnalysisCommands.INITIALIZE_PARAMETERS,
             self.initialize_sysid_parameters,
@@ -108,7 +115,10 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         self.map_command(
             RandomVibrationDataAnalysisCommands.STOP_CONTROL, self.stop_control
         )
-        self.map_command(RandomVibrationDataAnalysisCommands.SAVE_CONTROL_DATA, self.save_spectral_data)
+        self.map_command(
+            RandomVibrationDataAnalysisCommands.SAVE_CONTROL_DATA,
+            self.save_spectral_data,
+        )
         self.map_command(
             ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
@@ -133,7 +143,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
     # region StateSync
     def initialize_environment(self, data):
-        # This is a terrible way to do this. Basically, data is supposed to be just a str of 
+        # This is a terrible way to do this. Basically, data is supposed to be just a str of
         # environment name but in this case, the data analysis process requires knowledge of
         # the original environment metadata so we are storing it here instead. Breaks chain
         # of inheritance for this environment.
@@ -158,13 +168,17 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         # Load in the control script
         _, file = os.path.split(self.environment_metadata.control_python_script)
         file, _ = os.path.splitext(file)
-        spec = importlib.util.spec_from_file_location(file, self.environment_metadata.control_python_script)
+        spec = importlib.util.spec_from_file_location(
+            file, self.environment_metadata.control_python_script
+        )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         # Pull out the function from the loaded module
         if self.environment_metadata.control_python_function_type == 1:  # Generator
             # Get the generator function
-            generator_function = getattr(module, self.environment_metadata.control_python_function)()
+            generator_function = getattr(
+                module, self.environment_metadata.control_python_function
+            )()
             # Get us to the first yield statement
             next(generator_function)
             # Define the control function as the generator's send function
@@ -180,7 +194,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 if self.environment_metadata.update_tf_during_control
                 else self.sysid_data.sysid_coherence
             )
-            self.control_function = getattr(module, self.environment_metadata.control_python_function)(
+            self.control_function = getattr(
+                module, self.environment_metadata.control_python_function
+            )(
                 self.environment_metadata.specification_cpsd_matrix,  # Specifications
                 self.environment_metadata.specification_warning_matrix,  # Warning levels
                 self.environment_metadata.specification_abort_matrix,  # Abort Levels
@@ -207,7 +223,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 if self.environment_metadata.update_tf_during_control
                 else self.sysid_data.sysid_coherence
             )
-            control_class = getattr(module, self.environment_metadata.control_python_function)
+            control_class = getattr(
+                module, self.environment_metadata.control_python_function
+            )
             self.control_function = control_class(
                 self.environment_name,
                 self.gui_update_queue,
@@ -229,7 +247,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.last_interactive_parameters = None
             self.has_sent_interactive_control_transfer_function_results = False
         else:  # Function
-            self.control_function = getattr(module, self.environment_metadata.control_python_function)
+            self.control_function = getattr(
+                module, self.environment_metadata.control_python_function
+            )
 
     # region Commands
     def perform_control_prediction(self, data):  # pylint: disable=unused-argument
@@ -334,7 +354,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 None,  # Last Control Excitation for Drive-based control
             )
         response_cpsd = (
-            self.sysid_data.sysid_frf @ output_cpsd @ self.sysid_data.sysid_frf.conjugate().transpose(0, 2, 1)
+            self.sysid_data.sysid_frf
+            @ output_cpsd
+            @ self.sysid_data.sysid_frf.conjugate().transpose(0, 2, 1)
         )
         self.drive_cpsd_prediction = output_cpsd
         self.response_cpsd_prediction = response_cpsd
@@ -345,7 +367,8 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             np.einsum("ijj->ij", self.response_cpsd_prediction[self.error_indices]).real
         ) - power2db(
             np.einsum(
-                "ijj->ij", self.environment_metadata.specification_cpsd_matrix[self.error_indices]
+                "ijj->ij",
+                self.environment_metadata.specification_cpsd_matrix[self.error_indices],
             ).real
         )
         rms_db_error = rms_time(response_db_error, axis=0)
@@ -416,7 +439,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     if (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            > self.environment_metadata.specification_abort_matrix[1, :, i]
+                            > self.environment_metadata.specification_abort_matrix[
+                                1, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -424,7 +449,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     elif (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            < self.environment_metadata.specification_abort_matrix[0, :, i]
+                            < self.environment_metadata.specification_abort_matrix[
+                                0, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -432,7 +459,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     elif (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            > self.environment_metadata.specification_warning_matrix[1, :, i]
+                            > self.environment_metadata.specification_warning_matrix[
+                                1, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -440,7 +469,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     elif (
                         sum(
                             self.last_response_cpsd[:, i, i]
-                            < self.environment_metadata.specification_warning_matrix[0, :, i]
+                            < self.environment_metadata.specification_warning_matrix[
+                                0, :, i
+                            ]
                         )
                         > lines_out
                     ):
@@ -453,14 +484,17 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 print(f"Aborting due to channel indices {abort_channels}")
                 self.log(f"Aborting due to channel indices {abort_channels}")
                 self.environment_command_queue.put(
-                    self.process_name, (RandomVibrationDataAnalysisCommands.STOP_CONTROL, None)
+                    self.process_name,
+                    (RandomVibrationDataAnalysisCommands.STOP_CONTROL, None),
                 )
             response_db_error = power2db(
                 np.einsum("ijj->ij", self.last_response_cpsd[self.error_indices]).real
             ) - power2db(
                 np.einsum(
                     "ijj->ij",
-                    self.environment_metadata.specification_cpsd_matrix[self.error_indices],
+                    self.environment_metadata.specification_cpsd_matrix[
+                        self.error_indices
+                    ],
                 ).real
             )
             rms_db_error = rms_time(response_db_error, axis=0)
@@ -539,7 +573,9 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             )
             self.data_out_queue.put([output_cpsd])
             self.log("Finished Controlling")
-            rms_voltages = rms_csd(output_cpsd, self.environment_metadata.frequency_spacing)
+            rms_voltages = rms_csd(
+                output_cpsd, self.environment_metadata.frequency_spacing
+            )
             self.gui_update_queue.put(
                 (
                     self.environment_name,
@@ -591,9 +627,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
     def save_spectral_data(self, data):
         filename = data
-        netcdf_dataset = nc4.Dataset(
-            filename, "a", format="NETCDF4"
-        )
+        netcdf_dataset = nc4.Dataset(filename, "a", format="NETCDF4")
         netcdf_handle = netcdf_dataset.groups[self.environment_name]
         netcdf_handle.createDimension(
             "drive_channels", self.sysid_data.sysid_frf.shape[2]
@@ -660,7 +694,10 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         var[...] = self.sysid_data.sysid_reference_noise.imag
 
         netcdf_dataset.close()
+
+
 # endregion
+
 
 # region Process
 def random_data_analysis_process(
@@ -671,6 +708,7 @@ def random_data_analysis_process(
     environment_command_queue: VerboseMessageQueue,
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
+    ping_alive_event: mp.synchronize.Event,
     process_name=None,
 ):
     """Process defining the random vibration control calculations and data analysis
@@ -704,6 +742,7 @@ def random_data_analysis_process(
         log_file_queue,
         gui_update_queue,
         environment_name,
+        ping_alive_event,
     )
 
     data_analysis_instance.run()

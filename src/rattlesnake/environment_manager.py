@@ -64,6 +64,7 @@ class EnvironmentManager:
         self.environment_sysid_stored_events = (
             event_container.environment_sysid_stored_events
         )
+        self.ping_alive_event = event_container.ping_alive_event
         self._threaded = threaded
         if threaded:
             self.new_process = threading.Thread
@@ -453,6 +454,7 @@ class EnvironmentManager:
                 self.environment_close_events[queue_name],
                 self.environment_sysid_active_events[queue_name],
                 self.environment_sysid_stored_events[queue_name],
+                self.ping_alive_event,
                 self.threaded,
             ),
         )

@@ -1455,6 +1455,7 @@ def random_vibration_process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """Random vibration environment process function called by multiprocessing
@@ -1522,6 +1523,7 @@ def random_vibration_process(
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
             queue_container.log_file_queue,
+            ping_alive_event,
         ),
     )
     analysis_proc.start()

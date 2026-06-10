@@ -20,14 +20,14 @@ from rattlesnake.testing.mock_user_interface import (
 )
 
 """USER INPUTS"""
-THREADED = True
-IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_FRF
-ENVIRONMENT_TYPE = EnvironmentType.TIME
+THREADED = False
+IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
+HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
+ENVIRONMENT_TYPE = EnvironmentType.TRANSIENT
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = True
+LOAD_SYSID = False
 RUN_SYSID = False
-START_HARDWARE = True
+START_HARDWARE = False
 START_ENVIRONMENT = False
 RUN_PROFILE = False
 
@@ -44,7 +44,7 @@ def build_rattlesnake_object(
     start_environment=START_ENVIRONMENT,
     run_profile=RUN_PROFILE,
 ):
-    rattlesnake = RattlesnakeController(threaded=threaded, timeout=120)
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=10)
 
     # Initialize hardware
     if hardware_type is HardwareType.NONE:

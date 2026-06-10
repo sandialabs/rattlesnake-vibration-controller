@@ -233,9 +233,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_first_data = {}
         for queue_name, metadata in metadata_dict.items():
             self.environment_list.append(queue_name)
-            self.environment_acquisition_channels[queue_name] = (
-                metadata.channel_indices
-            )
+            self.environment_acquisition_channels[queue_name] = metadata.channel_indices
             self.environment_active_flags[queue_name] = False
             self.environment_last_data[queue_name] = False
             self.environment_samples_remaining_to_read[queue_name] = 0
@@ -603,6 +601,7 @@ def acquisition_process(
     streaming_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
 ):
     """Function passed to multiprocessing as the acquisition process
 

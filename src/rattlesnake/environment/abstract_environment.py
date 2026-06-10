@@ -139,9 +139,13 @@ class EnvironmentMetadata(ABC):
             if environment_bool
         ]
         return channel_indices
-    
+
     def environment_channel_list(self, channel_list):
-        environment_channel_list = [channel for channel, channel_bool in zip(channel_list, self.channel_list_bools) if channel_bool]
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(channel_list, self.channel_list_bools)
+            if channel_bool
+        ]
         return environment_channel_list
 
     # endregion
@@ -715,6 +719,7 @@ def process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment

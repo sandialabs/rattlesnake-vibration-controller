@@ -487,6 +487,7 @@ def output_process(
     output_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
 ):
     """Function passed to multiprocessing as the output process
 

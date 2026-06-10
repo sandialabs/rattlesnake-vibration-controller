@@ -365,6 +365,7 @@ class EventContainer:
         environment_active_events: Dict[str, mp.synchronize.Event],
         environment_sysid_active_events: Dict[str, mp.synchronize.Event],
         environment_sysid_stored_events: Dict[str, mp.synchronize.Event],
+        ping_alive_event: mp.synchronize.Event,
     ):
         # Ready Events
         self.controller_ready_event = controller_ready_event
@@ -387,6 +388,8 @@ class EventContainer:
         self.environment_sysid_active_events = environment_sysid_active_events
         # Storage Events
         self.environment_sysid_stored_events = environment_sysid_stored_events
+        # Alive Event
+        self.ping_alive_event = ping_alive_event
 
 
 def flush_queue(queue, timeout=None):

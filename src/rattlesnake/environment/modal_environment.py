@@ -1523,6 +1523,7 @@ def modal_process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """Modal environment process function called by multiprocessing

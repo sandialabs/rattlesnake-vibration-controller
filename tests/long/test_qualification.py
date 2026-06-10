@@ -134,3 +134,40 @@ def test_rattlesnake_ui_start_environment_qualification(
     )
 
     launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
+
+
+@pytest.mark.parametrize("threaded", [False])
+@pytest.mark.parametrize("import_method", ["manual"])
+@pytest.mark.parametrize(
+    "hardware_type",
+    [
+        HardwareType.SDYNPY_SYSTEM,
+    ],
+)
+@pytest.mark.parametrize(
+    "environment_type",
+    [
+        EnvironmentType.TIME,
+        EnvironmentType.MODAL,
+        EnvironmentType.SINE,
+        EnvironmentType.RANDOM,
+        EnvironmentType.TRANSIENT,
+    ],
+)
+def test_minimal_qualification(
+    threaded, import_method, hardware_type, environment_type
+):
+    rattlesnake = build_rattlesnake_object(
+        threaded=threaded,
+        import_method=import_method,
+        hardware_type=hardware_type,
+        environment_type=environment_type,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=True,
+        run_sysid=False,
+        start_hardware=True,
+        start_environment=False,
+        run_profile=False,
+    )
+
+    launch_temporary_rattlesnake_ui_profile(rattlesnake, 60)

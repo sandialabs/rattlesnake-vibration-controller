@@ -1351,6 +1351,7 @@ class EventWatcher(QtCore.QObject):
         self,
         ready_event_list,
         active_event_list,
+        ping_alive_event,
         *,
         active_event_check: bool = None,
         timeout=None,
@@ -1358,6 +1359,7 @@ class EventWatcher(QtCore.QObject):
         super().__init__()
         self.ready_event_list = ready_event_list
         self.active_event_list = active_event_list
+        self.ping_alive_event = ping_alive_event
         self.active_event_check = active_event_check
         self.timeout = timeout
         self._cancel_event = threading.Event()
@@ -1380,6 +1382,11 @@ class EventWatcher(QtCore.QObject):
                 if ready_ok and active_ok:
                     self.ready.emit()
                     return
+
+                if self.ping_alive_event.is_set():
+                    print("\nAlive Event Pinged\n")
+                    start = time.time()
+                    self.ping_alive_event.clear()
 
                 if self.timeout and (time.time() - start) > self.timeout:
                     for event in self.ready_event_list:

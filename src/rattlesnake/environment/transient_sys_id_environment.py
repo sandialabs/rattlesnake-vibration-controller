@@ -1283,6 +1283,7 @@ def transient_process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """
@@ -1353,6 +1354,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
+                ping_alive_event,
             ),
         )
         analysis_proc.start()
