@@ -138,7 +138,9 @@ class TimeMetadata(EnvironmentMetadata):
     @property
     def cancel_rampdown_samples(self):
         """The number of samples required to ramp down the signal when cancelled"""
-        return int(self.cancel_rampdown_time * self.sample_rate * self.output_oversample)
+        return int(
+            self.cancel_rampdown_time * self.sample_rate * self.output_oversample
+        )
 
     @property
     def signal_file(self):

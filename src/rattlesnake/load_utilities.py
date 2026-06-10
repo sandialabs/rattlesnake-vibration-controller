@@ -55,7 +55,15 @@ def load_metadata_from_netcdf(dataset):
 
 
 def discover_environment_type_in_old_netcdf(environment_group):
-    if hasattr(environment_group, "cancel_rampdown_time"):
+    if hasattr(environment_group, "tracking_filter_type"):
+        return EnvironmentType.SINE
+    elif hasattr(environment_group, "update_tf_during_control"):
+        return EnvironmentType.RANDOM
+    elif hasattr(environment_group, "num_averages"):
+        return EnvironmentType.MODAL
+    elif hasattr(environment_group, "test_level_ramp_time"):
+        return EnvironmentType.TRANSIENT
+    elif hasattr(environment_group, "cancel_rampdown_time"):
         return EnvironmentType.TIME
     else:
         raise RattlesnakeError("Invalid netcdf4 file")

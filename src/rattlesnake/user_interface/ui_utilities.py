@@ -28,6 +28,7 @@ import pyqtgraph
 import requests
 import time
 import threading
+import traceback
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt
@@ -82,6 +83,7 @@ def error_message_qt(title, message):
         Error message that will be displayed.
 
     """
+    print(message)
     QtWidgets.QMessageBox.critical(None, title, message)
 
 

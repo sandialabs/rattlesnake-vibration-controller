@@ -340,7 +340,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
                 "the number of physical output channels in the environment.",
             )
         else:
-            worksheet.cell(response_row, 2, "None",
+            worksheet.cell(
+                response_row,
+                2,
+                "None",
             )
         if output_matrix is not None:
             for i, row in enumerate(output_matrix):
@@ -348,7 +351,6 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
                     worksheet.cell(i + output_row, j + 2, value)
         else:
             worksheet.cell(output_row, 2, "None")
-
 
     @classmethod
     def load_sysid_matrix_from_worksheet(cls, worksheet, start_row):
@@ -359,10 +361,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             and worksheet.cell(start_response_row, 2).value.lower() == "none"
         ):
             response_transformation_matrix = None
-        elif (
-            worksheet.cell(start_response_row, 2)
-            .value.lower()
-            .startswith("# transformation matrix")
+        elif isinstance(
+            worksheet.cell(start_response_row, 2).value, str
+        ) and worksheet.cell(start_response_row, 2).value.lower().startswith(
+            "# transformation matrix"
         ):
             response_transformation_matrix = None
         else:
@@ -396,10 +398,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             and worksheet.cell(start_output_row, 2).value.lower() == "none"
         ):
             output_transformation_matrix = None
-        elif (
-            worksheet.cell(start_output_row, 2)
-            .value.lower()
-            .startswith("# transformation matrix")
+        elif isinstance(
+            worksheet.cell(start_output_row, 2).value, str
+        ) and worksheet.cell(start_output_row, 2).value.lower().startswith(
+            "# transformation matrix"
         ):
             output_transformation_matrix = None
         else:
