@@ -6,6 +6,8 @@ import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.load_utilities import load_profile_from_workbook
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
     TransientMetadata,
@@ -15,12 +17,39 @@ from rattlesnake.environment.transient_sys_id_environment import (
 ENVIRONMENT_NAME = "Transient 0"
 
 
-def netcdf_transient_metadata(hardware_metadata):
-    pass
-
-
 def worksheet_transient_metadata(hardware_metadata):
-    pass
+    worksheet_dir = defaults.DIRECTORY + "/environment/transient/transient_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    worksheet = workbook[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    metadata = TransientMetadata.load_metadata_from_worksheet(
+        worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    metadata.control_python_script = (
+        defaults.DIRECTORY + "/control_laws/transient_control_laws.py"
+    )
+    metadata.control_python_function = "pseudoinverse_control"
+    metadata.control_python_function_type = 0
+    metadata.control_signal = create_control_signal()
+
+    return metadata
+
+
+def netcdf_transient_metadata(hardware_metadata):
+    netcdf_dir = defaults.DIRECTORY + "/environment/transient/transient_v4.nc4"
+    netcdf_dataset = nc4.Dataset(netcdf_dir)
+    netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    metadata = TransientMetadata.load_metadata_from_netcdf(
+        netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    metadata.control_python_script = (
+        defaults.DIRECTORY + "/control_laws/transient_control_laws.py"
+    )
+
+    return metadata
 
 
 def manual_transient_metadata(hardware_metadata):
@@ -69,9 +98,11 @@ def create_control_signal():
 
     return signal
 
+
 def transient_instructions():
     instructions = TransientInstructions(ENVIRONMENT_NAME, test_level=0, repeat=True)
     return instructions
+
 
 def transient_event_list():
     timestamp = 0
@@ -80,9 +111,7 @@ def transient_event_list():
 
     timestamp = 0
     command = TransientCommands.SET_REPEAT
-    repeat_event = ProfileEvent(
-        timestamp, ENVIRONMENT_NAME, command
-    )
+    repeat_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
     timestamp = 0
     command = GlobalCommands.START_ENVIRONMENT
@@ -133,4 +162,15 @@ def transient_event_list():
         stop_hardware_event,
     ]
 
+    return event_list
+
+
+def worksheet_transient_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/transient/transient_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.TRANSIENT,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
     return event_list

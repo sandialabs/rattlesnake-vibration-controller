@@ -514,6 +514,10 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 "reference_transformation_matrix"
             ][...]
 
+        sysid_metadata = SysIdMetadata.load_metadata_from_netcdf(
+            netcdf_group_handle, hardware_metadata
+        )
+
         return cls(
             environment_name=environment_name,
             channel_list_bools=channel_list_bools,
@@ -543,7 +547,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             specification_abort_matrix=specification_abort_matrix,
             response_transformation_matrix=response_transformation_matrix,
             output_transformation_matrix=reference_transformation_matrix,
-            sysid_metadata=None,
+            sysid_metadata=sysid_metadata,
         )
 
     @classmethod

@@ -23,7 +23,7 @@ from rattlesnake.testing.mock_user_interface import (
 THREADED = True
 IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_FRF
-ENVIRONMENT_TYPE = EnvironmentType.RANDOM
+ENVIRONMENT_TYPE = EnvironmentType.TRANSIENT
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = True
 RUN_SYSID = False

@@ -69,6 +69,7 @@ from rattlesnake.examples.environment.transient.transient_metadata import (
     worksheet_transient_metadata,
     transient_instructions,
     transient_event_list,
+    worksheet_transient_event_list,
 )
 
 from rattlesnake.hardware.hardware_utilities import HardwareType
@@ -192,7 +193,11 @@ RANDOM_EVENT_DICT = {
     "netcdf": random_event_list,
     "worksheet": worksheet_random_event_list,
 }
-TRANSIENT_EVENT_DICT = {"manual": transient_event_list, "netcdf": transient_event_list}
+TRANSIENT_EVENT_DICT = {
+    "manual": transient_event_list,
+    "netcdf": transient_event_list,
+    "worksheet": worksheet_transient_event_list,
+}
 EVENT_DICT[EnvironmentType.NONE] = BLANK_EVENT_DICT
 EVENT_DICT[EnvironmentType.TIME] = TIME_EVENT_DICT
 EVENT_DICT[EnvironmentType.MODAL] = MODAL_EVENT_DICT
