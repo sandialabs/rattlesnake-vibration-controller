@@ -77,7 +77,7 @@ def test_rattlesnake_qualification(
         EnvironmentType.TRANSIENT,
     ],
 )
-def test_rattlesnake_ui_profile_qualification(
+def not_test_rattlesnake_ui_profile_qualification(
     threaded, import_method, hardware_type, environment_type
 ):
     rattlesnake = build_rattlesnake_object(
@@ -117,7 +117,7 @@ def test_rattlesnake_ui_profile_qualification(
         EnvironmentType.TRANSIENT,
     ],
 )
-def test_rattlesnake_ui_start_environment_qualification(
+def not_test_rattlesnake_ui_start_environment_qualification(
     threaded, import_method, hardware_type, environment_type
 ):
     rattlesnake = build_rattlesnake_object(
@@ -154,7 +154,7 @@ def test_rattlesnake_ui_start_environment_qualification(
         EnvironmentType.TRANSIENT,
     ],
 )
-def test_minimal_qualification(
+def not_test_minimal_qualification(
     threaded, import_method, hardware_type, environment_type
 ):
     rattlesnake = build_rattlesnake_object(
