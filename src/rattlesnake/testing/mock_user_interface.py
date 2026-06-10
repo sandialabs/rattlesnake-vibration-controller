@@ -6,7 +6,9 @@ from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.user_interface import RattlesnakeUI
 
 
-def launch_temporary_rattlesnake_ui_profile(rattlesnake: RattlesnakeController, closeout_time: float):
+def launch_temporary_rattlesnake_ui_profile(
+    rattlesnake: RattlesnakeController, closeout_time: float
+):
     """
     Function for launching rattlesnake ui with the default formatting
     that scales correcctly.
@@ -47,7 +49,10 @@ def launch_temporary_rattlesnake_ui_profile(rattlesnake: RattlesnakeController, 
     # Shutdown processes
     rattlesnake.shutdown()
 
-def launch_temporary_rattlesnake_ui_environment(rattlesnake: RattlesnakeController, closeout_time: float):
+
+def launch_temporary_rattlesnake_ui_environment(
+    rattlesnake: RattlesnakeController, closeout_time: float
+):
     """
     Function for launching rattlesnake ui with the default formatting
     that scales correcctly.

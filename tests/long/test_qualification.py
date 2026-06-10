@@ -2,7 +2,10 @@ import time
 
 import pytest
 
-from rattlesnake.testing.mock_user_interface import launch_temporary_rattlesnake_ui_environment, launch_temporary_rattlesnake_ui_profile
+from rattlesnake.testing.mock_user_interface import (
+    launch_temporary_rattlesnake_ui_environment,
+    launch_temporary_rattlesnake_ui_profile,
+)
 
 from rattlesnake.examples.headless_example import build_rattlesnake_object
 from rattlesnake.hardware.hardware_utilities import HardwareType
@@ -52,9 +55,18 @@ def test_rattlesnake_qualification(
 
     assert True
 
-@pytest.mark.parametrize("threaded", [False])
-@pytest.mark.parametrize("import_method", ["manual"])
-@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+
+@pytest.mark.parametrize("threaded", [True, False])
+@pytest.mark.parametrize("import_method", ["manual", "netcdf", "worksheet"])
+@pytest.mark.parametrize(
+    "hardware_type",
+    [
+        HardwareType.SDYNPY_SYSTEM,
+        HardwareType.EXODUS,
+        HardwareType.SDYNPY_FRF,
+        HardwareType.STATE_SPACE,
+    ],
+)
 @pytest.mark.parametrize(
     "environment_type",
     [
@@ -83,9 +95,18 @@ def test_rattlesnake_ui_profile_qualification(
 
     launch_temporary_rattlesnake_ui_profile(rattlesnake, 60)
 
-@pytest.mark.parametrize("threaded", [False])
-@pytest.mark.parametrize("import_method", ["manual"])
-@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+
+@pytest.mark.parametrize("threaded", [True, False])
+@pytest.mark.parametrize("import_method", ["manual", "netcdf", "worksheet"])
+@pytest.mark.parametrize(
+    "hardware_type",
+    [
+        HardwareType.SDYNPY_SYSTEM,
+        HardwareType.EXODUS,
+        HardwareType.SDYNPY_FRF,
+        HardwareType.STATE_SPACE,
+    ],
+)
 @pytest.mark.parametrize(
     "environment_type",
     [

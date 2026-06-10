@@ -37,6 +37,7 @@ def time_metadata():
         "Time Environment",
         channel_list_bools=mock_channel_list_bools,
         sample_rate=1000,
+        output_oversample=10,
         output_signal=np.zeros((1, 2000)),
         cancel_rampdown_time=0.1,
     )
@@ -83,8 +84,8 @@ def test_time_metadata_init():
 def test_time_metadata_properties(time_metadata):
     assert time_metadata.signal_samples == 2000
     assert time_metadata.output_channels == 1
-    assert time_metadata.signal_time == 2
-    assert time_metadata.cancel_rampdown_samples == 100
+    assert time_metadata.signal_time == 0.2
+    assert time_metadata.cancel_rampdown_samples == 1000
 
 
 @pytest.mark.parametrize(
