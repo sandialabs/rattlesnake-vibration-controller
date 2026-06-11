@@ -67,6 +67,9 @@ from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
     IPAddress,
     IPAddressManager,
+    HardwareAssistModules,
+    EditableCombobox,
+    EditableSpinBox,
 )
 from rattlesnake.user_interface.ui_registry import (
     UI_HARDWARE_OPTIONS,
@@ -257,9 +260,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.load_channel_table_from_file
         )
         self.save_channel_table_button.clicked.connect(self.save_channel_table_to_file)
-        # self.assist_channel_table_checkbox.stateChanged.connect(
-        #     self.assist_channel_table_init
-        # )
+        self.assist_channel_table_checkbox.stateChanged.connect(
+            self.assist_channel_table_init
+        )
         # Copy
         self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
         self.channel_table_action_copy.setShortcut("Ctrl+C")
@@ -1165,7 +1168,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
                 self,
                 "Load a System File",
-                filter="Numpy File (*.npz), Matlab File (*.mat), Exodus File (*.exo)",
+                filter="Supported Files (*.npz *.mat *.exo);;Numpy File (*.npz);;Matlab File (*.mat);;Exodus File (*.exo),",
             )
             # Check for 'cancel' dialog
             if filename == "" or filename is None:
@@ -1177,8 +1180,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         else:
             self.hardware_file = None
 
-        # if self.assist_channel_table_checkbox.isChecked():
-        #     self.assist_channel_table_init(True)
+        if self.assist_channel_table_checkbox.isChecked():
+            self.assist_channel_table_init(True)
 
         self.update_hardware_widget_visibility()
 
@@ -1228,6 +1231,113 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         ip_manager = IPAddressManager(stored_addresses)
         ip_manager.exec()
+
+    def assist_channel_table_init(self, assist_checked, edit_rows=[]):
+        # Clear out old widgets:
+        num_rows = self.channel_table.rowCount()
+        num_cols = self.channel_table.columnCount()
+        if not edit_rows:
+            edit_rows = range(num_rows)
+
+        for row in edit_rows:
+            for col in range(num_cols):
+                self.channel_table.removeCellWidget(row, col)
+
+        # Should be fine
+        if not assist_checked:
+            return
+
+        # Build new modules
+        hardware_metadata = self.get_hardware_metadata_no_channels()
+        channel_list = self.get_channel_list()
+        hardware_modules = hardware_metadata.assist_mode_modules
+        for row, channel in enumerate(channel_list):
+            if row in edit_rows:
+                channel_dict = hardware_metadata.valid_channel_dict(channel)
+                for col, (attr, module) in enumerate(hardware_modules.items()):
+                    attr_value = getattr(channel, attr)
+                    valid_values = channel_dict[attr]
+                    match module:
+                        case HardwareAssistModules.NONE:
+                            pass
+                        case HardwareAssistModules.COMBOBOX:
+                            combobox = EditableCombobox(valid_values, attr_value)
+                            combobox.currentTextChanged.connect(
+                                lambda text, row=row, col=col: self.assist_channel_table_update(
+                                    text, row, col
+                                )
+                            )
+                            self.channel_table.setCellWidget(row, col, combobox)
+                        case HardwareAssistModules.SPINBOX:
+                            spinbox = EditableSpinBox(
+                                valid_values[0], valid_values[1], attr_value
+                            )
+                            spinbox.stringValueChanged.connect(
+                                lambda text, row=row, col=col: self.assist_channel_table_update(
+                                    text, row, col
+                                )
+                            )
+                            self.channel_table.setCellWidget(row, col, spinbox)
+
+        # Fill out empty modules
+        empty_channel_dict = hardware_metadata.valid_channel_dict(Channel())
+        for row in range(len(channel_list), num_rows):
+            if row in edit_rows:
+                for col, (attr, module) in enumerate(hardware_modules.items()):
+                    valid_values = empty_channel_dict[attr]
+                    match module:
+                        case HardwareAssistModules.NONE:
+                            pass
+                        case HardwareAssistModules.COMBOBOX:
+                            combobox = EditableCombobox(valid_values)
+                            combobox.currentTextChanged.connect(
+                                lambda text, row=row, col=col: self.assist_channel_table_update(
+                                    text, row, col
+                                )
+                            )
+                            self.channel_table.setCellWidget(row, col, combobox)
+                        case HardwareAssistModules.SPINBOX:
+                            spinbox = EditableSpinBox(valid_values[0], valid_values[1])
+                            spinbox.stringValueChanged.connect(
+                                lambda text, row=row, col=col: self.assist_channel_table_update(
+                                    text, row, col
+                                )
+                            )
+                            self.channel_table.setCellWidget(row, col, spinbox)
+
+    def assist_channel_table_update(self, text, row, col):
+        # Assign text to channel table item
+        item = QtWidgets.QTableWidgetItem(text)
+        self.channel_table.setItem(row, col, item)
+
+        hardware_metadata = self.get_hardware_metadata_no_channels()
+        channel = self.get_channel(row)
+        hardware_modules = hardware_metadata.assist_mode_modules
+        channel_dict = hardware_metadata.valid_channel_dict(channel)
+        for col, (attr, module) in enumerate(hardware_modules.items()):
+            attr_value = getattr(channel, attr)
+            valid_values = channel_dict[attr]
+            match module:
+                case HardwareAssistModules.NONE:
+                    pass
+                case HardwareAssistModules.COMBOBOX:
+                    combobox = EditableCombobox(valid_values, attr_value)
+                    combobox.currentTextChanged.connect(
+                        lambda text, row=row, col=col: self.assist_channel_table_update(
+                            text, row, col
+                        )
+                    )
+                    self.channel_table.setCellWidget(row, col, combobox)
+                case HardwareAssistModules.SPINBOX:
+                    spinbox = EditableSpinBox(
+                        valid_values[0], valid_values[1], attr_value
+                    )
+                    spinbox.stringValueChanged.connect(
+                        lambda text, row=row, col=col: self.assist_channel_table_update(
+                            text, row, col
+                        )
+                    )
+                    self.channel_table.setCellWidget(row, col, spinbox)
 
     # def sample_rate_update(self):
     #     """Updates the sample rate selector based on valid available rates"""

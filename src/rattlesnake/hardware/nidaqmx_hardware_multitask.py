@@ -130,8 +130,8 @@ class NIDAQmxMetadata(HardwareMetadata):
         assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["physical_channel"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["channel_type"] = HardwareAssistModules.COMBOBOX
-        assist_mode_modules["minimum_value"] = HardwareAssistModules.SPINBOX
-        assist_mode_modules["maximum_value"] = HardwareAssistModules.SPINBOX
+        assist_mode_modules["minimum_value"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["maximum_value"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["coupling"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["excitation_source"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["excitation"] = HardwareAssistModules.COMBOBOX
@@ -144,7 +144,7 @@ class NIDAQmxMetadata(HardwareMetadata):
 
         valid_dict["sensitivity"] = self.valid_sensitivity(channel.channel_type)
         valid_dict["unit"] = self.valid_engineering_units(channel.channel_type)
-        valid_dict["physical_device"] = self.valid_physical_devices()
+        valid_dict["physical_device"] = self.valid_physical_devices
         valid_dict["physical_channel"] = self.valid_input_channels(
             channel.physical_device
         )
@@ -156,14 +156,16 @@ class NIDAQmxMetadata(HardwareMetadata):
             channel.physical_device, channel.feedback_device
         )
         valid_dict["coupling"] = self.valid_coupling(channel.channel_type)
-        valid_dict["excitation_source"] = self.valid_excitation_sources()
+        valid_dict["excitation_source"] = self.valid_excitation_sources
         valid_dict["excitation"] = self.valid_current_excitation(
             channel.physical_device, channel.excitation_source
         )
-        valid_dict["feedback_device"] = self.valid_physical_devices()
+        valid_dict["feedback_device"] = self.valid_physical_devices
         valid_dict["feedback_channel"] = self.valid_output_channels(
             channel.feedback_device
         )
+
+        return valid_dict
 
     @property
     def valid_channel_types(self):
@@ -190,9 +192,9 @@ class NIDAQmxMetadata(HardwareMetadata):
 
     def valid_sensitivity(self, channel_type: str = ""):
         if channel_type == "Voltage":
-            valid_sensitivity = [1000]
+            valid_sensitivity = [0, 1000]
         else:
-            valid_sensitivity = []
+            valid_sensitivity = [-1000000, 1000000]
         return valid_sensitivity
 
     def valid_engineering_units(self, channel_type: str = ""):
@@ -242,11 +244,11 @@ class NIDAQmxMetadata(HardwareMetadata):
             min_voltage = 0
 
         try:
-            min_voltage = int(min_voltage)
+            min_voltage = str(min_voltage)
         except ValueError:
-            min_voltage = 0
+            min_voltage = str(0)
 
-        return min_voltage
+        return [min_voltage]
 
     def valid_max_voltage(self, physical_device: str = "", feedback_device: str = ""):
         if physical_device in self._device_names:
@@ -264,11 +266,11 @@ class NIDAQmxMetadata(HardwareMetadata):
             max_voltage = 0
 
         try:
-            max_voltage = int(max_voltage)
+            max_voltage = str(max_voltage)
         except ValueError:
-            max_voltage = 0
+            max_voltage = str(0)
 
-        return max_voltage
+        return [max_voltage]
 
     def default_current_excitaton(self, excitation_source: str = ""):
         if excitation_source == "Internal":

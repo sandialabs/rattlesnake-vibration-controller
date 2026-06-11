@@ -1855,77 +1855,174 @@ class EditableCombobox(QtWidgets.QComboBox):
         return super().blockSignals(block)
 
 
-class EditableSpinBox(QtWidgets.QSpinBox):
+class EditableSpinBox(QtWidgets.QAbstractSpinBox):
     stringValueChanged = QtCore.Signal(str)
+    intValueChanged = QtCore.Signal(object)  # int or None
 
-    def __init__(self, parent=None, text=""):
+    def __init__(self, min_range=-1000000, max_range=1000000, text="", parent=None):
         super().__init__(parent)
 
-        # Initialize attributes
-        self.pause_signals = False
-        self.int_value = 0
-        self.str_value = ""
+        self._minimum = min_range
+        self._maximum = max_range
+        self._text = ""
+        self._int_value = None
+        self._last_emitted_text = None
+        self._last_emitted_int = object()
 
-        # If text is number, assign to number
-        text = str(text) if text is not None else ""
-        self.valueFromText(text)
+        self.lineEdit().textEdited.connect(self._on_text_edited)
+        self.lineEdit().editingFinished.connect(self._on_editing_finished)
 
-        self.setRange(-1000000, 1000000)
-        self.setValue(self.str_value)
+        self.setText(text)
 
-    def valueFromText(self, text):
-        """Convert text to a value."""
+    def text(self) -> str:
+        return self._text
 
-        self.str_value = str(text)
-        # Try to convert text to digit, if so check if its in range
-        try:
-            self.int_value = int(self.str_value)
-            min_value = self.minimum()
-            max_value = self.maximum()
-            # If out of range, store the max/min range to int_value
-            if self.int_value > max_value:
-                self.int_value = max_value
-            elif self.int_value < min_value:
-                self.int_value = min_value
-        # If text wasnt an integer, keep previous value
-        except ValueError:
-            pass
+    def value(self):
+        return self._int_value
 
-        if not self.pause_signals:
-            self.stringValueChanged.emit(self.str_value)
+    def setRange(self, minimum: int, maximum: int):
+        self._minimum = minimum
+        self._maximum = maximum
+        self._recompute_value()
 
-        return self.int_value
+    def setText(self, text):
+        text = "" if text is None else str(text)
+        if text == self._text and self.lineEdit().text() == text:
+            return
 
-    def textFromValue(self, value):
-        """Convert a value to text."""
-        if self.int_value != value:
-            self.int_value = value
-            self.str_value = str(value)
+        self._text = text
+        self._recompute_value()
 
-        if not self.pause_signals:
-            self.stringValueChanged.emit(self.str_value)
+        blocker = QtCore.QSignalBlocker(self.lineEdit())
+        self.lineEdit().setText(text)
+        del blocker
 
-        return self.str_value
+        self._emit_if_changed()
 
-    def setValue(self, text):
-        text = str(text) if text is not None else ""
-        self.str_value = text
+    def setValue(self, value):
+        if value is None:
+            self.setText("")
+        else:
+            self.setText(str(int(value)))
 
-        prev_pause_state = self.pause_signals
-        self.blockSignals(True)
-        value = self.valueFromText(text)
-        self.blockSignals(prev_pause_state)
+    def stepBy(self, steps: int):
+        if self._int_value is None:
+            base = 0
+        else:
+            base = self._int_value
 
-        return super().setValue(value)
+        new_value = base + steps
+        new_value = max(self._minimum, min(self._maximum, new_value))
+        self.setText(str(new_value))
+
+    def stepEnabled(self):
+        return (
+            QtWidgets.QAbstractSpinBox.StepUpEnabled
+            | QtWidgets.QAbstractSpinBox.StepDownEnabled
+        )
 
     def validate(self, text, pos):
-        """Allow letters and numbers in the input."""
         return QtGui.QValidator.Acceptable, text, pos
 
-    def blockSignals(self, state: bool):
-        """Blocks or enables signals"""
-        self.pause_signals = state
-        return super().blockSignals(state)
+    def _on_text_edited(self, text):
+        self._text = text
+        self._recompute_value()
+        self._emit_if_changed()
+
+    def _on_editing_finished(self):
+        self._text = self.lineEdit().text()
+        self._recompute_value()
+        self._emit_if_changed()
+
+    def _recompute_value(self):
+        try:
+            value = int(self._text.strip())
+            value = max(self._minimum, min(self._maximum, value))
+            self._int_value = value
+        except (ValueError, AttributeError):
+            self._int_value = None
+
+    def _emit_if_changed(self):
+        if self._text != self._last_emitted_text:
+            self._last_emitted_text = self._text
+            self.stringValueChanged.emit(self._text)
+
+        if self._int_value != self._last_emitted_int:
+            self._last_emitted_int = self._int_value
+            self.intValueChanged.emit(self._int_value)
+
+
+# class EditableSpinBox(QtWidgets.QSpinBox):
+#     stringValueChanged = QtCore.Signal(str)
+
+#     def __init__(self, min_range=-1000000, max_range=1000000, text="", parent=None):
+#         super().__init__(parent)
+
+#         # Initialize attributes
+#         self.pause_signals = False
+#         self.int_value = 0
+#         self.str_value = ""
+
+#         # If text is number, assign to number
+#         text = str(text) if text is not None else ""
+#         self.valueFromText(text)
+
+#         self.setRange(min_range, max_range)
+#         self.setValue(self.str_value)
+
+#     def valueFromText(self, text):
+#         """Convert text to a value."""
+
+#         self.str_value = str(text)
+#         # Try to convert text to digit, if so check if its in range
+#         try:
+#             self.int_value = int(self.str_value)
+#             min_value = self.minimum()
+#             max_value = self.maximum()
+#             # If out of range, store the max/min range to int_value
+#             if self.int_value > max_value:
+#                 self.int_value = max_value
+#             elif self.int_value < min_value:
+#                 self.int_value = min_value
+#         # If text wasnt an integer, keep previous value
+#         except ValueError:
+#             pass
+
+#         if not self.pause_signals:
+#             self.stringValueChanged.emit(self.str_value)
+
+#         return self.int_value
+
+#     def textFromValue(self, value):
+#         """Convert a value to text."""
+#         if self.int_value != value:
+#             self.int_value = value
+#             self.str_value = str(value)
+
+#         if not self.pause_signals:
+#             self.stringValueChanged.emit(self.str_value)
+
+#         return self.str_value
+
+#     def setValue(self, text):
+#         text = str(text) if text is not None else ""
+#         self.str_value = text
+
+#         prev_pause_state = self.pause_signals
+#         self.blockSignals(True)
+#         value = self.valueFromText(text)
+#         self.blockSignals(prev_pause_state)
+
+#         return super().setValue(value)
+
+#     def validate(self, text, pos):
+#         """Allow letters and numbers in the input."""
+#         return QtGui.QValidator.Acceptable, text, pos
+
+#     def blockSignals(self, state: bool):
+#         """Blocks or enables signals"""
+#         self.pause_signals = state
+#         return super().blockSignals(state)
 
 
 # endregion
