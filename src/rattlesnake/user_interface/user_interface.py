@@ -660,6 +660,35 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.trigger_output_selector.setText(
                     hardware_metadata.output_trigger_generator
                 )
+            case HardwareType.LAN_XI:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("HBK LAN-XI")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                lanxi_sample_rate_index = int(
+                    np.log2(hardware_metadata.sample_rate // 4096)
+                )
+                self.lanxi_sample_rate_selector.setCurrentIndex(lanxi_sample_rate_index)
+                self.lanxi_maximum_acquisition_processes_selector.setValue(
+                    hardware_metadata.maximum_acquisition_processes
+                )
+            case HardwareType.DP_QUATTRO:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("Data Physics Quattro")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.hardware_file = hardware_metadata.hardware_file
+            case HardwareType.DP_900:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("Data Physics 900")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
+                self.hardware_file = hardware_metadata.hardware_file
             case HardwareType.EXODUS:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("Exodus Modal Solution...")

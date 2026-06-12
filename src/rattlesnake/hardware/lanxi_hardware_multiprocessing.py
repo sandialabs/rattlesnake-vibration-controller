@@ -75,7 +75,6 @@ class LanXIMetadata(HardwareMetadata):
         sample_rate: int,
         time_per_read: float,
         time_per_write: float,
-        output_oversample: float,
         maximum_acquisition_processes: int,
         ip_list: List[IPAddress],
     ):
@@ -85,7 +84,7 @@ class LanXIMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample=output_oversample,
+            output_oversample=1,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
         self.ip = ip_list
@@ -307,6 +306,7 @@ class LanXIMetadata(HardwareMetadata):
         ) = super().load_metadata_from_netcdf(netcdf_dataset)
 
         maximum_acquisition_processes = netcdf_dataset.maximum_acquisition_processes
+        ip_list = []
 
         return cls(
             channel_list,
@@ -314,7 +314,7 @@ class LanXIMetadata(HardwareMetadata):
             time_per_read,
             time_per_write,
             maximum_acquisition_processes,
-            [],
+            ip_list,
         )
 
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
@@ -348,13 +348,15 @@ class LanXIMetadata(HardwareMetadata):
                 case _:
                     continue
 
+        ip_list = []
+
         return cls(
             channel_list,
             sample_rate,
             time_per_read,
             time_per_write,
             maximum_acquisition_processes,
-            [],
+            ip_list,
         )
 
     # endregion
