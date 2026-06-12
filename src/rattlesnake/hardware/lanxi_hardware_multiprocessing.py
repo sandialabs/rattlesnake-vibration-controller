@@ -75,6 +75,7 @@ class LanXIMetadata(HardwareMetadata):
         sample_rate: int,
         time_per_read: float,
         time_per_write: float,
+        output_oversample: float,
         maximum_acquisition_processes: int,
         ip_list: List[IPAddress],
     ):
@@ -84,7 +85,7 @@ class LanXIMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample=1,
+            output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
         self.ip = ip_list
@@ -313,6 +314,7 @@ class LanXIMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
+            output_oversample,
             maximum_acquisition_processes,
             ip_list,
         )
@@ -355,6 +357,7 @@ class LanXIMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
+            output_oversample,
             maximum_acquisition_processes,
             ip_list,
         )
