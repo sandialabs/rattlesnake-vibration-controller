@@ -169,7 +169,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v4 # revert to current stable version
+      uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
       with:
         enable-cache: true
         # Note: 'version' refers to the uv version itself
@@ -242,7 +242,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
           version: "latest"
@@ -323,7 +323,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4 # revert to current stable version
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
           version: "latest"
@@ -414,7 +414,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
           version: "latest"
