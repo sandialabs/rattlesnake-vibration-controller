@@ -201,13 +201,17 @@ jobs:
         echo "    📄 Output file: $LINT_OUTPUT_FILE"
         echo "    🏆 Lint score: $SCORE out of 10"
 
+        # github.head_ref is the source branch name on PRs; empty on push events.
+        # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
+        REF_NAME="${{ github.head_ref || github.ref_name }}"
+
         # The report_lint.py script still needs the file, which we created above.
         uv run python src/rattlesnake/cicd/report_lint.py \
           --input_file "$LINT_OUTPUT_FILE" \
           --output_file lint_report.html \
           --timestamp "$TIMESTAMP" \
           --run_id ${{ github.run_id }} \
-          --ref_name ${{ github.ref_name }} \
+          --ref_name "$REF_NAME" \
           --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
 
@@ -273,12 +277,16 @@ jobs:
 
           uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
+          # github.head_ref is the source branch name on PRs; empty on push events.
+          # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
+          REF_NAME="${{ github.head_ref || github.ref_name }}"
+
           uv run python src/rattlesnake/cicd/report_coverage.py \
             --input_file coverage.xml \
             --output_file coverage_report.html \
             --timestamp "$TIMESTAMP" \
             --run_id ${{ github.run_id }} \
-            --ref_name ${{ github.ref_name }} \
+            --ref_name "$REF_NAME" \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
@@ -327,11 +335,16 @@ jobs:
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
+          # github.ref_name is the internal merge ref on PRs (e.g. "83/merge"),
+          # which produces a 404 URL. github.head_ref is the actual source branch
+          # name for PRs; it is empty on push events so ref_name is the fallback.
+          REF_NAME="${{ github.head_ref || github.ref_name }}"
+
           uv run python src/rattlesnake/cicd/report_jupyter_book.py \
             --myst_file documentation/myst.yml \
             --timestamp "$TIMESTAMP" \
             --run_id ${{ github.run_id }} \
-            --ref_name ${{ github.ref_name }} \
+            --ref_name "$REF_NAME" \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
