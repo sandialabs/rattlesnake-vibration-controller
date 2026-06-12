@@ -95,9 +95,7 @@ def generate_report(args: argparse.Namespace, metadata: ReportMetadata) -> None:
     Orchestrate report generation.
     """
     footer_md = generate_footer(metadata)
-    extended_debug: bool = (
-        True  # Set to True to print the new myst.yml content for debugging
-    )
+    extended_debug: bool = False
     # Suppress injection to see primary_sidebar_footer in myst.yml for testing
     update_myst_file(args.myst_file, footer_md, debug=extended_debug)
 
