@@ -654,7 +654,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.task_trigger_selector.setCurrentIndex(
                     hardware_metadata.task_trigger
                 )
-                self.trigger_output_selector.setCurrentText(
+                self.trigger_output_selector.setText(
                     hardware_metadata.output_trigger_generator
                 )
             case HardwareType.EXODUS:
