@@ -654,7 +654,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.update_hardware_widget_visibility()
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                self.task_trigger_selector.setIndex(hardware_metadata.task_trigger)
+                self.task_trigger_selector.setCurrentIndex(
+                    hardware_metadata.task_trigger
+                )
                 self.trigger_output_selector.setText(
                     hardware_metadata.output_trigger_generator
                 )
