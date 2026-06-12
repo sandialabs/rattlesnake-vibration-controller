@@ -35,7 +35,9 @@ env:
   # Force all JavaScript actions to run on Node 24 (The 2026 Standard)
   # After 02 June 2026, the following line can be removed since on that date,
   # Node.js 24 will be the GitHub default.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 2026-06-12: Now running NODE24 by default on GitHub.
+  #
   # `BASE_URL` determines the website is served from, including CSS & JS assets
   # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
   BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
@@ -216,7 +218,7 @@ jobs:
           --github_repo ${{ github.repository }}
 
     - name: Upload lint artifact
-      uses: actions/upload-artifact@v4 # revert to current stable version
+      uses: actions/upload-artifact@v7
       with:
         name: lint-report
         path: |
@@ -291,7 +293,7 @@ jobs:
             --github_repo ${{ github.repository }}
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: |
@@ -354,7 +356,7 @@ jobs:
           cd documentation && uv run jupyter book build --html --strict && cd ..
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4 # revert to current stable version
+        uses: actions/upload-artifact@v7
         with:
           name: jupyter-book-report
           path: documentation/_build/html
@@ -423,13 +425,13 @@ jobs:
 
       # Download unconditionally; the script gates handle folder absences gracefully
       - name: Download lint artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: lint-report
           path: lint-report
           
       - name: Download coverage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
           path: coverage-report
@@ -437,7 +439,7 @@ jobs:
       - name: Download jupyter book artifact
         # Only download if the job was actually expected to run based on pathing or branch triggers
         if: needs.changes.outputs.docs_changed == 'true' || github.ref_name == 'main' || github.ref_name == 'dev'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: jupyter-book-report
           path: jupyter-book-report
