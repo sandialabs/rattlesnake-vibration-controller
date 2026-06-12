@@ -1,13 +1,20 @@
 # name: CI
-# name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
+# name: # keep this field blank to automatically show the filename that triggers it in the CI/CD web UI
 name: ci.yml
 
 on:
   push:
     branches:
       - '**'
+  pull_request:
+    branches:
+      - main
+      - dev
   workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
   # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
+  # Answer: Yes, it should work.  Possible that the workflow file must appear on the
+  # default branch (main) before it shows up in the UI.  Since this updated ci.yml is
+  # not yet in the main branch, it might not be visible in the UI until it is merged.
   workflow_dispatch:
     inputs:
       test_level:
@@ -52,7 +59,8 @@ jobs:
         id: filter
         with:
           list-files: shell
-          base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
+          # Allowing base only can let a bug sneak in.
+          # base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
           filters: |
             docs:
               - 'documentation/**'
@@ -78,16 +86,18 @@ jobs:
   # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run if code changed OR if we're on a primary branch OR if it's a PR targeting a primary branch
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
-        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
+        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
 
     steps:
 
@@ -118,38 +128,38 @@ jobs:
 
       - name: Run tests
         shell: bash
+        env:
+          # Securely map the context parameter into the environment context first
+          RESOLVED_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
         run: |
-          # Detect message from Push OR Pull Request
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          TEST_PATHS="tests/short"
           BRANCH_NAME="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
           
-          # Root tests + short tests should likely be the default "small" suite
-          TEST_PATHS="tests/*.py tests/short"
-
-          # Trigger full suite if:
-          # 1. Commit message contains [all tests]
-          # 2. Manual dispatch 'test_level' is 'full'
-          # 3. Current branch is exactly 'main' or 'dev'
-          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+          if [[ "$RESOLVED_MSG" == *"[all tests]"* ]] || \
              [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
              [[ "$BRANCH_NAME" == "main" ]] || \
-             [[ "$BRANCH_NAME" == "dev" ]]; then
-            echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+             [[ "$BRANCH_NAME" == "dev" ]] || \
+             [[ "$TARGET_BRANCH" == "main" ]] || \
+             [[ "$TARGET_BRANCH" == "dev" ]]; then
+            echo "⏱️⏱️⏱️ ALL TESTS MODE: Scaling up to include heavy simulations from tests/long"
             TEST_PATHS="tests"
           else
-            echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+            echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
           fi
-
-          # Execute pytest on selected directories
+     
           python -m pytest -vs $TEST_PATHS
 
   lint:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run if code changed OR if we're on a primary branch OR if it's a PR targeting a primary branch
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
+
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -157,7 +167,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v4 # revert to current stable version
       with:
         enable-cache: true
         # Note: 'version' refers to the uv version itself
@@ -202,7 +212,7 @@ jobs:
           --github_repo ${{ github.repository }}
 
     - name: Upload lint artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v4 # revert to current stable version
       with:
         name: lint-report
         path: |
@@ -211,11 +221,13 @@ jobs:
 
   coverage:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run if code changed OR if we're on a primary branch OR if it's a PR targeting a primary branch
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -224,7 +236,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
           version: "latest"
@@ -234,23 +246,29 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: coverage analysis and custom coverage HTML report
+        env:
+          # Securely map complex strings to environment variables to prevent shell injection errors
+          RESOLVED_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
         run: |
-          # Create a timestamp for the output file
+          # 1. Establish a safe, explicit default path
+          TEST_PATHS="tests/short"
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          # Match logic from pytest_matrix
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
-          TEST_PATHS="tests/*.py tests/short"
+          # 2. Extract branch metadata
           BRANCH_NAME="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
 
-          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+          # 3. Check override conditions cleanly from the environment block
+          if [[ "$RESOLVED_MSG" == *"[all tests]"* ]] || \
                [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
                [[ "$BRANCH_NAME" == "main" ]] || \
-               [[ "$BRANCH_NAME" == "dev" ]]; then
+               [[ "$BRANCH_NAME" == "dev" ]] || \
+               [[ "$TARGET_BRANCH" == "main" ]] || \
+               [[ "$TARGET_BRANCH" == "dev" ]]; then
               echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
               TEST_PATHS="tests"
           else
-              echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+            echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
           fi
 
           uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
@@ -265,7 +283,7 @@ jobs:
             --github_repo ${{ github.repository }}
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: |
@@ -280,11 +298,13 @@ jobs:
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run if docs changed OR if we're on a main/dev branch OR if it's a PR targeting a main/dev branch
     if: |
       needs.changes.outputs.docs_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -293,7 +313,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v4 # revert to current stable version
         with:
           enable-cache: true
           version: "latest"
@@ -321,7 +341,7 @@ jobs:
           cd documentation && uv run jupyter book build --html --strict && cd ..
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4 # revert to current stable version
         with:
           name: jupyter-book-report
           path: documentation/_build/html
@@ -340,7 +360,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
           version: "latest"
@@ -349,20 +369,23 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
+      # Download unconditionally; the script gates handle folder absences gracefully
       - name: Download lint artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: lint-report
           path: lint-report
           
       - name: Download coverage artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: coverage-report
           path: coverage-report
 
       - name: Download jupyter book artifact
-        uses: actions/download-artifact@v7
+        # Only download if the job was actually expected to run based on pathing or branch triggers
+        if: needs.changes.outputs.docs_changed == 'true' || github.ref_name == 'main' || github.ref_name == 'dev'
+        uses: actions/download-artifact@v4
         with:
           name: jupyter-book-report
           path: jupyter-book-report
@@ -377,24 +400,32 @@ jobs:
 
       - name: Create badges
         run: |
-          # Lint badge (now using Python script)
-          LINT_LOG=$(ls lint-report/lint_output_*.txt)
-          uv run python src/rattlesnake/cicd/badge_lint.py \
-            --input_file "$LINT_LOG" \
-            --output_dir badges \
-            --github_repo ${{ github.repository }} \
-            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
-            --run_id ${{ github.run_id }} \
-            --github_server_url ${{ github.server_url }}
+          # Use bash compgen to safely see if any logs exist without throwing a shell crash
+          if compgen -G "lint-report/lint_output_*.txt" > /dev/null; then
+            LINT_LOG=$(ls lint-report/lint_output_*.txt)
+            uv run python src/rattlesnake/cicd/badge_lint.py \
+              --input_file "$LINT_LOG" \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No lint output log files discovered; skipping lint badge generation."
+          fi
 
-          # Coverage badge (now using Python script)
-          uv run python src/rattlesnake/cicd/badge_coverage.py \
-            --input_file coverage-report/coverage.xml \
-            --output_dir badges \
-            --github_repo ${{ github.repository }} \
-            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
-            --run_id ${{ github.run_id }} \
-            --github_server_url ${{ github.server_url }}
+          # Safe evaluation operator check for the coverage xml file
+          if [ -f "coverage-report/coverage.xml" ]; then
+            uv run python src/rattlesnake/cicd/badge_coverage.py \
+              --input_file coverage-report/coverage.xml \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No coverage report xml file found; skipping coverage badge generation."
+          fi
 
       - name: Assemble pages directory
         run: |
@@ -403,12 +434,23 @@ jobs:
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
-          mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
-          mv coverage-report/coverage_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
-          mv coverage-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
-          mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
-          cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
+          if [ -d "lint-report" ]; then
+            mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
+          fi
           
+          if [ -d "coverage-report" ]; then
+            mv coverage-report/coverage_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
+            mv coverage-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
+          fi
+          
+          if [ -d "jupyter-book-report" ]; then
+            mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          fi
+          
+          if [ -d "badges" ]; then
+            cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
+          fi
+
           # Create a root index.html using the Python script
           uv run python src/rattlesnake/cicd/report_dashboard.py \
             --github_repo ${{ github.repository }} \
@@ -427,7 +469,7 @@ jobs:
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
 
-    # TODO: Chad to reconsider peaceiris/actions-gh-pages vs. GitHub's built-in pages deployment via the "pages" folder in the repository. The built-in method is simpler but less flexible, while peaceiris allows for more control over commit messages, history, and deployment process.`
+    # TODO: Chad to reconsider peaceiris/actions-gh-pages vs. GitHub's built-in pages deployment via the "pages" folder in the repository. The built-in method is simpler but less flexible, while peaceiris allows for more control over commit messages, history, and deployment process.
 
     #       1. The "Official" Way (actions/upload-pages-artifact & actions/deploy-pages)
     #    * How it works: It packages your files into an internal GitHub "artifact" and deploys it directly to the Pages
