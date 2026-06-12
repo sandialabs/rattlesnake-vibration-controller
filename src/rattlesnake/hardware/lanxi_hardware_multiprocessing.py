@@ -88,7 +88,7 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
-        self._ip_addresses = ip_list
+        self.ip = ip_list
         self._module_info = {}
 
         self.refresh_module_info()
@@ -109,7 +109,6 @@ class LanXIMetadata(HardwareMetadata):
         assist_mode_modules["maximum_value"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["coupling"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["excitation_source"] = HardwareAssistModules.COMBOBOX
-        assist_mode_modules["excitation"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
         assist_mode_modules["feedback_channel"] = HardwareAssistModules.COMBOBOX
         return assist_mode_modules
@@ -117,12 +116,36 @@ class LanXIMetadata(HardwareMetadata):
     def valid_channel_dict(self, channel):
         valid_dict = super().valid_channel_dict(channel)
 
+        valid_dict["sensitivity"] = self.valid_sensitivity(channel.channel_type)
+        valid_dict["physical_device"] = self.valid_physical_devices
+        valid_dict["physical_channel"] = self.valid_physical_channels(
+            channel.physical_device
+        )
+        valid_dict["maximum_value"] = self.valid_max_voltage(
+            channel.physical_device, channel.feedback_device
+        )
+        valid_dict["coupling"] = self.valid_coupling(
+            channel.physical_device, channel.feedback_device
+        )
+        valid_dict["excitation_source"] = self.valid_excitation_source
+        valid_dict["feedback_device"] = self.valid_feedback_devices
+        valid_dict["feedback_channel"] = self.valid_feedback_channels(
+            channel.feedback_device
+        )
+
         return valid_dict
 
     @property
     def ipv6_address_list(self):
         ipv6_address_list = [ip.ipv6_address for ip in self.ip]
         return ipv6_address_list
+
+    def valid_sensitivity(self, channel_type: str = ""):
+        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
+            valid_sensitivity = [0, 1000]
+        else:
+            valid_sensitivity = [-1000000, 1000000]
+        return valid_sensitivity
 
     @property
     def valid_physical_devices(self):
@@ -135,30 +158,34 @@ class LanXIMetadata(HardwareMetadata):
         return valid_feedback_devices
 
     def valid_physical_channels(self, physical_device: str = ""):
-        if physical_device in list(self.module_info.keys()):
-            num_physical_channels = self.module_info[physical_device][
+        if physical_device in list(self._module_info.keys()):
+            num_physical_channels = self._module_info[physical_device][
                 "numberOfInputChannels"
             ]
-            valid_physical_channels = range(num_physical_channels) + 1
+            valid_physical_channels = [
+                str(i) for i in range(1, num_physical_channels + 1)
+            ]
         else:
             valid_physical_channels = []
 
         return valid_physical_channels
 
     def valid_feedback_channels(self, feedback_device: str = ""):
-        if feedback_device in list(self.module_info.keys()):
-            num_feedback_channels = self.module_info[feedback_device][
+        if feedback_device in list(self._module_info.keys()):
+            num_feedback_channels = self._module_info[feedback_device][
                 "numberOfOutputChannels"
             ]
-            valid_feedback_channels = range(num_feedback_channels) + 1
+            valid_feedback_channels = [
+                str(i) for i in range(1, num_feedback_channels + 1)
+            ]
         else:
             valid_feedback_channels = []
 
         return valid_feedback_channels
 
     def valid_coupling(self, physical_device: str = "", feedback_device: str = ""):
-        if physical_device in list(self.module_info.keys()):
-            valid_physical_coupling = self.module_info[physical_device][
+        if physical_device in list(self._module_info.keys()):
+            valid_physical_coupling = self._module_info[physical_device][
                 "supportedFilters"
             ]
         else:
@@ -166,12 +193,12 @@ class LanXIMetadata(HardwareMetadata):
 
         if feedback_device == "" or feedback_device == None:
             valid_feedback_coupling = valid_physical_coupling
-        elif feedback_device in list(self.module_info.keys()):
-            valid_feedback_coupling = self.module_info[feedback_device][
+        elif feedback_device in list(self._module_info.keys()):
+            valid_feedback_coupling = self._module_info[feedback_device][
                 "supportedFilters"
             ]
         else:
-            valid_physical_coupling = []
+            valid_feedback_coupling = []
 
         valid_coupling = (
             set(valid_physical_coupling)
@@ -182,45 +209,72 @@ class LanXIMetadata(HardwareMetadata):
 
         return valid_coupling
 
+    @property
+    def valid_excitation_source(self):
+        return ["", "ccld"]
+
+    def normalize_voltage(self, value: str):
+        """
+        Function to go from strings "10", "10 VPeak", etc. to just numbers.
+        """
+        if not value:
+            return None
+
+        value = value.strip()
+
+        match = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(?:Vpeak)?\s*$", value, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+        return None
+
     def valid_max_voltage(self, physical_device: str = "", feedback_device: str = ""):
-        if physical_device in list(self.module_info.keys()):
-            valid_physical_voltage = self.module_info[physical_device][
+        if physical_device in self._module_info:
+            valid_physical_voltage = self._module_info[physical_device][
                 "supportedOutputRanges"
             ]
         else:
             valid_physical_voltage = []
 
-        if feedback_device == "" or feedback_device == None:
+        if feedback_device in ("", None):
             valid_feedback_voltage = valid_physical_voltage
-        elif feedback_device in list(self.module_info.keys()):
-            valid_feedback_voltage = self.module_info[feedback_device][
+        elif feedback_device in self._module_info:
+            valid_feedback_voltage = self._module_info[feedback_device][
                 "supportedOutputRanges"
             ]
         else:
             valid_feedback_voltage = []
 
+        normalized_physical = {
+            self.normalize_voltage(v)
+            for v in valid_physical_voltage
+            if self.normalize_voltage(v) is not None
+        }
+
+        normalized_feedback = {
+            self.normalize_voltage(v)
+            for v in valid_feedback_voltage
+            if self.normalize_voltage(v) is not None
+        }
+
+        normalized_valid_ranges = {
+            self.normalize_voltage(v)
+            for v in VALID_RANGES
+            if self.normalize_voltage(v) is not None
+        }
+
         valid_max_voltage = (
-            set(valid_physical_voltage)
-            & set(valid_feedback_voltage)
-            & set(VALID_RANGES)
+            normalized_physical & normalized_feedback & normalized_valid_ranges
         )
-        valid_max_voltage = list(valid_max_voltage)
 
-        pattern = r"(\d+\.?\d*)\s*Vpeak\b"
-        valid_max_voltage = [
-            str(match.group(1))
-            for s in valid_max_voltage
-            for match in re.finditer(pattern, s)
-        ]
-
-        return valid_max_voltage
+        return list(sorted(valid_max_voltage, key=float))
 
     def refresh_module_info(self):
         for ipv6 in self.ipv6_address_list:
             host = "http://" + ipv6
             response = requests.get(host + "/rest/rec/module/info")
             info = response.json()
-            self.module_info[ipv6] = info
+            self._module_info[ipv6] = info
 
     def get_module_name(self, ip: str):
         """Function to figure if the input is a BK name, ipv4, or ipv6 address
@@ -260,6 +314,7 @@ class LanXIMetadata(HardwareMetadata):
             time_per_read,
             time_per_write,
             maximum_acquisition_processes,
+            [],
         )
 
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
@@ -279,7 +334,7 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample,
         ) = super().load_metadata_from_workbook(workbook)
 
-        maximum_acqusition_processes = None
+        maximum_acquisition_processes = None
 
         hardware_worksheet = workbook["Hardware"]
         for row in hardware_worksheet.rows:
@@ -299,6 +354,7 @@ class LanXIMetadata(HardwareMetadata):
             time_per_read,
             time_per_write,
             maximum_acquisition_processes,
+            [],
         )
 
     # endregion
@@ -361,7 +417,9 @@ def read_lanxi(socket_handle: socket.socket):
     elif (
         package.header.message_type == OpenapiMessage.Header.EMessageType.e_data_quality
     ):
-        ip, port = socket_handle.getpeername()
+        peer = socket_handle.getpeername()
+        ip = peer[0]
+        port = peer[1]
         for q in package.message.qualities:
             if q.validity_flags.overload:
                 print(f"Overload Detected on {ip}:{port}")
@@ -449,8 +507,10 @@ def lanxi_multisocket_reader(
         for socket_handle, data_queue in zip(socket_handles, data_queues):
             # The socket has closed, so gracefully close down
             try:
-                ip, port = socket_handle.getpeername()
-            except OSError:
+                peer = socket_handle.getpeername()
+                ip = peer[0]
+                port = peer[1]
+            except OSError as exc:
                 ip, port = "<disconnected>", -1
             print(f"Closing Socket {ip}:{port}")
             while True:
@@ -463,7 +523,7 @@ def lanxi_multisocket_reader(
         return
 
 
-def create_harware_maps(acquisition_map, output_map, channel_list):
+def create_hardware_maps(acquisition_map, output_map, channel_list):
     """Creates mapping between the LAN-XI channels and the rattlesnake channel list
 
     Parameters
@@ -710,7 +770,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.maximum_processes = test_data.maximum_acquisition_processes
         # Now create a hardware map that will help us do bookkeeping
         channel_data = test_data.channel_list
-        create_harware_maps(self.acquisition_map, self.output_map, channel_data)
+        create_hardware_maps(self.acquisition_map, self.output_map, channel_data)
         # Go through the channel table and get the hardware and channel
         # information
         host_addresses = [channel.physical_device for channel in channel_data]
@@ -1003,7 +1063,7 @@ class LanXIOutput(HardwareOutput):
         self.maximum_processes = test_data.maximum_acquisition_processes
         # Create a hardware map that will help us do bookkeeping
         channel_data = test_data.channel_list
-        create_harware_maps(self.acquisition_map, self.output_map, channel_data)
+        create_hardware_maps(self.acquisition_map, self.output_map, channel_data)
         self.write_size = test_data.samples_per_write
         self.sample_rate = test_data.sample_rate
         # Go through the channel table and get the hardware and channel

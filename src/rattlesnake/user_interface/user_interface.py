@@ -1233,6 +1233,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         ip_manager = IPAddressManager(stored_addresses)
         ip_manager.exec()
+        self.lanxi_ip_addresses = ip_manager.ip_addresses
 
     def assist_channel_table_init(self, assist_checked, edit_rows=[]):
         # Clear out old widgets:

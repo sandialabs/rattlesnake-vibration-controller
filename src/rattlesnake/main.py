@@ -18,6 +18,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import datetime
 import multiprocessing as mp
 import sys
@@ -71,7 +72,7 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
 def main():
     """Main Rattlesnake Application Entry Point"""
     print("Loading Rattlesnake...")
-    
+
     rattlesnake = RattlesnakeController()
 
     launch_rattlesnake_ui(rattlesnake)

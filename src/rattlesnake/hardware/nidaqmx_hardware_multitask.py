@@ -191,7 +191,7 @@ class NIDAQmxMetadata(HardwareMetadata):
         return valid_coupling
 
     def valid_sensitivity(self, channel_type: str = ""):
-        if channel_type == "Voltage":
+        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
             valid_sensitivity = [0, 1000]
         else:
             valid_sensitivity = [-1000000, 1000000]
