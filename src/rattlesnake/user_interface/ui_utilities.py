@@ -43,6 +43,7 @@ from rattlesnake.utilities import (
     trac,
     VerboseMessageQueue,
     GlobalCommands,
+    IPAddress,
 )
 
 TASK_NAME = "UI"
@@ -1420,19 +1421,6 @@ class HardwareAssistModules(Enum):
     NONE = 0
     COMBOBOX = 2
     SPINBOX = 1
-
-
-class IPAddress:
-    """Container for information about IPAddress, mainly used to make
-    sure each address has a values for relevant information"""
-
-    def __init__(
-        self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False
-    ):
-        self.host_name = host_name
-        self.ipv4_address = ipv4_address
-        self.ipv6_address = ipv6_address
-        self.valid_ip = valid_ip
 
 
 class IPAddressManager(QtWidgets.QDialog):

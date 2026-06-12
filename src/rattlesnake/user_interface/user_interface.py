@@ -1540,6 +1540,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     time_per_write,
                     output_oversample,
                     maximum_acquisition_processes,
+                    self.lanxi_ip_addresses,
                 )
             case HardwareType.DP_QUATTRO:
                 sample_rate = self.sample_rate_selector.value()

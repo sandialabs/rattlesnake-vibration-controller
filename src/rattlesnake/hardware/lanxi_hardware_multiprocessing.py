@@ -32,7 +32,12 @@ import openpyxl
 import numpy as np
 import requests
 
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.utilities import IPAddress
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareAcquisition,
+    HardwareOutput,
+    HardwareAssistModules,
+)
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.lanxi_stream import OpenapiHeader, OpenapiMessage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -71,7 +76,8 @@ class LanXIMetadata(HardwareMetadata):
         time_per_read: float,
         time_per_write: float,
         output_oversample: float,
-        maximum_acquisition_processes,
+        maximum_acquisition_processes: int,
+        ip_list: List[IPAddress],
     ):
         super().__init__(
             HARDWARE_TYPE,
@@ -82,12 +88,150 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
+        self._ip_addresses = ip_list
+        self._module_info = {}
+
+        self.refresh_module_info()
 
     # endregion
 
     # region Validation
     def validate(self):
         return super().validate()
+
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+
+        assist_mode_modules["sensitivity"] = HardwareAssistModules.SPINBOX
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_channel"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["maximum_value"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["coupling"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["excitation_source"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["excitation"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_channel"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        return valid_dict
+
+    @property
+    def ipv6_address_list(self):
+        ipv6_address_list = [ip.ipv6_address for ip in self.ip]
+        return ipv6_address_list
+
+    @property
+    def valid_physical_devices(self):
+        valid_physical_devices = self.ipv6_address_list
+        return valid_physical_devices
+
+    @property
+    def valid_feedback_devices(self):
+        valid_feedback_devices = self.ipv6_address_list
+        return valid_feedback_devices
+
+    def valid_physical_channels(self, physical_device: str = ""):
+        if physical_device in list(self.module_info.keys()):
+            num_physical_channels = self.module_info[physical_device][
+                "numberOfInputChannels"
+            ]
+            valid_physical_channels = range(num_physical_channels) + 1
+        else:
+            valid_physical_channels = []
+
+        return valid_physical_channels
+
+    def valid_feedback_channels(self, feedback_device: str = ""):
+        if feedback_device in list(self.module_info.keys()):
+            num_feedback_channels = self.module_info[feedback_device][
+                "numberOfOutputChannels"
+            ]
+            valid_feedback_channels = range(num_feedback_channels) + 1
+        else:
+            valid_feedback_channels = []
+
+        return valid_feedback_channels
+
+    def valid_coupling(self, physical_device: str = "", feedback_device: str = ""):
+        if physical_device in list(self.module_info.keys()):
+            valid_physical_coupling = self.module_info[physical_device][
+                "supportedFilters"
+            ]
+        else:
+            valid_physical_coupling = []
+
+        if feedback_device == "" or feedback_device == None:
+            valid_feedback_coupling = valid_physical_coupling
+        elif feedback_device in list(self.module_info.keys()):
+            valid_feedback_coupling = self.module_info[feedback_device][
+                "supportedFilters"
+            ]
+        else:
+            valid_physical_coupling = []
+
+        valid_coupling = (
+            set(valid_physical_coupling)
+            & set(valid_feedback_coupling)
+            & set(VALID_FILTERS)
+        )
+        valid_coupling = list(valid_coupling)
+
+        return valid_coupling
+
+    def valid_max_voltage(self, physical_device: str = "", feedback_device: str = ""):
+        if physical_device in list(self.module_info.keys()):
+            valid_physical_voltage = self.module_info[physical_device][
+                "supportedOutputRanges"
+            ]
+        else:
+            valid_physical_voltage = []
+
+        if feedback_device == "" or feedback_device == None:
+            valid_feedback_voltage = valid_physical_voltage
+        elif feedback_device in list(self.module_info.keys()):
+            valid_feedback_voltage = self.module_info[feedback_device][
+                "supportedOutputRanges"
+            ]
+        else:
+            valid_feedback_voltage = []
+
+        valid_max_voltage = (
+            set(valid_physical_voltage)
+            & set(valid_feedback_voltage)
+            & set(VALID_RANGES)
+        )
+        valid_max_voltage = list(valid_max_voltage)
+
+        pattern = r"(\d+\.?\d*)\s*Vpeak\b"
+        valid_max_voltage = [
+            str(match.group(1))
+            for s in valid_max_voltage
+            for match in re.finditer(pattern, s)
+        ]
+
+        return valid_max_voltage
+
+    def refresh_module_info(self):
+        for ipv6 in self.ipv6_address_list:
+            host = "http://" + ipv6
+            response = requests.get(host + "/rest/rec/module/info")
+            info = response.json()
+            self.module_info[ipv6] = info
+
+    def get_module_name(self, ip: str):
+        """Function to figure if the input is a BK name, ipv4, or ipv6 address
+        and return the module name for use in dictionary keys"""
+
+    def set_ip_addresses(self, ip_addresses: list[IPAddress]):
+        self.ip = ip_addresses
+
+        self.refresh_module_info()
+
+    # endregion
 
     # region Loading
     def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
