@@ -1,8 +1,6 @@
 from rattlesnake.hardware.hardware_utilities import HardwareType
 
-UNIMPLEMENTED_HARDWARE = [
-    HardwareType.NONE,
-]
+UNIMPLEMENTED_HARDWARE = []
 
 
 HARDWARE_METADATA = {}
@@ -14,6 +12,16 @@ for hardware_type in HardwareType:
         continue
 
     match hardware_type:
+        case HardwareType.NONE:
+            from rattlesnake.hardware.abstract_hardware import (
+                HardwareMetadata,
+                HardwareAcquisition,
+                HardwareOutput,
+            )
+
+            HARDWARE_METADATA[HardwareType.NONE] = HardwareMetadata
+            HARDWARE_ACQUISITION[HardwareType.NONE] = HardwareAcquisition
+            HARDWARE_OUTPUT[HardwareType.NONE] = HardwareOutput
         case HardwareType.NI_DAQMX:
             from rattlesnake.hardware.nidaqmx_hardware_multitask import (
                 NIDAQmxMetadata,

@@ -531,13 +531,13 @@ class RattlesnakeController:
             raise RattlesnakeError("Rattlesnake only saves .xlsx files as templates")
         workbook = openpyxl.Workbook()
         hardware_metadata = self.hardware_metadata
-        environment_metadata_list = list(self.environment_metadata.values())
+        environment_metadata_dict = self.environment_metadata.values()
         profile_event_list = self.last_profile_event_list
 
         save_rattlesnake_to_workbook(
             workbook,
             hardware_metadata,
-            environment_metadata_list,
+            environment_metadata_dict,
             profile_event_list,
         )
         workbook.save(filepath)
