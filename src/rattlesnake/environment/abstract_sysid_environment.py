@@ -378,8 +378,13 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
                 ).value == "Output Transformation Matrix:" or (
                     first_col_value is None
                     or (
-                        isinstance(first_col_value, str)
-                        and first_col_value.strip() == ""
+                        (
+                            isinstance(first_col_value, str)
+                            and (
+                                first_col_value.startswith("#")
+                                or first_col_value.strip() == ""
+                            )
+                        )
                     )
                 ):
                     break

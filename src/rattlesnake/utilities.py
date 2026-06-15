@@ -643,7 +643,10 @@ def read_transformation_matrix_from_worksheet(
         col_idx = start_col
         while True:
             value = worksheet.cell(start_row + i, col_idx).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             row.append(float(value))
             col_idx += 1

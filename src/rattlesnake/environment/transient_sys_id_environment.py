@@ -484,7 +484,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         while True:
             channel_ind = worksheet.cell(7, column_index).value
             if channel_ind is None or (
-                isinstance(channel_ind, str) and channel_ind.strip() == ""
+                isinstance(channel_ind, str)
+                and (channel_ind.startswith("#") or channel_ind.strip() == "")
             ):
                 break
             try:

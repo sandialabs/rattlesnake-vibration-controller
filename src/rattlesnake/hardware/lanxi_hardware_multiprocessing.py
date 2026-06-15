@@ -784,7 +784,10 @@ class LanXIAcquisition(HardwareAcquisition):
             for channel in channel_data
             if (
                 not (channel.feedback_device is None)
-                and not (channel.feedback_device.strip() == "")
+                and not (
+                    channel.feedback_device.startswith("#")
+                    or channel.feedback_device.strip() == ""
+                )
             )
         ]
         self.master_address = host_addresses[0]

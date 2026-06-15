@@ -875,7 +875,10 @@ class NIDAQmxOutput(HardwareOutput):
         extra_task_index = 1
         for channel in channel_data:
             if not (channel.feedback_device is None) and not (
-                channel.feedback_device.strip() == ""
+                (
+                    channel.feedback_device.startswith("#")
+                    or channel.feedback_device.strip() == ""
+                )
             ):
                 device_name = channel.feedback_device
                 device = ni.system.device.Device(device_name)
