@@ -190,6 +190,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
             "lanxi_ip": [self.lanxi_ip_address_button],
             "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
+            "lanxi_ipv6": [self.ipv6_checkbox, self.ipv6_label],
             "buffer_size": [self.buffer_size_label, self.buffer_size_selector],
             "lanxi_processes": [
                 self.lanxi_maximum_acquisition_processes_label,

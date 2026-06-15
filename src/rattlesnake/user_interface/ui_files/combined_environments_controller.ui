@@ -497,6 +497,20 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
+              <widget class="QLabel" name="ipv6_label">
+               <property name="text">
+                <string>Use IPv6</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="ipv6_checkbox">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QLabel" name="sample_rate_label">
                <property name="text">
                 <string>Sample Rate</string>
@@ -1467,7 +1481,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
      <x>0</x>
      <y>0</y>
      <width>2107</width>
-     <height>18</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
