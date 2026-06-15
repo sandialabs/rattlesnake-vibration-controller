@@ -838,15 +838,24 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         try:
             # Hardware
+            hardware_text = self.hardware_selector.currentText()
             hardware_metadata = self.get_hardware_metadata_no_channels()
             channel_list = self.get_channel_list()
             hardware_metadata.channel_list = channel_list
 
             # Environments
-            environment_metadata_list = []
+            environment_metadata_dict = {}
             for environment_ui in self.environment_uis.values():
-                metadata = environment_ui.get_environment_metadata(channel_list)
-                environment_metadata_list.append(metadata)
+                if environment_ui.hardware_metadata is None:
+                    # This is a bad workaround to get blank templates.
+                    environment_metadata_dict[environment_ui.environment_name] = (
+                        environment_ui.environment_type
+                    )
+                else:
+                    metadata = environment_ui.get_environment_metadata(channel_list)
+                    environment_metadata_dict[environment_ui.environment_name] = (
+                        metadata
+                    )
 
             # Profiles
             profile_event_list = []
@@ -870,7 +879,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             save_rattlesnake_to_workbook(
                 workbook,
                 hardware_metadata,
-                environment_metadata_list,
+                environment_metadata_dict,
                 profile_event_list,
             )
             workbook.save(filepath)
@@ -1394,12 +1403,20 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         hardware_text = self.hardware_selector.currentText()
         hardware_type = UI_HARDWARE_OPTIONS[hardware_text]
-        if hardware_type == "Select":
-            return None
-
         channel_list = []
         hardware_metadata_class = HARDWARE_METADATA[hardware_type]
         match hardware_type:
+            case HardwareType.NONE:
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                return hardware_metadata_class(
+                    HardwareType.NONE,
+                    channel_list,
+                    sample_rate,
+                    time_per_read,
+                    time_per_write,
+                )
             case HardwareType.NI_DAQMX:
                 sample_rate = self.sample_rate_selector.value()
                 time_per_read = self.buffer_size_selector.value()

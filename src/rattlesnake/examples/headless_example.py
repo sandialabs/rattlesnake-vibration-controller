@@ -20,7 +20,7 @@ from rattlesnake.testing.mock_user_interface import (
 )
 
 """USER INPUTS"""
-THREADED = False
+THREADED = True
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.NONE
 ENVIRONMENT_TYPE = EnvironmentType.NONE

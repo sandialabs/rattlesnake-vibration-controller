@@ -168,7 +168,7 @@ def load_metadata_from_workbook(workbook):
 def save_rattlesnake_to_workbook(
     workbook,
     hardware_metadata=None,
-    environment_metadata_list=None,
+    environment_metadata_dict=None,
     profile_event_list=None,
 ):
     # Open workbook and save to blank template
@@ -176,21 +176,26 @@ def save_rattlesnake_to_workbook(
     HardwareMetadata.save_blank_hardware_to_workbook(workbook)
 
     # Save hardware metadata values
-    if hardware_metadata is not None and hardware_metadata.hardware_type != "Select":
-        hardware_metadata.save_metadata_to_workbook(workbook)
+    hardware_metadata.save_metadata_to_workbook(workbook)
 
     # Save environment metadata values
     channel_worksheet.cell(row=1, column=24, value="Environments")
-    if environment_metadata_list:
-        for col, environment_metadata in enumerate(environment_metadata_list):
+    if environment_metadata_dict:
+        for col, (environment_name, environment_metadata) in enumerate(
+            environment_metadata_dict.items()
+        ):
             col_idx = col + 24
-            environment_name = environment_metadata.environment_name
             channel_worksheet.cell(row=2, column=col_idx, value=environment_name)
-            for row in environment_metadata.channel_indices:
-                row_idx = row + 3
-                channel_worksheet.cell(row=row_idx, column=col_idx, value="x")
             environment_worksheet = workbook.create_sheet(environment_name)
-            environment_metadata.save_metadata_to_worksheet(environment_worksheet)
+            if isinstance(environment_metadata, EnvironmentType):
+                ENVIRONMENT_METADATA[
+                    environment_metadata
+                ].create_blank_worksheet_template(environment_worksheet)
+            else:
+                for row in environment_metadata.channel_indices:
+                    row_idx = row + 3
+                    channel_worksheet.cell(row=row_idx, column=col_idx, value="x")
+                environment_metadata.save_metadata_to_worksheet(environment_worksheet)
 
     # Save profile event list
     profile_sheet = workbook.create_sheet("Test Profile")
