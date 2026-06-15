@@ -88,7 +88,9 @@ jobs:
   # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
     needs: changes
-    # Run if code changed OR if we're on a primary branch OR if it's a PR targeting a primary branch
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
@@ -98,7 +100,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        # Full mode
+        #   main/dev branch, PR targeting main/dev, manual 'full', or '[all tests]' in commit/PR title):
+        #   run on Linux, macOS, and Windows.
+        # Fast mode (all other branches): ubuntu-latest only.
         os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        # Full mode: test against Python 3.11 and 3.12. Fast mode: 3.12 only.
         python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
 
     steps:
@@ -154,7 +161,9 @@ jobs:
 
   lint:
     needs: changes
-    # Run if code changed OR if we're on a primary branch OR if it's a PR targeting a primary branch
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
@@ -227,7 +236,9 @@ jobs:
 
   coverage:
     needs: changes
-    # Run if code changed OR if we're on a primary branch OR if it's a PR targeting a primary branch
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
@@ -308,7 +319,9 @@ jobs:
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
     needs: changes
-    # Run if docs changed OR if we're on a main/dev branch OR if it's a PR targeting a main/dev branch
+    # Run job if docs changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.docs_changed == 'true' ||
       github.ref_name == 'main' ||
