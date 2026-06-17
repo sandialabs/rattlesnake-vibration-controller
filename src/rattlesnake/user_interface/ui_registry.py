@@ -27,7 +27,6 @@ for hardware_type in HardwareType:
             UI_HARDWARE_OPTIONS["HBK LAN-XI"] = HardwareType.LAN_XI
             UI_HARDWARE_WIDGETS[HardwareType.LAN_XI] = [
                 "lanxi_sample_rate",
-                "lanxi_ipv6",
                 "buffer_size",
                 "lanxi_processes",
                 "lanxi_ip",

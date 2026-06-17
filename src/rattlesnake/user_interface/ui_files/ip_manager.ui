@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>693</width>
-    <height>492</height>
+    <width>914</width>
+    <height>639</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,6 +22,65 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <layout class="QGridLayout" name="button_layout">
+        <item row="8" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="clear_ip_button">
+            <property name="text">
+             <string>Clear IP Addresses</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="ipv6_checkbox">
+            <property name="text">
+             <string>Default to IPv6?</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QPushButton" name="add_ip_address_button">
+          <property name="toolTip">
+           <string>Adds an environment to the test.</string>
+          </property>
+          <property name="text">
+           <string>Add IP Address</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QPushButton" name="remove_ip_address_button">
+          <property name="toolTip">
+           <string>Removes an environment from the test.</string>
+          </property>
+          <property name="text">
+           <string>Remove Selected IP Address</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="save_file_button">
+            <property name="text">
+             <string>Save File</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="load_file_button">
+            <property name="text">
+             <string>Load File</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <item row="0" column="0" colspan="2">
          <widget class="QTableWidget" name="ip_address_table">
           <property name="sizePolicy">
@@ -50,27 +109,14 @@
           </column>
          </widget>
         </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QPushButton" name="add_ip_address_button">
-          <property name="toolTip">
-           <string>Adds an environment to the test.</string>
-          </property>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="find_ip_button">
           <property name="text">
-           <string>Add IP Address</string>
+           <string>Find IP Addresses</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QPushButton" name="remove_ip_address_button">
-          <property name="toolTip">
-           <string>Removes an environment from the test.</string>
-          </property>
-          <property name="text">
-           <string>Remove Selected IP Address</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
+        <item row="3" column="1">
          <widget class="QPushButton" name="validate_ip_address_button">
           <property name="text">
            <string>Autofill/Validate IP Addresses</string>

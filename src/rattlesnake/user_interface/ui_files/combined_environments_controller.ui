@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2107</width>
+    <width>2173</width>
     <height>703</height>
    </rect>
   </property>
@@ -493,20 +493,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               <widget class="QPushButton" name="lanxi_ip_address_button">
                <property name="text">
                 <string>IP Address Lookup</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="ipv6_label">
-               <property name="text">
-                <string>Use IPv6</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="ipv6_checkbox">
-               <property name="text">
-                <string/>
                </property>
               </widget>
              </item>
@@ -1480,7 +1466,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2107</width>
+     <width>2173</width>
      <height>22</height>
     </rect>
    </property>
