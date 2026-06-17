@@ -498,7 +498,6 @@ def autofill_single_ip_address(ip_address):
         ip_address.get_ip_from_host_name()
     if ip_address.host_name:
         ip_address.get_ip_from_host_name()
-        ip_address.validate()
 
     print(
         f"host: {ip_address.host_name}, ipv4: {ip_address.ipv4_address}, ipv6: {ip_address.ipv6_address}"
@@ -554,10 +553,11 @@ def find_lanxi_devices():
         }
 
         for future in as_completed(futures):
-            host_name, ipv4, info, valid = future.result()
+            host_name, ipv4, info, sync, valid = future.result()
             if valid:
                 address = IPAddress(host_name, ipv4)
                 address.module_info = info
+                address.sync_type = sync
                 address.get_ip_from_host_name()
                 results.append(address)
 
@@ -573,15 +573,21 @@ def test_lanxi_candidate(ipv4_address):
         )
         response.raise_for_status()
         info = response.json()
+        response = requests.get(
+            host + "/rest/rec/syncmode",
+            timeout=0.3,
+        )
+        sync = response.json()
 
         host_name = f"BK{info['module']['type']['number']}-{info['module']['serial']}"
         valid = True
     except Exception:
         host_name = None
         info = None
+        sync = None
         valid = False
 
-    return (host_name, ipv4_address, info, valid)
+    return (host_name, ipv4_address, info, sync, valid)
 
 
 class IPAddress:
@@ -596,6 +602,7 @@ class IPAddress:
         self.ipv6_address = ipv6_address
         self.valid_ip = valid_ip
         self.module_info = None
+        self.sync_type = None
         self.validation_timeout = 5
 
     def get_ip_from_host_name(self):
@@ -633,10 +640,14 @@ class IPAddress:
         try:
             response = requests.get(
                 host + "/rest/rec/module/info",
-                timeout=(2, self.validation_timeout),
-                headers={"Connection": "close"},
+                timeout=self.validation_timeout,
             )
             self.module_info = response.json()
+            response = requests.get(
+                host + "/rest/rec/syncmode",
+                timeout=self.validation_timeout,
+            )
+            self.sync_type = response.json()
             self.host_name = f"BK{self.module_info['module']['type']['number']}-{self.module_info['module']['serial']}"
             self.valid_ip = True
         except Exception:
@@ -654,10 +665,14 @@ class IPAddress:
         try:
             response = requests.get(
                 host + "/rest/rec/module/info",
-                timeout=(2, self.validation_timeout),
-                headers={"Connection": "close"},
+                timeout=self.validation_timeout,
             )
             self.module_info = response.json()
+            response = requests.get(
+                host + "/rest/rec/syncmode",
+                timeout=self.validation_timeout,
+            )
+            self.sync_type = response.json()
             self.valid_ip = True
         except Exception:
             self.valid_ip = False

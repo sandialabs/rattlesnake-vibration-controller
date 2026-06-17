@@ -94,6 +94,23 @@ class LanXIMetadata(HardwareMetadata):
         self.cache_info_dicts()
 
     @property
+    def master_address(self):
+        for address in self.ip_addresses:
+            if not address.sync_type["synchronization"]["preferredMaster"]:
+                continue
+
+            for channel in self.channel_list:
+                channel_devices = (channel.physical_device, channel.feedback_device)
+
+                if address.ipv4_address in channel_devices:
+                    return address.ipv4_address
+
+                if address.ipv6_address in channel_devices:
+                    return address.ipv6_address
+
+        return self.channel_list[0].physical_device
+
+    @property
     def channel_list(self):
         return super().channel_list
 
@@ -155,6 +172,7 @@ class LanXIMetadata(HardwareMetadata):
         for address in self.ip_addresses:
             if address.module_info is None:
                 autofill_single_ip_address(address)
+                address.validate()
                 if not address.valid_ip:
                     continue
 
@@ -843,7 +861,7 @@ class LanXIAcquisition(HardwareAcquisition):
                 )
             )
         ]
-        self.master_address = host_addresses[0]
+        self.master_address = test_data.master_address
         self.slave_addresses = set(
             [
                 address
@@ -1138,7 +1156,7 @@ class LanXIOutput(HardwareOutput):
                 and not (channel.feedback_device.strip() == "")
             )
         ]
-        self.master_address = host_addresses[0]
+        self.master_address = test_data.master_address
         self.slave_addresses = set(
             [
                 address
