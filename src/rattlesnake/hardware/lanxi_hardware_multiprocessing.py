@@ -77,7 +77,7 @@ class LanXIMetadata(HardwareMetadata):
         time_per_write: float,
         output_oversample: float,
         maximum_acquisition_processes: int,
-        ip_addresses: List[IPAddress],
+        ip_addresses: List[IPAddress] = [],
         use_ipv6: bool = False,
     ):
         super().__init__(
@@ -90,6 +90,8 @@ class LanXIMetadata(HardwareMetadata):
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
         self.ip_addresses = ip_addresses
+        self.update_ip_addresses()
+
         self.use_ipv6 = use_ipv6
         self.cache_info_dicts()
 
@@ -123,6 +125,46 @@ class LanXIMetadata(HardwareMetadata):
                 if channel.physical_device in self.ipv6_dict.keys():
                     channel.physical_device = self.ipv6_dict[channel.physical_device]
         self._channel_list = value
+        self.update_ip_addresses()
+
+    def update_ip_addresses(self):
+        # Check if physical and feedback devices are in the ip addresses and if not, look up their data
+        # for validation purposes and add them to the ip addresses.
+        for channel in self.channel_list:
+            if channel.physical_device not in (
+                self.ipv4_addresses,
+                self.ipv6_addresses,
+            ):
+                is_ipv4 = (
+                    re.search(IPV4_PATTERN, str(channel.physical_device)) is not None
+                )
+                is_ipv6 = (
+                    re.search(IPV6_PATTERN, str(channel.physical_device)) is not None
+                )
+                if is_ipv4:
+                    address = IPAddress(ipv4_address=channel.physical_device)
+                elif is_ipv6:
+                    address = IPAddress(ipv6_address=channel.physical_device)
+                address.get_host_name_from_ip()
+                address.get_ip_from_host_name()
+                self.ip_addresses.append(address)
+            if channel.feedback_device not in (
+                self.ipv4_addresses,
+                self.ipv6_addresses,
+            ):
+                is_ipv4 = (
+                    re.search(IPV4_PATTERN, str(channel.feedback_device)) is not None
+                )
+                is_ipv6 = (
+                    re.search(IPV6_PATTERN, str(channel.feedback_device)) is not None
+                )
+                if is_ipv4:
+                    address = IPAddress(ipv4_address=channel.feedback_device)
+                elif is_ipv6:
+                    address = IPAddress(ipv6_address=channel.feedback_device)
+                address.get_host_name_from_ip()
+                address.get_ip_from_host_name()
+                self.ip_addresses.append(address)
 
     # endregion
 
