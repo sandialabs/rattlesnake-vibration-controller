@@ -811,7 +811,8 @@ class SineMetadata(SysIdEnvironmentMetadata):
         while True:
             channel_ind = worksheet.cell(18, column_index).value
             if channel_ind is None or (
-                isinstance(channel_ind, str) and channel_ind.strip() == ""
+                isinstance(channel_ind, str)
+                and (channel_ind.startswith("#") or channel_ind.strip() == "")
             ):
                 break
             try:
@@ -934,7 +935,13 @@ class SineMetadata(SysIdEnvironmentMetadata):
             while True:
                 if worksheet.cell(output_transform_row + i, 2).value is None or (
                     isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
-                    and worksheet.cell(output_transform_row + i, 2).value.strip() == ""
+                    and (
+                        worksheet.cell(output_transform_row + i, 2).value.startswith(
+                            "#"
+                        )
+                        or worksheet.cell(output_transform_row + i, 2).value.strip()
+                        == ""
+                    )
                 ):
                     break
                 output_transformation.append([])

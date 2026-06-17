@@ -526,7 +526,10 @@ class TransientUI(SysIdEnvironmentUI):
         column_index = 2
         while True:
             value = worksheet.cell(7, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             item = self.definition_widget.control_channels_selector.item(int(value) - 1)
             item.setCheckState(Qt.Checked)
@@ -623,7 +626,13 @@ class TransientUI(SysIdEnvironmentUI):
             while True:
                 if worksheet.cell(output_transform_row + i, 2).value is None or (
                     isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
-                    and worksheet.cell(output_transform_row + i, 2).value.strip() == ""
+                    and (
+                        worksheet.cell(output_transform_row + i, 2).value.startswith(
+                            "#"
+                        )
+                        or worksheet.cell(output_transform_row + i, 2).value.strip()
+                        == ""
+                    )
                 ):
                     break
                 output_transformation.append([])

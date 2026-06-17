@@ -54,12 +54,20 @@ class HardwareMetadata:
         output_oversample: int = 1,
     ):
         self.hardware_type = hardware_type
-        self.channel_list = channel_list
+        self._channel_list = channel_list
         self.sample_rate = sample_rate
         self.time_per_read = time_per_read
         self.time_per_write = time_per_write
         # Used for virtual hardware but still required for normal hardware
         self.output_oversample = output_oversample
+
+    @property
+    def channel_list(self):
+        return self._channel_list
+
+    @channel_list.setter
+    def channel_list(self, value: List[Channel]):
+        self._channel_list = value
 
     @property
     def samples_per_read(self):

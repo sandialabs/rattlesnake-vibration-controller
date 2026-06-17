@@ -244,7 +244,10 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         for channel in test_data.channel_list:
             # Figure out if the channel is an output channel or just acquisition
             is_output = not (channel.feedback_device is None) and not (
-                channel.feedback_device.strip() == ""
+                (
+                    channel.feedback_device.startswith("#")
+                    or channel.feedback_device.strip() == ""
+                )
             )
 
             # Get the channel index from physical device

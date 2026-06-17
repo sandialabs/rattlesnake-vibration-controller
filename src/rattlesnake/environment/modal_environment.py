@@ -843,7 +843,10 @@ class ModalMetadata(EnvironmentMetadata):
         output_channel_indices = []
         while True:
             value = worksheet.cell(26, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             reference_channel_indices.append(int(value) - 1)
             column_index += 1
@@ -853,7 +856,10 @@ class ModalMetadata(EnvironmentMetadata):
         column_index = 2
         while True:
             value = worksheet.cell(27, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             response_channel_indices.remove(value - 1)
             column_index += 1
