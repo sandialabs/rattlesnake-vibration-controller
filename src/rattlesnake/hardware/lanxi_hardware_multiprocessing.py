@@ -32,7 +32,7 @@ import openpyxl
 import numpy as np
 import requests
 
-from rattlesnake.utilities import IPAddress
+from rattlesnake.utilities import IPAddress, autofill_single_ip_address
 from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareOutput,
@@ -77,7 +77,8 @@ class LanXIMetadata(HardwareMetadata):
         time_per_write: float,
         output_oversample: float,
         maximum_acquisition_processes: int,
-        ip_list: List[IPAddress],
+        ip_addresses: List[IPAddress],
+        use_ipv6: bool = False,
     ):
         super().__init__(
             HARDWARE_TYPE,
@@ -88,10 +89,23 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
-        self.ip = ip_list
-        self._module_info = {}
+        self.ip_addresses = ip_addresses
+        self.use_ipv6 = use_ipv6
+        self.cache_info_dicts()
 
-        self.refresh_module_info()
+    @property
+    def channel_list(self):
+        return super().channel_list
+
+    @channel_list.setter
+    def channel_list(self, value: List[Channel]):
+        if self.use_ipv6:
+            for channel in value:
+                if channel.feedback_device in self.ipv6_dict.keys():
+                    channel.feedback_device = self.ipv6_dict[channel.feedback_device]
+                if channel.physical_device in self.ipv6_dict.keys():
+                    channel.physical_device = self.ipv6_dict[channel.physical_device]
+        self._channel_list = value
 
     # endregion
 
@@ -135,10 +149,70 @@ class LanXIMetadata(HardwareMetadata):
 
         return valid_dict
 
+    def cache_info_dicts(self):
+        self.module_dict = {}
+        self.ipv6_dict = {}
+        for address in self.ip_addresses:
+            if address.module_info is None:
+                autofill_single_ip_address(address)
+                if not address.valid_ip:
+                    continue
+
+            if address.host_name:
+                self.module_dict[address.host_name] = address.module_info
+            if address.ipv4_address:
+                self.module_dict[address.ipv4_address] = address.module_info
+            if address.ipv6_address:
+                self.module_dict[address.ipv6_address] = address.module_info
+                if address.ipv4_address:
+                    self.ipv6_dict[address.ipv4_address] = address.ipv6_address
+
     @property
-    def ipv6_address_list(self):
-        ipv6_address_list = [ip.ipv6_address for ip in self.ip]
+    def bk_numbers(self):
+        bk_numbers = [ip.host_name for ip in self.ip_addresses]
+        return bk_numbers
+
+    @property
+    def ipv4_addresses(self):
+        ipv4_addresses = [ip.ipv4_address for ip in self.ip_addresses]
+        return ipv4_addresses
+
+    @property
+    def ipv6_addresses(self):
+        ipv6_address_list = [ip.ipv6_address for ip in self.ip_addresses]
         return ipv6_address_list
+
+    @property
+    def valid_physical_devices(self):
+        sorted_devices = sorted(
+            [ip for ip in self.ip_addresses if ip.ipv4_address],
+            key=lambda ip: tuple(map(int, ip.ipv4_address.split("."))),
+        )
+
+        ipv4_list = []
+        ipv6_list = []
+        bknum_list = []
+        for ip in sorted_devices:
+            ipv4_list.append(ip.ipv4_address)
+            ipv6_list.append(ip.ipv6_address)
+
+        return [*ipv4_list, *bknum_list, *ipv6_list]
+
+    @property
+    def valid_feedback_devices(self):
+        sorted_devices = sorted(
+            [ip for ip in self.ip_addresses if ip.ipv4_address],
+            key=lambda ip: tuple(map(int, ip.ipv4_address.split("."))),
+        )
+
+        ipv4_list = []
+        ipv6_list = []
+        bknum_list = []
+        for ip in sorted_devices:
+            ipv4_list.append(ip.ipv4_address)
+            ipv6_list.append(ip.ipv6_address)
+
+        return [*ipv4_list, *bknum_list, *ipv6_list]
 
     def valid_sensitivity(self, channel_type: str = ""):
         if isinstance(channel_type, str) and channel_type.lower() == "voltage":
@@ -147,19 +221,9 @@ class LanXIMetadata(HardwareMetadata):
             valid_sensitivity = [-1000000, 1000000]
         return valid_sensitivity
 
-    @property
-    def valid_physical_devices(self):
-        valid_physical_devices = self.ipv6_address_list
-        return valid_physical_devices
-
-    @property
-    def valid_feedback_devices(self):
-        valid_feedback_devices = self.ipv6_address_list
-        return valid_feedback_devices
-
     def valid_physical_channels(self, physical_device: str = ""):
-        if physical_device in list(self._module_info.keys()):
-            num_physical_channels = self._module_info[physical_device][
+        if physical_device in list(self.module_dict.keys()):
+            num_physical_channels = self.module_dict[physical_device][
                 "numberOfInputChannels"
             ]
             valid_physical_channels = [
@@ -171,8 +235,8 @@ class LanXIMetadata(HardwareMetadata):
         return valid_physical_channels
 
     def valid_feedback_channels(self, feedback_device: str = ""):
-        if feedback_device in list(self._module_info.keys()):
-            num_feedback_channels = self._module_info[feedback_device][
+        if feedback_device in list(self.module_dict.keys()):
+            num_feedback_channels = self.module_dict[feedback_device][
                 "numberOfOutputChannels"
             ]
             valid_feedback_channels = [
@@ -184,8 +248,8 @@ class LanXIMetadata(HardwareMetadata):
         return valid_feedback_channels
 
     def valid_coupling(self, physical_device: str = "", feedback_device: str = ""):
-        if physical_device in list(self._module_info.keys()):
-            valid_physical_coupling = self._module_info[physical_device][
+        if physical_device in list(self.module_dict.keys()):
+            valid_physical_coupling = self.module_dict[physical_device][
                 "supportedFilters"
             ]
         else:
@@ -193,8 +257,8 @@ class LanXIMetadata(HardwareMetadata):
 
         if feedback_device == "" or feedback_device == None:
             valid_feedback_coupling = valid_physical_coupling
-        elif feedback_device in list(self._module_info.keys()):
-            valid_feedback_coupling = self._module_info[feedback_device][
+        elif feedback_device in list(self.module_dict.keys()):
+            valid_feedback_coupling = self.module_dict[feedback_device][
                 "supportedFilters"
             ]
         else:
@@ -229,17 +293,17 @@ class LanXIMetadata(HardwareMetadata):
         return None
 
     def valid_max_voltage(self, physical_device: str = "", feedback_device: str = ""):
-        if physical_device in self._module_info:
-            valid_physical_voltage = self._module_info[physical_device][
-                "supportedOutputRanges"
+        if physical_device in self.module_dict:
+            valid_physical_voltage = self.module_dict[physical_device][
+                "supportedRanges"
             ]
         else:
             valid_physical_voltage = []
 
         if feedback_device in ("", None):
             valid_feedback_voltage = valid_physical_voltage
-        elif feedback_device in self._module_info:
-            valid_feedback_voltage = self._module_info[feedback_device][
+        elif feedback_device in self.module_dict:
+            valid_feedback_voltage = self.module_dict[feedback_device][
                 "supportedOutputRanges"
             ]
         else:
@@ -269,21 +333,10 @@ class LanXIMetadata(HardwareMetadata):
 
         return list(sorted(valid_max_voltage, key=float))
 
-    def refresh_module_info(self):
-        for ipv6 in self.ipv6_address_list:
-            host = "http://" + ipv6
-            response = requests.get(host + "/rest/rec/module/info")
-            info = response.json()
-            self._module_info[ipv6] = info
-
-    def get_module_name(self, ip: str):
-        """Function to figure if the input is a BK name, ipv4, or ipv6 address
-        and return the module name for use in dictionary keys"""
-
     def set_ip_addresses(self, ip_addresses: list[IPAddress]):
         self.ip = ip_addresses
 
-        self.refresh_module_info()
+        self.cache_info_dict()
 
     # endregion
 

@@ -1571,7 +1571,6 @@ class IPAddressManager(QtWidgets.QDialog):
         """Adds a new IP address to the manager"""
         if isinstance(ip_address, IPAddress):
             new_ip = ip_address
-            print(f"Adding IP: {ip_address.ipv4_address}")
         else:
             new_ip = IPAddress()
         self.ip_addresses.append(new_ip)

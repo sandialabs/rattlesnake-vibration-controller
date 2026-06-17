@@ -188,7 +188,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         available_hardware = UI_HARDWARE_OPTIONS.keys()
         self.hardware_widgets = {
             "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
-            "lanxi_ip": [self.lanxi_ip_address_button],
+            "lanxi_ip": [self.lanxi_ip_checkbox, self.lanxi_ip_address_button],
             "lanxi_sample_rate": [self.lanxi_sample_rate_selector],
             "buffer_size": [self.buffer_size_label, self.buffer_size_selector],
             "lanxi_processes": [
@@ -1577,6 +1577,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 time_per_read = self.buffer_size_selector.value()
                 time_per_write = self.buffer_size_selector.value()
                 output_oversample = 16384 // sample_rate
+                use_ipv6 = self.lanxi_ip_checkbox.isChecked()
                 if output_oversample == 0:
                     output_oversample = 1
                 maximum_acquisition_processes = (
@@ -1590,6 +1591,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     output_oversample,
                     maximum_acquisition_processes,
                     self.lanxi_ip_addresses,
+                    use_ipv6,
                 )
             case HardwareType.DP_QUATTRO:
                 sample_rate = self.sample_rate_selector.value()

@@ -492,10 +492,13 @@ def autofill_single_ip_address(ip_address):
 
     if ip_address.ipv6_address:
         ip_address.get_host_name_from_ip()
+        ip_address.get_ip_from_host_name()
     elif ip_address.ipv4_address:
         ip_address.get_host_name_from_ip()
+        ip_address.get_ip_from_host_name()
     if ip_address.host_name:
         ip_address.get_ip_from_host_name()
+        ip_address.validate()
 
     print(
         f"host: {ip_address.host_name}, ipv4: {ip_address.ipv4_address}, ipv6: {ip_address.ipv6_address}"
@@ -551,9 +554,10 @@ def find_lanxi_devices():
         }
 
         for future in as_completed(futures):
-            host_name, ipv4, valid = future.result()
+            host_name, ipv4, info, valid = future.result()
             if valid:
                 address = IPAddress(host_name, ipv4)
+                address.module_info = info
                 address.get_ip_from_host_name()
                 results.append(address)
 
@@ -574,9 +578,10 @@ def test_lanxi_candidate(ipv4_address):
         valid = True
     except Exception:
         host_name = None
+        info = None
         valid = False
 
-    return (host_name, ipv4_address, valid)
+    return (host_name, ipv4_address, info, valid)
 
 
 class IPAddress:
@@ -590,6 +595,7 @@ class IPAddress:
         self.ipv4_address = ipv4_address
         self.ipv6_address = ipv6_address
         self.valid_ip = valid_ip
+        self.module_info = None
         self.validation_timeout = 5
 
     def get_ip_from_host_name(self):
@@ -612,7 +618,6 @@ class IPAddress:
                         self.ipv6_address = f"[{ipv6}%{scope_id}]"
                     else:
                         self.ipv6_address = f"[{ipv6}]"
-            self.valid_ip = True
         except Exception:
             self.valid_ip = False
 
@@ -631,10 +636,8 @@ class IPAddress:
                 timeout=(2, self.validation_timeout),
                 headers={"Connection": "close"},
             )
-            info = response.json()
-            self.host_name = (
-                f"BK{info['module']['type']['number']}-{info['module']['serial']}"
-            )
+            self.module_info = response.json()
+            self.host_name = f"BK{self.module_info['module']['type']['number']}-{self.module_info['module']['serial']}"
             self.valid_ip = True
         except Exception:
             self.valid_ip = False
@@ -649,11 +652,13 @@ class IPAddress:
             return
 
         try:
-            response = requests.put(
-                host + "/rest/rec/open", timeout=self.validation_timeout
+            response = requests.get(
+                host + "/rest/rec/module/info",
+                timeout=(2, self.validation_timeout),
+                headers={"Connection": "close"},
             )
-            if response.status_code == 200:
-                self.valid_ip = True
+            self.module_info = response.json()
+            self.valid_ip = True
         except Exception:
             self.valid_ip = False
 

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2173</width>
+    <width>2183</width>
     <height>703</height>
    </rect>
   </property>
@@ -486,6 +486,13 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                </property>
                <property name="toolTip">
                 <string>Choose which hardware you will be using in the test.</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="lanxi_ip_checkbox">
+               <property name="text">
+                <string>Use IPv6?</string>
                </property>
               </widget>
              </item>
@@ -1466,7 +1473,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2173</width>
+     <width>2183</width>
      <height>22</height>
     </rect>
    </property>
