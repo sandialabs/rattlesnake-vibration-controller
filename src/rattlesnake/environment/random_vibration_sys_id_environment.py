@@ -352,6 +352,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         )
         netcdf_group_handle.cola_window = self.cola_window
         netcdf_group_handle.cola_overlap = self.cola_overlap
+        netcdf_group_handle.percent_lines_out = self.percent_lines_out
         netcdf_group_handle.cola_window_exponent = self.cola_window_exponent
         netcdf_group_handle.frames_in_cpsd = self.frames_in_cpsd
         netcdf_group_handle.cpsd_window = self.cpsd_window
@@ -476,6 +477,10 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         cola_window_exponent = netcdf_group_handle.cola_window_exponent
         frames_in_cpsd = netcdf_group_handle.frames_in_cpsd
         cpsd_window = netcdf_group_handle.cpsd_window
+        if hasattr(netcdf_group_handle, "percent_lines_out"):
+            percent_lines_out = netcdf_group_handle.percent_lines_out
+        else:
+            percent_lines_out = 0.1
         control_python_script = netcdf_group_handle.control_python_script
         control_python_function = netcdf_group_handle.control_python_function
         control_python_function_type = netcdf_group_handle.control_python_function_type
@@ -533,7 +538,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             frames_in_cpsd=frames_in_cpsd,
             cpsd_window=cpsd_window,
             cpsd_overlap=cpsd_overlap,
-            percent_lines_out=0.1,  # TODO This is wrong
+            percent_lines_out=percent_lines_out,
             allow_automatic_aborts=allow_automatic_aborts,
             control_python_script=control_python_script,
             control_python_function=control_python_function,
@@ -581,42 +586,44 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(9, 3, "# Window used to compute the CPSD matrix")
         worksheet.cell(10, 1, "CPSD Overlap %:")
         worksheet.cell(10, 3, "# Overlap percentage for CPSD calculations")
-        worksheet.cell(11, 1, "Allow Automatic Aborts")
+        worksheet.cell(11, 1, "Percent Lines Out")
+        worksheet.cell(11, 3, "# asdf")
+        worksheet.cell(12, 1, "Allow Automatic Aborts")
         worksheet.cell(
-            11,
+            12,
             3,
             "# Shut down the test automatically if an abort level is reached (Y/N)",
         )
-        worksheet.cell(12, 1, "Control Python Script:")
-        worksheet.cell(12, 3, "# Path to the Python script containing the control law")
-        worksheet.cell(13, 1, "Control Python Function:")
+        worksheet.cell(13, 1, "Control Python Script:")
+        worksheet.cell(13, 3, "# Path to the Python script containing the control law")
+        worksheet.cell(14, 1, "Control Python Function:")
         worksheet.cell(
-            13,
+            14,
             3,
             "# Function or class name within the Python Script that will serve as the control law",
         )
-        worksheet.cell(14, 1, "Control Parameters:")
-        worksheet.cell(14, 3, "# Extra parameters used in the control law")
-        worksheet.cell(15, 1, "Control Channels (1-based):")
-        worksheet.cell(16, 1, "Sigma Clipping")
+        worksheet.cell(15, 1, "Control Parameters:")
+        worksheet.cell(15, 3, "# Extra parameters used in the control law")
+        worksheet.cell(16, 1, "Control Channels (1-based):")
+        worksheet.cell(17, 1, "Sigma Clipping")
         worksheet.cell(
-            16, 3, "# Standard-deviation threshold used to reject outlier data."
+            17, 3, "# Standard-deviation threshold used to reject outlier data."
         )
-        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=17)
-        worksheet.cell(33, 1, "Specification File:")
-        worksheet.cell(33, 3, "# Path to the file containing the Specification")
-        worksheet.cell(34, 1, "Response Transformation Matrix:")
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=18)
+        worksheet.cell(34, 1, "Specification File:")
+        worksheet.cell(34, 3, "# Path to the file containing the Specification")
+        worksheet.cell(35, 1, "Response Transformation Matrix:")
         worksheet.cell(
-            34,
+            35,
             2,
             "# Transformation matrix to apply to the response channels.  Type None if there "
             "is none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
             "Transformation Matrix line down so it will fit.  The number of columns should be the "
             "number of physical control channels.",
         )
-        worksheet.cell(35, 1, "Output Transformation Matrix:")
+        worksheet.cell(36, 1, "Output Transformation Matrix:")
         worksheet.cell(
-            35,
+            36,
             2,
             "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
@@ -646,26 +653,28 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             worksheet.cell(9, 2, self.cpsd_window)
         if self.cpsd_overlap is not None:
             worksheet.cell(10, 2, self.cpsd_overlap)
+        if self.percent_lines_out is not None:
+            worksheet.cell(11, 2, self.percent_lines_out)
         if self.allow_automatic_aborts is not None:
-            worksheet.cell(11, 2, "Y" if self.allow_automatic_aborts else "N")
+            worksheet.cell(12, 2, "Y" if self.allow_automatic_aborts else "N")
         if self.control_python_script is not None:
-            worksheet.cell(12, 2, self.control_python_script)
+            worksheet.cell(13, 2, self.control_python_script)
         if self.control_python_function is not None:
-            worksheet.cell(13, 2, self.control_python_function)
+            worksheet.cell(14, 2, self.control_python_function)
         if self.control_python_function_parameters is not None:
-            worksheet.cell(14, 2, self.control_python_function_parameters)
+            worksheet.cell(15, 2, self.control_python_function_parameters)
         if self.control_channel_indices is not None:
             for idx, channel_ind in enumerate(self.control_channel_indices):
                 col_idx = idx + 2
-                worksheet.cell(15, col_idx, channel_ind + 1)
+                worksheet.cell(16, col_idx, channel_ind + 1)
         if self.sigma_clip is not None:
-            worksheet.cell(16, 2, self.sigma_clip)
-        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=17)
+            worksheet.cell(17, 2, self.sigma_clip)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=18)
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
             self.reference_transformation_matrix,
-            start_row=34,
+            start_row=35,
         )
 
     @classmethod
@@ -701,27 +710,28 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         frames_in_cpsd = int(worksheet.cell(8, 2).value)
         cpsd_window = worksheet.cell(9, 2).value
         cpsd_overlap = float(worksheet.cell(10, 2).value)
-        allow_automatic_aborts = worksheet.cell(11, 2).value.upper() == "Y"
+        percent_lines_out = float(worksheet.cell(11, 2).value)
+        allow_automatic_aborts = worksheet.cell(12, 2).value.upper() == "Y"
 
         control_python_script = (
-            worksheet.cell(12, 2).value
-            if worksheet.cell(12, 2).value is not None
-            else ""
-        )
-        control_python_function = (
             worksheet.cell(13, 2).value
             if worksheet.cell(13, 2).value is not None
             else ""
         )
-        control_python_function_parameters = (
+        control_python_function = (
             worksheet.cell(14, 2).value
             if worksheet.cell(14, 2).value is not None
+            else ""
+        )
+        control_python_function_parameters = (
+            worksheet.cell(15, 2).value
+            if worksheet.cell(15, 2).value is not None
             else ""
         )
         control_channel_indices = []
         column_index = 2
         while True:
-            channel_ind = worksheet.cell(15, column_index).value
+            channel_ind = worksheet.cell(16, column_index).value
             if channel_ind is None or (
                 isinstance(channel_ind, str)
                 and (channel_ind.startswith("#") or channel_ind.strip() == "")
@@ -732,14 +742,14 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             except:
                 break
             column_index += 1
-        sigma_clip = float(worksheet.cell(16, 2).value)
+        sigma_clip = float(worksheet.cell(17, 2).value)
 
         sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
-            worksheet, hardware_metadata, 17
+            worksheet, hardware_metadata, 18
         )
 
         response_transformation_matrix, output_transformation_matrix = (
-            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=34)
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=35)
         )
 
         # Find python module type
@@ -792,7 +802,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             frames_in_cpsd=frames_in_cpsd,
             cpsd_window=cpsd_window,
             cpsd_overlap=cpsd_overlap,
-            percent_lines_out=0.1,  # TODO This is wrong
+            percent_lines_out=percent_lines_out,
             allow_automatic_aborts=allow_automatic_aborts,
             control_python_script=control_python_script,
             control_python_function=control_python_function,
