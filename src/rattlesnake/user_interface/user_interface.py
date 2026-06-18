@@ -1468,8 +1468,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Prevent user from initializing multiple times
         self.initialize_hardware_button.setEnabled(False)
-        for ind in range(5):
-            self.rattlesnake_tabs.setTabEnabled(ind + 1, False)
+        if self.rattlesnake.state in (
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            for ind in range(5):
+                self.rattlesnake_tabs.setTabEnabled(ind + 1, False)
 
         try:
             # Build hardware metadata
@@ -1871,8 +1876,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Prevent user from initializing multiple times
         self.initialize_environments_button.setEnabled(False)
-        for ind in range(4):
-            self.rattlesnake_tabs.setTabEnabled(ind + 2, False)
+        if self.rattlesnake.state in (
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        ):
+            for ind in range(4):
+                self.rattlesnake_tabs.setTabEnabled(ind + 2, False)
 
         try:
             # Build environment metadata list
