@@ -437,7 +437,7 @@ On the GitHub repo:
   * Under the **Deployment branches and tags**, under the **No Restriction** button, select **Selected branches and tags**.
   * Click **Add deployment branch or tag rule**.
   * Select **Ref type: Tag**.
-  * Set the **Name Pattern:** to 'v*'.  This ensures that *only* version tags can ever use this environment, adding a layer of security.
+  * Set the **Name Pattern:** to `v*`.  This ensures that *only* version tags can ever use this environment, adding a layer of security.
 
 Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 
