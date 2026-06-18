@@ -560,6 +560,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_environments()
                 # Enable next tab (sysid/profile)
                 if self.has_system_id:
+                    # There is an edge case that helps us here: If the engine has had a system id loaded to it,
+                    # the abstract sys id data process will put the system id completed command to the ui gui
+                    # queue which is processed in order when the UI launches, therefore enabling the next tabs
                     self.rattlesnake_tabs.setTabEnabled(2, True)
                     self.rattlesnake_tabs.setCurrentIndex(2)
                 else:
@@ -567,7 +570,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.rattlesnake_tabs.setCurrentIndex(4)
                 if has_profile:
                     self.load_ui_from_profile()
-                    self.initialize_profile()
+                    if not self.has_system_id:
+                        self.initialize_profile()
                 if has_streamed:
                     self.load_ui_from_stream_metadata()
             case RattlesnakeState.SYS_ID_ACTIVE:
@@ -1464,6 +1468,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Prevent user from initializing multiple times
         self.initialize_hardware_button.setEnabled(False)
+        for ind in range(5):
+            self.rattlesnake_tabs.setTabEnabled(ind + 1, False)
 
         try:
             # Build hardware metadata
@@ -1865,6 +1871,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Prevent user from initializing multiple times
         self.initialize_environments_button.setEnabled(False)
+        for ind in range(4):
+            self.rattlesnake_tabs.setTabEnabled(ind + 2, False)
 
         try:
             # Build environment metadata list

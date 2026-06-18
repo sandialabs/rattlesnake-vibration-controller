@@ -1390,7 +1390,7 @@ class EventWatcher(QtCore.QObject):
                     return
 
                 if self.ping_alive_event.is_set():
-                    print("\nAlive Event Pinged\n")
+                    # print("\nAlive Event Pinged\n")
                     start = time.time()
                     self.ping_alive_event.clear()
 
