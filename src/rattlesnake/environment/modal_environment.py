@@ -733,7 +733,9 @@ class ModalMetadata(EnvironmentMetadata):
         if self.pretrigger is not None:
             worksheet.cell(13, 2, self.pretrigger)
         if self.trigger_slope_positive is not None:
-            worksheet.cell(14, 2, "Y" if self.trigger_slope_positive else "N")
+            worksheet.cell(
+                14, 2, "Positive" if self.trigger_slope_positive else "Negative"
+            )
         if self.trigger_level is not None:
             worksheet.cell(15, 2, self.trigger_level)
         if self.hysteresis_level is not None:
@@ -820,7 +822,9 @@ class ModalMetadata(EnvironmentMetadata):
         trigger_channel = worksheet.cell(12, 2).value
         pretrigger = worksheet.cell(13, 2).value
         pretrigger_percent = pretrigger * 100 if pretrigger else 0
-        trigger_slope_positive = worksheet.cell(14, 2).value
+        trigger_slope_positive = (
+            True if str(worksheet.cell(14, 2).value).lower() == "positive" else False
+        )
         trigger_level = worksheet.cell(15, 2).value
         trigger_level_percent = trigger_level * 100 if trigger_level else 0
         hysteresis_level = worksheet.cell(16, 2).value
