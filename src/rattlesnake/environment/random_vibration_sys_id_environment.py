@@ -820,7 +820,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         )
 
         # Load specification
-        specification_file = worksheet.cell(33, 2).value
+        specification_file = worksheet.cell(34, 2).value
         if specification_file is not None:
             (
                 metadata.specification_frequency_lines,
