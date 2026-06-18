@@ -65,7 +65,7 @@ class RattlesnakeController:
     """Object responsible for setting up, sending data to, and running processes that
     make up the rattlesnake vibration controller."""
 
-    def __init__(self, *, threaded: bool = THREADING, timeout: float = 120):
+    def __init__(self, *, threaded: bool = THREADING, timeout: float = 20):
         """
         Initializes a blank rattlesnake controller object and spins up multiple processes
         required to run a vibration test.
@@ -431,7 +431,7 @@ class RattlesnakeController:
                 return
 
             if self.is_alive:
-                print("\nAlive Event Pinged\n")
+                # print("\nAlive Event Pinged\n")
                 start_time = time.time()
                 self.clear_alive()
 

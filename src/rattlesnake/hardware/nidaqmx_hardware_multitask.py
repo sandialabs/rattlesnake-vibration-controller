@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import time
 from typing import List
+import multiprocessing as mp
 
 import netCDF4 as nc4
 import openpyxl
@@ -367,7 +368,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
     Acquisition process, and must define how to get data from the test
     hardware into the controller."""
 
-    def __init__(self, queue=None):
+    def __init__(self, ping_alive_event: mp.synchronize.Event = None, queue=None):
         """
         Constructs the NIDAQmx Acquisition class and specifies values to null.
         """
@@ -794,7 +795,7 @@ class NIDAQmxOutput(HardwareOutput):
     Output process, and must define how to get data from the controller to the
     output hardware."""
 
-    def __init__(self, queue=None):
+    def __init__(self, ping_alive_event: mp.synchronize.Event = None, queue=None):
         """
         Constructs the NIDAQmx Output class and initializes values to null.
         """

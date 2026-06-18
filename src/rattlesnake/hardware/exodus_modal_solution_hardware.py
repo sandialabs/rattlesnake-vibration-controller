@@ -180,7 +180,7 @@ class ExodusAcquisition(HardwareAcquisition):
     process, and must define how to get data from the test hardware into the
     controller."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """Loads in the Exodus file and sets initial parameters to null values
 
 
@@ -510,7 +510,7 @@ class ExodusOutput(HardwareOutput):
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 

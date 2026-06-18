@@ -63,6 +63,7 @@ class OutputProcess(AbstractMessageProcess):
         queue_container: QueueContainer,
         output_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
+        ping_alive_event: mp.synchronize.Event,
     ):
         """
         Constructor for the OutputProcess Class
@@ -95,6 +96,7 @@ class OutputProcess(AbstractMessageProcess):
         self.queue_container = queue_container
         self.startup = True
         self.shutdown_flag = False
+        self.ping_alive_event = ping_alive_event
         # Sampling data
         self.sample_rate = None
         self.write_size = None
@@ -152,7 +154,7 @@ class OutputProcess(AbstractMessageProcess):
 
         hardware_output_class = HARDWARE_OUTPUT[metadata.hardware_type]
         self.hardware = hardware_output_class(
-            self.queue_container.single_process_hardware_queue
+            self.ping_alive_event, self.queue_container.single_process_hardware_queue
         )
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
@@ -512,7 +514,7 @@ def output_process(
     """
 
     output_instance = OutputProcess(
-        TASK_NAME, queue_container, output_active_event, ready_event
+        TASK_NAME, queue_container, output_active_event, ready_event, ping_alive_event
     )
 
     output_instance.run(shutdown_event)

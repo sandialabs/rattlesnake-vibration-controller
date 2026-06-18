@@ -70,6 +70,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         acquisition_active_event: mp.synchronize.Event,
         streaming_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
+        ping_alive_event: mp.synchronize.Event,
     ):
         """
         Constructor for the AcquisitionProcess class
@@ -111,6 +112,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.startup = True
         self.shutdown_flag = False
         self.any_environments_started = False
+        self.ping_alive_event = ping_alive_event
         # Sampling data
         self.sample_rate = None
         self.read_size = None
@@ -179,6 +181,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 
         hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
         self.hardware = hardware_acquisition_class(
+            self.ping_alive_event,
             self.queue_container.single_process_hardware_queue,
         )
         # Initialize hardware and create channels
@@ -625,6 +628,7 @@ def acquisition_process(
         acquisition_active_event,
         streaming_active_event,
         ready_event,
+        ping_alive_event,
     )
 
     acquisition_instance.run(shutdown_event)

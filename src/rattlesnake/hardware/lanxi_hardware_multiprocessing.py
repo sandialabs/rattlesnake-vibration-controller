@@ -848,7 +848,7 @@ class LanXIAcquisition(HardwareAcquisition):
     process, and must define how to get data from the test hardware into the
     controller."""
 
-    def __init__(self, queue=None):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue=None):
         """
         Constructs the LAN-XI Acquisition class and specifies values to null.
         """
@@ -865,6 +865,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.modules_per_process = None
         self.total_processes = None
         self.acquisition_delay = None
+        self.ping_alive_event = ping_alive_event
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         """
@@ -1162,7 +1163,7 @@ class LanXIOutput(HardwareOutput):
     process, and must define how to get write data to the hardware from the
     control system"""
 
-    def __init__(self, queue=None):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue=None):
         """Method to start up the hardware"""
         self.sockets = {}
         self.acquisition_map = {}
@@ -1179,6 +1180,7 @@ class LanXIOutput(HardwareOutput):
         self.generator_sample_rate = None
         self.buffer_size = 5
         self.ready_signal_factor = BUFFER_SIZE
+        self.ping_alive_event = ping_alive_event
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         self.maximum_processes = test_data.maximum_acquisition_processes
@@ -1208,6 +1210,7 @@ class LanXIOutput(HardwareOutput):
         )
         print("\nInitial States:")
         self._get_states()
+        self.ping_alive_event.set()
 
         # time.sleep(10)
 
@@ -1263,6 +1266,7 @@ class LanXIOutput(HardwareOutput):
             single_module = True
         print("\nStates after synchronization")
         self._get_states()
+        self.ping_alive_event.set()
 
         # Now we open the recorders
         open_json = {
@@ -1281,6 +1285,7 @@ class LanXIOutput(HardwareOutput):
         )
         print("\nStates after Open")
         self._get_states()
+        self.ping_alive_event.set()
 
         # Now get the sample rate
         for i, address in enumerate(self.acquisition_map):
@@ -1310,6 +1315,7 @@ class LanXIOutput(HardwareOutput):
                 f"Invalid Sample Rate {test_data.sample_rate}, must be one of "
                 f"{supported_sample_rates}"
             )
+        self.ping_alive_event.set()
 
         # Get the Generator Sample Rate
         self.generator_sample_rate = round(np.log2(OUTPUT_RATE / test_data.sample_rate))
@@ -1320,6 +1326,7 @@ class LanXIOutput(HardwareOutput):
         self.output_rate = OUTPUT_RATE // 2 ** (self.generator_sample_rate)
         # Now prep the generators
         self.set_generators()
+        self.ping_alive_event.set()
 
         # Now we need to set up the recording configuration
         for slave_address in self.slave_addresses:
@@ -1345,6 +1352,7 @@ class LanXIOutput(HardwareOutput):
             wait_for_recorder_state(self.master_address, "RecorderConfiguring")
         print("\nStates after Recorder Create")
         self._get_states()
+        self.ping_alive_event.set()
 
         # State is now in Recorder Configuring
         print("Recorder in Configuring State")
@@ -1409,8 +1417,10 @@ class LanXIOutput(HardwareOutput):
                 f"Setting inputs to {acquisition_device} Channels, {response.status_code} "
                 f"{response.text}"
             )
+            self.ping_alive_event.set()
         print("\nStates after Channel Input")
         self._get_states()
+        self.ping_alive_event.set()
 
         # Now check for synchronization
         if len(self.slave_addresses) > 0:
@@ -1431,12 +1441,14 @@ class LanXIOutput(HardwareOutput):
                     "http://" + self.master_address + "/rest/rec/synchronize",
                     timeout=60,
                 )
+            self.ping_alive_event.set()
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
                     wait_for_input_state(slave_address, "Synchronized")
             if self.master_address in self.acquisition_map:
                 wait_for_input_state(self.master_address, "Synchronized")
             print("Recorder Synchronized, Starting Streaming...")
+            self.ping_alive_event.set()
 
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
@@ -1444,11 +1456,13 @@ class LanXIOutput(HardwareOutput):
                         "http://" + slave_address + "/rest/rec/startstreaming",
                         timeout=60,
                     )
+                    self.ping_alive_event.set()
             if self.master_address in self.acquisition_map:
                 requests.put(
                     "http://" + self.master_address + "/rest/rec/startstreaming",
                     timeout=60,
                 )
+        self.ping_alive_event.set()
 
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
@@ -1458,6 +1472,7 @@ class LanXIOutput(HardwareOutput):
             wait_for_recorder_state(self.master_address, "RecorderStreaming")
         print("Recorder Streaming")
         self._get_states()
+        self.ping_alive_event.set()
 
         print("\n\nData Acquisition Ready for Acquire")
 
