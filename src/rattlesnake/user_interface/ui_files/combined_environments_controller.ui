@@ -1388,7 +1388,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
       <item>
        <widget class="QPushButton" name="channel_monitor_button">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="toolTip">
          <string>Open up channel monitor to see the levels of each channel compared to their maximum values.</string>

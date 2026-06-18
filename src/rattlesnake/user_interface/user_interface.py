@@ -161,7 +161,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rattlesnake_tabs.setTabEnabled(i, False)
         self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
         self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
-        self.channel_monitor_button.setVisible(False)
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -1971,12 +1970,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         Shows the channel monitor window.
         """
+        if isinstance(self.rattlesnake.hardware_metadata, HardwareMetadata):
+            hardware_metadata = self.rattlesnake.hardware_metadata
+        else:
+            hardware_metadata = self.get_hardware_metadata_no_channels()
+
         if (self.channel_monitor_window is None) or (
             not self.channel_monitor_window.isVisible()
         ):
-            self.channel_monitor_window = ChannelMonitor(
-                None, self.global_daq_parameters
-            )
+            self.channel_monitor_window = ChannelMonitor(None, hardware_metadata)
         else:
             pass  # TODO Need to raise the window to the front, or close and reopen
 
