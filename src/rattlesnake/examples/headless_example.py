@@ -23,9 +23,9 @@ from rattlesnake.testing.mock_user_interface import (
 THREADED = True
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.RANDOM
+ENVIRONMENT_TYPE = EnvironmentType.TIME
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = True
+LOAD_SYSID = False
 RUN_SYSID = False
 START_HARDWARE = False
 START_ENVIRONMENT = False

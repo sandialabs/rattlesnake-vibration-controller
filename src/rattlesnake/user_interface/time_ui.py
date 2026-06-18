@@ -150,6 +150,7 @@ class TimeUI(EnvironmentUI):
             for channel in channels
             if channel.feedback_device is None
         ]
+        self.definition_widget.signal_file_name_display.setText("")
         # Add rows to the signal table
         self.definition_widget.signal_information_table.setRowCount(num_output)
         self.show_signal_checkboxes = []
