@@ -21,12 +21,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import importlib
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import threading
 import traceback
+import inspect
 from enum import Enum
 from multiprocessing.queues import Queue
 from typing import List
@@ -42,6 +44,8 @@ from rattlesnake.utilities import (
     db2scale,
     align_signals,
     shift_signal,
+    load_python_module,
+    load_time_history,
     trac,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -49,6 +53,9 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentCommands,
+)
+from rattlesnake.environment.abstract_interactive_control_law import (
+    AbstractControlLawComputation,
 )
 from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironment,
@@ -136,12 +143,14 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         output_channel_indices,
         response_transformation_matrix,
         output_transformation_matrix,
+        sysid_metadata=None,
     ):
         super().__init__(
             CONTROL_TYPE,
             environment_name,
             channel_list_bools,
             sample_rate,
+            sysid_metadata,
         )
         self.number_of_channels = number_of_channels
         self.sample_rate = sample_rate
@@ -236,7 +245,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         netcdf_group_handle : nc4._netCDF4.Group
             A group in a NetCDF4 group defining the environment's medatadata
         """
-        super().store_to_netcdf(netcdf_group_handle)
+        super().save_metadata_to_netcdf(netcdf_group_handle)
         netcdf_group_handle.test_level_ramp_time = self.test_level_ramp_time
         netcdf_group_handle.control_python_script = self.control_python_script
         netcdf_group_handle.control_python_function = self.control_python_function
@@ -360,7 +369,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             sample_rate=sample_rate,
             number_of_channels=number_of_channels,
             control_signal=control_signal,
-            test_level_ramp_time=test_level_ramp_time,
+            ramp_time=test_level_ramp_time,
             control_python_script=control_python_script,
             control_python_function=control_python_function,
             control_python_function_type=control_python_function_type,
@@ -368,19 +377,14 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             control_channel_indices=control_channel_indices,
             output_channel_indices=output_channel_indices,
             response_transformation_matrix=response_transformation_matrix,
-            reference_transformation_matrix=reference_transformation_matrix,
+            output_transformation_matrix=reference_transformation_matrix,
             sysid_metadata=sysid_metadata,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Transient")
-        worksheet.cell(
-            1,
-            4,
-            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
-        )
         worksheet.cell(2, 1, "Signal File")
         worksheet.cell(
             2, 3, "# Path to the file that contains the time signal that will be output"
@@ -403,76 +407,19 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(6, 3, "# Extra parameters used in the control law")
         worksheet.cell(7, 1, "Control Channels (1-based):")
         worksheet.cell(7, 3, "# List of channels, one per cell on this row")
-        worksheet.cell(8, 1, "System ID Samples per Frame")
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=8)
+        worksheet.cell(24, 1, "Response Transformation Matrix:")
         worksheet.cell(
-            8,
-            3,
-            "# Number of Samples per Measurement Frame in the System Identification",
-        )
-        worksheet.cell(9, 1, "System ID Averaging:")
-        worksheet.cell(9, 3, "# Averaging Type, should be Linear or Exponential")
-        worksheet.cell(10, 1, "Noise Averages:")
-        worksheet.cell(10, 3, "# Number of Averages used when characterizing noise")
-        worksheet.cell(11, 1, "System ID Averages:")
-        worksheet.cell(11, 3, "# Number of Averages used when computing the FRF")
-        worksheet.cell(12, 1, "Exponential Averaging Coefficient:")
-        worksheet.cell(
-            12, 3, "# Averaging Coefficient for Exponential Averaging (if used)"
-        )
-        worksheet.cell(13, 1, "System ID Estimator:")
-        worksheet.cell(
-            13,
-            3,
-            "# Technique used to compute system ID.  Should be one of H1, H2, H3, or Hv.",
-        )
-        worksheet.cell(14, 1, "System ID Level (V RMS):")
-        worksheet.cell(
-            14,
-            3,
-            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
-        )
-        worksheet.cell(15, 1, "System ID Ramp Time")
-        worksheet.cell(
-            15,
-            3,
-            "# Time for the system identification to ramp between levels or from start or to stop.",
-        )
-        worksheet.cell(16, 1, "System ID Signal Type:")
-        worksheet.cell(16, 3, "# Signal to use for the system identification")
-        worksheet.cell(17, 1, "System ID Window:")
-        worksheet.cell(
-            17,
-            3,
-            "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
-        )
-        worksheet.cell(18, 1, "System ID Overlap %:")
-        worksheet.cell(18, 3, "# Overlap to use in the system identification")
-        worksheet.cell(19, 1, "System ID Burst On %:")
-        worksheet.cell(19, 3, "# Percentage of a frame that the burst random is on for")
-        worksheet.cell(20, 1, "System ID Burst Pretrigger %:")
-        worksheet.cell(
-            20,
-            3,
-            "# Percentage of a frame that occurs before the burst starts in a burst random signal",
-        )
-        worksheet.cell(21, 1, "System ID Ramp Fraction %:")
-        worksheet.cell(
-            21,
-            3,
-            '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
-        )
-        worksheet.cell(22, 1, "Response Transformation Matrix:")
-        worksheet.cell(
-            22,
+            24,
             2,
             "# Transformation matrix to apply to the response channels.  Type None if there "
             "is none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
             "Transformation Matrix line down so it will fit.  The number of columns should be "
             "the number of physical control channels.",
         )
-        worksheet.cell(23, 1, "Output Transformation Matrix:")
+        worksheet.cell(25, 1, "Output Transformation Matrix:")
         worksheet.cell(
-            23,
+            25,
             2,
             "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should "
@@ -482,7 +429,26 @@ class TransientMetadata(SysIdEnvironmentMetadata):
     def save_metadata_to_worksheet(
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
     ):
-        pass
+        super().save_metadata_to_worksheet(worksheet)
+        if self.test_level_ramp_time is not None:
+            worksheet.cell(3, 2, self.test_level_ramp_time)
+        if self.control_python_script is not None:
+            worksheet.cell(4, 2, self.control_python_script)
+        if self.control_python_function is not None:
+            worksheet.cell(5, 2, self.control_python_function)
+        if self.control_python_function_parameters is not None:
+            worksheet.cell(6, 2, self.control_python_function_parameters)
+        if self.control_channel_indices is not None:
+            for idx, channel_ind in enumerate(self.control_channel_indices):
+                col_idx = idx + 2
+                worksheet.cell(7, col_idx, channel_ind + 1)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=8)
+        self.save_sysid_matrix_to_worksheet(
+            worksheet,
+            self.response_transformation_matrix,
+            self.reference_transformation_matrix,
+            start_row=24,
+        )
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -492,7 +458,98 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
     ):
-        pass
+        sample_rate = hardware_metadata.sample_rate
+        number_of_channels = sum(channel_list_bools)
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
+            if channel_bool
+        ]
+
+        ramp_time = float(worksheet.cell(3, 2).value)
+
+        control_python_script = (
+            worksheet.cell(4, 2).value if worksheet.cell(4, 2).value is not None else ""
+        )
+        control_python_function = (
+            worksheet.cell(5, 2).value if worksheet.cell(5, 2).value is not None else ""
+        )
+        control_python_function_parameters = (
+            worksheet.cell(6, 2).value if worksheet.cell(6, 2).value is not None else ""
+        )
+        control_channel_indices = []
+        column_index = 2
+        while True:
+            channel_ind = worksheet.cell(7, column_index).value
+            if channel_ind is None or (
+                isinstance(channel_ind, str)
+                and (channel_ind.startswith("#") or channel_ind.strip() == "")
+            ):
+                break
+            try:
+                control_channel_indices.append(int(channel_ind) - 1)
+            except:
+                break
+            column_index += 1
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
+        # Find python module type
+        if control_python_script:
+            python_control_module = load_python_module(control_python_script)
+            function = getattr(python_control_module, control_python_function)
+            control_python_function_type = None
+            if inspect.isgeneratorfunction(function):
+                control_python_function_type = 1
+            elif inspect.isclass(function) and issubclass(
+                function, AbstractControlLawComputation
+            ):
+                control_python_function_type = 2
+            elif inspect.isclass(function):
+                control_python_function_type = 3
+            else:
+                control_python_function_type = 0
+        else:
+            control_python_function_type = None
+
+        response_transformation_matrix, output_transformation_matrix = (
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=24)
+        )
+
+        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
+            worksheet, hardware_metadata, 8
+        )
+
+        metadata = cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            number_of_channels=number_of_channels,
+            control_signal=None,
+            ramp_time=ramp_time,
+            control_python_script=control_python_script,
+            control_python_function=control_python_function,
+            control_python_function_type=control_python_function_type,
+            control_python_function_parameters=control_python_function_parameters,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
+            response_transformation_matrix=response_transformation_matrix,
+            output_transformation_matrix=output_transformation_matrix,
+            sysid_metadata=sysid_metadata,
+        )
+
+        spec_filename = worksheet.cell(2, 2).value
+        if spec_filename is not None:
+            metadata.control_signal = load_time_history(
+                spec_filename, hardware_metadata.sample_rate
+            )
+
+        return metadata
 
 
 # endregion
@@ -971,6 +1028,12 @@ class TransientEnvironment(SysIdEnvironment):
         if self.startup:
             self.test_level = db2scale(data.test_level)
             self.repeat = data.repeat
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, data),
+                )
+            )
             self.log("Starting Environment")
             self.siggen_shutdown_achieved = False
             # Set up the signal generation
@@ -1221,6 +1284,7 @@ def transient_process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """
@@ -1291,6 +1355,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
+                ping_alive_event,
             ),
         )
         analysis_proc.start()

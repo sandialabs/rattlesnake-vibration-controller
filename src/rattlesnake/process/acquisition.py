@@ -70,6 +70,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         acquisition_active_event: mp.synchronize.Event,
         streaming_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
+        ping_alive_event: mp.synchronize.Event,
     ):
         """
         Constructor for the AcquisitionProcess class
@@ -111,6 +112,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.startup = True
         self.shutdown_flag = False
         self.any_environments_started = False
+        self.ping_alive_event = ping_alive_event
         # Sampling data
         self.sample_rate = None
         self.read_size = None
@@ -179,6 +181,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 
         hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
         self.hardware = hardware_acquisition_class(
+            self.ping_alive_event,
             self.queue_container.single_process_hardware_queue,
         )
         # Initialize hardware and create channels
@@ -205,7 +208,10 @@ class AcquisitionProcess(AbstractMessageProcess):
             index
             for index, channel in enumerate(metadata.channel_list)
             if (channel.feedback_device is not None)
-            and not (channel.feedback_device.strip() == "")
+            and not (
+                channel.feedback_device.startswith("#")
+                or channel.feedback_device.strip() == ""
+            )
         ]
         self.read_data = np.zeros(
             (
@@ -233,9 +239,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_first_data = {}
         for queue_name, metadata in metadata_dict.items():
             self.environment_list.append(queue_name)
-            self.environment_acquisition_channels[queue_name] = (
-                metadata.map_channel_indices()
-            )
+            self.environment_acquisition_channels[queue_name] = metadata.channel_indices
             self.environment_active_flags[queue_name] = False
             self.environment_last_data[queue_name] = False
             self.environment_samples_remaining_to_read[queue_name] = 0
@@ -603,6 +607,7 @@ def acquisition_process(
     streaming_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
 ):
     """Function passed to multiprocessing as the acquisition process
 
@@ -623,6 +628,7 @@ def acquisition_process(
         acquisition_active_event,
         streaming_active_event,
         ready_event,
+        ping_alive_event,
     )
 
     acquisition_instance.run(shutdown_event)

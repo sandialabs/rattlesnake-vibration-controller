@@ -64,6 +64,7 @@ class EnvironmentManager:
         self.environment_sysid_stored_events = (
             event_container.environment_sysid_stored_events
         )
+        self.ping_alive_event = event_container.ping_alive_event
         self._threaded = threaded
         if threaded:
             self.new_process = threading.Thread
@@ -397,12 +398,6 @@ class EnvironmentManager:
                 profile_event._queue_name = queue_name
                 profile_event._environment_type = self.environment_types[queue_name]
 
-                if not self.acquisition_ready_environments[queue_name]:
-                    pass
-                    raise RattlesnakeError(
-                        f"{environment_name} requires a system identifcation before performing profile events"
-                    )
-
     # endregion
 
     # region Environment
@@ -459,6 +454,7 @@ class EnvironmentManager:
                 self.environment_close_events[queue_name],
                 self.environment_sysid_active_events[queue_name],
                 self.environment_sysid_stored_events[queue_name],
+                self.ping_alive_event,
                 self.threaded,
             ),
         )

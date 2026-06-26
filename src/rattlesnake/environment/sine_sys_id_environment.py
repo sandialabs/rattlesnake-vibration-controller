@@ -591,9 +591,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
             sysid_metadata=sysid_metadata,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Sine")
         worksheet.cell(
             1,
@@ -679,15 +679,15 @@ class SineMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(18, 1, "Control Channels (1-based):")
         worksheet.cell(18, 3, "# List of channels, one per cell on this row")
         SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=19)
-        worksheet.cell(33, 1, "Specification File:")
+        worksheet.cell(35, 1, "Specification File:")
         worksheet.cell(
-            33,
+            35,
             3,
             "# Path to the file containing the Specification. Can specify multiple by using multiple columns",
         )
-        worksheet.cell(34, 1, "Response Transformation Matrix:")
+        worksheet.cell(36, 1, "Response Transformation Matrix:")
         worksheet.cell(
-            34,
+            36,
             2,
             (
                 "# Transformation matrix to apply to the response channels.  Type None if there is "
@@ -696,9 +696,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
                 "the number of physical control channels."
             ),
         )
-        worksheet.cell(35, 1, "Output Transformation Matrix:")
+        worksheet.cell(37, 1, "Output Transformation Matrix:")
         worksheet.cell(
-            35,
+            37,
             2,
             "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
@@ -750,8 +750,8 @@ class SineMetadata(SysIdEnvironmentMetadata):
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
-            self.output_transformation_matrix,
-            start_row=34,
+            self.reference_transformation_matrix,
+            start_row=36,
         )
 
     @classmethod
@@ -811,7 +811,8 @@ class SineMetadata(SysIdEnvironmentMetadata):
         while True:
             channel_ind = worksheet.cell(18, column_index).value
             if channel_ind is None or (
-                isinstance(channel_ind, str) and channel_ind.strip() == ""
+                isinstance(channel_ind, str)
+                and (channel_ind.startswith("#") or channel_ind.strip() == "")
             ):
                 break
             try:
@@ -823,16 +824,17 @@ class SineMetadata(SysIdEnvironmentMetadata):
             worksheet, hardware_metadata, start_row=19
         )
         response_transformation_matrix, output_transformation_matrix = (
-            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=34)
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=36)
         )
 
         # Specification Files
         specification_files = []
         column_index = 2
         while True:
-            filename = worksheet.cell(33, column_index).value
+            filename = worksheet.cell(35, column_index).value
             if filename is None or (
-                isinstance(filename, str) and filename.strip() == ""
+                isinstance(filename, str)
+                and (filename.startswith("#") or filename.strip() == "")
             ):
                 break
             specification_files.append(str(filename))
@@ -926,14 +928,20 @@ class SineMetadata(SysIdEnvironmentMetadata):
             isinstance(worksheet.cell(output_transform_row, 2).value, str)
             and worksheet.cell(output_transform_row, 2).value.lower() == "none"
         ):
-            self.output_transformation_matrix = None
+            self.reference_transformation_matrix = None
         else:
             output_transformation = []
             i = 0
             while True:
                 if worksheet.cell(output_transform_row + i, 2).value is None or (
                     isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
-                    and worksheet.cell(output_transform_row + i, 2).value.strip() == ""
+                    and (
+                        worksheet.cell(output_transform_row + i, 2).value.startswith(
+                            "#"
+                        )
+                        or worksheet.cell(output_transform_row + i, 2).value.strip()
+                        == ""
+                    )
                 ):
                     break
                 output_transformation.append([])
@@ -942,7 +950,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
                         float(worksheet.cell(output_transform_row + i, 2 + j).value)
                     )
                 i += 1
-            self.output_transformation_matrix = np.array(output_transformation)
+            self.reference_transformation_matrix = np.array(output_transformation)
         self.define_transformation_matrices(None, dialog=False)
 
         # Load in the specification
@@ -1921,6 +1929,12 @@ class SineEnvironment(SysIdEnvironment):
             self.control_tones = data.control_tones
             self.control_start_time = data.control_start_time
             self.control_end_time = data.control_end_time
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, data),
+                )
+            )
             if self.control_tones is not None and len(self.control_tones) == 0:
                 self.control_tones = None
             if self.control_tones is None:
@@ -2594,7 +2608,12 @@ class SineEnvironment(SysIdEnvironment):
         np.savez(filename, **output_dict)
 
     def set_test_level(self, data):
-        print("Cannot set test level during sine environment")
+        if self.active:
+            print("Cannot set test level during sine environment")
+        else:
+            self.gui_update_queue.put(
+                (self.environment_name, (SineCommands.SET_TEST_LEVEL, data))
+            )
 
     # endregion
 
@@ -2602,13 +2621,13 @@ class SineEnvironment(SysIdEnvironment):
     def shutdown(self):
         """Handles the environment after it has shut down"""
         self.log("Environment Shut Down")
-        self.log(
-            f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
-        )
+        # self.log(
+        #     f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
+        # )
         flush_queue(self.queue_container.time_history_to_generate_queue, timeout=0.01)
-        self.log(
-            f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
-        )
+        # self.log(
+        #     f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
+        # )
         self.clear_active()
         self.gui_update_queue.put(
             (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
@@ -2635,6 +2654,7 @@ def sine_process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """A function to be used by multiprocessing to run the Sine environment.  It sets up
@@ -2701,6 +2721,7 @@ def sine_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
+                ping_alive_event,
             ),
         )
         analysis_proc.start()

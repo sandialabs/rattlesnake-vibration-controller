@@ -4,6 +4,10 @@ import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
 
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sine_sys_id_environment import (
     SineCommands,
     SineMetadata,
@@ -12,27 +16,10 @@ from rattlesnake.environment.sine_sys_id_environment import (
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
 
 ENVIRONMENT_NAME = "Sine 0"
-# ENVIRONMENT_NAME = "sysid"
-
-
-def sine_instructions():
-    control_test_level = 0
-    control_tones = None
-    control_end_time = None
-    control_start_time = None
-
-    instructions = SineInstructions(
-        ENVIRONMENT_NAME,
-        control_test_level,
-        control_tones,
-        control_start_time,
-        control_end_time,
-    )
-    return instructions
 
 
 def worksheet_sine_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -47,7 +34,7 @@ def worksheet_sine_metadata(hardware_metadata):
 
 
 def netcdf_sine_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -81,8 +68,8 @@ def manual_sine_metadata(hardware_metadata):
     control_python_script = None
     control_python_class = None
     control_python_parameters = ""
-    control_channel_indices = [9]
-    output_channel_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    control_channel_indices = [0, 1, 2]
+    output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     response_transformation_matrix = None
     output_transformation_matrix = None
 
@@ -120,7 +107,7 @@ def create_sine_specification():
     specification = SineSpecification(
         name="Sine Tone 1",
         start_time=0,
-        num_control=1,
+        num_control=3,
         num_breakpoints=4,
     )
 
@@ -129,29 +116,105 @@ def create_sine_specification():
     table[0]["frequency"] = 1
     table[0]["sweep_type"] = 0  # 0 = linear
     table[0]["sweep_rate"] = 1
-    table[0]["amplitude"][0] = 0
-    table[0]["phase"][0] = 0  # radians
+    table[0]["amplitude"][:] = [0, 0, 0]
+    table[0]["phase"][:] = [0, 0, 0]
 
     table[1]["frequency"] = 10
     table[1]["sweep_type"] = 0
-    table[1]["sweep_rate"] = 1
-    table[1]["amplitude"][0] = 1
-    table[1]["phase"][0] = 0
+    table[1]["sweep_rate"] = 2
+    table[1]["amplitude"][:] = [1, 1, 1]
+    table[1]["phase"][:] = [0, 0, 0]
 
     table[2]["frequency"] = 15
     table[2]["sweep_type"] = 0
-    table[2]["sweep_rate"] = 1
-    table[2]["amplitude"][0] = 1
-    table[2]["phase"][0] = 0
+    table[2]["sweep_rate"] = 2
+    table[2]["amplitude"][:] = [1, 1, 1]
+    table[2]["phase"][:] = [0, 0, 0]
 
     table[3]["frequency"] = 20
-    table[3]["sweep_type"] = 0
-    table[3]["sweep_rate"] = 1
-    table[3]["amplitude"][0] = 0.5
-    table[3]["phase"][0] = 0
+    table[3]["sweep_type"] = 1
+    table[3]["sweep_rate"] = 10
+    table[3]["amplitude"][:] = [0.5, 0.5, 0.5]
+    table[3]["phase"][:] = [0, 0, 0]
 
     table["warning"][:] = np.nan
     table["abort"][:] = np.nan
 
     specifications = [specification]
     return specifications
+
+
+def sine_instructions():
+    control_test_level = 0
+    control_tones = None
+    control_end_time = None
+    control_start_time = None
+
+    instructions = SineInstructions(
+        ENVIRONMENT_NAME,
+        control_test_level,
+        control_tones,
+        control_start_time,
+        control_end_time,
+    )
+    return instructions
+
+
+def sine_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = SineCommands.SET_TEST_LEVEL
+    data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 0.5
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = sine_instructions()
+    instructions.control_test_level = 5
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 10
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 10
+    command = SineCommands.SAVE_CONTROL_DATA
+    data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        set_level_event,
+        start_environment_event,
+        stop_environment_event,
+        save_event,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+    return event_list
+
+
+def worksheet_sine_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.SINE,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
+    save_event = event_list[3]
+    save_event.data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
+    return event_list

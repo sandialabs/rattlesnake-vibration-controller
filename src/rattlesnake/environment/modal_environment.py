@@ -77,7 +77,6 @@ from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-impo
     spectral_processing_process,
 )
 
-
 CONTROL_TYPE = EnvironmentType.MODAL
 WAIT_TIME = 0.02
 
@@ -578,9 +577,9 @@ class ModalMetadata(EnvironmentMetadata):
             exponential_window_value_at_frame_end,
         )
 
-    @staticmethod
-    def create_blank_worksheet_template(worksheet):
-        worksheet.cell(1, 1, "Control Type")
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Modal")
         worksheet.cell(2, 1, "Samples Per Frame:")
         worksheet.cell(2, 3, "# Number of Samples per Measurement Frame")
@@ -730,11 +729,13 @@ class ModalMetadata(EnvironmentMetadata):
         if self.accept_type is not None:
             worksheet.cell(11, 2, self.accept_type)
         if self.trigger_channel is not None:
-            worksheet.cell(12, 2, self.trigger_channel)
+            worksheet.cell(12, 2, self.trigger_channel + 1)
         if self.pretrigger is not None:
             worksheet.cell(13, 2, self.pretrigger)
         if self.trigger_slope_positive is not None:
-            worksheet.cell(14, 2, self.trigger_slope_positive)
+            worksheet.cell(
+                14, 2, "Positive" if self.trigger_slope_positive else "Negative"
+            )
         if self.trigger_level is not None:
             worksheet.cell(15, 2, self.trigger_level)
         if self.hysteresis_level is not None:
@@ -818,10 +819,12 @@ class ModalMetadata(EnvironmentMetadata):
             ]
         else:
             acceptance_function = None
-        trigger_channel = worksheet.cell(12, 2).value
+        trigger_channel = worksheet.cell(12, 2).value - 1
         pretrigger = worksheet.cell(13, 2).value
         pretrigger_percent = pretrigger * 100 if pretrigger else 0
-        trigger_slope_positive = worksheet.cell(14, 2).value
+        trigger_slope_positive = (
+            True if str(worksheet.cell(14, 2).value).lower() == "positive" else False
+        )
         trigger_level = worksheet.cell(15, 2).value
         trigger_level_percent = trigger_level * 100 if trigger_level else 0
         hysteresis_level = worksheet.cell(16, 2).value
@@ -844,7 +847,10 @@ class ModalMetadata(EnvironmentMetadata):
         output_channel_indices = []
         while True:
             value = worksheet.cell(26, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             reference_channel_indices.append(int(value) - 1)
             column_index += 1
@@ -854,7 +860,10 @@ class ModalMetadata(EnvironmentMetadata):
         column_index = 2
         while True:
             value = worksheet.cell(27, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             response_channel_indices.remove(value - 1)
             column_index += 1
@@ -1132,7 +1141,7 @@ class ModalEnvironment(Environment):
             if self.environment_metadata.trigger_slope_positive
             else TriggerSlope.NEGATIVE
         )
-        (_, trigger_level, _, trigger_hysteresis) = (
+        _, trigger_level, _, trigger_hysteresis = (
             self.environment_metadata.get_trigger_levels(
                 self.hardware_metadata.channel_list
             )
@@ -1524,6 +1533,7 @@ def modal_process(
     shutdown_event: mp.synchronize.Event,
     sysid_active_event: mp.synchronize.Event,
     sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """Modal environment process function called by multiprocessing

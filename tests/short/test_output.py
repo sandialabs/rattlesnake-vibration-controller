@@ -29,6 +29,7 @@ def output(request):
         queue_container,
         event_container.output_active_event,
         event_container.output_ready_event,
+        event_container.ping_alive_event,
     )
     return output
 
@@ -44,6 +45,7 @@ def test_output_init(use_thread):
         queue_container,
         event_container.output_active_event,
         event_container.output_ready_event,
+        event_container.ping_alive_event,
     )
 
     # Make sure it is the correct class
@@ -150,7 +152,7 @@ def test_output_process_quit(mock_log, mock_flush, output):
     mock_hardware.close.assert_called()
 
 
-# region: output_process
+# region output_process
 # Prevent run while loop from starting
 @pytest.mark.parametrize("use_thread", [True, False])
 @mock.patch("rattlesnake.process.output.OutputProcess")
@@ -162,6 +164,7 @@ def test_output_process_func(mock_output, use_thread):
         event_container.output_active_event,
         event_container.output_ready_event,
         event_container.output_close_event,
+        event_container.ping_alive_event,
     )
 
     mock_instance = mock_output.return_value

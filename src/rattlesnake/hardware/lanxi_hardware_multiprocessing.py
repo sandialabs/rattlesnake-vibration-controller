@@ -32,7 +32,12 @@ import openpyxl
 import numpy as np
 import requests
 
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.utilities import IPAddress, autofill_single_ip_address
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareAcquisition,
+    HardwareOutput,
+    HardwareAssistModules,
+)
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.lanxi_stream import OpenapiHeader, OpenapiMessage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -71,7 +76,9 @@ class LanXIMetadata(HardwareMetadata):
         time_per_read: float,
         time_per_write: float,
         output_oversample: float,
-        maximum_acquisition_processes,
+        maximum_acquisition_processes: int,
+        ip_addresses: List[IPAddress] = [],
+        use_ipv6: bool = False,
     ):
         super().__init__(
             HARDWARE_TYPE,
@@ -82,12 +89,316 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
+        self.ip_addresses = ip_addresses
+        self.update_ip_addresses()
+
+        self.use_ipv6 = use_ipv6
+        self.cache_info_dicts()
+
+    @property
+    def master_address(self):
+        for address in self.ip_addresses:
+            if not address.sync_type["synchronization"]["preferredMaster"]:
+                continue
+
+            for channel in self.channel_list:
+                channel_devices = (channel.physical_device, channel.feedback_device)
+
+                if address.ipv4_address in channel_devices:
+                    return address.ipv4_address
+
+                if address.ipv6_address in channel_devices:
+                    return address.ipv6_address
+
+        return self.channel_list[0].physical_device
+
+    @property
+    def channel_list(self):
+        return super().channel_list
+
+    @channel_list.setter
+    def channel_list(self, value: List[Channel]):
+        if self.use_ipv6:
+            for channel in value:
+                if channel.feedback_device in self.ipv6_dict.keys():
+                    channel.feedback_device = self.ipv6_dict[channel.feedback_device]
+                if channel.physical_device in self.ipv6_dict.keys():
+                    channel.physical_device = self.ipv6_dict[channel.physical_device]
+        self._channel_list = value
+        self.update_ip_addresses()
+
+    def update_ip_addresses(self):
+        # Check if physical and feedback devices are in the ip addresses and if not, look up their data
+        # for validation purposes and add them to the ip addresses.
+        for channel in self.channel_list:
+            if channel.physical_device not in (
+                self.ipv4_addresses,
+                self.ipv6_addresses,
+            ):
+                is_ipv4 = (
+                    re.search(IPV4_PATTERN, str(channel.physical_device)) is not None
+                )
+                is_ipv6 = (
+                    re.search(IPV6_PATTERN, str(channel.physical_device)) is not None
+                )
+                if is_ipv4:
+                    address = IPAddress(ipv4_address=channel.physical_device)
+                elif is_ipv6:
+                    address = IPAddress(ipv6_address=channel.physical_device)
+                address.get_host_name_from_ip()
+                address.get_ip_from_host_name()
+                self.ip_addresses.append(address)
+            if channel.feedback_device not in (
+                self.ipv4_addresses,
+                self.ipv6_addresses,
+            ):
+                is_ipv4 = (
+                    re.search(IPV4_PATTERN, str(channel.feedback_device)) is not None
+                )
+                is_ipv6 = (
+                    re.search(IPV6_PATTERN, str(channel.feedback_device)) is not None
+                )
+                if is_ipv4:
+                    address = IPAddress(ipv4_address=channel.feedback_device)
+                elif is_ipv6:
+                    address = IPAddress(ipv6_address=channel.feedback_device)
+                address.get_host_name_from_ip()
+                address.get_ip_from_host_name()
+                self.ip_addresses.append(address)
 
     # endregion
 
     # region Validation
     def validate(self):
         return super().validate()
+
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+
+        assist_mode_modules["sensitivity"] = HardwareAssistModules.SPINBOX
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_channel"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["maximum_value"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["coupling"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["excitation_source"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_channel"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        valid_dict["sensitivity"] = self.valid_sensitivity(channel.channel_type)
+        valid_dict["physical_device"] = self.valid_physical_devices
+        valid_dict["physical_channel"] = self.valid_physical_channels(
+            channel.physical_device
+        )
+        valid_dict["maximum_value"] = self.valid_max_voltage(
+            channel.physical_device, channel.feedback_device
+        )
+        valid_dict["coupling"] = self.valid_coupling(
+            channel.physical_device, channel.feedback_device
+        )
+        valid_dict["excitation_source"] = self.valid_excitation_source
+        valid_dict["feedback_device"] = self.valid_feedback_devices
+        valid_dict["feedback_channel"] = self.valid_feedback_channels(
+            channel.feedback_device
+        )
+
+        return valid_dict
+
+    def cache_info_dicts(self):
+        self.module_dict = {}
+        self.ipv6_dict = {}
+        for address in self.ip_addresses:
+            if address.module_info is None:
+                autofill_single_ip_address(address)
+                address.validate()
+                if not address.valid_ip:
+                    continue
+
+            if address.host_name:
+                self.module_dict[address.host_name] = address.module_info
+            if address.ipv4_address:
+                self.module_dict[address.ipv4_address] = address.module_info
+            if address.ipv6_address:
+                self.module_dict[address.ipv6_address] = address.module_info
+                if address.ipv4_address:
+                    self.ipv6_dict[address.ipv4_address] = address.ipv6_address
+
+    @property
+    def bk_numbers(self):
+        bk_numbers = [ip.host_name for ip in self.ip_addresses]
+        return bk_numbers
+
+    @property
+    def ipv4_addresses(self):
+        ipv4_addresses = [ip.ipv4_address for ip in self.ip_addresses]
+        return ipv4_addresses
+
+    @property
+    def ipv6_addresses(self):
+        ipv6_address_list = [ip.ipv6_address for ip in self.ip_addresses]
+        return ipv6_address_list
+
+    @property
+    def valid_physical_devices(self):
+        sorted_devices = sorted(
+            [ip for ip in self.ip_addresses if ip.ipv4_address],
+            key=lambda ip: tuple(map(int, ip.ipv4_address.split("."))),
+        )
+
+        ipv4_list = []
+        ipv6_list = []
+        bknum_list = []
+        for ip in sorted_devices:
+            ipv4_list.append(ip.ipv4_address)
+            ipv6_list.append(ip.ipv6_address)
+
+        return [*ipv4_list, *bknum_list, *ipv6_list]
+
+    @property
+    def valid_feedback_devices(self):
+        sorted_devices = sorted(
+            [ip for ip in self.ip_addresses if ip.ipv4_address],
+            key=lambda ip: tuple(map(int, ip.ipv4_address.split("."))),
+        )
+
+        ipv4_list = []
+        ipv6_list = []
+        bknum_list = []
+        for ip in sorted_devices:
+            ipv4_list.append(ip.ipv4_address)
+            ipv6_list.append(ip.ipv6_address)
+
+        return [*ipv4_list, *bknum_list, *ipv6_list]
+
+    def valid_sensitivity(self, channel_type: str = ""):
+        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
+            valid_sensitivity = [0, 1000]
+        else:
+            valid_sensitivity = [-1000000, 1000000]
+        return valid_sensitivity
+
+    def valid_physical_channels(self, physical_device: str = ""):
+        if physical_device in list(self.module_dict.keys()):
+            num_physical_channels = self.module_dict[physical_device][
+                "numberOfInputChannels"
+            ]
+            valid_physical_channels = [
+                str(i) for i in range(1, num_physical_channels + 1)
+            ]
+        else:
+            valid_physical_channels = []
+
+        return valid_physical_channels
+
+    def valid_feedback_channels(self, feedback_device: str = ""):
+        if feedback_device in list(self.module_dict.keys()):
+            num_feedback_channels = self.module_dict[feedback_device][
+                "numberOfOutputChannels"
+            ]
+            valid_feedback_channels = [
+                str(i) for i in range(1, num_feedback_channels + 1)
+            ]
+        else:
+            valid_feedback_channels = []
+
+        return valid_feedback_channels
+
+    def valid_coupling(self, physical_device: str = "", feedback_device: str = ""):
+        if physical_device in list(self.module_dict.keys()):
+            valid_physical_coupling = self.module_dict[physical_device][
+                "supportedFilters"
+            ]
+        else:
+            valid_physical_coupling = []
+
+        if feedback_device == "" or feedback_device == None:
+            valid_feedback_coupling = valid_physical_coupling
+        elif feedback_device in list(self.module_dict.keys()):
+            valid_feedback_coupling = self.module_dict[feedback_device][
+                "supportedFilters"
+            ]
+        else:
+            valid_feedback_coupling = []
+
+        valid_coupling = (
+            set(valid_physical_coupling)
+            & set(valid_feedback_coupling)
+            & set(VALID_FILTERS)
+        )
+        valid_coupling = list(valid_coupling)
+
+        return valid_coupling
+
+    @property
+    def valid_excitation_source(self):
+        return ["", "ccld"]
+
+    def normalize_voltage(self, value: str):
+        """
+        Function to go from strings "10", "10 VPeak", etc. to just numbers.
+        """
+        if not value:
+            return None
+
+        value = value.strip()
+
+        match = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(?:Vpeak)?\s*$", value, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+        return None
+
+    def valid_max_voltage(self, physical_device: str = "", feedback_device: str = ""):
+        if physical_device in self.module_dict:
+            valid_physical_voltage = self.module_dict[physical_device][
+                "supportedRanges"
+            ]
+        else:
+            valid_physical_voltage = []
+
+        if feedback_device in ("", None):
+            valid_feedback_voltage = valid_physical_voltage
+        elif feedback_device in self.module_dict:
+            valid_feedback_voltage = self.module_dict[feedback_device][
+                "supportedOutputRanges"
+            ]
+        else:
+            valid_feedback_voltage = []
+
+        normalized_physical = {
+            self.normalize_voltage(v)
+            for v in valid_physical_voltage
+            if self.normalize_voltage(v) is not None
+        }
+
+        normalized_feedback = {
+            self.normalize_voltage(v)
+            for v in valid_feedback_voltage
+            if self.normalize_voltage(v) is not None
+        }
+
+        normalized_valid_ranges = {
+            self.normalize_voltage(v)
+            for v in VALID_RANGES
+            if self.normalize_voltage(v) is not None
+        }
+
+        valid_max_voltage = (
+            normalized_physical & normalized_feedback & normalized_valid_ranges
+        )
+
+        return list(sorted(valid_max_voltage, key=float))
+
+    def set_ip_addresses(self, ip_addresses: list[IPAddress]):
+        self.ip = ip_addresses
+
+        self.cache_info_dict()
+
+    # endregion
 
     # region Loading
     def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
@@ -109,13 +420,16 @@ class LanXIMetadata(HardwareMetadata):
         ) = super().load_metadata_from_netcdf(netcdf_dataset)
 
         maximum_acquisition_processes = netcdf_dataset.maximum_acquisition_processes
+        ip_list = []
 
         return cls(
             channel_list,
             sample_rate,
             time_per_read,
             time_per_write,
+            output_oversample,
             maximum_acquisition_processes,
+            ip_list,
         )
 
     def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
@@ -135,7 +449,7 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample,
         ) = super().load_metadata_from_workbook(workbook)
 
-        maximum_acqusition_processes = None
+        maximum_acquisition_processes = None
 
         hardware_worksheet = workbook["Hardware"]
         for row in hardware_worksheet.rows:
@@ -144,17 +458,21 @@ class LanXIMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Maximum Acquisition Processes":
+                case "maximum_acquisition_processes":
                     maximum_acquisition_processes = value
                 case _:
                     continue
+
+        ip_list = []
 
         return cls(
             channel_list,
             sample_rate,
             time_per_read,
             time_per_write,
+            output_oversample,
             maximum_acquisition_processes,
+            ip_list,
         )
 
     # endregion
@@ -217,7 +535,9 @@ def read_lanxi(socket_handle: socket.socket):
     elif (
         package.header.message_type == OpenapiMessage.Header.EMessageType.e_data_quality
     ):
-        ip, port = socket_handle.getpeername()
+        peer = socket_handle.getpeername()
+        ip = peer[0]
+        port = peer[1]
         for q in package.message.qualities:
             if q.validity_flags.overload:
                 print(f"Overload Detected on {ip}:{port}")
@@ -305,8 +625,10 @@ def lanxi_multisocket_reader(
         for socket_handle, data_queue in zip(socket_handles, data_queues):
             # The socket has closed, so gracefully close down
             try:
-                ip, port = socket_handle.getpeername()
-            except OSError:
+                peer = socket_handle.getpeername()
+                ip = peer[0]
+                port = peer[1]
+            except OSError as exc:
                 ip, port = "<disconnected>", -1
             print(f"Closing Socket {ip}:{port}")
             while True:
@@ -319,7 +641,7 @@ def lanxi_multisocket_reader(
         return
 
 
-def create_harware_maps(acquisition_map, output_map, channel_list):
+def create_hardware_maps(acquisition_map, output_map, channel_list):
     """Creates mapping between the LAN-XI channels and the rattlesnake channel list
 
     Parameters
@@ -526,7 +848,7 @@ class LanXIAcquisition(HardwareAcquisition):
     process, and must define how to get data from the test hardware into the
     controller."""
 
-    def __init__(self, queue=None):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue=None):
         """
         Constructs the LAN-XI Acquisition class and specifies values to null.
         """
@@ -543,6 +865,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.modules_per_process = None
         self.total_processes = None
         self.acquisition_delay = None
+        self.ping_alive_event = ping_alive_event
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         """
@@ -566,7 +889,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.maximum_processes = test_data.maximum_acquisition_processes
         # Now create a hardware map that will help us do bookkeeping
         channel_data = test_data.channel_list
-        create_harware_maps(self.acquisition_map, self.output_map, channel_data)
+        create_hardware_maps(self.acquisition_map, self.output_map, channel_data)
         # Go through the channel table and get the hardware and channel
         # information
         host_addresses = [channel.physical_device for channel in channel_data]
@@ -575,10 +898,13 @@ class LanXIAcquisition(HardwareAcquisition):
             for channel in channel_data
             if (
                 not (channel.feedback_device is None)
-                and not (channel.feedback_device.strip() == "")
+                and not (
+                    channel.feedback_device.startswith("#")
+                    or channel.feedback_device.strip() == ""
+                )
             )
         ]
-        self.master_address = host_addresses[0]
+        self.master_address = test_data.master_address
         self.slave_addresses = set(
             [
                 address
@@ -837,7 +1163,7 @@ class LanXIOutput(HardwareOutput):
     process, and must define how to get write data to the hardware from the
     control system"""
 
-    def __init__(self, queue=None):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue=None):
         """Method to start up the hardware"""
         self.sockets = {}
         self.acquisition_map = {}
@@ -854,12 +1180,13 @@ class LanXIOutput(HardwareOutput):
         self.generator_sample_rate = None
         self.buffer_size = 5
         self.ready_signal_factor = BUFFER_SIZE
+        self.ping_alive_event = ping_alive_event
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         self.maximum_processes = test_data.maximum_acquisition_processes
         # Create a hardware map that will help us do bookkeeping
         channel_data = test_data.channel_list
-        create_harware_maps(self.acquisition_map, self.output_map, channel_data)
+        create_hardware_maps(self.acquisition_map, self.output_map, channel_data)
         self.write_size = test_data.samples_per_write
         self.sample_rate = test_data.sample_rate
         # Go through the channel table and get the hardware and channel
@@ -873,7 +1200,7 @@ class LanXIOutput(HardwareOutput):
                 and not (channel.feedback_device.strip() == "")
             )
         ]
-        self.master_address = host_addresses[0]
+        self.master_address = test_data.master_address
         self.slave_addresses = set(
             [
                 address
@@ -883,6 +1210,7 @@ class LanXIOutput(HardwareOutput):
         )
         print("\nInitial States:")
         self._get_states()
+        self.ping_alive_event.set()
 
         # time.sleep(10)
 
@@ -938,6 +1266,7 @@ class LanXIOutput(HardwareOutput):
             single_module = True
         print("\nStates after synchronization")
         self._get_states()
+        self.ping_alive_event.set()
 
         # Now we open the recorders
         open_json = {
@@ -956,6 +1285,7 @@ class LanXIOutput(HardwareOutput):
         )
         print("\nStates after Open")
         self._get_states()
+        self.ping_alive_event.set()
 
         # Now get the sample rate
         for i, address in enumerate(self.acquisition_map):
@@ -985,6 +1315,7 @@ class LanXIOutput(HardwareOutput):
                 f"Invalid Sample Rate {test_data.sample_rate}, must be one of "
                 f"{supported_sample_rates}"
             )
+        self.ping_alive_event.set()
 
         # Get the Generator Sample Rate
         self.generator_sample_rate = round(np.log2(OUTPUT_RATE / test_data.sample_rate))
@@ -995,6 +1326,7 @@ class LanXIOutput(HardwareOutput):
         self.output_rate = OUTPUT_RATE // 2 ** (self.generator_sample_rate)
         # Now prep the generators
         self.set_generators()
+        self.ping_alive_event.set()
 
         # Now we need to set up the recording configuration
         for slave_address in self.slave_addresses:
@@ -1020,6 +1352,7 @@ class LanXIOutput(HardwareOutput):
             wait_for_recorder_state(self.master_address, "RecorderConfiguring")
         print("\nStates after Recorder Create")
         self._get_states()
+        self.ping_alive_event.set()
 
         # State is now in Recorder Configuring
         print("Recorder in Configuring State")
@@ -1084,8 +1417,10 @@ class LanXIOutput(HardwareOutput):
                 f"Setting inputs to {acquisition_device} Channels, {response.status_code} "
                 f"{response.text}"
             )
+            self.ping_alive_event.set()
         print("\nStates after Channel Input")
         self._get_states()
+        self.ping_alive_event.set()
 
         # Now check for synchronization
         if len(self.slave_addresses) > 0:
@@ -1106,12 +1441,14 @@ class LanXIOutput(HardwareOutput):
                     "http://" + self.master_address + "/rest/rec/synchronize",
                     timeout=60,
                 )
+            self.ping_alive_event.set()
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
                     wait_for_input_state(slave_address, "Synchronized")
             if self.master_address in self.acquisition_map:
                 wait_for_input_state(self.master_address, "Synchronized")
             print("Recorder Synchronized, Starting Streaming...")
+            self.ping_alive_event.set()
 
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
@@ -1119,11 +1456,13 @@ class LanXIOutput(HardwareOutput):
                         "http://" + slave_address + "/rest/rec/startstreaming",
                         timeout=60,
                     )
+                    self.ping_alive_event.set()
             if self.master_address in self.acquisition_map:
                 requests.put(
                     "http://" + self.master_address + "/rest/rec/startstreaming",
                     timeout=60,
                 )
+        self.ping_alive_event.set()
 
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
@@ -1133,6 +1472,7 @@ class LanXIOutput(HardwareOutput):
             wait_for_recorder_state(self.master_address, "RecorderStreaming")
         print("Recorder Streaming")
         self._get_states()
+        self.ping_alive_event.set()
 
         print("\n\nData Acquisition Ready for Acquire")
 

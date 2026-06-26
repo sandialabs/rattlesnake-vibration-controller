@@ -360,6 +360,7 @@ class EnvironmentUI(ABC):
         self.event_watcher = EventWatcher(
             ready_event_list,
             active_event_list,
+            self.rattlesnake.event_container.ping_alive_event,
             active_event_check=active_event_check,
             timeout=self.rattlesnake.timeout,
         )

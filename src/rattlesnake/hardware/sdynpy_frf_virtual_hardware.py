@@ -65,7 +65,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
         sample_rate: int,
         time_per_read: float,
         time_per_write: float,
-        output_oversample: int,
         hardware_file: str,
     ):
         super().__init__(
@@ -74,7 +73,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample=output_oversample,
         )
         self.hardware_file = hardware_file
 
@@ -110,7 +108,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample,
             hardware_file,
         )
 
@@ -140,7 +137,7 @@ class SDynPyFRFMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Hardware File":
+                case "hardware_file":
                     hardware_file = value
                 case _:
                     continue
@@ -150,7 +147,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
             sample_rate,
             time_per_read,
             time_per_write,
-            output_oversample,
             hardware_file,
         )
 
@@ -170,7 +166,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Loads in the SDynPy file and sets initial parameters to null
         values.
@@ -481,7 +477,7 @@ class SDynPyFRFOutput(HardwareOutput):
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 

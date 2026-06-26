@@ -106,6 +106,7 @@ class StateSpaceMetadata(HardwareMetadata):
 
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(2, 2, self.hardware_file)
+        hardware_worksheet.cell(7, 2, self.output_oversample)
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
@@ -127,7 +128,7 @@ class StateSpaceMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Hardware File":
+                case "hardware_file":
                     hardware_file = value
                 case _:
                     continue
@@ -156,7 +157,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """Loads in the state space file and sets initial parameters to null values
 
 
@@ -368,7 +369,7 @@ class StateSpaceOutput(HardwareOutput):
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 

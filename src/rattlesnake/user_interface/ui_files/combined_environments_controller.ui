@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2107</width>
+    <width>2183</width>
     <height>703</height>
    </rect>
   </property>
@@ -490,6 +490,13 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="lanxi_ip_checkbox">
+               <property name="text">
+                <string>Use IPv6?</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QPushButton" name="lanxi_ip_address_button">
                <property name="text">
                 <string>IP Address Lookup</string>
@@ -645,7 +652,14 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="damping_ratio_selector"/>
+              <widget class="QDoubleSpinBox" name="damping_ratio_selector">
+               <property name="maximum">
+                <double>10.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QLabel" name="task_trigger_label">
@@ -1374,7 +1388,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
       <item>
        <widget class="QPushButton" name="channel_monitor_button">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="toolTip">
          <string>Open up channel monitor to see the levels of each channel compared to their maximum values.</string>
@@ -1459,7 +1473,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2107</width>
+     <width>2183</width>
      <height>22</height>
     </rect>
    </property>

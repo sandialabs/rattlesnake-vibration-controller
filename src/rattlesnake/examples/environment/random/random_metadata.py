@@ -3,26 +3,22 @@ import netCDF4 as nc4
 import openpyxl
 
 import rattlesnake.examples.defaults as defaults
-
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationInstructions,
 )
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
 
 ENVIRONMENT_NAME = "Random 0"
 
 
-def random_instructions():
-    control_test_level = 1
-    instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
-
-    return instructions
-
-
 def worksheet_random_metadata(hardware_metadata):
 
-    worksheet_dir = defaults.DIRECTORY + "/environment/random/random.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -30,28 +26,33 @@ def worksheet_random_metadata(hardware_metadata):
     metadata = RandomVibrationMetadata.load_metadata_from_worksheet(
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
+    metadata.control_python_script = (
+        defaults.DIRECTORY + "/control_laws/control_laws.py"
+    )
+    metadata.control_python_function = "buzz_control"
+    metadata.control_python_function_type = 0
+    metadata.control_python_function_parameters = ""
     (
-        specification_frequency_lines,
-        specification_cpsd_matrix,
-        specification_warning_matrix,
-        specification_abort_matrix,
+        metadata.specification_frequency_lines,
+        metadata.specification_cpsd_matrix,
+        metadata.specification_warning_matrix,
+        metadata.specification_abort_matrix,
     ) = create_sine_specification(hardware_metadata.sample_rate)
-    metadata.specification_frequency_lines = specification_frequency_lines
-    metadata.specification_cpsd_matrix = specification_cpsd_matrix
-    metadata.specification_warning_matrix = specification_warning_matrix
-    metadata.specification_abort_matrix = specification_abort_matrix
 
     return metadata
 
 
 def netcdf_random_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/random/random.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/random/random_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     metadata = RandomVibrationMetadata.load_metadata_from_netcdf(
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    metadata.control_python_script = (
+        defaults.DIRECTORY + "/control_laws/control_laws.py"
     )
 
     return metadata
@@ -77,8 +78,8 @@ def manual_random_metadata(hardware_metadata):
     control_python_function = "buzz_control"
     control_python_function_type = 0
     control_python_function_parameters = ""
-    control_channel_indices = [9, 10, 11]
-    output_channel_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    control_channel_indices = [0, 1, 2]
+    output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     (
         specification_frequency_lines,
@@ -139,3 +140,92 @@ def create_sine_specification(sample_rate):
         specification_warning_matrix,
         specification_abort_matrix,
     )
+
+
+def random_instructions():
+    control_test_level = 0
+    instructions = RandomVibrationInstructions(ENVIRONMENT_NAME, control_test_level)
+
+    return instructions
+
+
+def random_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = random_instructions()
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 5
+    command = RandomVibrationCommands.ADJUST_TEST_LEVEL
+    data = 5
+    adjust_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 15
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 16
+    command = RandomVibrationCommands.SAVE_CONTROL_DATA
+    data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 17
+    command = RandomVibrationCommands.CHANGE_SPECIFICATION
+    data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
+    change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 20
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = random_instructions()
+    instructions.control_test_level = 5
+    start_environment_event_2 = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 40
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event_2 = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 40
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 40
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        start_environment_event,
+        adjust_level_event,
+        stop_environment_event,
+        save_event,
+        change_spec_event,
+        start_environment_event_2,
+        stop_environment_event_2,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+
+    return event_list
+
+
+def worksheet_random_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.RANDOM,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
+    save_event = event_list[4]
+    save_event.data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
+    change_spec_event = event_list[5]
+    change_spec_event.data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
+    return event_list

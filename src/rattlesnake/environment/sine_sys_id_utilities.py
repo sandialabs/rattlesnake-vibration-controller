@@ -226,11 +226,17 @@ def sine_sweep(
         if sweep_type.lower() in ["lin", "linear"]:
             sweep_time = +(end_frequency - start_frequency) / sweep_rate
         elif sweep_type.lower() in ["log", "logarithmic"]:
-            sweep_time = np.log(end_frequency / start_frequency) / (sweep_rate * np.log(2))
+            sweep_time = np.log(end_frequency / start_frequency) / (
+                sweep_rate * np.log(2)
+            )
         else:
-            raise ValueError("Sweep type should be one of lin, linear, log, or logarithmic")
+            raise ValueError(
+                "Sweep type should be one of lin, linear, log, or logarithmic"
+            )
         if sweep_time < 0:
-            raise ValueError(f"Sweep time for segment index {i} is negative.  Check sweep rate.")
+            raise ValueError(
+                f"Sweep time for segment index {i} is negative.  Check sweep rate."
+            )
         sweep_samples = int(np.floor(sweep_time / dt))
         # Construct the abscissa
         if only_breakpoints:
@@ -247,9 +253,13 @@ def sine_sweep(
             this_argument = 2 ** (sweep_rate * this_abscissa) * omega_start / (
                 sweep_rate * np.log(2)
             ) - omega_start / (sweep_rate * np.log(2))
-            this_frequency = 2 ** (sweep_rate * this_abscissa) * omega_start / (2 * np.pi)
+            this_frequency = (
+                2 ** (sweep_rate * this_abscissa) * omega_start / (2 * np.pi)
+            )
         else:
-            raise ValueError("Invalid sweep type, should be linear, lin, logarithmic, or log")
+            raise ValueError(
+                "Invalid sweep type, should be linear, lin, logarithmic, or log"
+            )
         # Compute the phase at each time step
         if end_frequency > start_frequency:
             freq_interp = [start_frequency, end_frequency]
@@ -262,11 +272,15 @@ def sine_sweep(
         this_phases = np.interp(this_frequency, freq_interp, phase_interp)
         # Compute the amplitude at each time step
         this_amplitudes = np.interp(this_frequency, freq_interp, amp_interp)
-        this_ordinate = this_amplitudes * np.cos(this_argument + this_phases + last_phase)
+        this_ordinate = this_amplitudes * np.cos(
+            this_argument + this_phases + last_phase
+        )
         if i == len(frequencies) - 2:
             last_index = None  # If it's the last segment, go up until the end
         else:
-            last_index = -1  # Otherwise, we remove the last point because the first point of the
+            last_index = (
+                -1
+            )  # Otherwise, we remove the last point because the first point of the
             # next segment will be this value
         arg_over_time.append(this_argument[:last_index] + last_phase)
         last_phase += this_argument[-1]
@@ -366,11 +380,17 @@ def digital_tracking_filter_generator(
         if xi_0_filt is None:
             # Set up some fake data to initialize the filter to a good value
             past_ts = np.arange(-filter_order * 2 - 1, 0) * dt
-            past_xs = amplitude_estimate * np.cos(2 * np.pi * fi[0] * past_ts + phase_estimate)
+            past_xs = amplitude_estimate * np.cos(
+                2 * np.pi * fi[0] * past_ts + phase_estimate
+            )
             xi_0 = np.cos(2 * np.pi * fi[0] * past_ts) * past_xs
             xi_90 = -np.sin(2 * np.pi * fi[0] * past_ts) * past_xs
-            xi_0_filt = 0.5 * amplitude_estimate * np.cos(phase_estimate) * np.ones(xi_0.shape)
-            xi_90_filt = 0.5 * amplitude_estimate * np.sin(phase_estimate) * np.ones(xi_90.shape)
+            xi_0_filt = (
+                0.5 * amplitude_estimate * np.cos(phase_estimate) * np.ones(xi_0.shape)
+            )
+            xi_90_filt = (
+                0.5 * amplitude_estimate * np.sin(phase_estimate) * np.ones(xi_90.shape)
+            )
             # if plot_results:
             #     ax[1,0].plot(past_ts,xi_0,'r')
             #     ax[1,0].plot(past_ts,xi_0_filt,'m')
@@ -658,7 +678,9 @@ class DefaultSineControlLaw:
         # print('Updating System ID Information')
         self.frf_frequency_spacing = sysid_frequency_spacing
         self.frfs = sysid_transfer_functions
-        self.frf_frequencies = self.frf_frequency_spacing * np.arange(self.frfs.shape[0])
+        self.frf_frequencies = self.frf_frequency_spacing * np.arange(
+            self.frfs.shape[0]
+        )
         # print('Inverting FRFs')
         self.frf_pinv = np.linalg.pinv(self.frfs)
         self.max_singular_values = np.max(
@@ -674,7 +696,9 @@ class DefaultSineControlLaw:
         # Go through and compute the response amplitudes and phases from each of the sine tones
         # print('Preallocating Amplitude, Phase, FRFs, and Correction Factors')
         if self.harddisk_storage is not None:
-            filename = os.path.join(self.harddisk_storage, "preshaped_drive_amplitudes.mmap")
+            filename = os.path.join(
+                self.harddisk_storage, "preshaped_drive_amplitudes.mmap"
+            )
             shape = (
                 self.specified_frequency.shape[0],
                 self.frfs.shape[-1],
@@ -683,14 +707,20 @@ class DefaultSineControlLaw:
             self.preshaped_drive_amplitudes = np.memmap(
                 filename, dtype=float, shape=shape, mode="w+"
             )
-            filename = os.path.join(self.harddisk_storage, "preshaped_drive_phases.mmap")
+            filename = os.path.join(
+                self.harddisk_storage, "preshaped_drive_phases.mmap"
+            )
             shape = (
                 self.specified_frequency.shape[0],
                 self.frfs.shape[-1],
                 self.specified_frequency.shape[-1],
             )
-            self.preshaped_drive_phases = np.memmap(filename, dtype=float, shape=shape, mode="w+")
-            filename = os.path.join(self.harddisk_storage, "largest_correction_factors.mmap")
+            self.preshaped_drive_phases = np.memmap(
+                filename, dtype=float, shape=shape, mode="w+"
+            )
+            filename = os.path.join(
+                self.harddisk_storage, "largest_correction_factors.mmap"
+            )
             shape = self.specified_frequency.shape
             self.largest_correction_factors = np.memmap(
                 filename, dtype=float, shape=shape, mode="w+"
@@ -700,7 +730,9 @@ class DefaultSineControlLaw:
                 self.specified_frequency.shape[0],
                 self.specified_frequency.shape[-1],
             ) + self.frf_pinv.shape[-2:]
-            self.interpolated_frf_pinv = np.memmap(filename, dtype="c16", shape=shape, mode="w+")
+            self.interpolated_frf_pinv = np.memmap(
+                filename, dtype="c16", shape=shape, mode="w+"
+            )
         else:
             self.preshaped_drive_amplitudes = np.zeros(
                 (
@@ -747,7 +779,11 @@ class DefaultSineControlLaw:
                 )
             # print('Computing Largest Correction Factors')
             self.largest_correction_factors[tone_index, control_slice] = (
-                1 / np.interp(control_freq, self.frf_frequencies, self.max_singular_values) ** 2
+                1
+                / np.interp(
+                    control_freq, self.frf_frequencies, self.max_singular_values
+                )
+                ** 2
             )
             # print('Computing Complex Response')
             complex_response = np.moveaxis(
@@ -757,7 +793,10 @@ class DefaultSineControlLaw:
             ]
             # print('Computing Complex Excitation')
             complex_excitation = np.moveaxis(
-                (self.interpolated_frf_pinv[tone_index, control_slice] @ complex_response)[..., 0],
+                (
+                    self.interpolated_frf_pinv[tone_index, control_slice]
+                    @ complex_response
+                )[..., 0],
                 0,
                 1,
             )
@@ -779,7 +818,8 @@ class DefaultSineControlLaw:
             ] = -self.maximum_drive_voltage
         # print('Computing Excitation Signal')
         self.preshaped_drive_signals = self.preshaped_drive_amplitudes * np.cos(
-            self.specified_argument[:, np.newaxis, :] + self.preshaped_drive_phases  # Radians
+            self.specified_argument[:, np.newaxis, :]
+            + self.preshaped_drive_phases  # Radians
         )
 
         if self.harddisk_storage is not None:
@@ -832,10 +872,14 @@ class DefaultSineControlLaw:
         ramp_up_end = block_end - self.ramp_samples
         if ramp_up_end >= 0:
             ramp_up_end = self.ramp_samples
-        ramp_down_start = block_start - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_start = (
+            block_start - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_start < 0:
             ramp_down_start = 0
-        ramp_down_end = block_end - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_end = (
+            block_end - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_end < 0:
             ramp_down_end = 0
         middle_start = block_start
@@ -863,11 +907,17 @@ class DefaultSineControlLaw:
         phases = self.specified_phase[  # Radians
             self.control_tones,
             ...,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         arguments = self.specified_argument[
             self.control_tones,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         return amplitudes, phases, arguments  # Radians
 
@@ -897,10 +947,14 @@ class DefaultSineControlLaw:
         ramp_up_end = block_end - self.ramp_samples
         if ramp_up_end >= 0:
             ramp_up_end = self.ramp_samples
-        ramp_down_start = block_start - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_start = (
+            block_start - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_start < 0:
             ramp_down_start = 0
-        ramp_down_end = block_end - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_end = (
+            block_end - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_end < 0:
             ramp_down_end = 0
         middle_start = block_start
@@ -928,11 +982,17 @@ class DefaultSineControlLaw:
         phases = self.preshaped_drive_phases[  # Radians
             self.control_tones,
             ...,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         arguments = self.specified_argument[
             self.control_tones,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         return amplitudes, phases, arguments  # Phase in Radians
 
@@ -964,17 +1024,23 @@ class DefaultSineControlLaw:
         # about
         self.control_tones = control_tones
         self.start_index = start_index
-        self.end_index = self.preshaped_drive_signals.shape[-1] if end_index is None else end_index
+        self.end_index = (
+            self.preshaped_drive_signals.shape[-1] if end_index is None else end_index
+        )
 
         if DEBUG:
             print("Writing Sine Debug Pickle")
-            with open("debug_data/sine_control_law_initialize_control_debug.pkl", "wb") as f:
+            with open(
+                "debug_data/sine_control_law_initialize_control_debug.pkl", "wb"
+            ) as f:
                 pickle.dump(self, f)
             print("Done!")
 
         # Set up the analysis and write_indices
         self.control_analysis_index = 0
-        self.control_write_index = self.ramp_samples + self.buffer_blocks * self.block_size
+        self.control_write_index = (
+            self.ramp_samples + self.buffer_blocks * self.block_size
+        )
 
         # Set up the ramp-ups and ramp downs for the excitation signal
         self.control_ramp_up = (
@@ -1021,12 +1087,16 @@ class DefaultSineControlLaw:
         )  # Radians
         excitation_signals = np.sum(
             starting_drive_amplitudes
-            * np.cos(starting_drive_phases + starting_arguments[:, np.newaxis, :]),  # Radians
+            * np.cos(
+                starting_drive_phases + starting_arguments[:, np.newaxis, :]
+            ),  # Radians
             axis=0,
         )
 
         # Set up control parameters
-        self.control_drive_correction = np.zeros(starting_drive_amplitudes.shape[:2], dtype=complex)
+        self.control_drive_correction = np.zeros(
+            starting_drive_amplitudes.shape[:2], dtype=complex
+        )
 
         # Set up the amplitude and phase tracking
         self.control_response_amplitudes = []
@@ -1090,14 +1160,17 @@ class DefaultSineControlLaw:
 
         if DEBUG:
             print("Writing Sine Debug Pickle")
-            with open("debug_data/sine_control_law_update_control_debug.pkl", "wb") as f:
+            with open(
+                "debug_data/sine_control_law_update_control_debug.pkl", "wb"
+            ) as f:
                 pickle.dump(self, f)
             print("Done!")
 
         # Find the equivalent block in the signal
         block_start_index = self.control_analysis_index
         block_end_index = (
-            control_signals.shape[-1] * self.output_oversample + self.control_analysis_index
+            control_signals.shape[-1] * self.output_oversample
+            + self.control_analysis_index
         )
         if self.convergence_factor != 0:
             reduction_slice = slice(
@@ -1109,15 +1182,19 @@ class DefaultSineControlLaw:
             target_response_amplitudes, target_response_phases, _ = (  # Radians
                 self.get_control_targets(block_start_index, block_end_index)
             )
-            complex_targets = target_response_amplitudes[..., :: self.output_oversample] * np.exp(
-                1j * target_response_phases[..., :: self.output_oversample]
-            )
-            complex_achieved = control_amplitudes * np.exp(1j * control_phases)  # Radians
+            complex_targets = target_response_amplitudes[
+                ..., :: self.output_oversample
+            ] * np.exp(1j * target_response_phases[..., :: self.output_oversample])
+            complex_achieved = control_amplitudes * np.exp(
+                1j * control_phases
+            )  # Radians
             complex_error = (
                 complex_targets - complex_achieved
             )  # Number of Tones x Num Responses x Num Freqs
             block_correction_factor = self.convergence_factor * np.min(
-                self.largest_correction_factors[self.control_tones, ..., reduction_slice],
+                self.largest_correction_factors[
+                    self.control_tones, ..., reduction_slice
+                ],
                 axis=-1,
                 keepdims=True,
             )  # Num Tones x 1
@@ -1155,7 +1232,9 @@ class DefaultSineControlLaw:
         """
         if DEBUG:
             print("Writing Sine Debug Pickle")
-            with open("debug_data/sine_control_law_generate_signal_debug.pkl", "wb") as f:
+            with open(
+                "debug_data/sine_control_law_generate_signal_debug.pkl", "wb"
+            ) as f:
                 pickle.dump(self, f)
             print("Done!")
 
@@ -1415,7 +1494,9 @@ def vold_kalman_filter(
                 col_indices[:, off_diagonal_index] = np.arange(
                     col_index * n_samples, (col_index + 1) * n_samples
                 )
-                CHC[:, off_diagonal_index] = phasor[row_index].conj() * phasor[col_index]
+                CHC[:, off_diagonal_index] = (
+                    phasor[row_index].conj() * phasor[col_index]
+                )
                 off_diagonal_index += 1
         # We set up the variables as multidimensional so we could store them easier,
         # but now we need to flatten them to put them into the sparse matrix.
@@ -1608,11 +1689,13 @@ def vold_kalman_filter_generator(
             # If necessary, do the overlap
             if previous_envelope is not None:
                 vk_envelope[..., :overlap_samples] = (
-                    vk_envelope[..., :overlap_samples] + previous_envelope[..., -overlap_samples:]
+                    vk_envelope[..., :overlap_samples]
+                    + previous_envelope[..., -overlap_samples:]
                 )
             if not last_signal:
                 reconstructed_signals = np.real(
-                    vk_envelope[..., :-overlap_samples] * vk_phasor[..., :-overlap_samples]
+                    vk_envelope[..., :-overlap_samples]
+                    * vk_phasor[..., :-overlap_samples]
                 )
                 reconstructed_amplitudes = np.abs(vk_envelope[..., :-overlap_samples])
                 reconstructed_phases = np.angle(vk_envelope[..., :-overlap_samples])
@@ -1634,7 +1717,9 @@ class CircularBufferWithOverlap:
     from the buffer with overlap
     """
 
-    def __init__(self, buffer_size, block_size, overlap_size, dtype="float", data_shape=()):
+    def __init__(
+        self, buffer_size, block_size, overlap_size, dtype="float", data_shape=()
+    ):
         """Initialize the circular buffer
 
         Parameters
@@ -1692,7 +1777,9 @@ class CircularBufferWithOverlap:
         """
         # Compute the end index for the write operation
         indices = (
-            np.arange(self.write_index, self.write_index + data.shape[-1] + self.overlap_size)
+            np.arange(
+                self.write_index, self.write_index + data.shape[-1] + self.overlap_size
+            )
             % self.buffer_size
         )
 
@@ -1702,8 +1789,12 @@ class CircularBufferWithOverlap:
                 "Read data before writing again."
             )
 
-        self.buffer[..., indices[: None if self.overlap_size == 0 else -self.overlap_size]] = data
-        self.buffer_read[indices[: None if self.overlap_size == 0 else -self.overlap_size]] = False
+        self.buffer[
+            ..., indices[: None if self.overlap_size == 0 else -self.overlap_size]
+        ] = data
+        self.buffer_read[
+            indices[: None if self.overlap_size == 0 else -self.overlap_size]
+        ] = False
 
         # Update the write index
         self.write_index = (self.write_index + data.shape[-1]) % self.buffer_size
@@ -1737,7 +1828,9 @@ class CircularBufferWithOverlap:
 
         """
         indices = (
-            np.arange(self.read_index - self.overlap_size, self.read_index + self.block_size)
+            np.arange(
+                self.read_index - self.overlap_size, self.read_index + self.block_size
+            )
             % self.buffer_size
         )
         if read_remaining:
@@ -1747,12 +1840,16 @@ class CircularBufferWithOverlap:
             indices = np.concatenate(
                 (
                     indices[: self.overlap_size],
-                    indices[self.overlap_size :][~self.buffer_read[indices[self.overlap_size :]]],
+                    indices[self.overlap_size :][
+                        ~self.buffer_read[indices[self.overlap_size :]]
+                    ],
                 )
             )
             # print(f"{indices.copy()=}")
         if np.any(self.buffer_read[indices[self.overlap_size :]]):
-            raise ValueError("Data would be read multiple times.  Write data before reading again.")
+            raise ValueError(
+                "Data would be read multiple times.  Write data before reading again."
+            )
         return_data = self.buffer[..., indices]
         self.buffer_read[indices[self.overlap_size :]] = True
         self.read_index = (
@@ -1845,11 +1942,15 @@ class SineSpecification:
             ("abort", "f8", (2, 2, num_control)),
         ]
         if frequency_breakpoints is None and num_breakpoints is None:
-            raise ValueError("Must specify either number of breakpoints or breakpoint frequencies.")
+            raise ValueError(
+                "Must specify either number of breakpoints or breakpoint frequencies."
+            )
         if frequency_breakpoints is None:
             self.breakpoint_table = np.zeros(num_breakpoints, dtype=spec_dtype)
         else:
-            self.breakpoint_table = np.zeros(frequency_breakpoints.shape[0], dtype=spec_dtype)
+            self.breakpoint_table = np.zeros(
+                frequency_breakpoints.shape[0], dtype=spec_dtype
+            )
             self.breakpoint_table["frequency"] = frequency_breakpoints
         if amplitude_breakpoints is not None:
             self.breakpoint_table["amplitude"] = amplitude_breakpoints
@@ -2004,7 +2105,9 @@ class SineSpecification:
             begin_arguments = 2 * np.pi * frequency[0] * begin_abscissa + argument[0]
             begin_frequencies = np.ones(ramp_samples + delay_samples) * frequency[0]
             begin_amplitudes = (
-                np.concatenate((np.zeros(delay_samples), np.linspace(0, 1, ramp_samples)))
+                np.concatenate(
+                    (np.zeros(delay_samples), np.linspace(0, 1, ramp_samples))
+                )
                 * amplitude[..., [0]]
             )
             begin_phases = np.ones(ramp_samples + delay_samples) * phase[..., [0]]
@@ -2064,8 +2167,12 @@ class SineSpecification:
 
         """
         abscissa = np.repeat(self.breakpoint_table["frequency"], 2)
-        lower_ordinate = self.breakpoint_table["warning"][:, 0, :, channel_index].flatten()
-        upper_ordinate = self.breakpoint_table["warning"][:, 1, :, channel_index].flatten()
+        lower_ordinate = self.breakpoint_table["warning"][
+            :, 0, :, channel_index
+        ].flatten()
+        upper_ordinate = self.breakpoint_table["warning"][
+            :, 1, :, channel_index
+        ].flatten()
         return np.array(
             [
                 np.interp(frequencies, abscissa, lower_ordinate),
@@ -2094,8 +2201,12 @@ class SineSpecification:
 
         """
         abscissa = np.repeat(self.breakpoint_table["frequency"], 2)
-        lower_ordinate = self.breakpoint_table["abort"][:, 0, :, channel_index].flatten()
-        upper_ordinate = self.breakpoint_table["abort"][:, 1, :, channel_index].flatten()
+        lower_ordinate = self.breakpoint_table["abort"][
+            :, 0, :, channel_index
+        ].flatten()
+        upper_ordinate = self.breakpoint_table["abort"][
+            :, 1, :, channel_index
+        ].flatten()
         return np.array(
             [
                 np.interp(frequencies, abscissa, lower_ordinate),
@@ -2158,7 +2269,9 @@ class SineSpecification:
         return True
 
     @staticmethod
-    def create_combined_signals(specifications, sample_rate, ramp_samples, control_index=None):
+    def create_combined_signals(
+        specifications, sample_rate, ramp_samples, control_index=None
+    ):
         """
         Creates a combined signal from many specifications
 
@@ -2240,16 +2353,23 @@ class SineSpecification:
             extra_samples = longest_signal - signal.shape[-1]
             end_abscissa = np.arange(1, extra_samples + 1) / sample_rate
             end_arguments = (
-                2 * np.pi * order_frequencies[i][-1] * end_abscissa + order_arguments[i][-1]
+                2 * np.pi * order_frequencies[i][-1] * end_abscissa
+                + order_arguments[i][-1]
             )
             end_frequencies = np.ones(extra_samples) * order_frequencies[i][-1]
             end_amplitudes = np.zeros((extra_samples)) * order_amplitudes[i][..., [-1]]
             end_phases = np.ones(extra_samples) * order_phases[i][..., [-1]]
             end_signal = np.zeros(extra_samples) * signal[..., [-1]]
             order_signals[i] = np.concatenate((order_signals[i], end_signal), axis=-1)
-            order_frequencies[i] = np.concatenate((order_frequencies[i], end_frequencies), axis=-1)
-            order_arguments[i] = np.concatenate((order_arguments[i], end_arguments), axis=-1)
-            order_amplitudes[i] = np.concatenate((order_amplitudes[i], end_amplitudes), axis=-1)
+            order_frequencies[i] = np.concatenate(
+                (order_frequencies[i], end_frequencies), axis=-1
+            )
+            order_arguments[i] = np.concatenate(
+                (order_arguments[i], end_arguments), axis=-1
+            )
+            order_amplitudes[i] = np.concatenate(
+                (order_amplitudes[i], end_amplitudes), axis=-1
+            )
             order_phases[i] = np.concatenate((order_phases[i], end_phases), axis=-1)
 
         order_signals = np.array(order_signals)

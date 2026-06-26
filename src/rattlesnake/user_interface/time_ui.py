@@ -150,6 +150,7 @@ class TimeUI(EnvironmentUI):
             for channel in channels
             if channel.feedback_device is None
         ]
+        self.definition_widget.signal_file_name_display.setText("")
         # Add rows to the signal table
         self.definition_widget.signal_information_table.setRowCount(num_output)
         self.show_signal_checkboxes = []
@@ -238,13 +239,13 @@ class TimeUI(EnvironmentUI):
         else:
             channel_list_bools = []
 
-        sample_rate = self.definition_widget.output_sample_rate_display.value()
         output_signal = self.signal
         cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
         metadata = TimeMetadata(
             self.environment_name,
             channel_list_bools,
-            sample_rate,
+            self.hardware_metadata.sample_rate,
+            self.hardware_metadata.output_oversample,
             output_signal,
             cancel_rampdown_time,
         )
@@ -295,6 +296,7 @@ class TimeUI(EnvironmentUI):
         instructions = data
         self.run_widget.test_level_selector.setValue(instructions.current_test_level)
         self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
+        super().set_environment_instructions(instructions)
 
     # endregion
 

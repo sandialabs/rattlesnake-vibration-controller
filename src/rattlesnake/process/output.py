@@ -63,6 +63,7 @@ class OutputProcess(AbstractMessageProcess):
         queue_container: QueueContainer,
         output_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
+        ping_alive_event: mp.synchronize.Event,
     ):
         """
         Constructor for the OutputProcess Class
@@ -95,6 +96,7 @@ class OutputProcess(AbstractMessageProcess):
         self.queue_container = queue_container
         self.startup = True
         self.shutdown_flag = False
+        self.ping_alive_event = ping_alive_event
         # Sampling data
         self.sample_rate = None
         self.write_size = None
@@ -152,7 +154,7 @@ class OutputProcess(AbstractMessageProcess):
 
         hardware_output_class = HARDWARE_OUTPUT[metadata.hardware_type]
         self.hardware = hardware_output_class(
-            self.queue_container.single_process_hardware_queue
+            self.ping_alive_event, self.queue_container.single_process_hardware_queue
         )
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
@@ -161,7 +163,10 @@ class OutputProcess(AbstractMessageProcess):
             index
             for index, channel in enumerate(metadata.channel_list)
             if (channel.feedback_device is not None)
-            and not (channel.feedback_device.strip() == "")
+            and not (
+                channel.feedback_device.startswith("#")
+                or channel.feedback_device.strip() == ""
+            )
         ]
         self.num_outputs = len(output_indices)
 
@@ -175,7 +180,10 @@ class OutputProcess(AbstractMessageProcess):
             index
             for index, channel in enumerate(self.hardware_metadata.channel_list)
             if (channel.feedback_device is not None)
-            and not (channel.feedback_device.strip() == "")
+            and not (
+                channel.feedback_device.startswith("#")
+                or channel.feedback_device.strip() == ""
+            )
         ]
         self.environment_list = []
         self.environment_output_channels = {}
@@ -193,10 +201,9 @@ class OutputProcess(AbstractMessageProcess):
             self.environment_first_data[queue_name] = False
 
             # Build output mapping dicts
-            environment_channel_indices = metadata.map_channel_indices()
             common_indices, out_inds, _ = np.intersect1d(
                 hardware_output_indices,
-                environment_channel_indices,
+                metadata.channel_indices,
                 return_indices=True,
             )
             self.environment_output_channels[queue_name] = out_inds
@@ -488,6 +495,7 @@ def output_process(
     output_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
 ):
     """Function passed to multiprocessing as the output process
 
@@ -506,7 +514,7 @@ def output_process(
     """
 
     output_instance = OutputProcess(
-        TASK_NAME, queue_container, output_active_event, ready_event
+        TASK_NAME, queue_container, output_active_event, ready_event, ping_alive_event
     )
 
     output_instance.run(shutdown_event)

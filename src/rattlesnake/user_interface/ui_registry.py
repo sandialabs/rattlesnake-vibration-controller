@@ -84,7 +84,6 @@ for hardware_type in HardwareType:
             UI_HARDWARE_WIDGETS[HardwareType.SDYNPY_FRF] = [
                 "sample_rate",
                 "buffer_size",
-                "integration_oversample",
                 "select_file",
             ]
             UI_ASK_FOR_FILE.append(HardwareType.SDYNPY_FRF)

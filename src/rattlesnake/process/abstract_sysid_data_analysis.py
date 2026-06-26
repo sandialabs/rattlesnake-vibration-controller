@@ -287,41 +287,53 @@ class SysIdMetadata:
         worksheet.cell(
             start_row + 6,
             3,
-            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
+            "# RMS Value of Flat Voltage Spectrum used for system identification.",
         )
-        worksheet.cell(start_row + 7, 1, "System ID Ramp Time")
+        worksheet.cell(start_row + 7, 1, "System ID Low Bandwidth")
         worksheet.cell(
             start_row + 7,
             3,
-            "# Time for the system identification to ramp between levels or from start or to stop.",
+            "# Low bandpass frequency (Hz) used for system identification.",
         )
-        worksheet.cell(start_row + 8, 1, "System ID Signal Type:")
+        worksheet.cell(start_row + 8, 1, "System ID High Bandwidth")
         worksheet.cell(
-            start_row + 8, 3, "# Signal to use for the system identification"
+            start_row + 8,
+            3,
+            "# High bandpass frequency (Hz) used for system identification.",
         )
-        worksheet.cell(start_row + 9, 1, "System ID Window:")
+        worksheet.cell(start_row + 9, 1, "System ID Ramp Time")
         worksheet.cell(
             start_row + 9,
-            2,
+            3,
+            "# Time for the system identification to ramp between levels or from start or to stop.",
+        )
+        worksheet.cell(start_row + 10, 1, "System ID Signal Type:")
+        worksheet.cell(
+            start_row + 10, 3, "# Signal to use for the system identification"
+        )
+        worksheet.cell(start_row + 11, 1, "System ID Window:")
+        worksheet.cell(
+            start_row + 11,
+            3,
             "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
         )
-        worksheet.cell(start_row + 10, 1, "System ID Overlap %:")
+        worksheet.cell(start_row + 12, 1, "System ID Overlap %:")
         worksheet.cell(
-            start_row + 10, 3, "# Overlap to use in the system identification"
+            start_row + 12, 3, "# Overlap to use in the system identification"
         )
-        worksheet.cell(start_row + 11, 1, "System ID Burst On %:")
+        worksheet.cell(start_row + 13, 1, "System ID Burst On %:")
         worksheet.cell(
-            start_row + 11, 3, "# Percentage of a frame that the burst random is on for"
+            start_row + 13, 3, "# Percentage of a frame that the burst random is on for"
         )
-        worksheet.cell(start_row + 12, 1, "System ID Burst Pretrigger %:")
+        worksheet.cell(start_row + 14, 1, "System ID Burst Pretrigger %:")
         worksheet.cell(
-            start_row + 12,
-            2,
+            start_row + 14,
+            3,
             "# Percentage of a frame that occurs before the burst starts in a burst random signal",
         )
-        worksheet.cell(start_row + 13, 1, "System ID Ramp Fraction %:")
+        worksheet.cell(start_row + 15, 1, "System ID Ramp Fraction %:")
         worksheet.cell(
-            start_row + 13,
+            start_row + 15,
             3,
             '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
         )
@@ -345,20 +357,24 @@ class SysIdMetadata:
             worksheet.cell(start_row + 5, 2, self.sysid_estimator)
         if self.sysid_level is not None:
             worksheet.cell(start_row + 6, 2, self.sysid_level)
+        if self.sysid_low_frequency_cutoff is not None:
+            worksheet.cell(start_row + 7, 2, self.sysid_low_frequency_cutoff)
+        if self.sysid_high_frequency_cutoff is not None:
+            worksheet.cell(start_row + 8, 2, self.sysid_high_frequency_cutoff)
         if self.sysid_level_ramp_time is not None:
-            worksheet.cell(start_row + 7, 2, self.sysid_level_ramp_time)
+            worksheet.cell(start_row + 9, 2, self.sysid_level_ramp_time)
         if self.sysid_signal_type is not None:
-            worksheet.cell(start_row + 8, 2, self.sysid_signal_type)
+            worksheet.cell(start_row + 10, 2, self.sysid_signal_type)
         if self.sysid_window is not None:
-            worksheet.cell(start_row + 9, 2, self.sysid_window)
+            worksheet.cell(start_row + 11, 2, self.sysid_window)
         if self.sysid_overlap is not None:
-            worksheet.cell(start_row + 10, 2, self.sysid_overlap * 100)
+            worksheet.cell(start_row + 12, 2, self.sysid_overlap * 100)
         if self.sysid_burst_on is not None:
-            worksheet.cell(start_row + 11, 2, self.sysid_burst_on * 100)
+            worksheet.cell(start_row + 13, 2, self.sysid_burst_on * 100)
         if self.sysid_pretrigger is not None:
-            worksheet.cell(start_row + 12, 2, self.sysid_pretrigger * 100)
+            worksheet.cell(start_row + 14, 2, self.sysid_pretrigger * 100)
         if self.sysid_burst_ramp_fraction is not None:
-            worksheet.cell(start_row + 13, 2, self.sysid_burst_ramp_fraction * 100)
+            worksheet.cell(start_row + 15, 2, self.sysid_burst_ramp_fraction * 100)
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -376,13 +392,15 @@ class SysIdMetadata:
         )
         sysid_estimator = worksheet.cell(start_row + 5, 2).value
         sysid_level = float(worksheet.cell(start_row + 6, 2).value)
-        sysid_level_ramp_time = float(worksheet.cell(start_row + 7, 2).value)
-        sysid_signal_type = worksheet.cell(start_row + 8, 2).value
-        sysid_window = worksheet.cell(start_row + 9, 2).value
-        sysid_overlap = float(worksheet.cell(start_row + 10, 2).value) / 100
-        sysid_burst_on = float(worksheet.cell(start_row + 11, 2).value) / 100
-        sysid_pretrigger = float(worksheet.cell(start_row + 12, 2).value) / 100
-        sysid_burst_ramp_fraction = float(worksheet.cell(start_row + 13, 2).value) / 100
+        sysid_low_frequency_cutoff = worksheet.cell(start_row + 7, 2).value
+        sysid_high_frequency_cutoff = worksheet.cell(start_row + 8, 2).value
+        sysid_level_ramp_time = float(worksheet.cell(start_row + 9, 2).value)
+        sysid_signal_type = worksheet.cell(start_row + 10, 2).value
+        sysid_window = worksheet.cell(start_row + 11, 2).value
+        sysid_overlap = float(worksheet.cell(start_row + 12, 2).value) / 100
+        sysid_burst_on = float(worksheet.cell(start_row + 13, 2).value) / 100
+        sysid_pretrigger = float(worksheet.cell(start_row + 14, 2).value) / 100
+        sysid_burst_ramp_fraction = float(worksheet.cell(start_row + 15, 2).value) / 100
 
         return cls(
             sample_rate=hardware_metadata.sample_rate,
@@ -400,8 +418,8 @@ class SysIdMetadata:
             sysid_burst_on=sysid_burst_on,
             sysid_pretrigger=sysid_pretrigger,
             sysid_burst_ramp_fraction=sysid_burst_ramp_fraction,
-            sysid_low_frequency_cutoff=0,
-            sysid_high_frequency_cutoff=int(hardware_metadata.sample_rate / 2),
+            sysid_low_frequency_cutoff=sysid_low_frequency_cutoff,
+            sysid_high_frequency_cutoff=sysid_high_frequency_cutoff,
             stream_file=None,
             auto_shutdown=False,
         )
@@ -698,6 +716,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         log_file_queue: mp.queues.Queue,
         gui_update_queue: mp.queues.Queue,
         environment_name: str,
+        ping_alive_event: mp.synchronize.Event,
     ):
         """Initialize the environment process
 
@@ -742,6 +761,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.map_command(
             SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, self.load_sysid_data_package
         )
+        self._ping_alive_event = ping_alive_event
         self.environment_name = environment_name
         self.environment_command_queue = environment_command_queue
         self.data_in_queue = data_in_queue
@@ -750,6 +770,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.frames = None
         self.sysid_data = SysIdDataPackage()
         self.startup = True
+
+    def ping_alive(self):
+        self._ping_alive_event.set()
 
     # region State Sync
     def initialize_environment(self, data: str):
@@ -857,6 +880,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.command_queue.put(
                 self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown)
             )
+            self.ping_alive()
 
     def run_sysid_transfer_function(self, auto_shutdown):
         """Starts and runs the system identification
@@ -916,6 +940,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 self.process_name,
                 (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
             )
+            self.ping_alive()
 
     def stop_sysid(self, data):  # pylint: disable=unused-argument
         """Stops the currently running system identification phase
@@ -940,7 +965,9 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
+
 # endregion
+
 
 # region Process
 def sysid_data_analysis_process(
@@ -951,6 +978,7 @@ def sysid_data_analysis_process(
     environment_command_queue: VerboseMessageQueue,
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
+    ping_alive_event: mp.synchronize.Event,
     process_name=None,
 ):
     """An function called by multiprocessing to start up the system identification analysis
@@ -988,6 +1016,7 @@ def sysid_data_analysis_process(
         log_file_queue,
         gui_update_queue,
         environment_name,
+        ping_alive_event,
     )
 
     data_analysis_instance.run()

@@ -12,6 +12,7 @@ from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_METADATA,
     ENVIRONMENT_COMMANDS,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 
 def load_metadata_from_netcdf(dataset):
@@ -54,7 +55,15 @@ def load_metadata_from_netcdf(dataset):
 
 
 def discover_environment_type_in_old_netcdf(environment_group):
-    if hasattr(environment_group, "cancel_rampdown_time"):
+    if hasattr(environment_group, "tracking_filter_type"):
+        return EnvironmentType.SINE
+    elif hasattr(environment_group, "update_tf_during_control"):
+        return EnvironmentType.RANDOM
+    elif hasattr(environment_group, "num_averages"):
+        return EnvironmentType.MODAL
+    elif hasattr(environment_group, "test_level_ramp_time"):
+        return EnvironmentType.TRANSIENT
+    elif hasattr(environment_group, "cancel_rampdown_time"):
         return EnvironmentType.TIME
     else:
         raise RattlesnakeError("Invalid netcdf4 file")
@@ -159,7 +168,7 @@ def load_metadata_from_workbook(workbook):
 def save_rattlesnake_to_workbook(
     workbook,
     hardware_metadata=None,
-    environment_metadata_list=None,
+    environment_metadata_dict=None,
     profile_event_list=None,
 ):
     # Open workbook and save to blank template
@@ -167,37 +176,30 @@ def save_rattlesnake_to_workbook(
     HardwareMetadata.save_blank_hardware_to_workbook(workbook)
 
     # Save hardware metadata values
-    if hardware_metadata is not None and hardware_metadata.hardware_type != "Select":
-        hardware_metadata.save_metadata_to_workbook(workbook)
+    hardware_metadata.save_metadata_to_workbook(workbook)
 
     # Save environment metadata values
     channel_worksheet.cell(row=1, column=24, value="Environments")
-    if environment_metadata_list:
-        for col, environment_metadata in enumerate(environment_metadata_list):
+    if environment_metadata_dict:
+        for col, (environment_name, environment_metadata) in enumerate(
+            environment_metadata_dict.items()
+        ):
             col_idx = col + 24
-            environment_name = environment_metadata.environment_name
             channel_worksheet.cell(row=2, column=col_idx, value=environment_name)
-            bool_indices = environment_metadata.map_channel_indices()
-            for row in bool_indices:
-                row_idx = row + 3
-                channel_worksheet.cell(row=row_idx, column=col_idx, value="x")
             environment_worksheet = workbook.create_sheet(environment_name)
-            environment_metadata.save_metadata_to_worksheet(environment_worksheet)
+            if isinstance(environment_metadata, EnvironmentType):
+                ENVIRONMENT_METADATA[
+                    environment_metadata
+                ].create_blank_worksheet_template(environment_worksheet)
+            else:
+                for row in environment_metadata.channel_indices:
+                    row_idx = row + 3
+                    channel_worksheet.cell(row=row_idx, column=col_idx, value="x")
+                environment_metadata.save_metadata_to_worksheet(environment_worksheet)
 
     # Save profile event list
     profile_sheet = workbook.create_sheet("Test Profile")
-    profile_sheet.cell(1, 1, "Time (s)")
-    profile_sheet.cell(1, 2, "Environment")
-    profile_sheet.cell(1, 3, "Operation")
-    profile_sheet.cell(1, 4, "Data")
-    # Fill out values
-    if profile_event_list:
-        for row, event in enumerate(profile_event_list):
-            row_idx = row + 2
-            profile_sheet.cell(row_idx, 1, str(event.timestamp))
-            profile_sheet.cell(row_idx, 2, event.environment_name)
-            profile_sheet.cell(row_idx, 3, event.command.label)
-            profile_sheet.cell(row_idx, 4, str(event.data))
+    save_profile_to_workbook(profile_sheet, profile_event_list)
 
 
 def load_profile_from_workbook(workbook, environment_types):
@@ -222,6 +224,11 @@ def load_profile_from_workbook(workbook, environment_types):
             command = GlobalCommands[command]
         elif command in ENVIRONMENT_COMMANDS[environment_type].__members__:
             command = ENVIRONMENT_COMMANDS[environment_type][command]
+        elif (
+            command == "SET_ENVIRONMENT_INSTRUCTIONS"
+        ):  # This should not be set by workbook.
+            index += 1
+            continue
         else:
             raise RattlesnakeError(
                 f"Invalid command: {command} for {environment_name} | {environment_type}"
@@ -238,18 +245,19 @@ def load_profile_from_workbook(workbook, environment_types):
     return profile_event_list
 
 
-def save_profile_to_workbook(workbook, profile_event_list):
-    profile_sheet = workbook.active
-    profile_sheet.title = "Test Profile"
+def save_profile_to_workbook(profile_sheet, profile_event_list):
     profile_sheet.cell(1, 1, "Time (s)")
     profile_sheet.cell(1, 2, "Environment")
     profile_sheet.cell(1, 3, "Operation")
     profile_sheet.cell(1, 4, "Data")
     # Fill out values
     if profile_event_list:
-        for row, event in enumerate(profile_event_list):
-            row_idx = row + 2
+        row_idx = 2
+        for event in profile_event_list:
+            if event.command == UICommands.SET_ENVIRONMENT_INSTRUCTIONS:
+                continue
             profile_sheet.cell(row_idx, 1, str(event.timestamp))
             profile_sheet.cell(row_idx, 2, event.environment_name)
             profile_sheet.cell(row_idx, 3, event.command.label)
             profile_sheet.cell(row_idx, 4, str(event.data))
+            row_idx = row_idx + 1

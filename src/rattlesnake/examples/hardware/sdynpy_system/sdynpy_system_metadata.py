@@ -12,7 +12,7 @@ HARDWARE_FILE = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.npz"
 
 
 def worksheet_sdynpy_system_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = SDynPySystemMetadata.load_metadata_from_workbook(workbook)
     metadata.hardware_file = HARDWARE_FILE
@@ -21,7 +21,7 @@ def worksheet_sdynpy_system_metadata():
 
 
 def netcdf_sdynpy_system_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = SDynPySystemMetadata.load_metadata_from_netcdf(netcdf_dataset)
     metadata.hardware_file = HARDWARE_FILE
@@ -35,6 +35,17 @@ def manual_sdynpy_system_metadata():
     excitation_nodes = [1004, 1020, 1065, 1049]
 
     channel_list = []
+    for node in excitation_nodes:
+        for direction in directions:
+            channel = Channel(
+                node_number=node,
+                node_direction=direction,
+                comment=f"{node}{direction}",
+                physical_device="Virtual",
+                channel_type="Acceleration",
+            )
+            channel_list.append(channel)
+
     for node in force_nodes:
         for direction in directions:
             channel = Channel(
@@ -44,17 +55,6 @@ def manual_sdynpy_system_metadata():
                 physical_device="Virtual",
                 channel_type="Force",
                 feedback_device="Virtual",
-            )
-            channel_list.append(channel)
-
-    for node in excitation_nodes:
-        for direction in directions:
-            channel = Channel(
-                node_number=node,
-                node_direction=direction,
-                comment=f"{node}{direction}",
-                physical_device="Virtual",
-                channel_type="Acceleration",
             )
             channel_list.append(channel)
 

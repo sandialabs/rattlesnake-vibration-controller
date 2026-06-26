@@ -54,12 +54,20 @@ class HardwareMetadata:
         output_oversample: int = 1,
     ):
         self.hardware_type = hardware_type
-        self.channel_list = channel_list
+        self._channel_list = channel_list
         self.sample_rate = sample_rate
         self.time_per_read = time_per_read
         self.time_per_write = time_per_write
         # Used for virtual hardware but still required for normal hardware
         self.output_oversample = output_oversample
+
+    @property
+    def channel_list(self):
+        return self._channel_list
+
+    @channel_list.setter
+    def channel_list(self, value: List[Channel]):
+        self._channel_list = value
 
     @property
     def samples_per_read(self):
@@ -300,6 +308,13 @@ class HardwareMetadata:
             4,
             "Only used if Task Triggers is 2.  Only used for NI hardware.  "
             "This row can be deleted if it is not used.",
+        )
+        hardware_worksheet.cell(10, 1, "Damping Ratio")
+        hardware_worksheet.cell(
+            10,
+            3,
+            "# Damping ratio for Exodus Modal Solution virtual hardware. Only fill out if you "
+            "are using Exodus Modal Solution virtual hardware.",
         )
 
     @classmethod

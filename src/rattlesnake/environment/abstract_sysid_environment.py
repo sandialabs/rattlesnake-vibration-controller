@@ -252,12 +252,13 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             netcdf_group_handle, hardware_metadata
         )
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def create_blank_worksheet_template(worksheet):
+    def create_blank_worksheet_template(cls, worksheet):
         """
         Creates blank worksheet template for an excel worksheet
         """
+        super().create_blank_worksheet_template(worksheet)
 
     @abstractmethod
     def save_metadata_to_worksheet(
@@ -338,10 +339,18 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
                 "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
                 "the number of physical output channels in the environment.",
             )
+        else:
+            worksheet.cell(
+                response_row,
+                2,
+                "None",
+            )
         if output_matrix is not None:
             for i, row in enumerate(output_matrix):
                 for j, value in enumerate(row):
                     worksheet.cell(i + output_row, j + 2, value)
+        else:
+            worksheet.cell(output_row, 2, "None")
 
     @classmethod
     def load_sysid_matrix_from_worksheet(cls, worksheet, start_row):
@@ -352,10 +361,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             and worksheet.cell(start_response_row, 2).value.lower() == "none"
         ):
             response_transformation_matrix = None
-        elif (
-            worksheet.cell(start_response_row, 2)
-            .value.lower()
-            .startswith("# transformation matrix")
+        elif isinstance(
+            worksheet.cell(start_response_row, 2).value, str
+        ) and worksheet.cell(start_response_row, 2).value.lower().startswith(
+            "# transformation matrix"
         ):
             response_transformation_matrix = None
         else:
@@ -369,8 +378,13 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
                 ).value == "Output Transformation Matrix:" or (
                     first_col_value is None
                     or (
-                        isinstance(first_col_value, str)
-                        and first_col_value.strip() == ""
+                        (
+                            isinstance(first_col_value, str)
+                            and (
+                                first_col_value.startswith("#")
+                                or first_col_value.strip() == ""
+                            )
+                        )
                     )
                 ):
                     break
@@ -389,10 +403,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             and worksheet.cell(start_output_row, 2).value.lower() == "none"
         ):
             output_transformation_matrix = None
-        elif (
-            worksheet.cell(start_output_row, 2)
-            .value.lower()
-            .startswith("# transformation matrix")
+        elif isinstance(
+            worksheet.cell(start_output_row, 2).value, str
+        ) and worksheet.cell(start_output_row, 2).value.lower().startswith(
+            "# transformation matrix"
         ):
             output_transformation_matrix = None
         else:

@@ -128,6 +128,7 @@ def mock_event_container(use_thread):
         environment_sysid_stored_events[environment_name] = new_event()
         environment_active_events[environment_name].clear()
         environment_sysid_active_events[environment_name].clear()
+    ping_alive_event = new_event()
 
     event_container = EventContainer(
         controller_ready_event,
@@ -147,6 +148,7 @@ def mock_event_container(use_thread):
         environment_active_events,
         environment_sysid_active_events,
         environment_sysid_stored_events,
+        ping_alive_event,
     )
 
     return event_container

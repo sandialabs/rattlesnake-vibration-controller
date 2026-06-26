@@ -3,6 +3,10 @@ import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
 
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.modal_environment import (
     ModalCommands,
     ModalMetadata,
@@ -12,13 +16,8 @@ from rattlesnake.environment.modal_environment import (
 ENVIRONMENT_NAME = "Modal 0"
 
 
-def modal_instructions():
-    modal_instructions = ModalInstructions(ENVIRONMENT_NAME)
-    return modal_instructions
-
-
 def worksheet_modal_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/modal/modal.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/modal/modal_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -31,7 +30,7 @@ def worksheet_modal_metadata(hardware_metadata):
 
 
 def netcdf_modal_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/modal/modal.nc4"
+    netcdf_dir = defaults.DIRECTORY + "/environment/modal/modal_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -68,9 +67,9 @@ def manual_modal_metadata(hardware_metadata):
     signal_generator_max_frequency = 500
     signal_generator_on_percent = 0
     acceptance_function = None
-    reference_channel_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    response_channel_indices = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-    output_channel_indices = [0, 1, 2]
+    reference_channel_indices = [12, 13, 14]
+    response_channel_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     output_oversample = hardware_metadata.output_oversample
     exponential_window_value_at_frame_end = 0.25
 
@@ -106,3 +105,54 @@ def manual_modal_metadata(hardware_metadata):
         output_oversample,
         exponential_window_value_at_frame_end,
     )
+
+
+def modal_instructions():
+    modal_instructions = ModalInstructions(ENVIRONMENT_NAME)
+    return modal_instructions
+
+
+def modal_event_list():
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = modal_instructions()
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 10
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        start_environment_event,
+        stop_environment_event,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+
+    return event_list
+
+
+def worksheet_modal_event_list():
+    worksheet_dir = defaults.DIRECTORY + "/environment/modal/modal_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.MODAL,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
+    return event_list

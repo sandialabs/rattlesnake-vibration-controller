@@ -266,7 +266,7 @@ class SDynPySystemMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Hardware File":
+                case "hardware_file":
                     hardware_file = value
                 case _:
                     continue
@@ -294,7 +294,12 @@ class SDynPySystemAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, queue: mp.Queue, sleep: bool = True):
+    def __init__(
+        self,
+        ping_alive_event: mp.synchronize.Event,
+        queue: mp.Queue,
+        sleep: bool = True,
+    ):
         """
         Loads in the SDynPy system file and sets initial parameters to null
         values.
@@ -665,7 +670,7 @@ class SDynPySystemOutput(HardwareOutput):
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
 
-    def __init__(self, queue: mp.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 

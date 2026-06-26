@@ -128,7 +128,7 @@ class DataPhysicsMetadata(HardwareMetadata):
             if value is None or value == "":
                 continue
             match name:
-                case "Hardware File":
+                case "hardware_file":
                     hardware_file = value
                 case _:
                     continue
@@ -154,7 +154,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
     process, and must define how to get data from the test hardware into the
     controller."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Initializes the data physics hardware interface.
 
@@ -244,7 +244,10 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         for channel in test_data.channel_list:
             # Figure out if the channel is an output channel or just acquisition
             is_output = not (channel.feedback_device is None) and not (
-                channel.feedback_device.strip() == ""
+                (
+                    channel.feedback_device.startswith("#")
+                    or channel.feedback_device.strip() == ""
+                )
             )
 
             # Get the channel index from physical device
@@ -441,7 +444,7 @@ class DataPhysicsOutput(HardwareOutput):
     process, and must define how to get write data to the hardware from the
     control system"""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue
 

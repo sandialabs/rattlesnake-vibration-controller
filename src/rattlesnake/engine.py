@@ -39,6 +39,7 @@ from rattlesnake.process.output import output_process
 from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
 from rattlesnake.process.controller import controller_process
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
+from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 # from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 
@@ -64,7 +65,7 @@ class RattlesnakeController:
     """Object responsible for setting up, sending data to, and running processes that
     make up the rattlesnake vibration controller."""
 
-    def __init__(self, *, threaded: bool = THREADING, timeout: float = 10):
+    def __init__(self, *, threaded: bool = THREADING, timeout: float = 20):
         """
         Initializes a blank rattlesnake controller object and spins up multiple processes
         required to run a vibration test.
@@ -190,6 +191,9 @@ class RattlesnakeController:
         # Set up output queue
         gui_update_queue = new_queue()
 
+        # Event for telling engine to restart timeout
+        ping_alive_event = new_event()
+
         # Build queue container
         self.queue_container = QueueContainer(
             controller_command_queue,
@@ -222,6 +226,7 @@ class RattlesnakeController:
             environment_active_events,
             environment_sysid_active_events,
             environment_sysid_stored_events,
+            ping_alive_event,
         )
 
         # Controller
@@ -248,6 +253,7 @@ class RattlesnakeController:
                 self.event_container.streaming_active_event,
                 self.event_container.acquisition_ready_event,
                 self.event_container.acquisition_close_event,
+                self.event_container.ping_alive_event,
             ),
         )
 
@@ -260,6 +266,7 @@ class RattlesnakeController:
                 self.event_container.output_active_event,
                 self.event_container.output_ready_event,
                 self.event_container.output_close_event,
+                self.event_container.ping_alive_event,
             ),
         )
         self.output_proc.start()
@@ -363,6 +370,16 @@ class RattlesnakeController:
     def timeout(self):
         return self._timeout
 
+    @property
+    def is_alive(self):
+        return self.event_container.ping_alive_event.is_set()
+
+    def set_alive(self):
+        self.event_container.ping_alive_event.set()
+
+    def clear_alive(self):
+        self.event_container.ping_alive_event.clear()
+
     def set_blocking(self):
         """
         Tells rattlesnake to wait for a response from a process after sending a command.
@@ -413,10 +430,17 @@ class RattlesnakeController:
             if ready_ok and active_ok:
                 return
 
+            if self.is_alive:
+                # print("\nAlive Event Pinged\n")
+                start_time = time.time()
+                self.clear_alive()
+
             if self.timeout is not None and (time.time() - start_time) >= self.timeout:
                 for event in ready_event_list:
                     event.set()
                 raise RattlesnakeError("Timeout waiting for all events to be ready")
+
+            time.sleep(0.25)
 
     # endregion
 
@@ -453,6 +477,17 @@ class RattlesnakeController:
                     )
                     self.initialize_hardware(hardware_metadata)
                     self.initialize_environments(environment_metadata_list)
+                    # Initialize system identification if it exists
+                    for environment_metadata in environment_metadata_list:
+                        environment_type = environment_metadata.environment_type
+                        if (
+                            environment_type in SYSID_ENVIRONMENTS
+                            and environment_metadata.sysid_metadata is not None
+                        ):
+                            self.initialize_system_id(
+                                environment_metadata.sysid_metadata,
+                                environment_metadata.environment_name,
+                            )
                     self.initialize_profile_event_list([])
                     self.last_stream_metadata = None
                 case ".xlsx":
@@ -462,6 +497,17 @@ class RattlesnakeController:
                     )
                     self.initialize_hardware(hardware_metadata)
                     self.initialize_environments(environment_metadata_list)
+                    # Initialize system identification if it exists
+                    for environment_metadata in environment_metadata_list:
+                        environment_type = environment_metadata.environment_type
+                        if (
+                            environment_type in SYSID_ENVIRONMENTS
+                            and environment_metadata.sysid_metadata is not None
+                        ):
+                            self.initialize_system_id(
+                                environment_metadata.sysid_metadata,
+                                environment_metadata.environment_name,
+                            )
                     self.initialize_profile_event_list(profile_event_list)
                     self.last_stream_metadata = None
         finally:
@@ -485,13 +531,13 @@ class RattlesnakeController:
             raise RattlesnakeError("Rattlesnake only saves .xlsx files as templates")
         workbook = openpyxl.Workbook()
         hardware_metadata = self.hardware_metadata
-        environment_metadata_list = list(self.environment_metadata.values())
+        environment_metadata_dict = self.environment_metadata.values()
         profile_event_list = self.last_profile_event_list
 
         save_rattlesnake_to_workbook(
             workbook,
             hardware_metadata,
-            environment_metadata_list,
+            environment_metadata_dict,
             profile_event_list,
         )
         workbook.save(filepath)

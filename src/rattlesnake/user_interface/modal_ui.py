@@ -826,7 +826,7 @@ class ModalUI(EnvironmentUI):
         return ModalInstructions(self.environment_name)
 
     def set_environment_instructions(self, instructions):
-        return
+        super().set_environment_instructions(instructions)
 
     # endregion
 
@@ -1044,16 +1044,16 @@ class ModalUI(EnvironmentUI):
 
     def accept_frame(self):
         """Sends a signal to the environment process to accept the current measurement frame"""
-        self.environment_command_queue.put(
-            self.log_name, (ModalCommands.ACCEPT_FRAME, True)
+        self.rattlesnake.send_environment_command(
+            self.environment_name, ModalCommands.ACCEPT_FRAME, True
         )
         self.run_widget.accept_average_button.setEnabled(False)
         self.run_widget.reject_average_button.setEnabled(False)
 
     def reject_frame(self):
         """Sends a signal to the environment process to reject the current measurement frame"""
-        self.environment_command_queue.put(
-            self.log_name, (ModalCommands.ACCEPT_FRAME, False)
+        self.rattlesnake.send_environment_command(
+            self.environment_name, ModalCommands.ACCEPT_FRAME, False
         )
         self.run_widget.accept_average_button.setEnabled(False)
         self.run_widget.reject_average_button.setEnabled(False)

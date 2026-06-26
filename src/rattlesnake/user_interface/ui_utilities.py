@@ -28,20 +28,27 @@ import pyqtgraph
 import requests
 import time
 import threading
+import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt
 from scipy.io import loadmat
 from enum import Enum
+import openpyxl
 
 from rattlesnake.utilities import (
     DIRECTORY,
+    RattlesnakeError,
     coherence,
     load_csv_matrix,
     save_csv_matrix,
     trac,
     VerboseMessageQueue,
     GlobalCommands,
+    IPAddress,
+    autofill_single_ip_address,
+    search_for_lanxi_devices,
 )
 
 TASK_NAME = "UI"
@@ -82,6 +89,7 @@ def error_message_qt(title, message):
         Error message that will be displayed.
 
     """
+    print(message)
     QtWidgets.QMessageBox.critical(None, title, message)
 
 
@@ -1349,6 +1357,7 @@ class EventWatcher(QtCore.QObject):
         self,
         ready_event_list,
         active_event_list,
+        ping_alive_event,
         *,
         active_event_check: bool = None,
         timeout=None,
@@ -1356,6 +1365,7 @@ class EventWatcher(QtCore.QObject):
         super().__init__()
         self.ready_event_list = ready_event_list
         self.active_event_list = active_event_list
+        self.ping_alive_event = ping_alive_event
         self.active_event_check = active_event_check
         self.timeout = timeout
         self._cancel_event = threading.Event()
@@ -1378,6 +1388,11 @@ class EventWatcher(QtCore.QObject):
                 if ready_ok and active_ok:
                     self.ready.emit()
                     return
+
+                if self.ping_alive_event.is_set():
+                    # print("\nAlive Event Pinged\n")
+                    start = time.time()
+                    self.ping_alive_event.clear()
 
                 if self.timeout and (time.time() - start) > self.timeout:
                     for event in self.ready_event_list:
@@ -1413,19 +1428,6 @@ class HardwareAssistModules(Enum):
     SPINBOX = 1
 
 
-class IPAddress:
-    """Container for information about IPAddress, mainly used to make
-    sure each address has a values for relevant information"""
-
-    def __init__(
-        self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False
-    ):
-        self.host_name = host_name
-        self.ipv4_address = ipv4_address
-        self.ipv6_address = ipv6_address
-        self.valid_ip = valid_ip
-
-
 class IPAddressManager(QtWidgets.QDialog):
     """A class to manage IP addresses"""
 
@@ -1444,9 +1446,9 @@ class IPAddressManager(QtWidgets.QDialog):
 
         self.ip_addresses = []
         self.unique_indices = []
-        for ind, address in enumerate(ip_addresses):
-            self.add_ip_address()
-            self.ip_addresses[ind] = address
+        for address in ip_addresses:
+            self.add_ip_address(ip_address=address)
+        self.max_processes = 10
 
         self.validation_timeout = 0.5
         self.selected_index = -1
@@ -1463,10 +1465,97 @@ class IPAddressManager(QtWidgets.QDialog):
         self.add_ip_address_button.clicked.connect(self.add_ip_address)
         self.remove_ip_address_button.clicked.connect(self.remove_ip_address)
         self.validate_ip_address_button.clicked.connect(self.validate_button_pressed)
+        self.load_file_button.clicked.connect(self.load_file)
+        self.save_file_button.clicked.connect(self.save_file)
+        self.clear_ip_button.clicked.connect(self.clear_ip_addresses)
+        self.find_ip_button.clicked.connect(self.find_lanxi_devices)
 
         self.button_box.accepted.disconnect()
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+
+    @property
+    def valid_ip_list(self):
+        return [ip_address for ip_address in self.ip_addresses if ip_address.valid_ip]
+
+    def save_file(self, clicked=None, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save IP Address File",
+                filter="Excel File (*.xlsx)",
+            )
+            if filepath == "":
+                return
+
+        filename, filetype = os.path.splitext(filepath)
+        if filetype != ".xlsx":
+            raise RattlesnakeError("Invalid filetype {filetype}")
+
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+
+        worksheet.cell(1, 1, "BK Number")
+        worksheet.cell(1, 2, "IPv4 Address")
+        worksheet.cell(1, 3, "IPv6 Address")
+
+        start_row = 2
+        for ind, address in enumerate(self.ip_addresses):
+            worksheet.cell(ind + start_row, 1, str(address.host_name))
+            worksheet.cell(ind + start_row, 2, str(address.ipv4_address))
+            worksheet.cell(ind + start_row, 3, str(address.ipv6_address))
+
+        workbook.save(filepath)
+
+    def load_file(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Ip Address File",
+                filter="Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        filename, filetype = os.path.splitext(filepath)
+        if not os.access(filepath, os.R_OK) or filetype != ".xlsx":
+            raise RattlesnakeError("You do not have permissions to open {filepath}")
+
+        # Load IP Addresses from workbook
+        workbook = openpyxl.load_workbook(filepath)
+        worksheet = workbook.active
+        first_row = 2
+        num_row = 0
+        ip_addresses = []
+        while True:
+            host_name = worksheet.cell(first_row + num_row, 1).value
+            ipv4 = worksheet.cell(first_row + num_row, 2).value
+            ipv6 = worksheet.cell(first_row + num_row, 3).value
+
+            ip_address = IPAddress()
+
+            if host_name is None and ipv4 is None and ipv6 is None:
+                break
+
+            if host_name is not None:
+                ip_address.host_name = host_name
+            if ipv4 is not None:
+                ip_address.ipv4_address = ipv4
+            if ipv6 is not None:
+                ip_address.ipv6_address = ipv6
+
+            ip_addresses.append(ip_address)
+            num_row += 1
+
+        # Find which IP addresses are valid
+        for address in ip_addresses:
+            self.add_ip_address(ip_address=address)
+        self.refresh_ip_table()
+
+    def clear_ip_addresses(self):
+        while len(self.ip_addresses) > 0:
+            self.remove_ip_address(current_row=0)
+        self.refresh_ip_table()
 
     def set_row_count(self, row_count):
         """Sets the number of rows in the table"""
@@ -1475,17 +1564,20 @@ class IPAddressManager(QtWidgets.QDialog):
             self.add_ip_address(clicked)
 
     def add_ip_address(
-        self, clicked=None, append_list=True
+        self,
+        clicked=None,
+        ip_address=None,
     ):  # pylint: disable=unused-argument
         """Adds a new IP address to the manager"""
-        if append_list:
+        if isinstance(ip_address, IPAddress):
+            new_ip = ip_address
+        else:
             new_ip = IPAddress()
-            self.ip_addresses.append(new_ip)
-
-            unique_index = 0
-            while unique_index in self.unique_indices:
-                unique_index += 1
-            self.unique_indices.append(unique_index)
+        self.ip_addresses.append(new_ip)
+        unique_index = 0
+        while unique_index in self.unique_indices:
+            unique_index += 1
+        self.unique_indices.append(unique_index)
 
         # Add new row to list
         current_row = self.ip_address_table.rowCount()
@@ -1586,10 +1678,11 @@ class IPAddressManager(QtWidgets.QDialog):
         """Updates the selected index based on the window focus"""
         self.selected_index = unique_index
 
-    def remove_ip_address(self):
+    def remove_ip_address(self, clicked=None, current_row=None):
         """Removes the currently selected IP Address"""
         try:
-            current_row = self.unique_indices.index(self.selected_index)
+            if current_row is None:
+                current_row = self.unique_indices.index(self.selected_index)
         except ValueError:
             return
         if 0 <= current_row < len(self.unique_indices):
@@ -1668,122 +1761,36 @@ class IPAddressManager(QtWidgets.QDialog):
             ipv6_input.setText(ipv6_address)
             ipv6_input.blockSignals(False)
 
-    def get_ip_addresses(self, host_name: str = None):
-        """Gets valid IP Addresses given the host name"""
-        valid_host_name = False
-        ipv4_address = None
-        ipv6_address = None
-        try:
-            # Get the address info for the hostname
-            socket_info = socket.getaddrinfo(host_name, None)
-            ipv4 = socket_info[1]
-            ipv4_address = ipv4[4][0]
-            ipv6 = socket_info[0]
-            ipv6_address = f"[{ipv6[4][0]}%{ipv6[4][3]}]"
-
-            valid_host_name = self.validate_ip_address(ipv6_address)
-        except (socket.gaierror, IndexError):
-            # print(f'Error retrieving info')
-            pass
-
-        return (valid_host_name, ipv4_address, ipv6_address)
-
-    def get_host_name(self, ip_address: str = None):
-        """Gets the host name from an IP address"""
-        host_name = None
-        host = "http://" + ip_address
-        valid_ip = self.validate_ip_address(ip_address)
-        if valid_ip:
-            try:
-                response = requests.get(host + "/rest/rec/module/info", timeout=1)
-                info = response.json()
-                host_name = (
-                    f"BK{info['module']['type']['number']}-{info['module']['serial']}"
-                )
-            except Exception:
-                valid_ip = False
-                host_name = None
-
-        return (valid_ip, host_name)
-
-    def validate_ip_address(self, ip_address: str = None):
-        """Checks if IP addresses are valid"""
-        valid_ip = False
-        host = "http://" + ip_address
-        try:
-            response = requests.put(
-                host + "/rest/rec/open", timeout=self.validation_timeout
-            )
-            if response.status_code == 200:
-                valid_ip = True
-        except requests.exceptions.Timeout:
-            pass
-        except requests.exceptions.ConnectionError:
-            pass
-        except requests.exceptions.RequestException:
-            pass
-
-        return valid_ip
-
     def autofill_ip_addresses(self):
-        """This function validates the ip address and autofills the other values.
-        If multiple inputs are valid but correspond to different devices, the
-        priority is host_name > ipv4 > ipv6
-        Note: Having 2 of the same host names may not validate correctly due to weird
-        socket waiting requirements
-        """
+        """Validate IP addresses and autofill other values using background threads."""
         self.loading_bar.setValue(0)
         self.loading_bar.show()
-        num_rows = len(self.unique_indices)
-        for row_idx in range(num_rows):
-            valid_row = self.ip_addresses[row_idx].valid_ip
-            percent_complete = round((row_idx + 1) / num_rows * 100)
-            self.loading_bar.setValue(percent_complete)
 
-            # Check if you can pull information from hostname
-            host_name = (
-                str(self.ip_addresses[row_idx].host_name)
-                if self.ip_addresses[row_idx].host_name is not None
-                else ""
-            )
-            if not valid_row and host_name != "":
-                valid_row, ipv4_address, ipv6_address = self.get_ip_addresses(host_name)
+        num_rows = len(self.ip_addresses)
+        if num_rows == 0:
+            self.loading_bar.hide()
+            return
 
-                if valid_row:
-                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
-                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
-                    self.ip_addresses[row_idx].valid_ip = valid_row
-                    continue
+        max_workers = min(self.max_processes, num_rows)
 
-            ipv4_address = (
-                str(self.ip_addresses[row_idx].ipv4_address)
-                if self.ip_addresses[row_idx].ipv4_address is not None
-                else ""
-            )
-            if not valid_row and ipv4_address is not None:
-                valid_row, host_name = self.get_host_name(ipv4_address)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(autofill_single_ip_address, ip_address): row_idx
+                for row_idx, ip_address in enumerate(self.ip_addresses)
+            }
 
-                if valid_row:
-                    self.ip_addresses[row_idx].host_name = host_name
-                    valid_row, _, ipv6_address = self.get_ip_addresses(host_name)
-                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
-                    self.ip_addresses[row_idx].valid_ip = valid_row
-                    continue
+            completed = 0
+            for future in as_completed(futures):
+                row_idx = futures[future]
 
-            ipv6_address = (
-                str(self.ip_addresses[row_idx].ipv6_address)
-                if self.ip_addresses[row_idx].ipv6_address is not None
-                else ""
-            )
-            if not valid_row and ipv6_address is not None:
-                valid_row, host_name = self.get_host_name(ipv6_address)
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f"Error processing row {row_idx}: {exc}")
 
-                if valid_row:
-                    self.ip_addresses[row_idx].host_name = host_name
-                    valid_row, ipv4_address, _ = self.get_ip_addresses(host_name)
-                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
-                    self.ip_addresses[row_idx].valid_ip = valid_row
-                    continue
+                completed += 1
+                percent_complete = round(completed / num_rows * 100)
+                self.loading_bar.setValue(percent_complete)
 
         self.loading_bar.hide()
 
@@ -1809,9 +1816,17 @@ class IPAddressManager(QtWidgets.QDialog):
                 QtWidgets.QMessageBox.Ok,
             )
 
-    def closeEvent(self, a0):  # pylint: disable=unused-argument,invalid-name
+    def find_lanxi_devices(self):
+        ip_addresses = search_for_lanxi_devices(timeout=10)
+
+        for address in ip_addresses:
+            self.add_ip_address(ip_address=address)
+
+        self.refresh_ip_table()
+
+    def closeEvent(self, event):  # pylint: disable=unused-argument,invalid-name
         """Returns the IP addresses"""
-        return self.ip_addresses
+        event.accept()
 
 
 class EditableCombobox(QtWidgets.QComboBox):
@@ -1846,77 +1861,101 @@ class EditableCombobox(QtWidgets.QComboBox):
         return super().blockSignals(block)
 
 
-class EditableSpinBox(QtWidgets.QSpinBox):
+class EditableSpinBox(QtWidgets.QAbstractSpinBox):
     stringValueChanged = QtCore.Signal(str)
+    intValueChanged = QtCore.Signal(object)  # int or None
 
-    def __init__(self, parent=None, text=""):
+    def __init__(self, min_range=-1000000, max_range=1000000, text="", parent=None):
         super().__init__(parent)
 
-        # Initialize attributes
-        self.pause_signals = False
-        self.int_value = 0
-        self.str_value = ""
+        self._minimum = min_range
+        self._maximum = max_range
+        self._text = ""
+        self._int_value = None
+        self._last_emitted_text = None
+        self._last_emitted_int = object()
 
-        # If text is number, assign to number
-        text = str(text) if text is not None else ""
-        self.valueFromText(text)
+        self.lineEdit().textEdited.connect(self._on_text_edited)
+        self.lineEdit().editingFinished.connect(self._on_editing_finished)
 
-        self.setRange(-1000000, 1000000)
-        self.setValue(self.str_value)
+        self.setText(text)
 
-    def valueFromText(self, text):
-        """Convert text to a value."""
+    def text(self) -> str:
+        return self._text
 
-        self.str_value = str(text)
-        # Try to convert text to digit, if so check if its in range
-        try:
-            self.int_value = int(self.str_value)
-            min_value = self.minimum()
-            max_value = self.maximum()
-            # If out of range, store the max/min range to int_value
-            if self.int_value > max_value:
-                self.int_value = max_value
-            elif self.int_value < min_value:
-                self.int_value = min_value
-        # If text wasnt an integer, keep previous value
-        except ValueError:
-            pass
+    def value(self):
+        return self._int_value
 
-        if not self.pause_signals:
-            self.stringValueChanged.emit(self.str_value)
+    def setRange(self, minimum: int, maximum: int):
+        self._minimum = minimum
+        self._maximum = maximum
+        self._recompute_value()
 
-        return self.int_value
+    def setText(self, text):
+        text = "" if text is None else str(text)
+        if text == self._text and self.lineEdit().text() == text:
+            return
 
-    def textFromValue(self, value):
-        """Convert a value to text."""
-        if self.int_value != value:
-            self.int_value = value
-            self.str_value = str(value)
+        self._text = text
+        self._recompute_value()
 
-        if not self.pause_signals:
-            self.stringValueChanged.emit(self.str_value)
+        blocker = QtCore.QSignalBlocker(self.lineEdit())
+        self.lineEdit().setText(text)
+        del blocker
 
-        return self.str_value
+        self._emit_if_changed()
 
-    def setValue(self, text):
-        text = str(text) if text is not None else ""
-        self.str_value = text
+    def setValue(self, value):
+        if value is None:
+            self.setText("")
+        else:
+            self.setText(str(int(value)))
 
-        prev_pause_state = self.pause_signals
-        self.blockSignals(True)
-        value = self.valueFromText(text)
-        self.blockSignals(prev_pause_state)
+    def stepBy(self, steps: int):
+        if self._int_value is None:
+            base = 0
+        else:
+            base = self._int_value
 
-        return super().setValue(value)
+        new_value = base + steps
+        new_value = max(self._minimum, min(self._maximum, new_value))
+        self.setText(str(new_value))
+
+    def stepEnabled(self):
+        return (
+            QtWidgets.QAbstractSpinBox.StepUpEnabled
+            | QtWidgets.QAbstractSpinBox.StepDownEnabled
+        )
 
     def validate(self, text, pos):
-        """Allow letters and numbers in the input."""
         return QtGui.QValidator.Acceptable, text, pos
 
-    def blockSignals(self, state: bool):
-        """Blocks or enables signals"""
-        self.pause_signals = state
-        return super().blockSignals(state)
+    def _on_text_edited(self, text):
+        self._text = text
+        self._recompute_value()
+        self._emit_if_changed()
+
+    def _on_editing_finished(self):
+        self._text = self.lineEdit().text()
+        self._recompute_value()
+        self._emit_if_changed()
+
+    def _recompute_value(self):
+        try:
+            value = int(self._text.strip())
+            value = max(self._minimum, min(self._maximum, value))
+            self._int_value = value
+        except (ValueError, AttributeError):
+            self._int_value = None
+
+    def _emit_if_changed(self):
+        if self._text != self._last_emitted_text:
+            self._last_emitted_text = self._text
+            self.stringValueChanged.emit(self._text)
+
+        if self._int_value != self._last_emitted_int:
+            self._last_emitted_int = self._int_value
+            self.intValueChanged.emit(self._int_value)
 
 
 # endregion

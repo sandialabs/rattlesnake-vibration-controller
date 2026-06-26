@@ -34,6 +34,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Tuple
 import sys
+import socket
+import requests
+import re
+import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import scipy.signal as sig
@@ -365,6 +370,7 @@ class EventContainer:
         environment_active_events: Dict[str, mp.synchronize.Event],
         environment_sysid_active_events: Dict[str, mp.synchronize.Event],
         environment_sysid_stored_events: Dict[str, mp.synchronize.Event],
+        ping_alive_event: mp.synchronize.Event,
     ):
         # Ready Events
         self.controller_ready_event = controller_ready_event
@@ -387,6 +393,8 @@ class EventContainer:
         self.environment_sysid_active_events = environment_sysid_active_events
         # Storage Events
         self.environment_sysid_stored_events = environment_sysid_stored_events
+        # Alive Event
+        self.ping_alive_event = ping_alive_event
 
 
 def flush_queue(queue, timeout=None):
@@ -473,16 +481,207 @@ _direction_inv_map = {
     -6: "RZ-",
 }
 
+
+def autofill_single_ip_address(ip_address):
+    """
+    Worker function for a single ip_address object.
+    Runs the same logic as the original loop, but without touching UI widgets.
+    """
+    if ip_address.valid_ip:
+        return ip_address
+
+    if ip_address.ipv6_address:
+        ip_address.get_host_name_from_ip()
+        ip_address.get_ip_from_host_name()
+    elif ip_address.ipv4_address:
+        ip_address.get_host_name_from_ip()
+        ip_address.get_ip_from_host_name()
+    if ip_address.host_name:
+        ip_address.get_ip_from_host_name()
+
+    print(
+        f"host: {ip_address.host_name}, ipv4: {ip_address.ipv4_address}, ipv6: {ip_address.ipv6_address}"
+    )
+
+    return ip_address
+
+
+def search_for_lanxi_devices(timeout):
+    unique_addresses = {}
+    start_time = time.perf_counter()
+    while True:
+        now = time.perf_counter()
+        elapsed = now - start_time
+        if elapsed >= timeout:
+            break
+
+        devices = find_lanxi_devices()
+        for device in devices:
+            unique_addresses[device.ipv4_address] = device
+
+        print(f"found={len(devices)} devices")
+
+    return list(unique_addresses.values())
+
+
+def find_lanxi_devices():
+    result = subprocess.run(["arp", "-a"], capture_output=True, text=True, check=False)
+
+    addresses = set()
+
+    # Match 169.254.x.x where x is 1 to 3 digits
+    pattern = re.compile(r"\b169\.254\.(\d{1,3})\.(\d{1,3})\b")
+
+    for line in result.stdout.splitlines():
+        match = pattern.search(line)
+        if match:
+            third = int(match.group(1))
+            fourth = int(match.group(2))
+
+            # Ensure valid IPv4 octet range
+            if 0 <= third <= 255 and 0 <= fourth <= 255:
+                addresses.add(f"169.254.{third}.{fourth}")
+
+    candidates = sorted(addresses, key=lambda ip: tuple(map(int, ip.split("."))))
+
+    max_workers = min(10, len(addresses))
+    results = []
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(test_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates
+        }
+
+        for future in as_completed(futures):
+            host_name, ipv4, info, sync, valid = future.result()
+            if valid:
+                address = IPAddress(host_name, ipv4)
+                address.module_info = info
+                address.sync_type = sync
+                address.get_ip_from_host_name()
+                results.append(address)
+
+    return results
+
+
+def test_lanxi_candidate(ipv4_address):
+    host = f"http://{ipv4_address}"
+    try:
+        response = requests.get(
+            host + "/rest/rec/module/info",
+            timeout=0.3,
+        )
+        response.raise_for_status()
+        info = response.json()
+        response = requests.get(
+            host + "/rest/rec/syncmode",
+            timeout=0.3,
+        )
+        sync = response.json()
+
+        host_name = f"BK{info['module']['type']['number']}-{info['module']['serial']}"
+        valid = True
+    except Exception:
+        host_name = None
+        info = None
+        sync = None
+        valid = False
+
+    return (host_name, ipv4_address, info, sync, valid)
+
+
+class IPAddress:
+    """Container for information about IPAddress, mainly used to make
+    sure each address has a values for relevant information"""
+
+    def __init__(
+        self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False
+    ):
+        self.host_name = host_name
+        self.ipv4_address = ipv4_address
+        self.ipv6_address = ipv6_address
+        self.valid_ip = valid_ip
+        self.module_info = None
+        self.sync_type = None
+        self.validation_timeout = 5
+
+    def get_ip_from_host_name(self):
+        if not self.host_name:
+            self.valid_ip = False
+            return
+
+        try:
+            # Get the address info for the hostname
+            socket_info = socket.getaddrinfo(self.host_name, None)
+            for family, _, _, _, sockaddr in socket_info:
+                if family == socket.AF_INET:
+                    self.ipv4_address = sockaddr[0]
+
+                elif family == socket.AF_INET6:
+                    ipv6 = sockaddr[0]
+                    scope_id = sockaddr[3]
+
+                    if scope_id:
+                        self.ipv6_address = f"[{ipv6}%{scope_id}]"
+                    else:
+                        self.ipv6_address = f"[{ipv6}]"
+        except Exception:
+            self.valid_ip = False
+
+    def get_host_name_from_ip(self):
+        if self.ipv6_address:
+            host = "http://" + self.ipv6_address
+        elif self.ipv4_address:
+            host = "http://" + self.ipv4_address
+        else:
+            self.valid_ip = False
+            return
+
+        try:
+            response = requests.get(
+                host + "/rest/rec/module/info",
+                timeout=self.validation_timeout,
+            )
+            self.module_info = response.json()
+            response = requests.get(
+                host + "/rest/rec/syncmode",
+                timeout=self.validation_timeout,
+            )
+            self.sync_type = response.json()
+            self.host_name = f"BK{self.module_info['module']['type']['number']}-{self.module_info['module']['serial']}"
+            self.valid_ip = True
+        except Exception:
+            self.valid_ip = False
+
+    def validate(self):
+        if self.ipv6_address:
+            host = "http://" + self.ipv6_address
+        elif self.ipv4_address:
+            host = "http://" + self.ipv6_address
+        else:
+            self.valid_ip = False
+            return
+
+        try:
+            response = requests.get(
+                host + "/rest/rec/module/info",
+                timeout=self.validation_timeout,
+            )
+            self.module_info = response.json()
+            response = requests.get(
+                host + "/rest/rec/syncmode",
+                timeout=self.validation_timeout,
+            )
+            self.sync_type = response.json()
+            self.valid_ip = True
+        except Exception:
+            self.valid_ip = False
+
+
 # endregion
 
 
 # region Loading
-def save_rattlesnake_to_netcdf(
-    netcdf_handle, hardware_metadata, environment_metadata_dict
-):
-    pass
-
-
 def load_time_history(signal_path, sample_rate):
     """Loads a time history from a given file
 
@@ -626,7 +825,10 @@ def read_transformation_matrix_from_worksheet(
         col_idx = start_col
         while True:
             value = worksheet.cell(start_row + i, col_idx).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            if value is None or (
+                isinstance(value, str)
+                and (value.startswith("#") or value.strip() == "")
+            ):
                 break
             row.append(float(value))
             col_idx += 1

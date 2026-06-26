@@ -1,8 +1,6 @@
 from rattlesnake.hardware.hardware_utilities import HardwareType
 
-UNIMPLEMENTED_HARDWARE = [
-    HardwareType.NONE,
-]
+UNIMPLEMENTED_HARDWARE = []
 
 
 HARDWARE_METADATA = {}
@@ -14,6 +12,16 @@ for hardware_type in HardwareType:
         continue
 
     match hardware_type:
+        case HardwareType.NONE:
+            from rattlesnake.hardware.abstract_hardware import (
+                HardwareMetadata,
+                HardwareAcquisition,
+                HardwareOutput,
+            )
+
+            HARDWARE_METADATA[HardwareType.NONE] = HardwareMetadata
+            HARDWARE_ACQUISITION[HardwareType.NONE] = HardwareAcquisition
+            HARDWARE_OUTPUT[HardwareType.NONE] = HardwareOutput
         case HardwareType.NI_DAQMX:
             from rattlesnake.hardware.nidaqmx_hardware_multitask import (
                 NIDAQmxMetadata,
@@ -36,26 +44,32 @@ for hardware_type in HardwareType:
             HARDWARE_OUTPUT[HardwareType.LAN_XI] = LanXIOutput
         case HardwareType.DP_QUATTRO:
             from rattlesnake.hardware.data_physics_hardware import (
+                DataPhysicsMetadata,
                 DataPhysicsAcquisition,
                 DataPhysicsOutput,
             )
 
+            HARDWARE_METADATA[HardwareType.DP_QUATTRO] = DataPhysicsMetadata
             HARDWARE_ACQUISITION[HardwareType.DP_QUATTRO] = DataPhysicsAcquisition
             HARDWARE_OUTPUT[HardwareType.DP_QUATTRO] = DataPhysicsOutput
         case HardwareType.DP_900:
             from rattlesnake.hardware.data_physics_dp900_hardware import (
+                DataPhysicsDP900Metadata,
                 DataPhysicsDP900Acquisition,
                 DataPhysicsDP900Output,
             )
 
+            HARDWARE_METADATA[HardwareType.DP_900] = DataPhysicsDP900Metadata
             HARDWARE_ACQUISITION[HardwareType.DP_900] = DataPhysicsDP900Acquisition
             HARDWARE_OUTPUT[HardwareType.DP_900] = DataPhysicsDP900Output
         case HardwareType.EXODUS:
             from rattlesnake.hardware.exodus_modal_solution_hardware import (
+                ExodusMetadata,
                 ExodusAcquisition,
                 ExodusOutput,
             )
 
+            HARDWARE_METADATA[HardwareType.EXODUS] = ExodusMetadata
             HARDWARE_ACQUISITION[HardwareType.EXODUS] = ExodusAcquisition
             HARDWARE_OUTPUT[HardwareType.EXODUS] = ExodusOutput
         case HardwareType.STATE_SPACE:
