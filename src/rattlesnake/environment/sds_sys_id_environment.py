@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 # region Imports
 import importlib
+import threading
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
@@ -34,10 +35,10 @@ import numpy as np
 import scipy.signal as sig
 
 from rattlesnake.environment.abstract_sysid_environment import (
-    AbstractSysIdEnvironment,
+    SysIdEnvironment,
 )
 from rattlesnake.environment.environment_utilities import (
-    ControlTypes,
+    EnvironmentType,
 )
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
@@ -52,8 +53,10 @@ from rattlesnake.environment.sds_sys_id_utilities import (
 )
 
 
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareMetadata,
+)
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
     db2scale,
@@ -85,21 +88,25 @@ from rattlesnake.process.spectral_processing import (
 
 
 # region Globals
-CONTROL_TYPE = ControlTypes.SDS
+CONTROL_TYPE = EnvironmentType.SDS
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
 # region Environment Process
 
 
-class SDSEnvironment(AbstractSysIdEnvironment):
+class SDSEnvironment(SysIdEnvironment):
     """Class defining calculations for the SDS environment"""
 
     def __init__(
         self,
         environment_name: str,
         queue_container: SDSQueues,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
+        sysid_active_event: mp.synchronize.Event,
+        sysid_stored_event: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
@@ -113,8 +120,12 @@ class SDSEnvironment(AbstractSysIdEnvironment):
             queue_container.data_analysis_command_queue,
             queue_container.data_in_queue,
             queue_container.data_out_queue,
-            acquisition_active,
-            output_active,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
+            ready_event,
+            sysid_active_event,
+            sysid_stored_event,
         )
         self.map_command(
             SDSCommands.PERFORM_CONTROL_PREDICTION,
@@ -549,8 +560,15 @@ def sds_process(
     log_file_queue: Queue,
     data_in_queue: Queue,
     data_out_queue: Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+    sysid_active_event: mp.synchronize.Event,
+    sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """
     SDS environment process function called by multiprocessing
@@ -580,6 +598,11 @@ def sds_process(
     output_active : mp.sharedctypes.Synchronized
         A synchronized value that indicates when the output is active
     """
+    # Create vibration queues
+    if threaded:
+        new_process = threading.Thread  # worker threads
+    else:
+        new_process = mp.Process  # worker processes
     try:
         # Create vibration queues
         queue_container = SDSQueues(
@@ -592,7 +615,7 @@ def sds_process(
             log_file_queue,
         )
 
-        spectral_proc = mp.Process(
+        spectral_proc = new_process(
             target=spectral_processing_process,
             args=(
                 environment_name,
@@ -605,7 +628,7 @@ def sds_process(
             ),
         )
         spectral_proc.start()
-        analysis_proc = mp.Process(
+        analysis_proc = new_process(
             target=sysid_data_analysis_process,
             args=(
                 environment_name,
@@ -615,10 +638,11 @@ def sds_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
+                ping_alive_event
             ),
         )
         analysis_proc.start()
-        siggen_proc = mp.Process(
+        siggen_proc = new_process(
             target=signal_generation_process,
             args=(
                 environment_name,
@@ -631,7 +655,7 @@ def sds_process(
             ),
         )
         siggen_proc.start()
-        collection_proc = mp.Process(
+        collection_proc = new_process(
             target=data_collector_process,
             args=(
                 environment_name,
@@ -646,9 +670,16 @@ def sds_process(
         collection_proc.start()
 
         process_class = SDSEnvironment(
-            environment_name, queue_container, acquisition_active, output_active
+            environment_name, 
+            queue_container,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
+            ready_event,
+            sysid_active_event,
+            sysid_stored_event,
         )
-        process_class.run()
+        process_class.run(shutdown_event)
 
         # Rejoin all the processes
         process_class.log("Joining Subprocesses")

@@ -1,7 +1,7 @@
 from qtpy import QtCore, QtWidgets, uic
 from qtpy.QtCore import Qt
-from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
     SDSRunMetadata,
@@ -19,6 +19,7 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     ControlParameters,
     convert_decay_strategy,
 )
+from rattlesnake.engine import RattlesnakeController
 from rattlesnake.environment.sds_sys_id_utilities import (
     octspace,
     SDSQueues,
@@ -27,23 +28,21 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     srs as srs_function,
 )
 from rattlesnake.user_interface.ui_utilities import (
-    environment_definition_ui_paths,
-    environment_prediction_ui_paths,
-    environment_run_ui_paths,
     PlotTimeWindow,
     TransformationMatrixWindow,
     colororder,
-    load_time_history,
     multiline_plotter,
     AdaptiveNoWheelSpinBox,
     ScientificDoubleSpinBox,
 )
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
+    load_time_history,
     db2scale,
     load_python_module,
+    DIRECTORY,
 )
 from multiprocessing.queues import Queue
 from rattlesnake.user_interface.sds_sys_id_prediction_table import SDSPredictionTable
@@ -56,43 +55,41 @@ from enum import Enum
 import os
 import netCDF4 as nc4
 
-CONTROL_TYPE = ControlTypes.SDS
+CONTROL_TYPE = EnvironmentType.SDS
 MAXIMUM_NAME_LENGTH = 50
 
 
-class SDSUI(AbstractSysIdUI):
+class SDSUI(SysIdEnvironmentUI):
     """Class defining the user interface for the SDS environment"""
 
     def __init__(
         self,
         environment_name: str,
-        definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,
-        test_predictions_tabwidget: QtWidgets.QTabWidget,
-        run_tabwidget: QtWidgets.QTabWidget,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
+        rattlesnake: RattlesnakeController,
     ):
         super().__init__(
+            CONTROL_TYPE,
             environment_name,
-            environment_command_queue,
-            controller_communication_queue,
-            log_file_queue,
-            system_id_tabwidget,
+            rattlesnake,
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
-        definition_tabwidget.addTab(self.definition_widget, self.environment_name)
+        environment_definition_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "srs_sds_definition.ui"
+        )
+        uic.loadUi(environment_definition_ui_path, self.definition_widget)
         # Add the page to the control prediction tabwidget
         self.prediction_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_prediction_ui_paths[CONTROL_TYPE], self.prediction_widget)
-        test_predictions_tabwidget.addTab(self.prediction_widget, self.environment_name)
+        environment_prediction_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "srs_sds_prediction.ui"
+        )
+        uic.loadUi(environment_prediction_ui_path, self.prediction_widget)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_run_ui_paths[CONTROL_TYPE], self.run_widget)
-        run_tabwidget.addTab(self.run_widget, self.environment_name)
+        environment_run_ui_path = os.path.join(
+            DIRECTORY, "user_interface", "ui_files", "srs_sds_run.ui"
+        )
+        uic.loadUi(environment_run_ui_path, self.run_widget)
 
         # Initialize persistent data
         self.plot_data_items = {}
@@ -112,14 +109,14 @@ class SDSUI(AbstractSysIdUI):
 
         self.prediction_table = SDSPredictionTable(
             self.prediction_widget.prediction_table_placeholder,
-            environment_command_queue,
-            self.log_name,
+            self.rattlesnake,
+            self.environment_name,
             prediction_mode=True,
         )
         self.prediction_table.lock_table(all_data=True)
 
         self.run_table_dialog = SDSRunTableDialog(
-            environment_command_queue, self.log_name, prediction_mode=False, parent=self.run_widget
+            self.rattlesnake, self.environment_name, prediction_mode=False, parent=self.run_widget
         )
         self.run_table = self.run_table_dialog.run_table
         self.run_table.lock_table(frequencies=True)
@@ -191,12 +188,12 @@ class SDSUI(AbstractSysIdUI):
         )
         # Run Test
         self.run_widget.sds_table_button.clicked.connect(self.show_run_table)
-        self.run_widget.start_test_button.clicked.connect(self.start_control)
+        self.run_widget.start_test_button.clicked.connect(self.start_environment)
 
     # region UI Data Acquisition
 
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
-        super().initialize_data_acquisition(data_acquisition_parameters)
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+        super().initialize_hardware(hardware_metadata)
         # Initialize and clear plots
         for plotwidget in self.plotwidgets:
             plotwidget.clear()
@@ -233,26 +230,22 @@ class SDSUI(AbstractSysIdUI):
                 f"{channel.node_number} "
                 f"{'' if channel.node_direction is None else channel.node_direction}"
             )[:MAXIMUM_NAME_LENGTH]
-            for channel in data_acquisition_parameters.channel_list
+            for channel in hardware_metadata.channel_list
         ]
         self.physical_unit_names = [
             f"{'-' if channel.unit is None else channel.unit}"
-            for channel in data_acquisition_parameters.channel_list
+            for channel in hardware_metadata.channel_list
         ]
         self.physical_output_indices = [
-            i
-            for i, channel in enumerate(data_acquisition_parameters.channel_list)
-            if channel.feedback_device
+            i for i, channel in enumerate(hardware_metadata.channel_list) if channel.feedback_device
         ]
 
         # Set default values for various widgets
         # Sampling parameters
-        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(
-            data_acquisition_parameters.sample_rate
-        )
+        self.definition_widget.sample_rate_display.setValue(hardware_metadata.sample_rate)
+        self.system_id_widget.samplesPerFrameSpinBox.setValue(hardware_metadata.sample_rate)
         # By default set the block time length to 1 second
-        self.definition_widget.block_size_selector.setValue(data_acquisition_parameters.sample_rate)
+        self.definition_widget.block_size_selector.setValue(hardware_metadata.sample_rate)
         # Set up control channel list
         self.definition_widget.control_channels_selector.clear()
         for channel_name in self.physical_channel_names:
@@ -375,7 +368,7 @@ class SDSUI(AbstractSysIdUI):
         for row in range(num_rows):
             # Frequency breakpoint
             spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+            spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
             spinbox.setSingleStep(1)
             if frequencies is None:
                 spinbox.setValue(0)
@@ -387,7 +380,7 @@ class SDSUI(AbstractSysIdUI):
             self.definition_widget.breakpoint_table.setCellWidget(row, 0, spinbox)
             # Frequency breakpoint, lower limit
             spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+            spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
             spinbox.setSingleStep(1)
             if frequencies is None:
                 spinbox.setValue(0)
@@ -400,7 +393,7 @@ class SDSUI(AbstractSysIdUI):
             self.definition_widget.lower_limit_table.setCellWidget(row, 0, spinbox)
             # Frequency breakpoint, upper limit
             spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+            spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
             spinbox.setSingleStep(1)
             if frequencies is None:
                 spinbox.setValue(0)
@@ -459,7 +452,7 @@ class SDSUI(AbstractSysIdUI):
         self.definition_widget.upper_limit_table.insertRow(selected_row)
         # Frequency breakpoint
         spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
         spinbox.setSingleStep(1)
         spinbox.setValue(0)
         spinbox.setKeyboardTracking(False)
@@ -468,7 +461,7 @@ class SDSUI(AbstractSysIdUI):
         self.definition_widget.breakpoint_table.setCellWidget(selected_row, 0, spinbox)
         # Frequency breakpoint, lower limit
         spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
         spinbox.setSingleStep(1)
         spinbox.setValue(0)
         spinbox.setKeyboardTracking(False)
@@ -478,7 +471,7 @@ class SDSUI(AbstractSysIdUI):
         self.definition_widget.lower_limit_table.setCellWidget(selected_row, 0, spinbox)
         # Frequency breakpoint, upper limit
         spinbox = AdaptiveNoWheelSpinBox()
-        spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
         spinbox.setSingleStep(1)
         spinbox.setValue(0)
         spinbox.setKeyboardTracking(False)
@@ -902,8 +895,12 @@ class SDSUI(AbstractSysIdUI):
         )
         return sds_data
 
-    def collect_environment_definition_parameters(self):
+    def get_environment_metadata(self, global_channel_list):
         """Collects the metadata defining the environment from the UI widgets"""
+        if self.hardware_metadata and global_channel_list:
+            channel_list_bools = self.get_channel_list_bools(global_channel_list)
+        else:
+            channel_list_bools = []
         control_data = self.collect_control_data()
         tone_data = self.collect_tone_data()
         compensation_pulse_data = self.collect_compensation_pulse_data()
@@ -912,8 +909,10 @@ class SDSUI(AbstractSysIdUI):
         sds_data = self.collect_sds_data()
         spec_data = self.collect_specification()
         return SDSMetadata(
-            sample_rate=self.data_acquisition_parameters.sample_rate,
-            num_channels=len(self.data_acquisition_parameters.channel_list),
+            environment_name=self.environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=self.hardware_metadata.sample_rate,
+            num_channels=len(self.hardware_metadata.channel_list),
             block_size=self.definition_widget.block_size_selector.value(),
             tone_data=tone_data,
             compensation_pulse_data=compensation_pulse_data,
@@ -927,6 +926,10 @@ class SDSUI(AbstractSysIdUI):
             excitation_transformation_matrix=self.output_transformation_matrix,
             specification_data=spec_data,
         )
+
+    def set_environment_metadata(self, metadata: SDSMetadata):
+        """Sets the UI State given a metadata object"""
+        pass
 
     def initialize_environment(self):
         super().initialize_environment()
@@ -943,7 +946,7 @@ class SDSUI(AbstractSysIdUI):
     ):  # pylint: disable=unused-argument
         """Defines the transformation matrices using the dialog box"""
         if dialog:
-            (response_transformation, output_transformation, result) = (
+            response_transformation, output_transformation, result = (
                 TransformationMatrixWindow.define_transformation_matrices(
                     self.response_transformation_matrix,
                     self.definition_widget.control_channels_display.value(),
@@ -1014,7 +1017,7 @@ class SDSUI(AbstractSysIdUI):
                 # If there isn't, make one
                 if freq_spinbox is None:
                     freq_spinbox = AdaptiveNoWheelSpinBox()
-                    freq_spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+                    freq_spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
                     freq_spinbox.setSingleStep(1)
                     freq_spinbox.setKeyboardTracking(False)
                     freq_spinbox.setDecimals(4)
@@ -1041,7 +1044,7 @@ class SDSUI(AbstractSysIdUI):
                 # If there isn't, make one
                 if freq_spinbox is None:
                     freq_spinbox = AdaptiveNoWheelSpinBox()
-                    freq_spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+                    freq_spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
                     freq_spinbox.setSingleStep(1)
                     freq_spinbox.setKeyboardTracking(False)
                     freq_spinbox.setDecimals(4)
@@ -1164,7 +1167,7 @@ class SDSUI(AbstractSysIdUI):
             selected_row = self.definition_widget.tone_table.rowCount()
         self.definition_widget.tone_table.insertRow(selected_row)
         freq_spinbox = AdaptiveNoWheelSpinBox()
-        freq_spinbox.setRange(0, self.data_acquisition_parameters.sample_rate / 2)
+        freq_spinbox.setRange(0, self.hardware_metadata.sample_rate / 2)
         freq_spinbox.setSingleStep(1)
         freq_spinbox.setKeyboardTracking(False)
         freq_spinbox.setDecimals(4)
@@ -1276,8 +1279,8 @@ class SDSUI(AbstractSysIdUI):
 
     def recompute_prediction(self):
         """Recomputes the control predictions"""
-        self.environment_command_queue.put(
-            self.log_name, (SDSCommands.PERFORM_CONTROL_PREDICTION, False)
+        self.rattlesnake.send_environment_command(
+            self.environment_name, SDSCommands.PERFORM_CONTROL_PREDICTION, False
         )
 
     # region UI Control
@@ -1305,34 +1308,36 @@ class SDSUI(AbstractSysIdUI):
         )
         return metadata
 
-    def start_control(self):
-        """Starts the chain of events to start the environment"""
-        if (
-            self.run_widget.current_hits_at_level_display.value()
-            >= self.run_widget.target_hits_at_level_selector.value()
-        ):
-            confirm = self.ask_yes_no(
-                self.run_widget,
-                "Target Hits Reached, Are you Sure?",
-                "The number of target hits at this level has been reached.\n\n"
-                "Are you sure you wish to continue?",
-            )
-            if not confirm:
-                return
-        metadata = self.collect_run_metadata()
-        self.enable_control(False)
-        self.environment_command_queue.put(
-            self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
-        )
-        self.environment_command_queue.put(self.log_name, (SDSCommands.START_CONTROL, metadata))
-        if self.run_widget.current_test_level_selector.value >= 0:
-            self.controller_communication_queue.put(
-                self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name)
-            )
+    # def start_control(self):
+    #     """Starts the chain of events to start the environment"""
+    #     if (
+    #         self.run_widget.current_hits_at_level_display.value()
+    #         >= self.run_widget.target_hits_at_level_selector.value()
+    #     ):
+    #         confirm = self.ask_yes_no(
+    #             self.run_widget,
+    #             "Target Hits Reached, Are you Sure?",
+    #             "The number of target hits at this level has been reached.\n\n"
+    #             "Are you sure you wish to continue?",
+    #         )
+    #         if not confirm:
+    #             return
+    #     metadata = self.collect_run_metadata()
+    #     self.enable_control(False)
+    #     self.rattlesnake.send_environment_command(
+    #         self.environment_name, GlobalCommands.START_ENVIRONMENT, self.environment_name
+    #     )
+    #     self.rattlesnake.send_environment_command(
+    #         self.environment_name, SDSCommands.START_CONTROL, metadata
+    #     )
+    #     if self.run_widget.current_test_level_selector.value >= 0:
+    #         self.rattlesnake.environment_at_target_level(self.environment_name)
 
-    def stop_control(self):
-        """Starts the sequence of events to stop the controller prematurely"""
-        self.environment_command_queue.put(self.log_name, (SDSCommands.STOP_CONTROL, None))
+    # def stop_control(self):
+    #     """Starts the sequence of events to stop the controller prematurely"""
+    #     self.rattlesnake.send_environment_command(
+    #         self.environment_name, SDSCommands.STOP_CONTROL, None
+    #     )
 
     def enable_control(self, enabled):
         """Enables or disables the buttons to start control if it's already running"""
@@ -1351,6 +1356,67 @@ class SDSUI(AbstractSysIdUI):
     def change_test_level_from_profile(self, test_level):
         """Updates the test level based on a profile event"""
         self.run_widget.current_test_level_selector.setValue(int(test_level))
+
+    def display_environment_ended(self):
+        """Enables or disables the buttons to start control if it's already running"""
+        self.enable_control(True)
+
+    def display_environment_started(self):
+        self.enable_control(False)
+
+    def start_environment(self):
+        """Sets itself up to start controlling and sends a signal to the environment to start"""
+        if (
+            self.run_widget.current_hits_at_level_display.value()
+            >= self.run_widget.target_hits_at_level_selector.value()
+        ):
+            confirm = self.ask_yes_no(
+                self.run_widget,
+                "Target Hits Reached, Are you Sure?",
+                "The number of target hits at this level has been reached.\n\n"
+                "Are you sure you wish to continue?",
+            )
+            if not confirm:
+                return
+        for widget in [
+            self.run_widget.start_test_button,
+            self.run_widget.test_level_selector,
+            self.run_widget.target_hits_at_level_selector,
+            self.run_widget.manual_hits_checkbox,
+            self.run_widget.auto_hits_checkbox,
+            self.run_widget.auto_hit_interval_selector,
+        ]:
+            widget.setEnabled(False)
+
+        super().start_environment()
+        # TODO: This needs to come from the environment, not the UI.
+        if self.run_widget.current_test_level_selector.value >= 0:
+            self.rattlesnake.environment_at_target_level(self.environment_name)
+
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    def stop_environment(self):
+        """Sends a signal to shut down the control"""
+        for widget in [self.run_widget.stop_test_button]:
+            widget.setEnabled(False)
+
+        super().stop_environment()
+
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
+
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()
+
+    def get_environment_instructions(self):
+        pass
+
+    def set_environment_instructions(self, sds_instructions):
+        pass
 
     # region UI Update and Templates
 

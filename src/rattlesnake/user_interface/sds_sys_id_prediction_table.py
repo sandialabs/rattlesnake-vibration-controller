@@ -1,16 +1,16 @@
 import numpy as np
 from qtpy import uic, QtWidgets
 from qtpy.QtCore import Qt
-
-from rattlesnake.user_interface.ui_utilities import sds_prediction_table_ui_path
+import os
 from rattlesnake.environment.sds_sys_id_metadata import SRSParameters, SpecParameters, SDSMetadata
+from rattlesnake.engine import RattlesnakeController
 from rattlesnake.environment.sds_sys_id_utilities import (
     SDSCommands,
     sum_decayed_sines_reconstruction,
     DecayedSineTable,
     decayed_sine_table,
 )
-from rattlesnake.utilities import VerboseMessageQueue
+from rattlesnake.utilities import DIRECTORY
 from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox
 
 
@@ -19,19 +19,22 @@ class SDSPredictionTable:
     def __init__(
         self,
         parent_widget: QtWidgets.QWidget,
-        environment_command_queue: VerboseMessageQueue,
-        log_name: str,
+        rattlesnake: RattlesnakeController,
+        environment_name: str,
         prediction_mode: bool,
         sds_table: None | DecayedSineTable = None,
         drive_names: None | np.ndarray = None,
         response_names: None | np.ndarray = None,
         sds_parameters: None | SDSMetadata = None,
     ):
-        uic.loadUi(sds_prediction_table_ui_path, parent_widget)
+        uic.loadUi(
+            os.path.join(DIRECTORY, "user_interface", "ui_files", "srs_sds_prediction_table.ui"),
+            parent_widget,
+        )
         # Utility Information
         self.parent_widget = parent_widget
-        self.environment_command_queue = environment_command_queue
-        self.log_name = log_name
+        self.rattlesnake = rattlesnake
+        self.environment_name = environment_name
         self.prediction_mode = prediction_mode
         # Processing data
         self.sds_table = sds_table
@@ -221,12 +224,12 @@ class SDSPredictionTable:
     def perform_prediction(self):
         print("Performing Prediction!")
         if self.prediction_mode:
-            self.environment_command_queue.put(
-                self.log_name, (SDSCommands.SDS_TABLE_PREDICTION, self.sds_table)
+            self.rattlesnake.send_environment_command(
+                self.environment_name, SDSCommands.SDS_TABLE_PREDICTION, self.sds_table
             )
         else:
-            self.environment_command_queue.put(
-                self.log_name, (SDSCommands.SDS_RUN_TABLE_PREDICTION, self.sds_table)
+            self.rattlesnake.send_environment_command(
+                self.environment_name, SDSCommands.SDS_RUN_TABLE_PREDICTION, self.sds_table
             )
 
     def synchronize_sds_table(self):

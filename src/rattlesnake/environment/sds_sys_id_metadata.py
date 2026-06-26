@@ -25,8 +25,9 @@ from enum import Enum
 import netCDF4 as nc4
 import numpy as np
 
-from rattlesnake.environment.abstract_sysid_environment import AbstractSysIdMetadata
+from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentMetadata
 from rattlesnake.environment.sds_sys_id_utilities import octspace, DecayedSineTable
+from rattlesnake.environment.environment_utilities import EnvironmentType
 
 
 class ToneStrategy(Enum):
@@ -349,12 +350,14 @@ class ControlParameters:
         self.control_parameters = control_parameters
 
 
-class SDSMetadata(AbstractSysIdMetadata):
+class SDSMetadata(SysIdEnvironmentMetadata):
     """Metadata required to define a Shock control law in rattlesnake."""
 
     def __init__(
         self,
         *,
+        environment_name: str,
+        channel_list_bools: list,
         sample_rate: int,
         num_channels: int,
         block_size: int,
@@ -369,8 +372,15 @@ class SDSMetadata(AbstractSysIdMetadata):
         response_transformation_matrix: None | np.ndarray,
         excitation_transformation_matrix: None | np.ndarray,
         specification_data: SpecParameters,
+        sysid_metadata=None,
     ):
-        super().__init__()
+        super().__init__(
+            EnvironmentType.SDS,
+            environment_name,
+            channel_list_bools,
+            sample_rate,
+            sysid_metadata,
+        )
         self.block_size = block_size
         self.number_of_channels = num_channels
         self.compensation_pulse_data = compensation_pulse_data

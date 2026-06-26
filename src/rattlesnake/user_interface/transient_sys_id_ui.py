@@ -142,9 +142,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.prediction_widget.excitation_selector.currentIndexChanged.connect(
             self.plot_predictions
         )
-        self.prediction_widget.response_selector.currentIndexChanged.connect(
-            self.plot_predictions
-        )
+        self.prediction_widget.response_selector.currentIndexChanged.connect(self.plot_predictions)
         self.prediction_widget.response_error_list.itemClicked.connect(
             self.update_response_error_prediction_selector
         )
@@ -157,12 +155,8 @@ class TransientUI(SysIdEnvironmentUI):
         self.prediction_widget.minimum_voltage_button.clicked.connect(
             self.show_min_voltage_prediction
         )
-        self.prediction_widget.maximum_error_button.clicked.connect(
-            self.show_max_error_prediction
-        )
-        self.prediction_widget.minimum_error_button.clicked.connect(
-            self.show_min_error_prediction
-        )
+        self.prediction_widget.maximum_error_button.clicked.connect(self.show_max_error_prediction)
+        self.prediction_widget.minimum_error_button.clicked.connect(self.show_min_error_prediction)
         self.prediction_widget.recompute_predictions_button.clicked.connect(
             self.recompute_predictions
         )
@@ -173,15 +167,9 @@ class TransientUI(SysIdEnvironmentUI):
         self.run_widget.show_all_channels_button.clicked.connect(self.show_all_channels)
         self.run_widget.tile_windows_button.clicked.connect(self.tile_windows)
         self.run_widget.close_windows_button.clicked.connect(self.close_windows)
-        self.run_widget.control_response_error_list.itemDoubleClicked.connect(
-            self.show_window
-        )
-        self.run_widget.save_current_control_data_button.clicked.connect(
-            self.save_control_data
-        )
-        self.run_widget.display_duration_spinbox.valueChanged.connect(
-            self.set_display_duration
-        )
+        self.run_widget.control_response_error_list.itemDoubleClicked.connect(self.show_window)
+        self.run_widget.save_current_control_data_button.clicked.connect(self.save_control_data)
+        self.run_widget.display_duration_spinbox.valueChanged.connect(self.set_display_duration)
 
     @property
     def physical_output_names(self):
@@ -194,8 +182,7 @@ class TransientUI(SysIdEnvironmentUI):
         return [
             i
             for i in range(self.definition_widget.control_channels_selector.count())
-            if self.definition_widget.control_channels_selector.item(i).checkState()
-            == Qt.Checked
+            if self.definition_widget.control_channels_selector.item(i).checkState() == Qt.Checked
         ]
 
     @property
@@ -214,9 +201,7 @@ class TransientUI(SysIdEnvironmentUI):
         else:
             return [
                 f"Transformed Response {i + 1}"
-                for i in range(
-                    self.environment_metadata.response_transformation_matrix.shape[0]
-                )
+                for i in range(self.environment_metadata.response_transformation_matrix.shape[0])
             ]
 
     @property
@@ -227,9 +212,7 @@ class TransientUI(SysIdEnvironmentUI):
         else:
             return [
                 f"Transformed Drive {i + 1}"
-                for i in range(
-                    self.environment_metadata.reference_transformation_matrix.shape[0]
-                )
+                for i in range(self.environment_metadata.reference_transformation_matrix.shape[0])
             ]
 
     # endregion
@@ -262,9 +245,7 @@ class TransientUI(SysIdEnvironmentUI):
             if channel.feedback_device
         ]
         # Set up widgets
-        self.definition_widget.sample_rate_display.setValue(
-            data_acquisition_parameters.sample_rate
-        )
+        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
         self.system_id_widget.samplesPerFrameSpinBox.setValue(
             data_acquisition_parameters.sample_rate
         )
@@ -278,25 +259,17 @@ class TransientUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.define_transformation_matrices(None, False)
-        self.definition_widget.input_channels_display.setValue(
-            len(self.physical_channel_names)
-        )
-        self.definition_widget.output_channels_display.setValue(
-            len(self.physical_output_indices)
-        )
+        self.definition_widget.input_channels_display.setValue(len(self.physical_channel_names))
+        self.definition_widget.output_channels_display.setValue(len(self.physical_output_indices))
         self.definition_widget.control_channels_display.setValue(0)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
         # Make sure everything is defined
         if self.environment_metadata.control_signal is None:
-            raise ValueError(
-                f"Control Signal is not defined for {self.environment_name}!"
-            )
+            raise ValueError(f"Control Signal is not defined for {self.environment_name}!")
         if self.environment_metadata.control_python_script is None:
-            raise ValueError(
-                f"Control function has not been loaded for {self.environment_name}"
-            )
+            raise ValueError(f"Control function has not been loaded for {self.environment_name}")
         self.system_id_widget.samplesPerFrameSpinBox.setMaximum(
             self.environment_metadata.control_signal.shape[-1]
         )
@@ -342,8 +315,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.run_widget.output_signal_plot.getPlotItem().clear()
         self.run_widget.response_signal_plot.getPlotItem().clear()
         self.max_plot_samples = (
-            self.hardware_metadata.sample_rate
-            * self.run_widget.display_duration_spinbox.value()
+            self.hardware_metadata.sample_rate * self.run_widget.display_duration_spinbox.value()
         )
         self.plot_data_items["output_signal_measurement"] = multiline_plotter(
             (np.array([])),
@@ -371,10 +343,7 @@ class TransientUI(SysIdEnvironmentUI):
             downsample={"auto": True},
             clip_to_view=True,
         )
-        if (
-            self.definition_widget.control_function_generator_selector.currentIndex()
-            == 3
-        ):
+        if self.definition_widget.control_function_generator_selector.currentIndex() == 3:
             control_class = getattr(
                 self.python_control_module,
                 self.definition_widget.control_function_input.itemText(
@@ -391,9 +360,7 @@ class TransientUI(SysIdEnvironmentUI):
             else:
                 if self.interactive_control_law_widget is not None:
                     self.interactive_control_law_widget.close()
-                self.interactive_control_law_window = QtWidgets.QDialog(
-                    self.definition_widget
-                )
+                self.interactive_control_law_window = QtWidgets.QDialog(self.definition_widget)
                 self.interactive_control_law_widget = ui_class(
                     self.log_name,
                     self.environment_command_queue,
@@ -417,9 +384,7 @@ class TransientUI(SysIdEnvironmentUI):
             control_function_type = None
             control_function_parameters = None
         else:
-            control_module = (
-                self.definition_widget.control_script_file_path_input.text()
-            )
+            control_module = self.definition_widget.control_script_file_path_input.text()
             control_function = self.definition_widget.control_function_input.itemText(
                 self.definition_widget.control_function_input.currentIndex()
             )
@@ -463,9 +428,7 @@ class TransientUI(SysIdEnvironmentUI):
                 metadata.control_python_function
             )
             if func_index != -1:
-                self.definition_widget.control_function_input.setCurrentIndex(
-                    func_index
-                )
+                self.definition_widget.control_function_input.setCurrentIndex(func_index)
 
             # Set the generator type selector
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
@@ -482,15 +445,11 @@ class TransientUI(SysIdEnvironmentUI):
         # Control Channel Selection (ListWidget/Selector)
         # First, clear all existing checks
         for i in range(self.definition_widget.control_channels_selector.count()):
-            self.definition_widget.control_channels_selector.item(i).setCheckState(
-                Qt.Unchecked
-            )
+            self.definition_widget.control_channels_selector.item(i).setCheckState(Qt.Unchecked)
 
         # Check the indices provided in metadata
         for control_channel in metadata.control_channel_indices:
-            item = self.definition_widget.control_channels_selector.item(
-                control_channel
-            )
+            item = self.definition_widget.control_channels_selector.item(control_channel)
             if item:
                 item.setCheckState(Qt.Checked)
 
@@ -514,51 +473,34 @@ class TransientUI(SysIdEnvironmentUI):
         self.definition_widget.ramp_selector.setValue(float(worksheet.cell(3, 2).value))
         self.select_python_module(None, worksheet.cell(4, 2).value)
         self.definition_widget.control_function_input.setCurrentIndex(
-            self.definition_widget.control_function_input.findText(
-                worksheet.cell(5, 2).value
-            )
+            self.definition_widget.control_function_input.findText(worksheet.cell(5, 2).value)
         )
         self.definition_widget.control_parameters_text_input.setText(
-            ""
-            if worksheet.cell(6, 2).value is None
-            else str(worksheet.cell(6, 2).value)
+            "" if worksheet.cell(6, 2).value is None else str(worksheet.cell(6, 2).value)
         )
         column_index = 2
         while True:
             value = worksheet.cell(7, column_index).value
             if value is None or (
-                isinstance(value, str)
-                and (value.startswith("#") or value.strip() == "")
+                isinstance(value, str) and (value.startswith("#") or value.strip() == "")
             ):
                 break
             item = self.definition_widget.control_channels_selector.item(int(value) - 1)
             item.setCheckState(Qt.Checked)
             column_index += 1
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(
-            int(worksheet.cell(8, 2).value)
-        )
+        self.system_id_widget.samplesPerFrameSpinBox.setValue(int(worksheet.cell(8, 2).value))
         self.system_id_widget.averagingTypeComboBox.setCurrentIndex(
-            self.system_id_widget.averagingTypeComboBox.findText(
-                worksheet.cell(9, 2).value
-            )
+            self.system_id_widget.averagingTypeComboBox.findText(worksheet.cell(9, 2).value)
         )
-        self.system_id_widget.noiseAveragesSpinBox.setValue(
-            int(worksheet.cell(10, 2).value)
-        )
-        self.system_id_widget.systemIDAveragesSpinBox.setValue(
-            int(worksheet.cell(11, 2).value)
-        )
+        self.system_id_widget.noiseAveragesSpinBox.setValue(int(worksheet.cell(10, 2).value))
+        self.system_id_widget.systemIDAveragesSpinBox.setValue(int(worksheet.cell(11, 2).value))
         self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(
             float(worksheet.cell(12, 2).value)
         )
         self.system_id_widget.estimatorComboBox.setCurrentIndex(
-            self.system_id_widget.estimatorComboBox.findText(
-                worksheet.cell(13, 2).value
-            )
+            self.system_id_widget.estimatorComboBox.findText(worksheet.cell(13, 2).value)
         )
-        self.system_id_widget.levelDoubleSpinBox.setValue(
-            float(worksheet.cell(14, 2).value)
-        )
+        self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(14, 2).value))
         # this should be a temporary solution - template file rework needed
         low, high = worksheet.cell(14, 3).value, worksheet.cell(14, 4).value
         if low is not None:
@@ -569,25 +511,15 @@ class TransientUI(SysIdEnvironmentUI):
             float(worksheet.cell(15, 2).value)
         )
         self.system_id_widget.signalTypeComboBox.setCurrentIndex(
-            self.system_id_widget.signalTypeComboBox.findText(
-                worksheet.cell(16, 2).value
-            )
+            self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(16, 2).value)
         )
         self.system_id_widget.windowComboBox.setCurrentIndex(
             self.system_id_widget.windowComboBox.findText(worksheet.cell(17, 2).value)
         )
-        self.system_id_widget.overlapDoubleSpinBox.setValue(
-            float(worksheet.cell(18, 2).value)
-        )
-        self.system_id_widget.onFractionDoubleSpinBox.setValue(
-            float(worksheet.cell(19, 2).value)
-        )
-        self.system_id_widget.pretriggerDoubleSpinBox.setValue(
-            float(worksheet.cell(20, 2).value)
-        )
-        self.system_id_widget.rampFractionDoubleSpinBox.setValue(
-            float(worksheet.cell(21, 2).value)
-        )
+        self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(18, 2).value))
+        self.system_id_widget.onFractionDoubleSpinBox.setValue(float(worksheet.cell(19, 2).value))
+        self.system_id_widget.pretriggerDoubleSpinBox.setValue(float(worksheet.cell(20, 2).value))
+        self.system_id_widget.rampFractionDoubleSpinBox.setValue(float(worksheet.cell(21, 2).value))
 
         # Now we need to find the transformation matrices' sizes
         response_channels = self.definition_widget.control_channels_display.value()
@@ -600,10 +532,7 @@ class TransientUI(SysIdEnvironmentUI):
             self.response_transformation_matrix = None
         else:
             while True:
-                if (
-                    worksheet.cell(output_transform_row, 1).value
-                    == "Output Transformation Matrix:"
-                ):
+                if worksheet.cell(output_transform_row, 1).value == "Output Transformation Matrix:":
                     break
                 output_transform_row += 1
             response_size = output_transform_row - 22
@@ -611,9 +540,7 @@ class TransientUI(SysIdEnvironmentUI):
             for i in range(response_size):
                 response_transformation.append([])
                 for j in range(response_channels):
-                    response_transformation[-1].append(
-                        float(worksheet.cell(22 + i, 2 + j).value)
-                    )
+                    response_transformation[-1].append(float(worksheet.cell(22 + i, 2 + j).value))
             self.response_transformation_matrix = np.array(response_transformation)
         if (
             isinstance(worksheet.cell(output_transform_row, 2).value, str)
@@ -627,11 +554,8 @@ class TransientUI(SysIdEnvironmentUI):
                 if worksheet.cell(output_transform_row + i, 2).value is None or (
                     isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
                     and (
-                        worksheet.cell(output_transform_row + i, 2).value.startswith(
-                            "#"
-                        )
-                        or worksheet.cell(output_transform_row + i, 2).value.strip()
-                        == ""
+                        worksheet.cell(output_transform_row + i, 2).value.startswith("#")
+                        or worksheet.cell(output_transform_row + i, 2).value.strip() == ""
                     )
                 ):
                     break
@@ -653,9 +577,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.specification_signal = None
-        self.definition_widget.control_channels_display.setValue(
-            len(self.physical_control_indices)
-        )
+        self.definition_widget.control_channels_display.setValue(len(self.physical_control_indices))
         self.define_transformation_matrices(None, False)
         self.show_signal()
 
@@ -691,12 +613,9 @@ class TransientUI(SysIdEnvironmentUI):
 
         This function computes the RMS and max values for the signals and then
         creates entries in the table for each signal"""
-        self.definition_widget.signal_samples_display.setValue(
-            self.specification_signal.shape[-1]
-        )
+        self.definition_widget.signal_samples_display.setValue(self.specification_signal.shape[-1])
         self.definition_widget.signal_time_display.setValue(
-            self.specification_signal.shape[-1]
-            / self.definition_widget.sample_rate_display.value()
+            self.specification_signal.shape[-1] / self.definition_widget.sample_rate_display.value()
         )
         maxs = np.max(np.abs(self.specification_signal), axis=-1)
         rmss = rms_time(self.specification_signal, axis=-1)
@@ -705,9 +624,7 @@ class TransientUI(SysIdEnvironmentUI):
             self.specification_signal.shape[0]
         )
         self.show_signal_checkboxes = []
-        for i, (name, mx, rms) in enumerate(
-            zip(self.physical_control_names, maxs, rmss)
-        ):
+        for i, (name, mx, rms) in enumerate(zip(self.physical_control_names, maxs, rmss)):
             item = QtWidgets.QTableWidgetItem()
             item.setText(name)
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
@@ -716,9 +633,7 @@ class TransientUI(SysIdEnvironmentUI):
             checkbox.setChecked(True)
             checkbox.stateChanged.connect(self.show_signal)
             self.show_signal_checkboxes.append(checkbox)
-            self.definition_widget.signal_information_table.setCellWidget(
-                i, 0, checkbox
-            )
+            self.definition_widget.signal_information_table.setCellWidget(i, 0, checkbox)
             item = QtWidgets.QTableWidgetItem()
             item.setText(f"{mx:0.2f}")
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
@@ -834,9 +749,7 @@ class TransientUI(SysIdEnvironmentUI):
             self.response_transformation_matrix = response_transformation
             self.output_transformation_matrix = output_transformation
 
-    def select_python_module(
-        self, clicked, filename=None
-    ):  # pylint: disable=unused-argument
+    def select_python_module(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
         Parameters
@@ -872,9 +785,7 @@ class TransientUI(SysIdEnvironmentUI):
                         (
                             method in function[1].__dict__
                             and not (
-                                hasattr(
-                                    function[1].__dict__[method], "__isabstractmethod__"
-                                )
+                                hasattr(function[1].__dict__[method], "__isabstractmethod__")
                                 and function[1].__dict__[method].__isabstractmethod__
                             )
                         )
@@ -906,23 +817,13 @@ class TransientUI(SysIdEnvironmentUI):
         except AttributeError:
             return
         if inspect.isgeneratorfunction(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                1
-            )
-        elif inspect.isclass(function) and issubclass(
-            function, AbstractControlLawComputation
-        ):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                3
-            )
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(1)
+        elif inspect.isclass(function) and issubclass(function, AbstractControlLawComputation):
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(3)
         elif inspect.isclass(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                2
-            )
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(2)
         else:
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                0
-            )
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(0)
 
     def check_selected_control_channels(self):
         """Callback to check control channels that are selected"""
@@ -939,10 +840,7 @@ class TransientUI(SysIdEnvironmentUI):
     # region Predictions
     def plot_predictions(self):
         """Plots the control predictions based on the currently selected item"""
-        times = (
-            np.arange(self.specification_signal.shape[-1])
-            / self.hardware_metadata.sample_rate
-        )
+        times = np.arange(self.specification_signal.shape[-1]) / self.hardware_metadata.sample_rate
         index = self.prediction_widget.excitation_selector.currentIndex()
         self.plot_data_items["excitation_prediction"][0].setData(
             times, self.excitation_prediction[index]
@@ -1002,9 +900,7 @@ class TransientUI(SysIdEnvironmentUI):
         """Updates the display duration in the UI"""
         self.max_plot_samples = int(self.hardware_metadata.sample_rate * value)
 
-    def create_window(
-        self, event, control_index=None
-    ):  # pylint: disable=unused-argument
+    def create_window(self, event, control_index=None):  # pylint: disable=unused-argument
         """Creates a subwindow to show a specific channel information
 
         Parameters
@@ -1039,9 +935,7 @@ class TransientUI(SysIdEnvironmentUI):
         """Tile subwindow equally across the screen"""
         screen_rect = QtWidgets.QApplication.desktop().screenGeometry()
         # Go through and remove any closed windows
-        self.plot_windows = [
-            window for window in self.plot_windows if window.isVisible()
-        ]
+        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
         num_windows = len(self.plot_windows)
         ncols = int(np.ceil(np.sqrt(num_windows)))
         nrows = int(np.ceil(num_windows / ncols))
@@ -1066,9 +960,7 @@ class TransientUI(SysIdEnvironmentUI):
     def update_control_plots(self):
         """Updates plots in all of the existing subwindows"""
         # Go through and remove any closed windows
-        self.plot_windows = [
-            window for window in self.plot_windows if window.isVisible()
-        ]
+        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
         for window in self.plot_windows:
             window.update_plot(self.last_control_data)
 
@@ -1111,9 +1003,7 @@ class TransientUI(SysIdEnvironmentUI):
             filename, "w", format="NETCDF4", clobber=True
         )
         # Create dimensions
-        netcdf_handle.createDimension(
-            "response_channels", len(global_data_parameters.channel_list)
-        )
+        netcdf_handle.createDimension("response_channels", len(global_data_parameters.channel_list))
         netcdf_handle.createDimension(
             "output_channels",
             len(
@@ -1132,8 +1022,7 @@ class TransientUI(SysIdEnvironmentUI):
         netcdf_handle.file_version = "3.0.0"
         netcdf_handle.sample_rate = global_data_parameters.sample_rate
         netcdf_handle.time_per_write = (
-            global_data_parameters.samples_per_write
-            / global_data_parameters.output_sample_rate
+            global_data_parameters.samples_per_write / global_data_parameters.output_sample_rate
         )
         netcdf_handle.time_per_read = (
             global_data_parameters.samples_per_read / global_data_parameters.sample_rate
@@ -1148,9 +1037,7 @@ class TransientUI(SysIdEnvironmentUI):
         for key, value in global_data_parameters.extra_parameters.items():
             setattr(netcdf_handle, key, value)
         # Create Variables
-        var = netcdf_handle.createVariable(
-            "environment_names", str, ("num_environments",)
-        )
+        var = netcdf_handle.createVariable("environment_names", str, ("num_environments",))
         this_environment_index = None
         for i, name in enumerate(global_data_parameters.environment_names):
             var[i] = name
@@ -1162,9 +1049,7 @@ class TransientUI(SysIdEnvironmentUI):
             ("response_channels", "num_environments"),
         )
         var[...] = global_data_parameters.environment_active_channels.astype("int8")[
-            global_data_parameters.environment_active_channels[
-                :, this_environment_index
-            ],
+            global_data_parameters.environment_active_channels[:, this_environment_index],
             :,
         ]
         # Create channel table variables
@@ -1174,8 +1059,7 @@ class TransientUI(SysIdEnvironmentUI):
                 "/channels/" + label, netcdf_datatype, ("response_channels",)
             )
             channel_data = [
-                getattr(channel, label)
-                for channel in global_data_parameters.channel_list
+                getattr(channel, label) for channel in global_data_parameters.channel_list
             ]
             if netcdf_datatype == "i1":
                 channel_data = np.array([1 if val else 0 for val in channel_data])
@@ -1187,9 +1071,7 @@ class TransientUI(SysIdEnvironmentUI):
         group_handle = netcdf_handle.createGroup(self.environment_name)
         self.environment_metadata.store_to_netcdf(group_handle)
         # Create Variables for Spectral Data
-        group_handle.createDimension(
-            "drive_channels", self.last_transfer_function.shape[2]
-        )
+        group_handle.createDimension("drive_channels", self.last_transfer_function.shape[2])
         group_handle.createDimension(
             "fft_lines", self.environment_metadata.sysid_frame_size // 2 + 1
         )
@@ -1305,9 +1187,7 @@ class TransientUI(SysIdEnvironmentUI):
 
     def stop_control(self):
         """Starts the sequence of events to stop the controller prematurely"""
-        self.environment_command_queue.put(
-            self.log_name, (TransientCommands.STOP_CONTROL, None)
-        )
+        self.environment_command_queue.put(self.log_name, (TransientCommands.STOP_CONTROL, None))
 
     def start_environment(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""
@@ -1394,14 +1274,9 @@ class TransientUI(SysIdEnvironmentUI):
                             )
                             y = np.concatenate((y, this_data), axis=0)
                     else:
-                        x = (
-                            np.arange(this_data.size)
-                            / self.hardware_metadata.sample_rate
-                        )
+                        x = np.arange(this_data.size) / self.hardware_metadata.sample_rate
                         y = this_data
-                    curve.setData(
-                        x[-self.max_plot_samples :], y[-self.max_plot_samples :]
-                    )
+                    curve.setData(x[-self.max_plot_samples :], y[-self.max_plot_samples :])
                 # Display the data
                 for curve, this_output in zip(
                     self.plot_data_items["output_signal_measurement"], output_data
@@ -1426,18 +1301,11 @@ class TransientUI(SysIdEnvironmentUI):
                             )
                             y = np.concatenate((y, this_output), axis=0)
                     else:
-                        x = (
-                            np.arange(this_output.size)
-                            / self.hardware_metadata.sample_rate
-                        )
+                        x = np.arange(this_output.size) / self.hardware_metadata.sample_rate
                         y = this_output
-                    curve.setData(
-                        x[-self.max_plot_samples :], y[-self.max_plot_samples :]
-                    )
+                    curve.setData(x[-self.max_plot_samples :], y[-self.max_plot_samples :])
                 if signal_delay is None:
-                    self.plot_data_items["signal_range"].setData(
-                        np.ones(5) * x[-1], np.zeros(5)
-                    )
+                    self.plot_data_items["signal_range"].setData(np.ones(5) * x[-1], np.zeros(5))
             case TransientUICommands.CONTROL_DATA:
                 self.last_control_data, self.last_output_data = data
                 self.update_control_plots()
@@ -1466,10 +1334,8 @@ class TransientUI(SysIdEnvironmentUI):
                         (
                             0,
                             0,
-                            (self.environment_metadata.control_signal.shape[-1] - 1)
-                            / sr,
-                            (self.environment_metadata.control_signal.shape[-1] - 1)
-                            / sr,
+                            (self.environment_metadata.control_signal.shape[-1] - 1) / sr,
+                            (self.environment_metadata.control_signal.shape[-1] - 1) / sr,
                             0,
                         )
                     ),

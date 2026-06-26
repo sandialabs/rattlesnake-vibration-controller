@@ -1,6 +1,6 @@
 from qtpy import uic, QtWidgets
 from qtpy.QtCore import Qt
-from rattlesnake.user_interface.ui_utilities import sds_synthesize_dialog_ui_path
+import os
 import numpy as np
 from typing import TYPE_CHECKING
 from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox
@@ -10,6 +10,7 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     srs,
     sum_decayed_sines_reconstruction,
 )
+from rattlesnake.utilities import DIRECTORY
 from rattlesnake.environment.sds_sys_id_metadata import DecayStrategy
 
 if TYPE_CHECKING:
@@ -29,7 +30,10 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
             targets used to compute the sum of decayed sines.
         """
         super().__init__(parent.definition_widget)
-        uic.loadUi(sds_synthesize_dialog_ui_path, self)
+        uic.loadUi(
+            os.path.join(DIRECTORY, "user_interface", "ui_files", "srs_sds_synthesize_dialog.ui"),
+            self,
+        )
         self.parent_widget = parent
         self.metadata = parent.collect_environment_definition_parameters()
         self.setWindowTitle("Sum-of-Decayed-Sines Synthesis")

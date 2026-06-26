@@ -5,10 +5,11 @@ import multiprocessing as mp
 from multiprocessing.queues import Queue
 from scipy.signal import lfilter, oaconvolve
 from scipy.optimize import minimize, NonlinearConstraint, nnls
+from rattlesnake.environment.abstract_environment import EnvironmentCommands
 
 
 # %% Commands
-class SDSCommands(Enum):
+class SDSCommands(EnvironmentCommands):
     """Valid commands for the SDS environment"""
 
     START_CONTROL = 0
@@ -17,6 +18,8 @@ class SDSCommands(Enum):
     SDS_TABLE_PREDICTION = 3
     SDS_RUN_TABLE_PREDICTION = 4
     # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
+    VALID_PROFILE_COMMANDS = set()
+    VALID_DATA = {}
 
 
 # %% Queues
