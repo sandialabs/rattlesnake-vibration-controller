@@ -24,10 +24,13 @@ from enum import Enum
 
 import netCDF4 as nc4
 import numpy as np
+from typing import List
+import openpyxl
 
 from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentMetadata
 from rattlesnake.environment.sds_sys_id_utilities import octspace, DecayedSineTable
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 
 
 class ToneStrategy(Enum):
@@ -446,23 +449,178 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         """Sets the sample rate of the data acquisition system"""
         self._sample_rate = value
 
-    def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
-    ):
-        """Stores the metadata in a netcdf group
+    def get_compensation_pulse_frequency(self):
+        if self.compensation_pulse_data.compensation_frequency is None:
+            return min(self.get_sds_frequencies()) / 3
+        else:
+            return self.compensation_pulse_data.compensation_frequency
 
-        Parameters
-        ----------
-        netcdf_group_handle : nc4._netCDF4.Group
-            A group in a NetCDF4 group defining the environment's medatadata
-        """
-        super().store_to_netcdf(netcdf_group_handle)
-        # netcdf_group_handle.control_python_script = self.control_python_script
-        # netcdf_group_handle.control_python_function = self.control_python_function
-        # netcdf_group_handle.control_python_function_type = self.control_python_function_type
-        # netcdf_group_handle.control_python_function_parameters = (
-        #     self.control_python_function_parameters
+    def get_sds_frequencies(self):
+        if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
+            return self.specification_data.frequencies
+        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
+            return octspace(*self.tone_data.tone_data)
+        if self.tone_data.tone_strategy == ToneStrategy.MANUAL:
+            return self.tone_data.tone_data
+
+    def get_sds_decays(self):
+        frequencies = self.get_sds_frequencies()
+        if self.decay_data.common_decay:
+            decay_values = self.decay_data.decay_data[0] * np.ones(len(frequencies))
+        else:
+            decay_values = self.decay_data.decay_data
+        return convert_decay_strategy(
+            decay_values,
+            frequencies,
+            self.block_size / self.sample_rate,
+            self.decay_data.decay_strategy,
+            DecayStrategy.DAMPING,
+        )
+
+    def get_sds_frequencies_w_compensation_pulse(self):
+        if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
+            frequencies = self.specification_data.frequencies
+        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
+            frequencies = octspace(*self.tone_data.tone_data)
+        if self.tone_data.tone_strategy == ToneStrategy.MANUAL:
+            frequencies = self.tone_data.tone_data
+        if self.compensation_pulse_data.use_compensation_pulse:
+            frequencies = np.concatenate((frequencies, [self.get_compensation_pulse_frequency()]))
+        return frequencies
+
+    def get_sds_decays_w_compensation_pulse(self):
+        frequencies = self.get_sds_frequencies()
+        if self.decay_data.common_decay:
+            decay_values = self.decay_data.decay_data[0] * np.ones(len(frequencies))
+        else:
+            decay_values = self.decay_data.decay_data
+        decay_values = convert_decay_strategy(
+            decay_values,
+            frequencies,
+            self.block_size / self.sample_rate,
+            self.decay_data.decay_strategy,
+            DecayStrategy.DAMPING,
+        )
+        if self.compensation_pulse_data.use_compensation_pulse:
+            decay_values = np.concatenate(
+                (decay_values, [self.compensation_pulse_data.compensation_decay])
+            )
+        return decay_values
+
+    @classmethod
+    def create_blank_worksheet_template(cls, worksheet):
+        pass
+
+    @classmethod
+    def load_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        pass
+
+    def save_metadata_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        pass
+
+    @classmethod
+    def load_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        pass
+        # TODO: Replace this with data from the netcdf4 file
+        # tone_parameters = ToneParameters(tone_strategy=ToneStrategy.FROM_SPEC, tone_data=None)
+
+        # compensation_pulse_parameters = CompPulseParameters(
+        #     use_compensation_pulse=True, compensation_frequency=None, compensation_decay=0.95
         # )
+
+        # decay_parameters = DecayParameters(
+        #     decay_strategy=DecayStrategy.NUM_TIME_CONSTANTS, common_decay=True, decay_data=5.0
+        # )
+
+        # srs_parameters = SRSParameters(
+        #     srs_type=SRSType.MAXIMUM_ABSMAX,
+        #     srs_displacement=SRSDisplacementType.ABSOLUTE,
+        #     srs_damping=0.03,
+        # )
+
+        # sds_parameters = SDSParameters(
+        #     iterations=3, convergence=0.8, scale_factor=1.02, error_tolerance=0.05
+        # )
+
+        # spec_data = np.load(
+        #     r"C:\Users\dprohe\Documents\Test_Problems\Rattlesnake_MIMO_SDS\srs_spec.npz"
+        # )
+        # specification = SpecParameters(
+        #     frequencies=spec_data["f"],
+        #     srs_spec=spec_data["srs"],
+        #     srs_lower_limit=spec_data["lower_limit"],
+        #     srs_upper_limit=spec_data["upper_limit"],
+        #     num_hits=spec_data["num_hits"],
+        # )
+
+        # control_parameters = ControlParameters(
+        #     control_script="rattlesnake.environment.sds_sys_id_control_law",
+        #     control_object="default_control_law",
+        #     control_type=ControlLawType.FUNCTION,
+        #     control_parameters={},
+        # )
+
+        # sysid_parameters = SysIdMetadata(
+        #     sample_rate=sample_rate,
+        #     sysid_frame_size=4000,
+        #     sysid_averaging_type="Linear",
+        #     sysid_noise_averages=5,
+        #     sysid_averages=20,
+        #     sysid_exponential_averaging_coefficient=0.01,
+        #     sysid_estimator="H1",
+        #     sysid_level=0.01,
+        #     sysid_level_ramp_time=0.5,
+        #     sysid_signal_type="Random",
+        #     sysid_window="Hann",
+        #     sysid_overlap=0.5,
+        #     sysid_burst_on=0.5,
+        #     sysid_pretrigger=0.05,
+        #     sysid_burst_ramp_fraction=0.05,
+        #     sysid_low_frequency_cutoff=0,
+        #     sysid_high_frequency_cutoff=int(sample_rate / 2),
+        #     stream_file=None,
+        # )
+
+        # response_transform = None
+        # excitation_transform = None
+
+        # environment_metadata = SDSMetadata(
+        #     environment_name="SDS",
+        #     channel_list_bools=[True] * len(hardware_metadata.channel_list),
+        #     sample_rate=sample_rate,
+        #     num_channels=len(hardware_metadata.channel_list),
+        #     block_size=8000,
+        #     tone_data=tone_parameters,
+        #     compensation_pulse_data=compensation_pulse_parameters,
+        #     decay_data=decay_parameters,
+        #     srs_data=srs_parameters,
+        #     sds_data=sds_parameters,
+        #     control_script_data=control_parameters,
+        #     control_channel_indices=np.arange(len(output_nodes)),
+        #     output_channel_indices=np.arange(len(input_nodes)) + len(output_nodes),
+        #     response_transformation_matrix=response_transform,
+        #     excitation_transformation_matrix=excitation_transform,
+        #     specification_data=specification,
+        #     sysid_metadata=sysid_parameters,
+        # )
+
+    def save_metadata_to_netcdf(
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
+    ):
+        super().save_metadata_to_netcdf(netcdf_group_handle)
         netcdf_group_handle.block_size = self.block_size
         # Create groups for different portions of the metadata
         tone_grp = netcdf_group_handle.createGroup("tone_parameters")
@@ -554,64 +712,6 @@ class SDSMetadata(SysIdEnvironmentMetadata):
                 ("reference_transformation_rows", "reference_transformation_cols"),
             )
             var[...] = self.reference_transformation_matrix
-
-    def get_compensation_pulse_frequency(self):
-        if self.compensation_pulse_data.compensation_frequency is None:
-            return min(self.get_sds_frequencies()) / 3
-        else:
-            return self.compensation_pulse_data.compensation_frequency
-
-    def get_sds_frequencies(self):
-        if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
-            return self.specification_data.frequencies
-        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
-            return octspace(*self.tone_data.tone_data)
-        if self.tone_data.tone_strategy == ToneStrategy.MANUAL:
-            return self.tone_data.tone_data
-
-    def get_sds_decays(self):
-        frequencies = self.get_sds_frequencies()
-        if self.decay_data.common_decay:
-            decay_values = self.decay_data.decay_data[0] * np.ones(len(frequencies))
-        else:
-            decay_values = self.decay_data.decay_data
-        return convert_decay_strategy(
-            decay_values,
-            frequencies,
-            self.block_size / self.sample_rate,
-            self.decay_data.decay_strategy,
-            DecayStrategy.DAMPING,
-        )
-
-    def get_sds_frequencies_w_compensation_pulse(self):
-        if self.tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
-            frequencies = self.specification_data.frequencies
-        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
-            frequencies = octspace(*self.tone_data.tone_data)
-        if self.tone_data.tone_strategy == ToneStrategy.MANUAL:
-            frequencies = self.tone_data.tone_data
-        if self.compensation_pulse_data.use_compensation_pulse:
-            frequencies = np.concatenate((frequencies, [self.get_compensation_pulse_frequency()]))
-        return frequencies
-
-    def get_sds_decays_w_compensation_pulse(self):
-        frequencies = self.get_sds_frequencies()
-        if self.decay_data.common_decay:
-            decay_values = self.decay_data.decay_data[0] * np.ones(len(frequencies))
-        else:
-            decay_values = self.decay_data.decay_data
-        decay_values = convert_decay_strategy(
-            decay_values,
-            frequencies,
-            self.block_size / self.sample_rate,
-            self.decay_data.decay_strategy,
-            DecayStrategy.DAMPING,
-        )
-        if self.compensation_pulse_data.use_compensation_pulse:
-            decay_values = np.concatenate(
-                (decay_values, [self.compensation_pulse_data.compensation_decay])
-            )
-        return decay_values
 
 
 class SDSRunMetadata:
