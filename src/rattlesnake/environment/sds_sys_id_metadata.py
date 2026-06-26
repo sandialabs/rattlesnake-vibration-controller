@@ -713,6 +713,9 @@ class SDSMetadata(SysIdEnvironmentMetadata):
             )
             var[...] = self.reference_transformation_matrix
 
+    def validate(self, hardware_metadata):
+        return super().validate(hardware_metadata)
+
 
 class SDSRunMetadata:
     def __init__(

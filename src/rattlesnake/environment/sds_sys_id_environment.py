@@ -21,6 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 # region Imports
 import importlib
 import threading
@@ -66,6 +67,7 @@ from rattlesnake.utilities import (
 
 from rattlesnake.environment.abstract_interactive_control_law import (
     AbstractControlLawComputation,
+    ControlLawCommands,
 )
 from rattlesnake.process.abstract_sysid_data_analysis import (
     sysid_data_analysis_process,
@@ -86,7 +88,6 @@ from rattlesnake.process.spectral_processing import (
     spectral_processing_process,
 )
 
-
 # region Globals
 CONTROL_TYPE = EnvironmentType.SDS
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
@@ -100,6 +101,7 @@ class SDSEnvironment(SysIdEnvironment):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         queue_container: SDSQueues,
         acquisition_active_event: mp.synchronize.Event,
         output_active_event: mp.synchronize.Event,
@@ -110,6 +112,7 @@ class SDSEnvironment(SysIdEnvironment):
     ):
         super().__init__(
             environment_name,
+            queue_name,
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
             queue_container.controller_communication_queue,
@@ -142,10 +145,10 @@ class SDSEnvironment(SysIdEnvironment):
         self.map_command(SDSCommands.START_CONTROL, self.start_control)
         self.map_command(SDSCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(
-            GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+            ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
         )
-        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
 
         # Persistent Data
         self.data_acquisition_parameters = None
@@ -554,6 +557,7 @@ class SDSEnvironment(SysIdEnvironment):
 
 def sds_process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: Queue,
     controller_communication_queue: VerboseMessageQueue,
@@ -638,7 +642,7 @@ def sds_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
-                ping_alive_event
+                ping_alive_event,
             ),
         )
         analysis_proc.start()
@@ -670,7 +674,8 @@ def sds_process(
         collection_proc.start()
 
         process_class = SDSEnvironment(
-            environment_name, 
+            environment_name,
+            queue_name,
             queue_container,
             acquisition_active_event,
             output_active_event,
