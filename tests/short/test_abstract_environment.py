@@ -281,6 +281,7 @@ def test_run_process(mock_process_class, use_thread):
         event_container.environment_close_events["Environment 0"],
         event_container.environment_sysid_active_events["Environment 0"],
         event_container.environment_sysid_stored_events["Environment 0"],
+        event_container.ping_alive_event,
         use_thread,
     )
 
