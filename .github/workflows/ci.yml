@@ -1,16 +1,30 @@
 # name: CI
-# name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
+# name: # keep this field blank to automatically show the filename that triggers it in the CI/CD web UI
 name: ci.yml
 
 on:
   push:
     branches:
-      - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+      - '**'
   pull_request:
     branches:
       - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+      - dev
+  workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
+  # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
+  # Answer: Yes, it should work.  Possible that the workflow file must appear on the
+  # default branch (main) before it shows up in the UI.  Since this updated ci.yml is
+  # not yet in the main branch, it might not be visible in the UI until it is merged.
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Testing level (small | full)'
+        required: true
+        default: 'small'
+        type: choice
+        options:
+          - small
+          - full
 
 # Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
 concurrency:
@@ -18,30 +32,100 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Force all JavaScript actions to run on Node 24 (The 2026 Standard)
+  # After 02 June 2026, the following line can be removed since on that date,
+  # Node.js 24 will be the GitHub default.
+  # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 2026-06-12: Now running NODE24 by default on GitHub.
+  #
   # `BASE_URL` determines the website is served from, including CSS & JS assets
   # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
   BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
 
 jobs:
 
+  # Detect what files changed to optimize the workflow
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_changed: ${{ steps.filter.outputs.docs }}
+      code_changed: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Filter changes
+        uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          list-files: shell
+          # Allowing base only can let a bug sneak in.
+          # base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
+          filters: |
+            docs:
+              - 'documentation/**'
+              - '*.md'  # Include markdown files at the root, which might be docs-related (e.g., README.md)
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/workflows/**'
+
+      # Log the results to the GitHub Actions console
+      - name: Log change status
+        run: |
+          echo "📂 Docs changed: ${{ steps.filter.outputs.docs }}"
+          echo "📂 Docs files: ${{ steps.filter.outputs.docs_files }}"
+          echo "💻 Code changed: ${{ steps.filter.outputs.code }}"
+          echo "💻 Code files: ${{ steps.filter.outputs.code_files }}"
+
   # 2026-03-13: We cannot use uv with the test matrix because of Qt.  There is
   # a known challenge with PyQt5 on modern macOS (particularly M1/M2/M3 Silicon)
   # and some Windows environments.  PyQt does not have pre-built wheels for every
   # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
+    needs: changes
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
+        # Full mode
+        #   main/dev branch, PR targeting main/dev, manual 'full', or '[all tests]' in commit/PR title):
+        #   run on Linux, macOS, and Windows.
+        # Fast mode (all other branches): ubuntu-latest only.
+        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        # Full mode: test against Python 3.11 and 3.12. Fast mode: 3.12 only.
+        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
 
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+        # By default, the GitHub Action actions/checkout performs a "shallow clone."
+        # This means it only downloads the very latest commit to save time.
+        # However, a shallow clone does not include the tags or history.
+        # Without that information, hatch-vcs won't know what version your code is
+        # and might default to 0.0.0 or fail during the build.  Setting
+        # fetch-depth: 0 tells GitHub to download the entire commit history
+        # and all tags, which gives Hatch the information it needs to correctly
+        # calculate the version.
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -52,101 +136,179 @@ jobs:
           python -m pip install .[dev]
 
       - name: Run tests
+        shell: bash
+        env:
+          # Securely map the context parameter into the environment context first
+          RESOLVED_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
         run: |
-          python -m pytest -v
+          TEST_PATHS="tests/short"
+          BRANCH_NAME="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
+          
+          if [[ "$RESOLVED_MSG" == *"[all tests]"* ]] || \
+             [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
+             [[ "$BRANCH_NAME" == "main" ]] || \
+             [[ "$BRANCH_NAME" == "dev" ]] || \
+             [[ "$TARGET_BRANCH" == "main" ]] || \
+             [[ "$TARGET_BRANCH" == "dev" ]]; then
+            echo "⏱️⏱️⏱️ ALL TESTS MODE: Scaling up to include heavy simulations from tests/long"
+            TEST_PATHS="tests"
+          else
+            echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
+          fi
+     
+          python -m pytest -vs $TEST_PATHS
 
   lint:
+    needs: changes
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
+
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v1
+      uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
       with:
         enable-cache: true
+        # Note: 'version' refers to the uv version itself
+        version: "latest"
         python-version: "3.12"
 
     - name: Install dependencies
-      run: |
-        uv venv
-        uv pip install .[dev]
+      # "uv sync" uses uv.lock to install exactly what you need
+      # --all-extras ensures [dev] or other extras are included
+      # if the pyproject.toml file changes, run "uv sync" and check into
+      # GitHub both the pyproject.toml file and the uv.lock file.
+      run: uv sync --all-extras --dev
         
-    - name: pylint analysis and custom pylint HTML report
+    - name: lint analysis and custom lint HTML report
       run: |
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
-        PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
+        LINT_OUTPUT_FILE="lint_output_${TIMESTAMP}.txt"
 
-        # Run pylint once, capturing the output to a variable.
+        # Run pylint once using 'uv run' (which automatically uses the synced venv)
+        # and capturing the output to a variable.
         # This avoids reading the file twice.
-        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
-        echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
+        LINT_OUTPUT=$(uv run pylint src/rattlesnake --output-format=text --reports=yes || true)
+        echo "$LINT_OUTPUT" > "$LINT_OUTPUT_FILE"
 
         # Extract the score from the captured output
-        SCORE=$(echo "$PYLINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+        SCORE=$(echo "$LINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
 
         # Output the score and file name
-        echo "🏁 Pylint analysis completed. 🏁"
-        echo "    📄 Output file: $PYLINT_OUTPUT_FILE"
-        echo "    🏆 Pylint score: $SCORE out of 10"
+        echo "🏁 Lint analysis completed. 🏁"
+        echo "    📄 Output file: $LINT_OUTPUT_FILE"
+        echo "    🏆 Lint score: $SCORE out of 10"
 
-        # The report_pylint.py script still needs the file, which we created above.
-        uv run python src/rattlesnake/cicd/report_pylint.py \
-          --input_file "$PYLINT_OUTPUT_FILE" \
-          --output_file pylint_report.html \
+        # github.head_ref is the source branch name on PRs; empty on push events.
+        # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
+        REF_NAME="${{ github.head_ref || github.ref_name }}"
+
+        # The report_lint.py script still needs the file, which we created above.
+        uv run python src/rattlesnake/cicd/report_lint.py \
+          --input_file "$LINT_OUTPUT_FILE" \
+          --output_file lint_report.html \
           --timestamp "$TIMESTAMP" \
           --run_id ${{ github.run_id }} \
-          --ref_name ${{ github.ref_name }} \
+          --ref_name "$REF_NAME" \
           --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
 
-    - name: Upload pylint artifact
-      uses: actions/upload-artifact@v4
+    - name: Upload lint artifact
+      uses: actions/upload-artifact@v7
       with:
-        name: pylint-report
+        name: lint-report
         path: |
-          pylint_report.html
-          pylint_output_*.txt
+          lint_report.html
+          lint_output_*.txt
 
   coverage:
+    needs: changes
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
+    if: |
+      needs.changes.outputs.code_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
+          version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          uv venv
-          uv pip install .[dev]
+        run: uv sync --all-extras --dev
 
-      - name: pytest coverage and custom coverage HTML report
+      - name: coverage analysis and custom coverage HTML report
+        env:
+          # Securely map complex strings to environment variables to prevent shell injection errors
+          RESOLVED_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
         run: |
-          # Create a timestamp for the output file
+          # 1. Establish a safe, explicit default path
+          TEST_PATHS="tests/short"
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          # 2. Extract branch metadata
+          BRANCH_NAME="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
 
-          uv run python src/rattlesnake/cicd/report_pytest.py \
+          # 3. Check override conditions cleanly from the environment block
+          if [[ "$RESOLVED_MSG" == *"[all tests]"* ]] || \
+               [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
+               [[ "$BRANCH_NAME" == "main" ]] || \
+               [[ "$BRANCH_NAME" == "dev" ]] || \
+               [[ "$TARGET_BRANCH" == "main" ]] || \
+               [[ "$TARGET_BRANCH" == "dev" ]]; then
+              echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+              TEST_PATHS="tests"
+          else
+            echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
+          fi
+
+          uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+
+          # github.head_ref is the source branch name on PRs; empty on push events.
+          # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
+          REF_NAME="${{ github.head_ref || github.ref_name }}"
+
+          uv run python src/rattlesnake/cicd/report_coverage.py \
             --input_file coverage.xml \
-            --output_file pytest_report.html \
+            --output_file coverage_report.html \
             --timestamp "$TIMESTAMP" \
             --run_id ${{ github.run_id }} \
-            --ref_name ${{ github.ref_name }} \
+            --ref_name "$REF_NAME" \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
-      - name: Upload pytest artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: pytest-report
+          name: coverage-report
           path: |
-            pytest_report.html
+            coverage_report.html
             htmlcov/
             coverage.xml
 
@@ -156,20 +318,50 @@ jobs:
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
+    needs: changes
+    # Run job if docs changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
+    if: |
+      needs.changes.outputs.docs_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
+          version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Update Jupyter Book metadata
         run: |
-          uv venv
-          uv pip install "jupyter-book>=2.0.0"
+          # Create a timestamp for the output file
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+
+          # github.ref_name is the internal merge ref on PRs (e.g. "83/merge"),
+          # which produces a 404 URL. github.head_ref is the actual source branch
+          # name for PRs; it is empty on push events so ref_name is the fallback.
+          REF_NAME="${{ github.head_ref || github.ref_name }}"
+
+          uv run python src/rattlesnake/cicd/report_jupyter_book.py \
+            --myst_file documentation/myst.yml \
+            --timestamp "$TIMESTAMP" \
+            --run_id ${{ github.run_id }} \
+            --ref_name "$REF_NAME" \
+            --github_sha ${{ github.sha }} \
+            --github_repo ${{ github.repository }}
 
       - name: Build the book
         run: |
@@ -177,45 +369,90 @@ jobs:
           cd documentation && uv run jupyter book build --html --strict && cd ..
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jupyter-book-report
           path: documentation/_build/html
 
   deploy:
-    needs: [pytest_matrix, lint, coverage, docs_jupyter_book]
+    needs: [changes, pytest_matrix, lint, coverage, docs_jupyter_book]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    # Run only on main/dev AND only if no previous jobs actually failed
+    if: |
+      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+
+    # Required to push commits to the gh-pages branch
+    permissions:
+      contents: write
+
+    # Serialize all gh-pages deployments across branches into a single queue.
+    # cancel-in-progress: false ensures a queued deploy is never dropped — if
+    # main and dev push simultaneously, one waits rather than being cancelled,
+    # preventing a race condition that would corrupt the gh-pages branch.
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
+
+    # gh-pages branch layout (after deploy):
+    # ├── index.html               (Dashboard — new each run by cicd/report_dashboard.py)
+    # ├── main/                    (Released content, deployed from main)
+    # │   ├── badges/
+    # │   │   ├── lint.svg
+    # │   │   └── coverage.svg
+    # │   ├── reports/
+    # │   │   ├── lint/
+    # │   │   │   └── index.html   (Pylint Summary)
+    # │   │   └── coverage/
+    # │   │       ├── index.html   (Coverage Summary)
+    # │   │       └── htmlcov/     (Detailed Pytest-cov HTML)
+    # │   └── book/
+    # │       └── jupyter/         (User Manual — Jupyter Book)
+    # └── dev/                     (Development content, deployed from dev)
+    #     ├── badges/
+    #     │   ├── lint.svg
+    #     │   └── coverage.svg
+    #     ├── reports/
+    #     │   ├── lint/
+    #     │   │   └── index.html
+    #     │   └── coverage/
+    #     │       ├── index.html
+    #     │       └── htmlcov/
+    #     └── book/
+    #         └── jupyter/
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
+          version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          uv venv
-          uv pip install .[dev]
+        run: uv sync --all-extras --dev
 
-      - name: Download pylint artifact
-        uses: actions/download-artifact@v4
+      # Download unconditionally; the script gates handle folder absences gracefully
+      - name: Download lint artifact
+        uses: actions/download-artifact@v8
         with:
-          name: pylint-report
-          path: pylint-report
+          name: lint-report
+          path: lint-report
           
-      - name: Download pytest artifact
-        uses: actions/download-artifact@v4
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v8
         with:
-          name: pytest-report
-          path: pytest-report
+          name: coverage-report
+          path: coverage-report
 
       - name: Download jupyter book artifact
-        uses: actions/download-artifact@v4
+        # Only download if the job was actually expected to run based on pathing or branch triggers
+        if: needs.changes.outputs.docs_changed == 'true' || github.ref_name == 'main' || github.ref_name == 'dev'
+        uses: actions/download-artifact@v8
         with:
           name: jupyter-book-report
           path: jupyter-book-report
@@ -230,113 +467,112 @@ jobs:
 
       - name: Create badges
         run: |
-          # Pylint badge
-          PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
-          SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          uv run python src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
-          mkdir -p badges
-          curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
-          cat > badges/pylint-info.json << EOF
-          {
-            "score": "${SCORE}",
-            "color": "${{ env.BADGE_COLOR }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/pylint/",
-            "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
-            "run_id": "${{ github.run_id }}",
-            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          }
-          EOF
+          # Use bash compgen to safely see if any logs exist without throwing a shell crash
+          if compgen -G "lint-report/lint_output_*.txt" > /dev/null; then
+            LINT_LOG=$(ls lint-report/lint_output_*.txt)
+            uv run python src/rattlesnake/cicd/badge_lint.py \
+              --input_file "$LINT_LOG" \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No lint output log files discovered; skipping lint badge generation."
+          fi
 
-          # Pytest badge
-          uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
-          
-          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
-          WORKFLOW_URL="${REPO_URL}/actions/workflows/ci.yml"
-          curl -o badges/coverage.svg "https://img.shields.io/badge/coverage-${{ env.COVERAGE }}%25-${{ env.BADGE_COLOR_COV }}.svg"
-          cat > badges/coverage-info.json << EOF
-          {
-            "coverage": "${{ env.COVERAGE }}",
-            "color": "${{ env.BADGE_COLOR_COV }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/coverage/",
-            "workflow_url": "${WORKFLOW_URL}",
-            "run_id": "${{ github.run_id }}",
-            "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}",
-            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          }
-          EOF
-
-#      - name: Commit badges
-#        run: |
-#          git pull
-#          git config --local user.email "action@github.com"
-#          git config --local user.name "GitHub Action"
-#          git add badges/
-#          git diff --staged --quiet || git commit -m "Update badges [skip ci]"
-#          git push
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Safe evaluation operator check for the coverage xml file
+          if [ -f "coverage-report/coverage.xml" ]; then
+            uv run python src/rattlesnake/cicd/badge_coverage.py \
+              --input_file coverage-report/coverage.xml \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No coverage report xml file found; skipping coverage badge generation."
+          fi
 
       - name: Assemble pages directory
         run: |
-          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
-          mv pylint-report/pylint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint/index.html"
-          mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
-          mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
-          mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          if [ -d "lint-report" ]; then
+            mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
+          fi
           
-          # Create a root index.html that redirects or links to both versions
-          cat > pages/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Rattlesnake Vibration Controller - Reports</title>
-              <style>
-                  body { font-family: sans-serif; margin: 40px; background-color: #f6f8fa; }
-                  .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                  h1 { color: #333; }
-                  h2 { color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-                  a { color: #0366d6; text-decoration: none; }
-                  a:hover { text-decoration: underline; }
-                  ul { list-style-type: none; padding: 0; }
-                  li { background-color: #f1f1f1; margin: 10px 0; padding: 15px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-                  .badge { font-weight: bold; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
-                  .badge-main { background-color: #0366d6; color: white; }
-                  .badge-dev { background-color: #f66a0a; color: white; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h1>Rattlesnake Vibration Controller - CI/CD Hub</h1>
-                  <p>Access the latest documentation and quality reports for both the stable and development versions.</p>
-                  
-                  <h2>🚀 Released (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file">Main Branch</a>)</h2>
-                  <ul>
-                      <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
-                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a></li>
-                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a></li>
-                  </ul>
+          if [ -d "coverage-report" ]; then
+            mv coverage-report/coverage_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
+            mv coverage-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
+          fi
+          
+          if [ -d "jupyter-book-report" ]; then
+            mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          fi
+          
+          if [ -d "badges" ]; then
+            cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
+          fi
 
-                  <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
-                  <ul>
-                      <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
-                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
-                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a></li>
-                  </ul>
-              </div>
-          </body>
-          </html>
-          EOF
+          # Create a root index.html using the Python script
+          uv run python src/rattlesnake/cicd/report_dashboard.py \
+            --github_repo ${{ github.repository }} \
+            --timestamp "$(date +"%Y%m%d_%H%M%S_%Z")" \
+            --run_id ${{ github.run_id }} \
+            --ref_name ${{ github.ref_name }} \
+            --github_sha ${{ github.sha }} \
+            --output_file pages/index.html
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./pages
-          publish_branch: gh-pages
-          keep_files: true
-          commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
+      # Push built artifacts directly to the gh-pages branch rather than using
+      # peaceiris/actions-gh-pages (keep_files: true) or actions/deploy-pages.
+      #
+      # Why not peaceiris with keep_files?
+      #   keep_files is imprecise — it tries to preserve other content but can
+      #   behave unexpectedly when main and dev deploy close together, risking
+      #   one branch's content overwriting the other's.
+      #
+      # Why not actions/deploy-pages?
+      #   It replaces the entire site on every run and cannot preserve
+      #   subdirectories from other branches (main/ and dev/ must coexist).
+      #
+      # This approach clones gh-pages, replaces only the current branch's
+      # subdirectory (main/ or dev/), refreshes index.html at the root, and
+      # pushes back. The job-level concurrency group above ensures only one
+      # branch deploys at a time, preventing push conflicts.
+      # Commit is skipped entirely if the staged content is identical to what
+      # is already on gh-pages (e.g., a re-run with no code changes).
+      - name: Deploy to gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Step 1: Clone the existing gh-pages branch into a local staging directory.
+          # --depth 1 fetches only the latest commit (no history needed for deployment).
+          # The token is injected into the URL so git can authenticate and push later.
+          git clone --branch gh-pages --depth 1 \
+            https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git \
+            gh-pages-deploy
+
+          # Step 2: Replace only this branch's subdirectory (main/ or dev/).
+          # Wiping and re-copying ensures stale files from prior runs are removed.
+          # The other branch's subdirectory is untouched — both coexist on gh-pages.
+          rm -rf gh-pages-deploy/${{ env.DEPLOY_SUBDIR }}
+          mkdir -p gh-pages-deploy/${{ env.DEPLOY_SUBDIR }}
+          cp -r pages/${{ env.DEPLOY_SUBDIR }}/. gh-pages-deploy/${{ env.DEPLOY_SUBDIR }}/
+
+          # Step 3: Refresh the root dashboard (index.html) so it always reflects
+          # the latest run metadata regardless of which branch triggered the deploy.
+          cp pages/index.html gh-pages-deploy/index.html
+
+          # Step 4: Commit and push. Bot identity is required for the commit author.
+          # 'git diff --staged --quiet' exits 0 if nothing changed, skipping the
+          # commit entirely on re-runs that produce identical output.
+          cd gh-pages-deploy
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Deploy ${{ env.DEPLOY_SUBDIR }} from ${{ github.sha }}"
+          git push origin gh-pages

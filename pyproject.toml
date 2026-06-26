@@ -1,123 +1,83 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ['src']
-
-[tool.setuptools.package-data]
-rattlesnake = ["*.ui"]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
-name = 'rattlesnake'
-authors = [
-  {email = 'dprohe@sandia.gov'},
-  {name = 'Daniel P. Rohe'}
-]
+name = "rattlesnake-vibration-controller"
+# version = "3.1.1"  # Deprecate use of hard-coded version numbers, now hatch-vcs
+dynamic = ["version"]  # Removed static version, now determined by hatch-vcs
+description = "Multiple-Input Multiple-Output Vibration Controller"
+requires-python = ">=3.10"
+readme = "README.md"
 license = { file = "LICENSE" }
-description = 'Multiple-Input Multiple-Output Vibration Controller'
-readme = 'README.md'
-dependencies = [
-    "kaitaistruct",
-    "netCDF4",
-    "nidaqmx",
-    "numpy",
-    "openpyxl",
-    "packaging",
-    "PyQt5; sys_platform!='darwin'",
-    "PyQt6; sys_platform=='darwin'",
-    "pyqtgraph",
-    "qtpy",
-    "requests",
-    "scipy",
-    ]
-requires-python = '>=3.10'
-version = '3.1.1'
-
+authors = [
+  {email = "dprohe@sandia.gov", name = "Daniel P. Rohe"}
+]
 classifiers = [
-    'Natural Language :: English',
-    'Operating System :: Microsoft :: Windows :: Windows 10',
-    'Operating System :: MacOS :: MacOS X',
-    'Operating System :: POSIX :: Linux',
-    'Programming Language :: Python :: 3.8',
-    'Framework :: Pytest',
-    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)'
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Framework :: Pytest",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
     ]
+dependencies = [
+  "kaitaistruct",
+  "netCDF4",
+  "nidaqmx",
+  "numpy",
+  "openpyxl",
+  "packaging",
+  "PyQt5; sys_platform!='darwin'",
+  "PyQt6; sys_platform=='darwin'",
+  "pyqtgraph",
+  "pytz",
+  "qtpy",
+  "requests",
+  "scipy",
+  ]
 
 [project.optional-dependencies]
 dev = [
-  'coverage-badge',
-  'flake8',
-  'isort',
-  'pylint',
-  'pytest',
-  'pytest-cov',
-  'pytest-qt==4.4.0',
-  'pytz',
-  'ruff',
-  # 'black',
-  # 'mypy',
-  # 'pydocstyle',
+  "coverage-badge",
+  "flake8",
+  "isort",
+  "jupyter-book>=2.0.0",
+  "pylint",
+  "pytest",
+  "pytest-cov",
+  "pytest-qt==4.4.0",
+  "requests",
+  "ruff",
 ]
-#docs = [
-#    'docutils<0.18,>=0.14', 'ipykernel', 'ipython',
-#    'jinja2>=3.0', 'nbsphinx',
-#    'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-bibtex',
-#    'sphinx-copybutton'
-#]
-#testing = [
-#    'pytest', 'coverage'
-#]
-#all = [
-#    'docutils<0.18,>=0.14', 'ipykernel', 'ipython',
-#                'jinja2>=3.0', 'nbsphinx', 'pytest', 'coverage',
-#                'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-bibtex'
-#]
 
-[project.urls]
-Documentation = 'https://sandialabs.github.io/rattlesnake-vibration-controller'
-Repository = 'https://github.com/sandialabs/rattlesnake-vibration-controller'
-
+# Entry Points
 [project.scripts]
 rattlesnake = "rattlesnake.main:main"
+preflight = "rattlesnake.preflight:main"
 
-#[tool.pytest.ini_options]
-#junit_family = 'xunit2'
-#addopts = '--doctest-modules --doctest-continue-on-failure --doctest-glob="*.rst" --verbose --junitxml=report.xml'
-#testpaths = 'tests'
+[project.urls]
+Documentation = "https://sandialabs.github.io/rattlesnake-vibration-controller"
+Repository = "https://github.com/sandialabs/rattlesnake-vibration-controller"
 
-#[tool.coverage.run]
-#omit = [
-#    "setup.py",
-#    "*__main__.py"
-#]
+[tool.hatch.version]
+source = "vcs"
 
-#[tool.coverage.report]
-#exclude_lines = [
-#    "pragma: no coverage",
-#    "if __name__ == '__main__'",
-#    "def main",
-#    "def __repr__"
-#]
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead of 0.0.9+g1234567
 
-#[tool.coverage.html]
-#directory = "coverage_html"
+[tool.hatch.build.targets.wheel]
+packages = ["src/rattlesnake"]
 
-#[tool.flake8]
-#max-line-length = 100
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]  # Ignores files without "test" prefix for pytest runs
+testpaths = ["tests/"]
+pythonpath = ["src", "tests"]
 
-#[tool.pycodestyle]
-#count = true
-#max-line-length = 160
-#statistics = true
+[tool.pylint.format]
+max-line-length = 88  # Match ruff/black default.
 
-#[tool.isort]
-#profile = "black"
-# line_length = 88
-#line_length = 100
-
-[tool.black]
-line-length = 100  # Update from 88 to 100
+[tool.ruff]
+# line-length = 100
+line-length = 88  # The Ruff default is 88 characters, which is also the Black default. Setting it to 88 ensures consistency between Ruff and Black formatting, and is explicit.

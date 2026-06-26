@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>693</width>
-    <height>492</height>
+    <width>914</width>
+    <height>639</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,6 +22,65 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <layout class="QGridLayout" name="button_layout">
+        <item row="10" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="save_file_button">
+            <property name="text">
+             <string>Save File</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="load_file_button">
+            <property name="text">
+             <string>Load File</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="10" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="clear_ip_button">
+            <property name="text">
+             <string>Clear IP Addresses</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="validate_ip_address_button">
+            <property name="text">
+             <string>Autofill/Validate IP Addresses</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QPushButton" name="add_ip_address_button">
+          <property name="toolTip">
+           <string>Adds an environment to the test.</string>
+          </property>
+          <property name="text">
+           <string>Add IP Address</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QPushButton" name="remove_ip_address_button">
+          <property name="toolTip">
+           <string>Removes an environment from the test.</string>
+          </property>
+          <property name="text">
+           <string>Remove Selected IP Address</string>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="0" colspan="2">
          <widget class="QTableWidget" name="ip_address_table">
           <property name="sizePolicy">
@@ -29,9 +88,6 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
-          </property>
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;IP Address Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table populates the host name, IPv4 and IPv6 addresses for LAN-XI Hardware.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <attribute name="verticalHeaderVisible">
            <bool>false</bool>
@@ -53,33 +109,10 @@
           </column>
          </widget>
         </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QPushButton" name="add_ip_address_button">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Add IP Address&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Adds an empty row in the IP Address table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Add IP Address</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QPushButton" name="remove_ip_address_button">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Selected IP Address&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes the IP Address corresponding to the selected row in the IP Address Table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Remove Selected IP Address</string>
-          </property>
-         </widget>
-        </item>
         <item row="3" column="0" colspan="2">
-         <widget class="QPushButton" name="validate_ip_address_button">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Autofill/Validate IP Addresses&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Clicking this button will populate the additional columns of the IP Address Table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
+         <widget class="QPushButton" name="find_ip_button">
           <property name="text">
-           <string>Autofill/Validate IP Addresses</string>
+           <string>Find IP Addresses</string>
           </property>
          </widget>
         </item>

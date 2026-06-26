@@ -1,14 +1,22 @@
-from rattlesnake.utilities import VerboseMessageQueue, DataAcquisitionParameters
-from rattlesnake.environment.abstract_environment import AbstractMetadata
+import multiprocessing as mp
 from abc import ABC, abstractmethod
-from multiprocessing.queues import Queue
-import netCDF4 as nc4
 from datetime import datetime
-import openpyxl
+import traceback
+
+from qtpy import QtWidgets, QtCore
+
+from rattlesnake.engine import RattlesnakeController
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentMetadata,
+    EnvironmentInstructions,
+)
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.user_interface.ui_utilities import UICommands, EventWatcher
 
 
-# region: User Interface
-class AbstractUI(ABC):
+# region User Interface
+class EnvironmentUI(ABC):
     """Abstract User Interface class defining the interface with the controller
 
     This class is used to define the interface between the User Interface of a
@@ -17,75 +25,42 @@ class AbstractUI(ABC):
     @abstractmethod
     def __init__(
         self,
+        environment_type: EnvironmentType,
         environment_name: str,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
+        rattlesnake: RattlesnakeController,
     ):
-        """
-        Stores data required by the controller to interact with the UI
+        self.environment_type = environment_type
+        self.environment_name = environment_name
+        self.rattlesnake = rattlesnake
+        self.hardware_metadata = None
+        self.environment_metadata = None
+        self.definition_widget = None
+        self.system_id_widget = None
+        self.prediction_widget = None
+        self.run_widget = None
+        self.event_thread = None
+        self.event_watcher = None
 
-        This class stores data required by the controller to interact with the
-        user interface for a given environment.  This includes the environment
-        name and queues to pass information between the controller and
-        environment.  It additionally initializes the ``command_map`` which is
-        used by the Test Profile functionality to map profile instructions to
-        operations on the user interface.
-
-
-        Parameters
-        ----------
-        environment_name : str
-            The name of the environment
-        environment_command_queue : VerboseMessageQueue
-            A queue that will provide instructions to the corresponding
-            environment
-        controller_communication_queue : VerboseMessageQueue
-            The queue that relays global communication messages to the controller
-        log_file_queue : Queue
-            The queue that will be used to put messages to the log file.
-
-
-        """
-        self._environment_name = environment_name
-        self._log_name = environment_name + " UI"
-        self._log_file_queue = log_file_queue
-        self._environment_command_queue = environment_command_queue
-        self._controller_communication_queue = controller_communication_queue
-        self._command_map = {
-            "Start Control": self.start_control,
-            "Stop Control": self.stop_control,
-        }
-
+    # region State Sync
     @property
-    def command_map(self) -> dict:
-        """Dictionary mapping profile instructions to functions of the UI that
-        are called when the instruction is executed."""
-        return self._command_map
+    def active(self):
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+                self.environment_name
+            ]
+            return self.rattlesnake.environment_manager.event_container.environment_active_events[
+                queue_name
+            ].is_set()
+        except:
+            return False
+
+    def get_channel_list_bools(self, global_channel_list):
+        channel_set = set(self.hardware_metadata.channel_list)
+        channel_list_bools = [channel in channel_set for channel in global_channel_list]
+        return channel_list_bools
 
     @abstractmethod
-    def start_control(self):
-        """Runs the corresponding environment in the controller"""
-
-    @abstractmethod
-    def stop_control(self):
-        """Stops the corresponding environment in the controller"""
-
-    @abstractmethod
-    def collect_environment_definition_parameters(self) -> AbstractMetadata:
-        """
-        Collect the parameters from the user interface defining the environment
-
-        Returns
-        -------
-        AbstractMetadata
-            A metadata or parameters object containing the parameters defining
-            the corresponding environment.
-
-        """
-
-    @abstractmethod
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -94,58 +69,212 @@ class AbstractUI(ABC):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        hardware_metadata : HardwareMetadata :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 
         """
+        self.hardware_metadata = hardware_metadata
 
     @abstractmethod
-    def initialize_environment(self) -> AbstractMetadata:
-        """
-        Update the user interface with environment parameters
-
-        This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
-
-        Returns
-        -------
-        AbstractMetadata
-            An AbstractMetadata-inheriting object that contains the parameters
-            defining the environment.
-
-        """
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata):
+        """Updates the later environment tabs with environment metadata. This is called after
+        get_environment_metadata when initializing from UI. If loading from a template or
+        existing rattlesnake state, this will be called after set_environment_metadata.
+        This allows you to update the system id, test predictions, and run tab with data from
+        the environment definitions tab."""
+        self.environment_name = environment_metadata.environment_name
+        self.environment_metadata = environment_metadata
 
     @abstractmethod
-    def retrieve_metadata(
-        self, netcdf_handle: nc4._netCDF4.Dataset
-    ):  # pylint: disable=c-extension-no-member
-        """Collects environment parameters from a netCDF dataset.
-
-        This function retrieves parameters from a netCDF dataset that was written
-        by the controller during streaming.  It must populate the widgets
-        in the user interface with the proper information.
-
-        This function is the "read" counterpart to the store_to_netcdf
-        function in the AbstractMetadata class, which will write parameters to
-        the netCDF file to document the metadata.
-
-        Note that the entire dataset is passed to this function, so the function
-        should collect parameters pertaining to the environment from a Group
-        in the dataset sharing the environment's name, e.g.
-
-        ``group = netcdf_handle.groups[self.environment_name]``
-        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+    def get_environment_metadata(self, global_channel_list) -> EnvironmentMetadata:
+        """
+        Collect the parameters from the user interface defining the environment
 
         Parameters
         ----------
-        netcdf_handle : nc4._netCDF4.Dataset :
-            The netCDF dataset from which the data will be read.  It should have
-            a group name with the enviroment's name.
+        global_channel_list : List[Channel] :
+            List of all hardware channels. Since environments deal with subsets of channel list,
+            this is required to build channel list bools
 
+        Returns
+        -------
+        EnvironmentMetadata
+            An EnvironmentMetadata-inheriting object that contains the parameters
+            defining the environment.
         """
+
+    @abstractmethod
+    def set_environment_metadata(self, metadata: EnvironmentMetadata):
+        """
+        Update the user interface from environment metadata
+
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.
+        """
+
+    @abstractmethod
+    def get_environment_instructions(self) -> EnvironmentInstructions:
+        """
+        Compiles environment instructions to give to the main environment class
+        when start_environment is called
+
+        Returns
+        -------
+        EnvironmentInstructions
+            An EnvironmentInstructions-inheriting object that contians parameters
+            in the environment likely to change between runs
+        """
+
+    @abstractmethod
+    def set_environment_instructions(self, instructions: EnvironmentInstructions):
+        """
+        Updates the user interface with environment instructions
+
+        This function is called when wanting to sync the environment ui with an
+        EnvironmentInstructions object. This will most likely set widgets in the
+        environment's run_tab to the values in the EnvironmentInstructions
+        """
+
+    # endregion
+
+    # region Callbacks
+    @abstractmethod
+    def start_environment(self):
+        """
+        This method in the UI class should follow this structure:
+        1. Disable start_environment button
+        2. Call super().start_environment
+        """
+        try:
+            instructions = self.get_environment_instructions()
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+                self.environment_name
+            ]
+            self.rattlesnake.start_environment(instructions)
+        except Exception as e:
+            self.start_environment_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [
+            self.rattlesnake.event_container.environment_active_events[queue_name]
+        ]
+        self.create_event_watcher(
+            ready_event_list, active_event_list, active_event_check=True
+        )
+        self.event_watcher.ready.connect(self.start_environment_ready)
+        self.event_watcher.error.connect(self.start_environment_error)
+        self.event_thread.start()
+
+    @abstractmethod
+    def start_environment_ready(self):
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+
+    @abstractmethod
+    def start_environment_error(self, error):
+        """
+        This method defines how to recover UI if the instruction/environment did
+        not start up correctly. Should follow this structure:
+        1. Enable stop_environment and start_environment button
+        2. Call super().start_environment_error or display error some other way
+        """
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+        self.display_error(error)
+
+    @abstractmethod
+    def stop_environment(self):
+        """
+        This method in the UI class should follow this structure:
+        1. Disable stop_environment button
+        2. Call super().stop_environment
+        """
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+                self.environment_name
+            ]
+            self.rattlesnake.stop_environment(self.environment_name)
+        except Exception as e:
+            self.stop_environment_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [
+            self.rattlesnake.event_container.environment_active_events[queue_name]
+        ]
+        self.create_event_watcher(
+            ready_event_list, active_event_list, active_event_check=False
+        )
+        self.event_watcher.ready.connect(self.stop_environment_ready)
+        self.event_watcher.error.connect(self.stop_environment_error)
+        self.event_thread.start()
+
+    @abstractmethod
+    def stop_environment_ready(self):
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+
+    @abstractmethod
+    def stop_environment_error(self, error):
+        """
+        This method defines how to recover UI if the instruction/environment did
+        not start up correctly. Should follow this structure:
+        1. Enable stop_environment and start_environment button
+        2. Call super().start_environment_error or display error some other way
+        """
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+        self.display_error(error)
+
+    @abstractmethod
+    def display_environment_started(self):
+        """
+        This command is called when the environment process officially
+        starts up. Needs to prevent user from starting environment again until
+        display_environment ended has been called.
+        """
+
+    @abstractmethod
+    def display_environment_ended(self):
+        """
+        This command is called when the environment process has officially
+        shut down. Needs to enable the user to start up the process again.
+        """
+
+    # region Commands
+    @property
+    def log_file_queue(self) -> mp.Queue:
+        """A property containing a reference to the queue accepting messages
+        that will be written to the log file"""
+        return self.rattlesnake.queue_container.log_file_queue
+
+    @property
+    def gui_update_queue(self) -> mp.Queue:
+        return self.rattlesnake.queue_container.gui_update_queue
+
+    @property
+    def log_name(self):
+        """A property containing the name that the UI will be referenced by in
+        the log file, which will typically be ``self.environment_name + ' UI'``"""
+        return self.environment_name + " UI"
 
     @abstractmethod
     def update_gui(self, queue_data: tuple):
@@ -164,35 +293,44 @@ class AbstractUI(ABC):
             defines and operation or widget to be modified and ``data`` contains
             the data used to perform the operation.
         """
+        command, data = queue_data
+        match command:
+            case UICommands.ENVIRONMENT_STARTED:
+                self.display_environment_started()
+            case UICommands.ENVIRONMENT_ENDED:
+                self.display_environment_ended()
+            case UICommands.SET_ENVIRONMENT_INSTRUCTIONS:
+                self.set_environment_instructions(data)
+            case UICommands.SET_ATTR:
+                attr, data = data
+                for parent in [
+                    self.definition_widget,
+                    self.run_widget,
+                    self.system_id_widget,
+                    self.prediction_widget,
+                ]:
+                    try:
+                        widget = getattr(parent, attr)
+                        break
+                    except AttributeError:
+                        continue
+                if isinstance(widget, QtWidgets.QDoubleSpinBox):
+                    widget.setValue(data)
+                elif isinstance(widget, QtWidgets.QSpinBox):
+                    widget.setValue(data)
+                elif isinstance(widget, QtWidgets.QLineEdit):
+                    widget.setText(data)
+                elif isinstance(widget, QtWidgets.QListWidget):
+                    widget.clear()
+                    widget.addItems([f"{d:.3f}" for d in data])
+                else:
+                    print(
+                        f"{widget} is not found in {self.environment_name} uesr interface"
+                    )
+            case _:
+                return False
 
-    @property
-    def log_file_queue(self) -> Queue:
-        """A property containing a reference to the queue accepting messages
-        that will be written to the log file"""
-        return self._log_file_queue
-
-    @property
-    def environment_command_queue(self) -> VerboseMessageQueue:
-        """A property containing a reference to the queue accepting commands
-        that will be delivered to the environment"""
-        return self._environment_command_queue
-
-    @property
-    def controller_communication_queue(self) -> VerboseMessageQueue:
-        """A property containing a reference to the queue accepting global
-        commands that will be delivered to the controller"""
-        return self._controller_communication_queue
-
-    @property
-    def environment_name(self):
-        """A property containing the environment's name"""
-        return self._environment_name
-
-    @property
-    def log_name(self):
-        """A property containing the name that the UI will be referenced by in
-        the log file, which will typically be ``self.environment_name + ' UI'``"""
-        return self._log_name
+        return True
 
     def log(self, message: str):
         """Write a message to the log file
@@ -212,52 +350,39 @@ class AbstractUI(ABC):
         """
         self.log_file_queue.put(f"{datetime.now()}: {self.log_name} -- {message}\n")
 
-    @staticmethod
-    @abstractmethod
-    def create_environment_template(
-        environment_name: str, workbook: openpyxl.workbook.workbook.Workbook
+    def create_event_watcher(
+        self, ready_event_list, active_event_list, *, active_event_check: bool = None
     ):
-        """Creates a template worksheet in an Excel workbook defining the
-        environment.
+        if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            print("Event watcher is still active")
+            return
+        self.event_thread = QtCore.QThread()
+        self.event_watcher = EventWatcher(
+            ready_event_list,
+            active_event_list,
+            self.rattlesnake.event_container.ping_alive_event,
+            active_event_check=active_event_check,
+            timeout=self.rattlesnake.timeout,
+        )
+        self.event_watcher.moveToThread(self.event_thread)
+        self.event_thread.started.connect(self.event_watcher.run)
 
-        This function creates a template worksheet in an Excel workbook that
-        when filled out could be read by the controller to re-create the
-        environment.
+    def clean_up_event_watcher(self):
+        if getattr(self, "event_thread", None):
+            self.event_thread.quit()
+            self.event_thread.wait()
+            self.event_thread.deleteLater()
+            self.event_thread = None
+        if getattr(self, "event_watcher", None):
+            self.event_watcher.deleteLater()
+            self.event_watcher = None
 
-        This function is the "write" counterpart to the
-        ``set_parameters_from_template`` function in the ``AbstractUI`` class,
-        which reads the values from the template file to populate the user
-        interface.
-
-        Parameters
-        ----------
-        environment_name : str :
-            The name of the environment that will specify the worksheet's name
-        workbook : openpyxl.workbook.workbook.Workbook :
-            A reference to an ``openpyxl`` workbook.
-
-        """
-
-    @abstractmethod
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        """
-        Collects parameters for the user interface from the Excel template file
-
-        This function reads a filled out template worksheet to create an
-        environment.  Cells on this worksheet contain parameters needed to
-        specify the environment, so this function should read those cells and
-        update the UI widgets with those parameters.
-
-        This function is the "read" counterpart to the
-        ``create_environment_template`` function in the ``AbstractUI`` class,
-        which writes a template file that can be filled out by a user.
-
-
-        Parameters
-        ----------
-        worksheet : openpyxl.worksheet.worksheet.Worksheet
-            An openpyxl worksheet that contains the environment template.
-            Cells on this worksheet should contain the parameters needed for the
-            user interface.
-
-        """
+    def display_error(self, error_message):
+        tb = traceback.format_exc()
+        self.log(f"ERROR\n\n {error_message}")
+        self.gui_update_queue.put(
+            (
+                UICommands.ERROR,
+                (f"{self.log_name} Error", f"ERROR:\n\n{error_message}"),
+            )
+        )

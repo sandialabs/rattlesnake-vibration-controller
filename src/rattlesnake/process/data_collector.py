@@ -112,13 +112,17 @@ class FrameBuffer:
         """
         self.samples_per_frame = samples_per_frame
         self.trigger_index = trigger_index
-        self.pretrigger_samples = int(pretrigger * samples_per_frame) if trigger_enabled else 0
+        self.pretrigger_samples = (
+            int(pretrigger * samples_per_frame) if trigger_enabled else 0
+        )
         self.positive_slope = positive_slope
         self.trigger_level = trigger_level
         self.hysteresis_level = hysteresis_level
         self.hysteresis_samples = hysteresis_samples
         self.samples_per_frame = samples_per_frame
-        self.overlap_samples = samples_per_frame - int(maximum_overlap * samples_per_frame)
+        self.overlap_samples = samples_per_frame - int(
+            maximum_overlap * samples_per_frame
+        )
         self.manual_accept = manual_accept
         self.waiting_for_accept = False
         self._buffer = starting_value * np.ones(
@@ -166,12 +170,14 @@ class FrameBuffer:
             # print('Waiting for Accept')
             return []
         if self.trigger_enabled and (
-            (self.trigger_only_first and self.first_trigger) or not self.trigger_only_first
+            (self.trigger_only_first and self.first_trigger)
+            or not self.trigger_only_first
         ):
             # print('Getting trigger based on signal')
             trigger_data = self.buffer_data[
                 self.trigger_index,
-                self.pretrigger_samples : self.samples_per_frame + self.pretrigger_samples,
+                self.pretrigger_samples : self.samples_per_frame
+                + self.pretrigger_samples,
             ]
             if self.positive_slope:
                 indices = (trigger_data[:-1] < self.trigger_level) & (
@@ -189,7 +195,11 @@ class FrameBuffer:
                 absdiff = np.abs(np.diff(iszero))
                 ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
                 reset_indices = np.array(
-                    [r[-1] - 1 for r in ranges if r[1] - r[0] > self.hysteresis_samples - 2]
+                    [
+                        r[-1] - 1
+                        for r in ranges
+                        if r[1] - r[0] > self.hysteresis_samples - 2
+                    ]
                 )
             triggers = list(
                 self.buffer_size_frame_multiplier * self.samples_per_frame
@@ -233,7 +243,8 @@ class FrameBuffer:
             # Get the next triggers that are in the data
             # print('Getting trigger based on spacing')
             last_trigger_rectified = (
-                self.buffer_size_frame_multiplier * self.samples_per_frame - self.last_trigger
+                self.buffer_size_frame_multiplier * self.samples_per_frame
+                - self.last_trigger
             )
             triggers_available = int(
                 (self.samples_per_frame - last_trigger_rectified) / self.overlap_samples
@@ -536,7 +547,10 @@ class CollectorMetadata:
     def __eq__(self, other):
         try:
             return np.all(
-                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
+                [
+                    np.all(value == other.__dict__[field])
+                    for field, value in self.__dict__.items()
+                ]
             )
         except (AttributeError, KeyError):
             return False
@@ -575,7 +589,9 @@ class DataCollectorProcess(AbstractMessageProcess):
 
         """
         super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
-        self.map_command(DataCollectorCommands.INITIALIZE_COLLECTOR, self.initialize_collector)
+        self.map_command(
+            DataCollectorCommands.INITIALIZE_COLLECTOR, self.initialize_collector
+        )
         self.map_command(
             DataCollectorCommands.FORCE_INITIALIZE_COLLECTOR,
             self.force_initialize_collector,
@@ -584,7 +600,9 @@ class DataCollectorProcess(AbstractMessageProcess):
         self.map_command(DataCollectorCommands.STOP, self.stop)
         self.map_command(DataCollectorCommands.ACCEPT, self.accept)
         self.map_command(DataCollectorCommands.SET_TEST_LEVEL, self.set_test_level)
-        self.map_command(DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, self.clear_kurtosis_buffer)
+        self.map_command(
+            DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, self.clear_kurtosis_buffer
+        )
         self.environment_command_queue = environment_command_queue
         self.environment_name = environment_name
         self.collector_metadata = None
@@ -640,7 +658,8 @@ class DataCollectorProcess(AbstractMessageProcess):
             self.collector_metadata.overlap_fraction,
             self.collector_metadata.acceptance == Acceptance.MANUAL,
             self.collector_metadata.acquisition_type != AcquisitionType.FREE_RUN,
-            self.collector_metadata.acquisition_type == AcquisitionType.TRIGGER_FIRST_FRAME,
+            self.collector_metadata.acquisition_type
+            == AcquisitionType.TRIGGER_FIRST_FRAME,
             self.collector_metadata.wait_samples,
         )
         if self.collector_metadata.kurtosis_buffer_length is not None:
@@ -660,13 +679,19 @@ class DataCollectorProcess(AbstractMessageProcess):
             self.reference_window = 1
             self.response_window = 1
         elif self.collector_metadata.window == Window.HANN:
-            self.reference_window = sig.get_window("hann", self.collector_metadata.frame_size)
+            self.reference_window = sig.get_window(
+                "hann", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.HAMMING:
-            self.reference_window = sig.get_window("hamming", self.collector_metadata.frame_size)
+            self.reference_window = sig.get_window(
+                "hamming", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.FLATTOP:
-            self.reference_window = sig.get_window("flattop", self.collector_metadata.frame_size)
+            self.reference_window = sig.get_window(
+                "flattop", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.TUKEY:
             self.reference_window = sig.get_window(
@@ -700,8 +725,10 @@ class DataCollectorProcess(AbstractMessageProcess):
             )
             self.response_window = self.reference_window.copy()
             non_pulse_samples = (
-                np.arange(self.collector_metadata.frame_size) + 1
-            ) / self.collector_metadata.frame_size > self.collector_metadata.window_parameter_1
+                (np.arange(self.collector_metadata.frame_size) + 1)
+                / self.collector_metadata.frame_size
+                > self.collector_metadata.window_parameter_1
+            )
             self.reference_window[non_pulse_samples] = 0
         else:
             raise ValueError("Invalid Window Type")
@@ -731,12 +758,16 @@ class DataCollectorProcess(AbstractMessageProcess):
         """
         try:
             acquisition_data, last_data = self.data_in_queue.get(timeout=10)
-            self.log(f"Acquired Data with shape {acquisition_data.shape} and Last Data {last_data}")
+            self.log(
+                f"Acquired Data with shape {acquisition_data.shape} and Last Data {last_data}"
+            )
             self.log(f"Data Average RMS: {rms_time(acquisition_data):0.4f}")
         except mp.queues.Empty:
             # Keep running until stopped
             #            self.log('No Incoming Data!')
-            self.command_queue.put(self.process_name, (DataCollectorCommands.ACQUIRE, None))
+            self.command_queue.put(
+                self.process_name, (DataCollectorCommands.ACQUIRE, None)
+            )
             return
         # Add data to buffer
         self.log("Putting Data to Buffer")
@@ -769,14 +800,18 @@ class DataCollectorProcess(AbstractMessageProcess):
                 frame = np.copy(frame)
                 accepted = self.acceptance_function(frame)
                 response_frame = frame[self.collector_metadata.response_channel_indices]
-                reference_frame = frame[self.collector_metadata.reference_channel_indices]
+                reference_frame = frame[
+                    self.collector_metadata.reference_channel_indices
+                ]
                 if self.collector_metadata.response_transformation_matrix is not None:
                     response_frame = (
-                        self.collector_metadata.response_transformation_matrix @ response_frame
+                        self.collector_metadata.response_transformation_matrix
+                        @ response_frame
                     )
                 if self.collector_metadata.reference_transformation_matrix is not None:
                     reference_frame = (
-                        self.collector_metadata.reference_transformation_matrix @ reference_frame
+                        self.collector_metadata.reference_transformation_matrix
+                        @ reference_frame
                     )
                 self.log(
                     f"Received output from framebuffer with RMS: \n  "
@@ -787,7 +822,10 @@ class DataCollectorProcess(AbstractMessageProcess):
                 reference_frame *= self.reference_window / self.test_level
                 if accepted and not self.frame_buffer.manual_accept:
                     self.gui_update_queue.put(
-                        (self.environment_name, (DataCollectorUICommands.TIME_FRAME, (frame, True)))
+                        (
+                            self.environment_name,
+                            (DataCollectorUICommands.TIME_FRAME, (frame, True)),
+                        )
                     )
                     self.log("Sending data")
                     if self.collector_metadata.kurtosis_buffer_length is not None:
@@ -802,8 +840,12 @@ class DataCollectorProcess(AbstractMessageProcess):
                             )
                         )
                     # Separate into response and reference
-                    response_fft = rfft(response_frame, axis=-1) * self.window_correction
-                    reference_fft = rfft(reference_frame, axis=-1) * self.window_correction
+                    response_fft = (
+                        rfft(response_frame, axis=-1) * self.window_correction
+                    )
+                    reference_fft = (
+                        rfft(reference_frame, axis=-1) * self.window_correction
+                    )
                     for queue in self.data_out_queues:
                         queue.put(copy.deepcopy((response_fft, reference_fft)))
                     self.log("Sent Data")
@@ -824,7 +866,9 @@ class DataCollectorProcess(AbstractMessageProcess):
                     )
         # Keep running until stopped
         if not last_data:
-            self.command_queue.put(self.process_name, (DataCollectorCommands.ACQUIRE, None))
+            self.command_queue.put(
+                self.process_name, (DataCollectorCommands.ACQUIRE, None)
+            )
         else:
             self.stop(None)
 

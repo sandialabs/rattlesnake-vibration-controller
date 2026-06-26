@@ -69,9 +69,9 @@ files = [
 # "../src/rattlesnake/components/combined_environments_controller.ui",
 # "../src/rattlesnake/components/control_select.ui",
 
+
 class UIAnalyzer(QtWidgets.QMainWindow):
-    """A Class to analyze the contents of a .ui file and create a markdown file documenting it
-    """
+    """A Class to analyze the contents of a .ui file and create a markdown file documenting it"""
 
     def __init__(self, ui_file):
         """Initializes the UI Analyzer object
@@ -232,14 +232,21 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             structure_dictionary = {}
 
         if isinstance(full_structure["widget"], QtWidgets.QGroupBox):
-            structure_dictionary[full_structure["widget"].title()] = full_structure.copy()
+            structure_dictionary[full_structure["widget"].title()] = (
+                full_structure.copy()
+            )
             del structure_dictionary[full_structure["widget"].title()]["children"]
             structure_dictionary[full_structure["widget"].title()]["children"] = {}
-            children_dictionary = structure_dictionary[full_structure["widget"].title()]["children"]
+            children_dictionary = structure_dictionary[
+                full_structure["widget"].title()
+            ]["children"]
         else:
             children_dictionary = structure_dictionary
 
-        if full_structure["tooltip"] is not None and full_structure["tooltip"].strip() != "":
+        if (
+            full_structure["tooltip"] is not None
+            and full_structure["tooltip"].strip() != ""
+        ):
             label, message = self.parse_tooltip(full_structure["tooltip"])
             structure_dictionary[label] = full_structure.copy()
             del structure_dictionary[label]["children"]
@@ -331,7 +338,12 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         """
         struct = self.reduced_structure()
         markdown_text, markdown_figures = self._generate_item_markdown(struct)
-        return f"---\nnumbering:\n  figure: false\n---\n# {self.name}\n\n"+markdown_text + "\n\n" + markdown_figures
+        return (
+            f"---\nnumbering:\n  figure: false\n---\n# {self.name}\n\n"
+            + markdown_text
+            + "\n\n"
+            + markdown_figures
+        )
 
     def _generate_item_markdown(self, reduced_structure):
         this_text_markdown = ""
@@ -344,7 +356,9 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 figure_full_path = os.path.join(
                     "book", "src", "_generated", "figures", figure_file_name
                 ).replace("\\", "/")
-                figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
+                figure_rel_path = os.path.join("figures", figure_file_name).replace(
+                    "\\", "/"
+                )
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 px = self.generate_documentation_figure(struct["widget"])
                 px.save(figure_full_path)
@@ -358,8 +372,10 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(
                     "book", "src", "_generated", "figures", figure_file_name
-                ).replace('\\','/')
-                figure_rel_path = os.path.join("figures", figure_file_name).replace('\\','/')
+                ).replace("\\", "/")
+                figure_rel_path = os.path.join("figures", figure_file_name).replace(
+                    "\\", "/"
+                )
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 label, message = self.parse_tooltip(struct["tooltip"])
                 px = self.generate_documentation_figure(struct["widget"])
@@ -367,12 +383,15 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
                 this_figure_markdown += f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n **{label}** {message}\n:::"
                 this_text_markdown = (
-                    this_text_markdown + f"\n* [**{label}**](#{figure_ref_name}) {message}"
+                    this_text_markdown
+                    + f"\n* [**{label}**](#{figure_ref_name}) {message}"
                 )
 
             # Go through its children
             if "children" in struct:
-                child_text, child_figure = self._generate_item_markdown(struct["children"])
+                child_text, child_figure = self._generate_item_markdown(
+                    struct["children"]
+                )
                 this_text_markdown = this_text_markdown + child_text
                 this_figure_markdown = this_figure_markdown + child_figure
 
@@ -381,7 +400,9 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
         return this_text_markdown, this_figure_markdown
 
-    def generate_documentation_figure(self, widget, padding=100, box_thickness=2, box_padding=5):
+    def generate_documentation_figure(
+        self, widget, padding=100, box_thickness=2, box_padding=5
+    ):
         item_rect = widget.rect()
         parent_window = widget.window()
         position = widget.mapTo(parent_window, item_rect.topLeft())

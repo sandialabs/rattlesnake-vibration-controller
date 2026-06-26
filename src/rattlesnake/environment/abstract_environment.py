@@ -22,20 +22,28 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
-from multiprocessing.queues import Queue
+from enum import Enum
+from multiprocessing import queues
+from typing import List
+import multiprocessing as mp
+import multiprocessing.queues as mpqueue
+import queue as thqueue
+
+import openpyxl
 import netCDF4 as nc4
+
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
-    DataAcquisitionParameters,
+    RattlesnakeError,
     GlobalCommands,
     VerboseMessageQueue,
 )
-from rattlesnake.user_interface.ui_utilities import UICommands
 
 PICKLE_ON_ERROR = False
 
@@ -43,26 +51,135 @@ if PICKLE_ON_ERROR:
     import pickle
 
 
-# region Metadata
-class AbstractMetadata(ABC):
-    """Abstract class for storing metadata for an environment.
-
-    This class is used as a storage container for parameters used by an
-    environment.  It is returned by the environment UI's
-    ``collect_environment_definition_parameters`` function as well as its
-    ``initialize_environment`` function.  Various parts of the controller and
-    environment will query the class's data members for parameter values.
-
-    Classes inheriting from AbstractMetadata must define:
-      1. store_to_netcdf - A function defining the way the parameters are
-         stored to a netCDF file saved during streaming operations.
+# region Commands
+class EnvironmentCommands(Enum):
+    """
+    Treat this as an ABC for the commands. Initialize it as
+    CommandClass(EnvironmentCommands).
     """
 
+    _ignore_ = ("VALID_PROFILE_COMMANDS", "VALID_DATA")
+    VALID_PROFILE_COMMANDS = ()
+    VALID_DATA = {}
+
+    @property
+    def label(self):
+        return self.name.replace("_", " ").title()
+
+    @classmethod
+    def valid_data(cls):
+        valid_data = {
+            cls(command): data for command, data in cls.VALID_DATA.value.items()
+        }
+        return valid_data
+
+    @classmethod
+    def valid_profile_commands(cls):
+        valid_commands = tuple(
+            cls(command) for command in cls.VALID_PROFILE_COMMANDS.value
+        )
+        return valid_commands
+
+
+class EnvironmentUICommands(Enum):
+    """These are extra commands that the UI needs to use"""
+
+
+# endregion
+
+
+# region Metadata
+class EnvironmentMetadata(ABC):
+    """
+    Abstract class for storing metadata for an environment.
+
+    This class is used as a storage container for parameters used by an
+    environment.  It is built by Environment UI's and passed to the main
+    Rattlesnake process. The class is used to initialize environment data
+    for the acquisition, output, and streaming process. Must fully define
+    environment and be able to rebuild full UI based off the data in this
+    class.
+    """
+
+    def __init__(
+        self,
+        environment_type: EnvironmentType,
+        environment_name: str,
+        channel_list_bools: list = [],
+        sample_rate: int = None,
+    ):
+        """
+        Initializes the environment metadata class with all attributes
+        required to fully define environment.
+
+        The environment_type should be specified from a EnvironmentType
+        enum in environment_utilities and should not be required as an
+        input to the specified environment instructions. Just force it
+        as an input to super().__init__() when you define the specific
+        EnvironmentMetadata class.
+        """
+        self.environment_type = environment_type
+        self.environment_name = (
+            environment_name  # Name used for logging TASK_NAMES, UI, etc.
+        )
+        self.sample_rate = sample_rate
+        self.channel_list_bools = channel_list_bools
+        self.queue_name = (
+            None  # Unique name used to track specific environment. Used for queues.
+        )
+
+    @property
+    def channel_indices(self):
+        """Method to return the row indices of the hardware_channel_list that
+        contains channels in the environment_channel_list"""
+        channel_bools = self.channel_list_bools
+        channel_indices = [
+            index
+            for index, environment_bool in enumerate(channel_bools)
+            if environment_bool
+        ]
+        return channel_indices
+
+    def environment_channel_list(self, channel_list):
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(channel_list, self.channel_list_bools)
+            if channel_bool
+        ]
+        return environment_channel_list
+
+    # endregion
+
+    # region Validation
     @abstractmethod
-    def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group
-    ):  # pylint: disable=c-extension-no-member
-        """Store parameters to a group in a netCDF streaming file.
+    def validate(self, hardware_metadata):
+        """
+        Validate whether the metadata will work for that environment.
+
+        Throw errors if metadata is invalid. This should contain checks for
+        things like duplicate channel_list entries, valid control channels,
+        etc.
+        """
+        if not isinstance(self.environment_type, EnvironmentType):
+            raise RattlesnakeError(
+                f"{self.environment_type} is not a valid ControlType"
+            )
+
+        if not isinstance(self.environment_name, str):
+            raise RattlesnakeError(f"{self.environment_name} must be a string")
+
+        if len(self.channel_list_bools) != len(hardware_metadata.channel_list):
+            raise RattlesnakeError(
+                f"{self.environment_name} channel list bools is not the same length as channel list"
+            )
+
+    # endregion
+
+    # region Loading
+    @abstractmethod
+    def save_metadata_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
+        """
+        Store parameters to a group in a netCDF streaming file.
 
         This function stores parameters from the environment into the netCDF
         file in a group with the environment's name as its name.  The function
@@ -79,7 +196,167 @@ class AbstractMetadata(ABC):
         netcdf_group_handle : nc4._netCDF4.Group
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
+        """
 
+    @classmethod
+    @abstractmethod
+    def load_metadata_from_netcdf(
+        cls,
+        netcdf_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment's name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment's name.
+
+        """
+
+    @classmethod
+    @abstractmethod
+    def create_blank_worksheet_template(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+    ):
+        """
+        Create blank worksheet template for environment metadata to store to excel file
+        """
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 3, "v4.0")
+
+    @abstractmethod
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
+        """
+        Store parameters to a worksheet in an netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment's name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment's parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the "write" counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            A reference to the worksheet within the excel file where the
+            environment's metadata is stored.
+        """
+        self.create_blank_worksheet_template(worksheet)
+
+    @classmethod
+    @abstractmethod
+    def load_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from an Excel worksheet.
+
+        This function retrieves parameters from an Excel worksheet that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_worksheet
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a worksheet
+        in the worksheet sharing the environment's name, e.g.
+
+        """
+
+    # endregion
+
+
+# region Instructions
+class EnvironmentInstructions(ABC):
+    """Environment Instructions class that defines startup of environment
+
+    This is an class given to the controller as input to the intial
+    start_control function call for that environment. It is used to
+    define aspects such as test_level or repeating_signals that need
+    to be defined quickly without needing to be stored to netcdf4 file.
+
+    If no instructions are given to controller for an environment, the
+    first start_control function call will be given with a None as the
+    datatype.
+
+    If profile events are being used, this will be given to the controller
+    when "Start Profile" button is clicked. If a profile is not being used,
+    you are responsible for sending this to the controller with:
+
+    queue_container.controller_command_queue.put(
+        TASK_NAME,
+        (GlobalCommands.INITIALIZE_INSTRUCTIONS, (EnvironmentInstructions,))
+    )
+
+    when the "Start" button on your run tab is pressed, most likely
+    right before the GlobalCommand.START_ENVIRONMENT for that environment
+    would be called.
+
+    Parameters
+    ---------
+    queue_name : str
+        This is the queue_name which is the key corresponding to all the
+        dicts that store information about the environment. This name is
+        forced to be unique and is used to track the environment. The
+        queue_name is known in the EnvironmentManager, EnvironmentUI, and
+        EnvironmentProcess
+    """
+
+    def __init__(self, environment_type, environment_name):
+        """
+        Initializes the environment instructions class with attributes
+        that will be defined to the run tab of the environment ui. These
+        are attributes that dont need to be stored during
+        initialize_environment and can instead be passed to the
+        EnvironmentProcess.start_control function.
+
+        The environment_type should be specified from a EnvironmentType
+        enum in environment_utilities and should not be required as an
+        input to the specified environment instructions. Just force it
+        as an input to super().__init__() when you define the specific
+        EnvironmentInstructions class. The environment_type is validated
+        so that the instructions class is passed to the correct environment.
+        """
+        self.environment_type = environment_type
+        self.environment_name = environment_name
+
+    @abstractmethod
+    def validate(self):
+        """
+        Validates the instruction to make sure that it will work with a
+        given environment. Should throw errors describing why that
+        instruction is invalid.
         """
 
 
@@ -87,7 +364,7 @@ class AbstractMetadata(ABC):
 
 
 # region Environment
-class AbstractEnvironment(ABC):
+class Environment(ABC):
     """Abstract Environment class defining the interface with the controller
 
     This class is used to define the operation of an environment within the
@@ -133,61 +410,123 @@ class AbstractEnvironment(ABC):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         command_queue: VerboseMessageQueue,
-        gui_update_queue: Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
-        data_in_queue: Queue,
-        data_out_queue: Queue,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        gui_update_queue: mp.Queue,
+        controller_command_queue: VerboseMessageQueue,
+        log_file_queue: mp.Queue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
     ):
-        self._environment_name = environment_name
+        """
+        Initializes the environment process and maps the global commands to functions.
+
+        You can set more commands to the command_map with self.map_command(). These commands
+        are recieved from the environment_command_queue and will mostly recieve None types as
+        the data package. It is recommended to have a START_ENVIRONMENT command.
+        """
+        self.environment_name = environment_name  # Used for UI/Metadata/Instructions. Must be unique, can change adaptively. Converted to queue_name in Rattlesnake()
+        self._queue_name = (
+            queue_name  # Internal ID mapping initialized queues to this environment.
+        )
         self._command_queue = command_queue
         self._gui_update_queue = gui_update_queue
-        self._controller_communication_queue = controller_communication_queue
+        self._controller_command_queue = controller_command_queue
         self._log_file_queue = log_file_queue
         self._data_in_queue = data_in_queue
         self._data_out_queue = data_out_queue
+        self._ready_event = ready_event
+        self._active_event = active_event
         self._command_map = {
             GlobalCommands.QUIT: self.quit,
-            GlobalCommands.INITIALIZE_DATA_ACQUISITION: self.initialize_data_acquisition_parameters,
-            GlobalCommands.INITIALIZE_ENVIRONMENT_PARAMETERS: self.initialize_environment_test_parameters,
+            GlobalCommands.INITIALIZE_HARDWARE: self.initialize_hardware,
+            GlobalCommands.INITIALIZE_ENVIRONMENT: self.initialize_environment,
             GlobalCommands.STOP_ENVIRONMENT: self.stop_environment,
         }
-        self._acquisition_active = acquisition_active
-        self._output_active = output_active
+        self._acquisition_active_event = acquisition_active_event
+        self._output_active_event = output_active_event
+        # self.set_ready() # Call this at the end of your function
+
+    # region Commands
+    @property
+    def command_map(self) -> dict:
+        """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
+        return self._command_map
+
+    def map_command(self, key, function):
+        """A function that maps an instruction to a function in the ``command_map``.
+
+        Parameters
+        ----------
+        key :
+            The instruction that will be pulled from the ``command_queue``.
+
+        function :
+            A reference to the function that will be called when the ``key``
+            message is received.
+        """
+        self._command_map[key] = function
+
+    # endregion
+
+    # region Events
+    def set_ready(self):
+        self._ready_event.set()
+
+    def clear_ready(self):
+        self._ready_event.clear()
+
+    @property
+    def ready(self):
+        return self._ready_event.is_set()
+
+    def set_active(self):
+        self._active_event.set()
+
+    def clear_active(self):
+        self._active_event.clear()
+
+    @property
+    def active(self):
+        return self._active_event.is_set()
 
     @property
     def acquisition_active(self):
-        """Flag to check if acquisition is active"""
+        """Flag to check if acquisition is active."""
         # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
-        return bool(self._acquisition_active.value)
+        return self._acquisition_active_event.is_set()
 
     @property
     def output_active(self):
-        """Flag to check if output is active"""
+        """Flag to check if output is active."""
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
-        return bool(self._output_active.value)
+        return self._output_active_event.is_set()
 
+    # endregion
+
+    # region State Sync
     @abstractmethod
-    def initialize_data_acquisition_parameters(
-        self, data_acquisition_parameters: DataAcquisitionParameters
-    ):
-        """Initialize the data acquisition parameters in the environment.
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+        """Initialize the hardware parameters in the environment.
 
-        The environment will receive the global data acquisition parameters from
+        The environment will receive the hardware parameters from
         the controller, and must set itself up accordingly.
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
-            A container containing data acquisition parameters, including
-            channels active in the environment as well as sampling parameters.
+        hardware_metadata : HardwareMetadata :
+            A specific metadata class containing information about
+            specific hardware metadata. Assume you are only getting
+            the attributes in the base HardwareMetadata class.
         """
+        # self.set_ready() # Call this at the end of your function
 
     @abstractmethod
-    def initialize_environment_test_parameters(self, environment_parameters: AbstractMetadata):
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata) -> None:
         """
         Initialize the environment parameters specific to this environment
 
@@ -196,27 +535,20 @@ class AbstractEnvironment(ABC):
 
         Parameters
         ----------
-        environment_parameters : AbstractMetadata
-            A container containing the parameters defining the environment
-
+        environment_metadata : EnvironmentMetadata
+            A container containing the parameters defining the environment.
         """
+        self.environment_name = environment_metadata.environment_name
+        self.environment_metadata = environment_metadata
+        # self.set_ready() # Call this at the end of your function
 
-    @abstractmethod
-    def stop_environment(self, data):
-        """Stop the environment gracefully
+    # endregion
 
-        This function defines the operations to shut down the environment
-        gracefully so there is no hard stop that might damage test equipment
-        or parts.
-
-        Parameters
-        ----------
-        data : Ignored
-            This parameter is not used by the function but must be present
-            due to the calling signature of functions called through the
-            ``command_map``
-
-        """
+    # region Process
+    @property
+    def queue_name(self) -> str:
+        """A string defining the queue name asigned to the environment."""
+        return self._queue_name
 
     @property
     def environment_command_queue(self) -> VerboseMessageQueue:
@@ -224,32 +556,32 @@ class AbstractEnvironment(ABC):
         return self._command_queue
 
     @property
-    def data_in_queue(self) -> Queue:
-        """The queue from which data is delivered to the environment"""
+    def data_in_queue(self) -> mp.Queue:
+        """The queue from which data is delivered to the environment."""
         return self._data_in_queue
 
     @property
-    def data_out_queue(self) -> Queue:
-        """The queue to which data is written that will be output to exciters"""
+    def data_out_queue(self) -> mp.Queue:
+        """The queue to which data is written that will be output to exciters."""
         return self._data_out_queue
 
     @property
-    def gui_update_queue(self) -> Queue:
-        """The queue that GUI update instructions are written to"""
+    def gui_update_queue(self) -> mp.Queue:
+        """The queue that GUI update instructions are written to."""
         return self._gui_update_queue
 
     @property
-    def controller_communication_queue(self) -> Queue:
-        """The queue that global controller updates are written to"""
-        return self._controller_communication_queue
+    def controller_command_queue(self) -> mp.Queue:
+        """The queue that global controller updates are written to."""
+        return self._controller_command_queue
 
     @property
-    def log_file_queue(self) -> Queue:
-        """The queue that log file messages are written to"""
+    def log_file_queue(self) -> mp.Queue:
+        """The queue that log file messages are written to."""
         return self._log_file_queue
 
     def log(self, message: str):
-        """Write a message to the log file
+        """Write a message to the log file.
 
         This function puts a message onto the ``log_file_queue`` so it will
         eventually be written to the log file.
@@ -263,35 +595,12 @@ class AbstractEnvironment(ABC):
         message : str :
             A message that will be written to the log file.
         """
-        self.log_file_queue.put(f"{datetime.now()}: {self.environment_name} -- {message}\n")
+        self.log_file_queue.put(
+            f"{datetime.now()}: {self.environment_name} -- {message}\n"
+        )
 
-    @property
-    def environment_name(self) -> str:
-        """A string defining the name of the environment"""
-        return self._environment_name
-
-    @property
-    def command_map(self) -> dict:
-        """A dictionary that maps commands received by the ``command_queue`` to functions in the class"""
-        return self._command_map
-
-    def map_command(self, key, function):
-        """A function that maps an instruction to a function in the ``command_map``
-
-        Parameters
-        ----------
-        key :
-            The instruction that will be pulled from the ``command_queue``
-
-        function :
-            A reference to the function that will be called when the ``key``
-            message is received.
-
-        """
-        self._command_map[key] = function
-
-    def run(self):
-        """The main function that is run by the environment's process
+    def run(self, shutdown_event: mp.synchronize.Event):
+        """The main function that is run by the environment's process.
 
         A function that is called by the environment's process function that
         sits in a while loop waiting for instructions on the command queue.
@@ -302,13 +611,16 @@ class AbstractEnvironment(ABC):
         the ``data`` is passed to that function as the argument.  If the
         function returns a truthy value, it signals to the ``run`` function
         that it is time to stop the loop and exit.
-
-
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while True:
+        while not shutdown_event.is_set():
             # Get the message from the queue
-            message, data = self.environment_command_queue.get(self.environment_name)
+            try:
+                message, data = self.environment_command_queue.get(
+                    self.environment_name
+                )
+            except (thqueue.Empty, mpqueue.Empty):
+                continue
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]
@@ -327,16 +639,20 @@ class AbstractEnvironment(ABC):
                         UICommands.ERROR,
                         (
                             f"{self.environment_name} Error",
-                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
+                            f"ERROR:\n\n{tb}",
                         ),
                     )
                 )
                 if PICKLE_ON_ERROR:
                     with open(
-                        f"debug_data/{self.environment_name}_error_state.txt", "w", encoding="utf-8"
+                        f"debug_data/{self.environment_name}_error_state.txt",
+                        "w",
+                        encoding="utf-8",
                     ) as f:
                         f.write(f"{tb}")
-                    with open(f"debug_data/{self.environment_name}_error_state.pkl", "wb") as f:
+                    with open(
+                        f"debug_data/{self.environment_name}_error_state.pkl", "wb"
+                    ) as f:
                         dic = self.dump_to_dict()
                         pickle.dump(dic, f)
                     print("Done Writing Pickle File from Error...")
@@ -346,37 +662,65 @@ class AbstractEnvironment(ABC):
                 self.log("Stopping Process")
                 break
 
-    def quit(self, data):  # pylint: disable=unused-argument
-        """Returns True to stop the ``run`` while loop and exit the process
+    # endregion
+
+    # region Shutdown
+    @abstractmethod
+    def stop_environment(self, data) -> None:
+        """Stop the environment gracefully.
+
+        This function defines the operations to shut down the environment
+        gracefully so there is no hard stop that might damage test equipment
+        or parts.
 
         Parameters
         ----------
         data : Ignored
             This parameter is not used by the function but must be present
             due to the calling signature of functions called through the
-            ``command_map``
+            ``command_map``.
+        """
+
+    def quit(self, data):  # pylint: disable=unused-argument
+        """Returns True to stop the ``run`` while loop and exit the process.
+
+        Parameters
+        ----------
+        data : Ignored
+            This parameter is not used by the function but must be present
+            due to the calling signature of functions called through the
+            ``command_map``.
 
         Returns
         -------
         True :
             This function returns True to signal to the ``run`` while loop
             that it is time to close down the environment.
-
         """
         return True
 
+    # endregion
 
-# region: Process
-def run_process(
+
+# region Process
+def process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
-    gui_update_queue: Queue,
-    controller_communication_queue: VerboseMessageQueue,
-    log_file_queue: Queue,
-    data_in_queue: Queue,
-    data_out_queue: Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    gui_update_queue: mp.Queue,
+    controller_command_queue: VerboseMessageQueue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+    sysid_active_event: mp.synchronize.Event,
+    sysid_stored_event: mp.synchronize.Event,
+    ping_alive_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
 
@@ -409,15 +753,21 @@ def run_process(
         to the excitation devices in the output hardware
 
     """
-    process_class = AbstractEnvironment(  # pylint: disable=abstract-class-instantiated
+    process_class = Environment(
         environment_name,
+        queue_name,
         input_queue,
         gui_update_queue,
-        controller_communication_queue,
+        controller_command_queue,
         log_file_queue,
         data_in_queue,
         data_out_queue,
-        acquisition_active,
-        output_active,
+        acquisition_active_event,
+        output_active_event,
+        active_event,
+        ready_event,
     )
-    process_class.run()
+    process_class.run(shutdown_event)
+
+
+# endregion

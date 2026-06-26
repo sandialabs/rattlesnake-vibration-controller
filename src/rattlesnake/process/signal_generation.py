@@ -632,7 +632,7 @@ class CPSDSignalGenerator(SignalGenerator):
         # Determine rms and rescaling factors for sigma clipping (rescale factors used to
         # maintain rms levels when using low clipping thresholds)
         self._rms = (
-            np.trapz(  # TODO: This is deprecated, fix to use Trapezoid
+            np.trapezoid(  # TODO: This is deprecated, fix to use Trapezoid
                 self.cpsd_matrix.diagonal(axis1=1, axis2=2),
                 np.arange(self.cpsd_matrix.shape[0]) * self.frequency_spacing,
                 axis=0,

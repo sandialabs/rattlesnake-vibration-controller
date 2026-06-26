@@ -27,15 +27,126 @@ import os
 import time
 from typing import List
 
+import openpyxl
+import netCDF4 as nc4
 import numpy as np
 import scipy.signal as signal
 from scipy.io import loadmat
 
-from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareMetadata,
+    HardwareAcquisition,
+    HardwareOutput,
+)
+from rattlesnake.utilities import flush_queue
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+
+HARDWARE_TYPE = HardwareType.STATE_SPACE
 
 
-# region: Acqusition
+# region Metadata
+class StateSpaceMetadata(HardwareMetadata):
+    def __init__(
+        self,
+        channel_list: List[Channel],
+        sample_rate: int,
+        time_per_read: float,
+        time_per_write: float,
+        output_oversample: int,
+        hardware_file: str,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample=output_oversample,
+        )
+        self.hardware_file = hardware_file
+
+    # endregion
+
+    # region Validation
+    def validate(self):
+        return super().validate()
+
+    # endregion
+
+    # region Loading
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+        super().save_metadata_to_netcdf(netcdf_dataset)
+
+        netcdf_dataset.hardware_file = self.hardware_file
+
+    @classmethod
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_netcdf(netcdf_dataset)
+
+        hardware_file = netcdf_dataset.hardware_file
+
+        return cls(
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+            hardware_file,
+        )
+
+    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+        super().save_metadata_to_workbook(workbook)
+
+        hardware_worksheet = workbook["Hardware"]
+        hardware_worksheet.cell(2, 2, self.hardware_file)
+        hardware_worksheet.cell(7, 2, self.output_oversample)
+
+    @classmethod
+    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+        (
+            hardware_type,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+        ) = super().load_metadata_from_workbook(workbook)
+
+        hardware_file = None
+
+        hardware_worksheet = workbook["Hardware"]
+        for row in hardware_worksheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            if value is None or value == "":
+                continue
+            match name:
+                case "hardware_file":
+                    hardware_file = value
+                case _:
+                    continue
+
+        return cls(
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample,
+            hardware_file,
+        )
+
+
+# endregion
+
+
+# region Acqusition
 class StateSpaceAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -46,7 +157,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
 
-    def __init__(self, state_space_file: str, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """Loads in the state space file and sets initial parameters to null values
 
 
@@ -63,20 +174,6 @@ class StateSpaceAcquisition(HardwareAcquisition):
             pass the output data to the acquisition which does the integration.
 
         """
-        _, extension = os.path.splitext(state_space_file)
-
-        if extension.lower() == ".npz":
-            data = np.load(state_space_file)
-        elif extension.lower() == ".mat":
-            data = loadmat(state_space_file)
-        else:
-            raise ValueError(
-                f"Unknown extension to file {state_space_file}, "
-                f"should be .npz or .mat, not {extension}"
-            )
-        self.system = signal.StateSpace(data["A"], data["B"], data["C"], data["D"])
-        self.times = None
-        self.state = np.zeros(data["A"].shape[0])
         self.frame_time = None
         self.queue = queue
         self.force_buffer = None
@@ -85,10 +182,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.response_channels: np.ndarray
         self.response_channels = None
 
-    # region: Abstract Methods
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: StateSpaceMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -97,7 +191,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -108,7 +202,22 @@ class StateSpaceAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.create_response_channels(channel_data)
+        _, extension = os.path.splitext(test_data.hardware_file)
+
+        if extension.lower() == ".npz":
+            data = np.load(test_data.hardware_file)
+        elif extension.lower() == ".mat":
+            data = loadmat(test_data.hardware_file)
+        else:
+            raise ValueError(
+                f"Unknown extension to file {test_data.hardware_file}, "
+                f"should be .npz or .mat, not {extension}"
+            )
+        self.system = signal.StateSpace(data["A"], data["B"], data["C"], data["D"])
+        self.times = None
+        self.state = np.zeros(data["A"].shape[0])
+
+        self.create_response_channels(test_data.channel_list)
         self.set_parameters(test_data)
 
     def create_response_channels(self, channel_data: List[Channel]):
@@ -135,7 +244,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
         # the read size
         self.force_buffer = np.zeros((0, np.sum(~self.response_channels)))
 
-    def set_parameters(self, test_data: DataAcquisitionParameters):
+    def set_parameters(self, test_data: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         For the synthetic case, we will set up the integration parameters using
@@ -143,7 +252,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
@@ -151,11 +260,13 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
-            test_data.sample_rate * self.integration_oversample
-        )
+        self.times = np.arange(
+            test_data.samples_per_read * self.integration_oversample + 1
+        ) / (test_data.sample_rate * self.integration_oversample)
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
+        self.acquisition_delay = (
+            test_data.samples_per_write / test_data.output_oversample
+        )
 
     def start(self):
         """Method to start acquiring data.
@@ -247,7 +358,10 @@ class StateSpaceAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
-# region: Output
+# endregion
+
+
+# region Output
 class StateSpaceOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -255,7 +369,7 @@ class StateSpaceOutput(HardwareOutput):
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
 
-    def __init__(self, queue: mp.queues.Queue):
+    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 
@@ -268,10 +382,7 @@ class StateSpaceOutput(HardwareOutput):
         """
         self.queue = queue
 
-    # region: Abstract Methods
-    def set_up_data_output_parameters_and_channels(
-        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
-    ):
+    def initialize_hardware(self, test_data: StateSpaceMetadata):
         """
         Initialize the hardware and set up sources and sampling properties
 
@@ -279,7 +390,7 @@ class StateSpaceOutput(HardwareOutput):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
+        test_data : HardwareMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -327,3 +438,6 @@ class StateSpaceOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
+
+
+# endregion
