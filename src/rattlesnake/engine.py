@@ -189,7 +189,7 @@ class RattlesnakeController:
             environment_data_out_queues[queue_name] = new_queue()
 
         # Set up output queue
-        gui_update_queue = new_queue(maxsize=100)
+        gui_update_queue = new_queue()
 
         # Event for telling engine to restart timeout
         ping_alive_event = new_event()
