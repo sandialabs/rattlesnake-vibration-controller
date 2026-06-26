@@ -21,6 +21,7 @@ from rattlesnake.testing.mock_user_interface import (
 
 """USER INPUTS"""
 THREADED = True
+TIMEOUT = 20
 IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.RANDOM
@@ -34,6 +35,7 @@ RUN_PROFILE = False
 
 def build_rattlesnake_object(
     threaded=THREADED,
+    timeout=TIMEOUT,
     import_method=IMPORT_METHOD,
     hardware_type=HARDWARE_TYPE,
     environment_type=ENVIRONMENT_TYPE,
