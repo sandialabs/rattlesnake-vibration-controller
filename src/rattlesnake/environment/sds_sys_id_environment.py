@@ -71,6 +71,8 @@ from rattlesnake.environment.abstract_interactive_control_law import (
 )
 from rattlesnake.process.abstract_sysid_data_analysis import (
     sysid_data_analysis_process,
+    SysIdMetadata,
+    SysIdDataPackage,
 )
 from rattlesnake.process.data_collector import (
     FrameBuffer,
@@ -130,6 +132,7 @@ class SDSEnvironment(SysIdEnvironment):
             sysid_active_event,
             sysid_stored_event,
         )
+        # print(f"Building environment for {environment_name}")
         self.map_command(
             SDSCommands.PERFORM_CONTROL_PREDICTION,
             self.perform_control_prediction,
@@ -151,19 +154,7 @@ class SDSEnvironment(SysIdEnvironment):
         self.map_command(ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
 
         # Persistent Data
-        self.data_acquisition_parameters = None
-        self.environment_parameters = None
         self.queue_container = queue_container
-        # System ID information
-        self.sysid_frames = None
-        self.sysid_frequencies = None
-        self.sysid_frf = None
-        self.sysid_coherence = None
-        self.sysid_response_cpsd = None
-        self.sysid_reference_cpsd = None
-        self.sysid_condition = None
-        self.sysid_response_noise = None
-        self.sysid_reference_noise = None
         # Control information
         self.control_module = None
         self.control_law = None
@@ -184,35 +175,34 @@ class SDSEnvironment(SysIdEnvironment):
         self.predicted_delays = None
         self.predicted_drive_time_history = None
 
+        self.set_ready()
+
+    def initialize_hardware(self, hardware_metadata):
+        super().initialize_hardware(hardware_metadata)
+
+        self.set_ready()
+
     # region Environment
-    def initialize_environment_test_parameters(self, environment_parameters: SDSMetadata):
+    def initialize_environment(self, environment_metadata: SDSMetadata):
         print("Environment Initialized Parameters")
         # Check if things need to be reset
-        if self.environment_parameters is None or not np.array_equal(
-            self.environment_parameters.control_channel_indices,
-            environment_parameters.control_channel_indices,
+        if self.environment_metadata is None or not np.array_equal(
+            self.environment_metadata.control_channel_indices,
+            environment_metadata.control_channel_indices,
         ):
             # System ID information
-            self.sysid_frames = None
-            self.sysid_frequencies = None
-            self.sysid_frf = None
-            self.sysid_coherence = None
-            self.sysid_response_cpsd = None
-            self.sysid_reference_cpsd = None
-            self.sysid_condition = None
-            self.sysid_response_noise = None
-            self.sysid_reference_noise = None
+            self.sysid_data = SysIdDataPackage()
             self.control_last_interactive_parameters = None
             self.control_has_sent_interactive_control_transfer_function_results = False
             self.last_response_srs = None
             self.last_drive_amplitudes = None
             self.last_drive_decays = None
             self.last_drive_delays = None
-        super().initialize_environment_test_parameters(environment_parameters)
-        self.environment_parameters: SDSMetadata
+        super().initialize_environment(environment_metadata)
+        self.environment_metadata: SDSMetadata
         # Load in the control law
         if (
-            self.environment_parameters.control_script_data.control_script
+            self.environment_metadata.control_script_data.control_script
             == "rattlesnake.environment.sds_sys_id_control_law"
         ):
             self.control_module = importlib.import_module(
@@ -220,67 +210,60 @@ class SDSEnvironment(SysIdEnvironment):
             )
         else:
             self.control_module = load_python_module(
-                self.environment_parameters.control_script_data.control_script
+                self.environment_metadata.control_script_data.control_script
             )
         # Depending on the type, initialize the control law
-        if self.environment_parameters.control_script_data.control_type == ControlLawType.FUNCTION:
+        if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
             self.control_law = getattr(
-                self.control_module, self.environment_parameters.control_script_data.control_object
+                self.control_module, self.environment_metadata.control_script_data.control_object
             )
-        elif self.environment_parameters.control_script_data.control_type == ControlLawType.CLASS:
+        elif self.environment_metadata.control_script_data.control_type == ControlLawType.CLASS:
             self.control_law = getattr(
-                self.control_module, self.environment_parameters.control_script_data.control_object
+                self.control_module, self.environment_metadata.control_script_data.control_object
             )(
-                environment_parameters=self.environment_parameters,
-                transfer_function_frequencies=self.sysid_frequencies,
-                transfer_function=self.sysid_frf,
-                noise_response_cpsd=self.sysid_response_noise,
-                noise_reference_cpsd=self.sysid_reference_noise,
-                sysid_response_cpsd=self.sysid_response_cpsd,
-                sysid_reference_cpsd=self.sysid_reference_cpsd,
-                multiple_coherence=self.sysid_coherence,
-                frames=self.sysid_frames,
+                environment_metadata=self.environment_metadata,
+                sysid_data=self.sysid_data,
                 last_response_srs=self.last_response_srs,
                 last_drive_amplitudes=self.last_drive_amplitudes,
                 last_drive_decays=self.last_drive_decays,
                 last_drive_delays=self.last_drive_delays,
-                **self.environment_parameters.control_script_data.control_parameters,
+                **self.environment_metadata.control_script_data.control_parameters,
             )
         elif (
-            self.environment_parameters.control_script_data.control_type
+            self.environment_metadata.control_script_data.control_type
             == ControlLawType.INTERACTIVE_CLASS
         ):
             self.control_law = getattr(
-                self.control_module, self.environment_parameters.control_script_data.control_object
+                self.control_module, self.environment_metadata.control_script_data.control_object
             )(
-                environment_parameters=self.environment_parameters,
-                transfer_function_frequencies=self.sysid_frequencies,
-                transfer_function=self.sysid_frf,
-                noise_response_cpsd=self.sysid_response_noise,
-                noise_reference_cpsd=self.sysid_reference_noise,
-                sysid_response_cpsd=self.sysid_response_cpsd,
-                sysid_reference_cpsd=self.sysid_reference_cpsd,
-                multiple_coherence=self.sysid_coherence,
-                frames=self.sysid_frames,
+                environment_metadata=self.environment_metadata,
+                sysid_data=self.sysid_data,
                 last_response_srs=self.last_response_srs,
                 last_drive_amplitudes=self.last_drive_amplitudes,
                 last_drive_decays=self.last_drive_decays,
                 last_drive_delays=self.last_drive_delays,
-                **self.environment_parameters.control_script_data.control_parameters,
+                **self.environment_metadata.control_script_data.control_parameters,
             )
             self.control_last_interactive_parameters = None
             self.control_has_sent_interactive_control_transfer_function_results = False
         else:
             raise ValueError(
-                f"Invalid type {self.environment_parameters.control_script_data.control_type}. "
+                f"Invalid type {self.environment_metadata.control_script_data.control_type}. "
                 "How did you get here?!"
             )
+
+        self.set_ready()
+
+    def initialize_sysid(self, sysid_metadata: SysIdMetadata):
+        super().initialize_sysid(sysid_metadata)
+
+        self.set_ready()
 
     # region Interactive Control Law
     def update_interactive_control_parameters(self, interactive_control_parameters):
         """Updates the interactive control law based on received parameters"""
         if (
-            self.environment_parameters.control_script_data.control_type
+            self.environment_metadata.control_script_data.control_type
             == ControlLawType.INTERACTIVE_CLASS
         ):
             self.control_law.update_parameters(interactive_control_parameters)
@@ -295,7 +278,7 @@ class SDSEnvironment(SysIdEnvironment):
         """General method that can be used by an interactive UI object to pass commands
         and data to its corresponding computation object"""
         if (
-            self.environment_parameters.control_script_data.control_type
+            self.environment_metadata.control_script_data.control_type
             == ControlLawType.INTERACTIVE_CLASS
         ):
             self.control_law.send_command(command)
@@ -311,25 +294,14 @@ class SDSEnvironment(SysIdEnvironment):
         should be performed"""
         print("Environment System ID Complete!")
         super().system_id_complete(data)
-        (
-            self.sysid_frames,
-            _,  # avg,
-            self.sysid_frequencies,
-            self.sysid_frf,
-            self.sysid_coherence,
-            self.sysid_response_cpsd,
-            self.sysid_reference_cpsd,
-            self.sysid_condition,
-            self.sysid_response_noise,
-            self.sysid_reference_noise,
-        ) = data
         self.perform_control_prediction(True)
+        self.set_sysid_stored()
 
     # region Prediction
     def perform_control_prediction(self, sysid_update):
         """Performs the control prediction based on system identification information"""
         print("Performing Control Prediction")
-        if self.sysid_frf is None:
+        if self.sysid_data.sysid_frf is None:
             self.gui_update_queue.put(
                 (
                     "error",
@@ -342,41 +314,25 @@ class SDSEnvironment(SysIdEnvironment):
             return
         # Perform the control prediction
         # Depending on the type, initialize the control law
-        if self.environment_parameters.control_script_data.control_type == ControlLawType.FUNCTION:
+        if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
             output_amplitudes, output_decays, output_delays = self.control_law(
-                environment_parameters=self.environment_parameters,
-                transfer_function_frequencies=self.sysid_frequencies,
-                transfer_function=self.sysid_frf,
-                noise_response_cpsd=self.sysid_response_noise,
-                noise_reference_cpsd=self.sysid_reference_noise,
-                sysid_response_cpsd=self.sysid_response_cpsd,
-                sysid_reference_cpsd=self.sysid_reference_cpsd,
-                multiple_coherence=self.sysid_coherence,
-                frames=self.sysid_frames,
+                environment_metadata=self.environment_metadata,
+                sysid_data=self.sysid_data,
                 last_response_srs=self.last_response_srs,
                 last_drive_amplitudes=self.last_drive_amplitudes,
                 last_drive_decays=self.last_drive_decays,
                 last_drive_delays=self.last_drive_delays,
-                **self.environment_parameters.control_script_data.control_parameters,
+                **self.environment_metadata.control_script_data.control_parameters,
             )
         elif (
-            self.environment_parameters.control_script_data.control_type == ControlLawType.CLASS
-            or self.environment_parameters.control_script_data.control_type
+            self.environment_metadata.control_script_data.control_type == ControlLawType.CLASS
+            or self.environment_metadata.control_script_data.control_type
             == ControlLawType.INTERACTIVE_CLASS
         ):
             if sysid_update:
-                self.control_law.system_id_update(
-                    transfer_function_frequencies=self.sysid_frequencies,
-                    transfer_function=self.sysid_frf,
-                    noise_response_cpsd=self.sysid_response_noise,
-                    noise_reference_cpsd=self.sysid_reference_noise,
-                    sysid_response_cpsd=self.sysid_response_cpsd,
-                    sysid_reference_cpsd=self.sysid_reference_cpsd,
-                    multiple_coherence=self.sysid_coherence,
-                    frames=self.sysid_frames,
-                )
+                self.control_law.system_id_update(sysid_data=self.sysid_data)
                 if (
-                    self.environment_parameters.control_script_data.control_type
+                    self.environment_metadata.control_script_data.control_type
                     == ControlLawType.INTERACTIVE_CLASS
                 ):
                     self.gui_update_queue.put(
@@ -384,22 +340,13 @@ class SDSEnvironment(SysIdEnvironment):
                             self.environment_name,
                             (
                                 "interactive_control_sysid_update",
-                                (
-                                    self.sysid_frequencies,
-                                    self.sysid_frf,
-                                    self.sysid_response_noise,
-                                    self.sysid_reference_noise,
-                                    self.sysid_response_cpsd,
-                                    self.sysid_reference_cpsd,
-                                    self.sysid_coherence,
-                                    self.sysid_frames,
-                                ),
+                                self.sysid_data,
                             ),
                         )
                     )
                     self.control_has_sent_interactive_control_transfer_function_results = True
             if (
-                self.environment_parameters.control_script_data.control_type == ControlLawType.CLASS
+                self.environment_metadata.control_script_data.control_type == ControlLawType.CLASS
                 or self.control_last_interactive_parameters is not None
             ):
                 output_amplitudes, output_decays, output_delays = self.control_law.control(
@@ -413,7 +360,7 @@ class SDSEnvironment(SysIdEnvironment):
                 return
         else:
             raise ValueError(
-                f"Invalid type {self.environment_parameters.control_script_data.control_type}. "
+                f"Invalid type {self.environment_metadata.control_script_data.control_type}. "
                 "How did you get here?!"
             )
 
@@ -463,18 +410,18 @@ class SDSEnvironment(SysIdEnvironment):
         print("Reconstructing Drives")
         # Reconstruct drive signals
         amplitudes, decays, delays = data
-        frequencies = self.environment_parameters.get_sds_frequencies_w_compensation_pulse()
+        frequencies = self.environment_metadata.get_sds_frequencies_w_compensation_pulse()
         drive_signals = sum_decayed_sines_reconstruction(
             frequencies,
             amplitudes[:, np.newaxis, :].T,
             decays[:, np.newaxis, :].T,
             delays[:, np.newaxis, :].T,
-            self.environment_parameters.sample_rate,
-            self.environment_parameters.block_size,
+            self.environment_metadata.sample_rate,
+            self.environment_metadata.block_size,
         )
         # Simulate responses to those drive signals
         print("Computing Impulse Response")
-        impulse_responses = np.moveaxis(np.fft.irfft(self.sysid_frf, axis=0), 0, -1)
+        impulse_responses = np.moveaxis(np.fft.irfft(self.sysid_data.sysid_frf, axis=0), 0, -1)
 
         predicted_response_time_history = np.zeros(
             (impulse_responses.shape[0], drive_signals.shape[-1])
@@ -493,11 +440,11 @@ class SDSEnvironment(SysIdEnvironment):
             srss.append(
                 srs_function(
                     signal,
-                    1 / self.environment_parameters.sample_rate,
-                    self.environment_parameters.get_sds_frequencies(),
-                    self.environment_parameters.srs_data.srs_damping,
-                    self.environment_parameters.srs_data.srs_type.value
-                    * self.environment_parameters.srs_data.srs_displacement.value,
+                    1 / self.environment_metadata.sample_rate,
+                    self.environment_metadata.get_sds_frequencies(),
+                    self.environment_metadata.srs_data.srs_damping,
+                    self.environment_metadata.srs_data.srs_type.value
+                    * self.environment_metadata.srs_data.srs_displacement.value,
                 )[0]
             )
         srss = np.array(srss).T
@@ -527,11 +474,11 @@ class SDSEnvironment(SysIdEnvironment):
     def get_signal_generation_metadata(self):
         """Collects the metadata required to define the signal generation process"""
         return SignalGenerationMetadata(
-            samples_per_write=self.data_acquisition_parameters.samples_per_write,
-            level_ramp_samples=self.environment_parameters.test_level_ramp_time
-            * self.environment_parameters.sample_rate
-            * self.data_acquisition_parameters.output_oversample,
-            output_transformation_matrix=self.environment_parameters.reference_transformation_matrix,
+            samples_per_write=self.hardware_metadata.samples_per_write,
+            level_ramp_samples=self.environment_metadata.test_level_ramp_time
+            * self.environment_metadata.sample_rate
+            * self.hardware_metadata.output_oversample,
+            output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
         )
 
     def start_control(self, data):
@@ -617,6 +564,7 @@ def sds_process(
             data_in_queue,
             data_out_queue,
             log_file_queue,
+            threaded,
         )
 
         spectral_proc = new_process(

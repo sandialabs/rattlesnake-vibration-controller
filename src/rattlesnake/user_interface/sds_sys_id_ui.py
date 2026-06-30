@@ -67,6 +67,7 @@ class SDSUI(SysIdEnvironmentUI):
         environment_name: str,
         rattlesnake: RattlesnakeController,
     ):
+        # print(f"Building UI for environment {environment_name}")
         super().__init__(
             CONTROL_TYPE,
             environment_name,
@@ -182,6 +183,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.definition_widget.control_function_input.currentIndexChanged.connect(
             self.set_up_widgets
         )
+        self.definition_widget.load_breakpoints_button.clicked.connect(self.load_specification)
         # Prediction
         self.prediction_widget.recompute_prediction_button.clicked.connect(
             self.recompute_prediction
@@ -304,33 +306,33 @@ class SDSUI(SysIdEnvironmentUI):
     @property
     def initialized_control_names(self):
         """Names of the control channels that have been initialized"""
-        if self.environment_parameters.response_transformation_matrix is None:
+        if self.environment_metadata.response_transformation_matrix is None:
             return [
                 self.physical_channel_names[i]
-                for i in self.environment_parameters.control_channel_indices
+                for i in self.environment_metadata.control_channel_indices
             ]
         else:
             return [
                 f"Transformed Response {i + 1}"
-                for i in range(self.environment_parameters.response_transformation_matrix.shape[0])
+                for i in range(self.environment_metadata.response_transformation_matrix.shape[0])
             ]
 
     @property
     def initialized_output_names(self):
         """Names of the drive channels that have been initialized"""
-        if self.environment_parameters.reference_transformation_matrix is None:
+        if self.environment_metadata.reference_transformation_matrix is None:
             return self.physical_output_names
         else:
             return [
                 f"Transformed Drive {i + 1}"
-                for i in range(self.environment_parameters.reference_transformation_matrix.shape[0])
+                for i in range(self.environment_metadata.reference_transformation_matrix.shape[0])
             ]
 
     # region UI Specification
     def load_specification(self, clicked, filename=None):  # pylint: disable=unused-argument
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self,
+                self.definition_widget,
                 "Select Specification File",
                 filter="Numpy or Mat (*.npy *.npz *.mat)",
             )
@@ -597,6 +599,16 @@ class SDSUI(SysIdEnvironmentUI):
         )
         return spec_data
 
+    def set_specification_data(self, specification_data: SpecParameters):
+        self.clear_and_update_specification_table(
+            specification_data.frequencies,
+            specification_data.srs_spec,
+            specification_data.srs_lower_limit,
+            specification_data.srs_upper_limit,
+        )
+        self.definition_widget.num_hits_spinbox.setValue(specification_data.num_hits)
+        self.update_specification()
+
     # region UI Control Laws
     @staticmethod
     def valid_annotation(annotation):
@@ -613,15 +625,8 @@ class SDSUI(SysIdEnvironmentUI):
     @staticmethod
     def get_valid_control_laws(module):
         required_control_law_arguments = {
-            "environment_parameters",
-            "transfer_function_frequencies",
-            "transfer_function",
-            "noise_response_cpsd",
-            "noise_reference_cpsd",
-            "sysid_response_cpsd",
-            "sysid_reference_cpsd",
-            "multiple_coherence",
-            "frames",
+            "environment_metadata",
+            "sysid_data",
             "last_response_srs",
             "last_drive_amplitudes",
             "last_drive_decays",
@@ -716,7 +721,8 @@ class SDSUI(SysIdEnvironmentUI):
             loading from a file (Default value = None).
 
         """
-        if default:
+        # print(f"Select Python Spec: {filename=}, {default=}, {clicked=}")
+        if default or filename == "rattlesnake.environment.sds_sys_id_control_law":
             self.python_control_module = importlib.import_module(
                 "rattlesnake.environment.sds_sys_id_control_law"
             )
@@ -803,6 +809,27 @@ class SDSUI(SysIdEnvironmentUI):
         # print(f"Got Arguments {kwargs=}")
         return kwargs
 
+    def set_control_extra_parameters(self, kwargs: dict):
+        for key, value in kwargs.items():
+            try:
+                widget = self.python_function_extra_argument_widgets[key]
+            except KeyError:
+                raise ValueError(f"Parameter {key} not found in extra parameter widget list.")
+            if isinstance(widget, QtWidgets.QSpinBox):
+                widget.setValue(value)
+            elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+                widget.setValue(value)
+            elif isinstance(widget, QtWidgets.QTextEdit):
+                widget.setPlainText(value)
+            elif isinstance(widget, QtWidgets.QComboBox):
+                index = widget.findData(value)
+                if index >= 0:
+                    widget.setCurrentIndex(index)
+                else:
+                    raise ValueError(f"Data {value} not found in combobox for parameter {key}")
+            else:
+                raise ValueError(f"Unsupported widget type: {type(widget)}")
+
     def collect_control_data(self):
         control_module = self.definition_widget.control_script_file_path_input.text()
         control_function = self.definition_widget.control_function_input.itemText(
@@ -816,6 +843,18 @@ class SDSUI(SysIdEnvironmentUI):
             control_module, control_function, control_function_type, control_function_parameters
         )
         return control_data
+
+    def set_control_data(self, control_data: ControlParameters):
+        self.select_python_module(filename=control_data.control_script)
+        index = self.definition_widget.control_function_input.findText(control_data.control_object)
+        if index != -1:
+            self.definition_widget.control_function_input.setCurrentIndex(index)
+        else:
+            raise ValueError("Control function/class was not found.")
+        self.definition_widget.control_function_generator_selector.setCurrentIndex(
+            control_data.control_type.value
+        )
+        self.set_control_extra_parameters(control_data.control_parameters)
 
     # region UI Collect Metadata
     def collect_tone_data(self):
@@ -842,6 +881,19 @@ class SDSUI(SysIdEnvironmentUI):
             raise ValueError("Invalid Tone Strategy (how did you get here?!)")
         return tone_data
 
+    def set_tone_data(self, tone_data: ToneParameters):
+        if tone_data.tone_strategy == ToneStrategy.FROM_SPEC:
+            self.definition_widget.from_spec_button.setChecked(True)
+        elif tone_data.tone_strategy == ToneStrategy.OCTAVE:
+            self.definition_widget.octave_button.setChecked(True)
+            min_freq, max_freq, tones_per_octave = tone_data.tone_data
+            self.definition_widget.min_frequency_selector.setValue(min_freq)
+            self.definition_widget.max_frequency_selector.setValue(max_freq)
+            self.definition_widget.tones_per_octave_selector.setValue(tones_per_octave)
+        elif tone_data.tone_strategy == ToneStrategy.MANUAL:
+            self.definition_widget.manual_button.setChecked(True)
+            self.set_sine_tone_values(frequencies=tone_data.tone_data)
+
     def collect_compensation_pulse_data(self):
         compensation_pulse_data = CompPulseParameters(
             self.definition_widget.use_compensation_pulse_checkbox.isChecked(),
@@ -853,6 +905,22 @@ class SDSUI(SysIdEnvironmentUI):
             self.definition_widget.compensation_decay_selector.value() / 100,
         )
         return compensation_pulse_data
+
+    def set_compensation_pulse_data(self, compensation_pulse_data: CompPulseParameters):
+        self.definition_widget.use_compensation_pulse_checkbox.setChecked(
+            compensation_pulse_data.use_compensation_pulse
+        )
+        if compensation_pulse_data.use_compensation_pulse:
+            self.definition_widget.autoselect_comp_frequency_checkbox.setChecked(
+                compensation_pulse_data.compensation_frequency is None
+            )
+            if compensation_pulse_data.compensation_frequency is not None:
+                self.definition_widget.compensation_frequency_selector.setValue(
+                    compensation_pulse_data.compensation_frequency
+                )
+            self.definition_widget.compensation_decay_selector.setValue(
+                compensation_pulse_data.compensation_decay * 100
+            )
 
     def collect_decay_data(self):
         if self.definition_widget.damping_zeta_button.isChecked():
@@ -874,6 +942,19 @@ class SDSUI(SysIdEnvironmentUI):
         decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
         return decay_parameters
 
+    def set_decay_data(self, decay_parameters: DecayParameters):
+        if decay_parameters.decay_strategy == DecayStrategy.DAMPING:
+            self.definition_widget.damping_zeta_button.setChecked(True)
+        elif decay_parameters.decay_strategy == DecayStrategy.TIME_CONSTANT:
+            self.definition_widget.time_constant_tau_button.setChecked(True)
+        elif decay_parameters.decay_strategy == DecayStrategy.NUM_TIME_CONSTANTS:
+            self.definition_widget.num_time_constants_button.setChecked(True)
+        self.definition_widget.common_decay_checkbox.setChecked(decay_parameters.common_decay)
+        if decay_parameters.common_decay:
+            self.definition_widget.decay_value_selector.setValue(decay_parameters.decay_data[0])
+        else:
+            self.set_sine_tone_values(decays=decay_parameters.decay_data)
+
     def collect_srs_data(self):
         srs_data = SRSParameters(
             SRSType(self.definition_widget.srs_type_setter.currentIndex() + 1),
@@ -886,6 +967,17 @@ class SDSUI(SysIdEnvironmentUI):
         )
         return srs_data
 
+    def set_srs_data(self, srs_data: SRSParameters):
+        srs_type_index = srs_data.srs_type.value - 1
+        self.definition_widget.srs_type_setter.setCurrentIndex(srs_type_index)
+        if srs_data.srs_displacement == SRSDisplacementType.ABSOLUTE:
+            self.definition_widget.srs_displacement_setter.setCurrentIndex(0)
+        elif srs_data.srs_displacement == SRSDisplacementType.RELATIVE:
+            self.definition_widget.srs_displacement_setter.setCurrentIndex(1)
+        else:
+            raise ValueError(f"Invalid value for srs_displacement {srs_data.srs_displacement}")
+        self.definition_widget.srs_damping_setter.setValue(srs_data.srs_damping * 100)
+
     def collect_sds_data(self):
         sds_data = SDSParameters(
             self.definition_widget.sds_iterations_selector.value(),
@@ -894,6 +986,12 @@ class SDSUI(SysIdEnvironmentUI):
             self.definition_widget.error_tolerance_selector.value() / 100,
         )
         return sds_data
+
+    def set_sds_data(self, sds_data: SDSParameters):
+        self.definition_widget.sds_iterations_selector.setValue(sds_data.iterations)
+        self.definition_widget.sds_convergence_selector.setValue(sds_data.convergence * 100)
+        self.definition_widget.sds_scale_factor_selector.setValue(sds_data.scale_factor * 100)
+        self.definition_widget.error_tolerance_selector.setValue(sds_data.error_tolerance * 100)
 
     def get_environment_metadata(self, global_channel_list):
         """Collects the metadata defining the environment from the UI widgets"""
@@ -929,17 +1027,41 @@ class SDSUI(SysIdEnvironmentUI):
 
     def set_environment_metadata(self, metadata: SDSMetadata):
         """Sets the UI State given a metadata object"""
-        pass
+        self.definition_widget.block_size_selector.setValue(metadata.block_size)
+        # First we need to set control channels correctly so the specification has the right
+        # number of columns
+        for index in range(self.definition_widget.control_channels_selector.count()):
+            self.definition_widget.control_channels_selector.item(index).setCheckState(Qt.Unchecked)
+        for index in metadata.control_channel_indices:
+            self.definition_widget.control_channels_selector.item(index).setCheckState(Qt.Checked)
+        # Now we need to set up any transformation matrices again so the specification has the
+        # correct number of channels
+        self.response_transformation_matrix = metadata.response_transformation_matrix
+        self.output_transformation_matrix = metadata.reference_transformation_matrix
+        self.define_transformation_matrices(None, dialog=False)
+        # Now we need to set up the specification so the default tone and decay values are
+        # inherited correctly from the specification
+        self.set_specification_data(metadata.specification_data)
+        # Now we need to set up the sine tone frequencies
+        self.set_tone_data(metadata.tone_data)
+        # Now we need to set the compensation pulse data
+        self.set_compensation_pulse_data(metadata.compensation_pulse_data)
+        # Now we need to set up the decay parameters
+        self.set_decay_data(metadata.decay_data)
+        # Now the rest of the parameters shouldn't matter which order
+        self.set_srs_data(metadata.srs_data)
+        self.set_sds_data(metadata.sds_data)
+        self.set_control_data(metadata.control_script_data)
 
-    def initialize_environment(self):
-        super().initialize_environment()
+    def initialize_environment(self, environment_metadata: SDSMetadata):
+        super().initialize_environment(environment_metadata)
         self.prediction_table.update_names(
             self.initialized_output_names, self.initialized_control_names
         )
         self.run_table.update_names(self.initialized_output_names, self.initialized_control_names)
-        self.prediction_table.update_parameters(self.environment_parameters)
-        self.run_table.update_parameters(self.environment_parameters)
-        return self.environment_parameters
+        self.prediction_table.update_parameters(environment_metadata)
+        self.run_table.update_parameters(environment_metadata)
+        return self.environment_metadata
 
     def define_transformation_matrices(
         self, clicked, dialog=True

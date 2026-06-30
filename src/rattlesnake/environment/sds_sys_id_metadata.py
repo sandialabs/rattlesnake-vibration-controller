@@ -99,6 +99,10 @@ class CompPulseParameters:
             compensation_frequency = None
             compensation_decay = None
         self.compensation_frequency = compensation_frequency
+        if compensation_decay is None and use_compensation_pulse:
+            raise ValueError(
+                "`compensation_decay` must be specified if a compensation pulse is used."
+            )
         self.compensation_decay = compensation_decay
 
 
@@ -263,7 +267,7 @@ class SDSParameters:
         self, iterations: int, convergence: float, scale_factor: float, error_tolerance: float
     ):
         self.iterations = iterations
-        self.convervence = convergence
+        self.convergence = convergence
         self.scale_factor = scale_factor
         self.error_tolerance = error_tolerance
 
@@ -626,6 +630,7 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         tone_grp = netcdf_group_handle.createGroup("tone_parameters")
         decay_grp = netcdf_group_handle.createGroup("decay_parameters")
         srs_grp = netcdf_group_handle.createGroup("srs_parameters")
+        sds_grp = netcdf_group_handle.createGroup("sds_parameters")
         comp_grp = netcdf_group_handle.createGroup("compensation_pulse_parameters")
         control_grp = netcdf_group_handle.createGroup("control_parameters")
         spec_grp = netcdf_group_handle.createGroup("specification_parameters")
@@ -636,16 +641,18 @@ class SDSMetadata(SysIdEnvironmentMetadata):
             var = tone_grp.createVariable("tone_data", "f8", ("tone_data_size"))
             var[...] = self.tone_data.tone_data
         # Compensation pulse
-        comp_grp.use_compensation_pulse = self.compensation_pulse_data.use_compensation_pulse
+        comp_grp.use_compensation_pulse = (
+            1 if self.compensation_pulse_data.use_compensation_pulse else 0
+        )
         if self.compensation_pulse_data.compensation_frequency is not None:
             comp_grp.compensation_frequency = self.compensation_pulse_data.compensation_frequency
         if self.compensation_pulse_data.compensation_decay is not None:
             comp_grp.compensation_decay = self.compensation_pulse_data.compensation_decay
         # Decay parameters
         decay_grp.decay_strategy = self.decay_data.decay_strategy.value
-        decay_grp.common_decay = self.decay_data.common_decay
+        decay_grp.common_decay = 1 if self.decay_data.common_decay else 0
         if self.decay_data.common_decay:
-            decay_grp.decay_data = self.decay_data.decay_data
+            decay_grp.decay_data = self.decay_data.decay_data[0]
         else:
             decay_grp.createDimension("num_decays", self.decay_data.decay_data.size)
             var = decay_grp.createVariable("decay_data", "f8", ("num_decays"))
@@ -654,6 +661,11 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         srs_grp.srs_type = self.srs_data.srs_type.value
         srs_grp.srs_displacement = self.srs_data.srs_displacement.value
         srs_grp.srs_damping = self.srs_data.srs_damping
+        # SDS Group
+        sds_grp.iterations = self.sds_data.iterations
+        sds_grp.convergence = self.sds_data.convergence
+        sds_grp.scale_factor = self.sds_data.scale_factor
+        sds_grp.error_tolerance = self.sds_data.error_tolerance
         # Specification
         spec_grp.num_hits = self.specification_data.num_hits
         spec_grp.createDimension("num_frequencies", self.specification_data.frequencies.size)
@@ -671,10 +683,12 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         )
         var[...] = self.specification_data.srs_upper_limit
         # Control group
-        control_grp.control_type = self.control_script_data.control_type
+        control_grp.control_type = self.control_script_data.control_type.value
         control_grp.control_script = self.control_script_data.control_script
         control_grp.control_object = self.control_script_data.control_object
-        control_grp.control_parameters = self.control_script_data.control_parameters
+        control_grp_params = control_grp.createGroup("control_extra_parameters")
+        for key, value in self.control_script_data.control_parameters.items():
+            setattr(control_grp_params, key, value)
         netcdf_group_handle.createDimension("control_channels", len(self.control_channel_indices))
         if self.response_transformation_matrix is None:
             netcdf_group_handle.createDimension(

@@ -84,9 +84,7 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 # pyqtgraph.setConfigOption('leftButtonPan',False)
 pyqtgraph.setConfigOption("background", "w")
 pyqtgraph.setConfigOption("foreground", "k")
-QtCore.QDir.addSearchPath(
-    "images", os.path.join(DIRECTORY, "user_interface", "themes", "images")
-)
+QtCore.QDir.addSearchPath("images", os.path.join(DIRECTORY, "user_interface", "themes", "images"))
 TASK_NAME = "UI"
 VERSION = "3.1.1"
 RATTLESNAKE_UI_PATH = os.path.join(
@@ -166,9 +164,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
         self.tray_icon.setIcon(icon)
         self.tray_icon.show()
-        if sys.platform.startswith(
-            "win"
-        ):  # This fixes windows treating taskbar icon as python.exe
+        if sys.platform.startswith("win"):  # This fixes windows treating taskbar icon as python.exe
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
                 f"sandia.rattlesnake.{VERSION}"
             )
@@ -255,13 +251,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        self.load_channel_table_button.clicked.connect(
-            self.load_channel_table_from_file
-        )
+        self.load_channel_table_button.clicked.connect(self.load_channel_table_from_file)
         self.save_channel_table_button.clicked.connect(self.save_channel_table_to_file)
-        self.assist_channel_table_checkbox.stateChanged.connect(
-            self.assist_channel_table_init
-        )
+        self.assist_channel_table_checkbox.stateChanged.connect(self.assist_channel_table_init)
         # Copy
         self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
         self.channel_table_action_copy.setShortcut("Ctrl+C")
@@ -273,27 +265,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
         self.channel_table.addAction(self.channel_table_action_paste)
         # Delete
-        self.channel_table_action_delete = QtWidgets.QAction(
-            "Delete", self.channel_table
-        )
+        self.channel_table_action_delete = QtWidgets.QAction("Delete", self.channel_table)
         self.channel_table_action_delete.setShortcut("Del")
         self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
         self.channel_table.addAction(self.channel_table_action_delete)
         # Insert Row
-        self.channel_table_action_insert_row = QtWidgets.QAction(
-            "Insert Row", self.channel_table
-        )
-        self.channel_table_action_insert_row.triggered.connect(
-            self.channel_table_insert_row
-        )
+        self.channel_table_action_insert_row = QtWidgets.QAction("Insert Row", self.channel_table)
+        self.channel_table_action_insert_row.triggered.connect(self.channel_table_insert_row)
         self.channel_table.addAction(self.channel_table_action_insert_row)
         # Delete Row
-        self.channel_table_action_delete_row = QtWidgets.QAction(
-            "Delete Row", self.channel_table
-        )
-        self.channel_table_action_delete_row.triggered.connect(
-            self.channel_table_delete_row
-        )
+        self.channel_table_action_delete_row = QtWidgets.QAction("Delete Row", self.channel_table)
+        self.channel_table_action_delete_row.triggered.connect(self.channel_table_delete_row)
         self.channel_table.addAction(self.channel_table_action_delete_row)
 
         # Hardware
@@ -309,17 +291,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
             self.rename_environment
         )
-        self.initialize_environments_button.clicked.connect(
-            self.initialize_environments
-        )
+        self.initialize_environments_button.clicked.connect(self.initialize_environments)
 
         # Acquisition
         self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
         self.arm_test_button.clicked.connect(self.start_acquisition)
         self.disarm_test_button.clicked.connect(self.stop_acquisition)
-        self.manual_streaming_radiobutton.toggled.connect(
-            self.show_hide_manual_streaming
-        )
+        self.manual_streaming_radiobutton.toggled.connect(self.show_hide_manual_streaming)
         self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
 
         # Profiles
@@ -336,14 +314,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if text == "Light":
             self.setStyleSheet("")
         elif text == "Dark":
-            dark_theme_path = os.path.join(
-                DIRECTORY, "user_interface", "themes", "dark_theme.txt"
-            )
+            dark_theme_path = os.path.join(DIRECTORY, "user_interface", "themes", "dark_theme.txt")
             with open(dark_theme_path, encoding="utf-8") as file:
                 stylesheet = file.read()
-            images_path = os.path.join(
-                DIRECTORY, "user_interface", "themes", "images"
-            ).replace("\\", "/")
+            images_path = os.path.join(DIRECTORY, "user_interface", "themes", "images").replace(
+                "\\", "/"
+            )
             print(f"Images Path: {images_path}")
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
@@ -401,9 +377,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 (UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}"))
             )
         else:
-            self.gui_update_queue.put(
-                (UICommands.ERROR, ("Unknown Error", f"ERROR:\n\n{tb}"))
-            )
+            self.gui_update_queue.put((UICommands.ERROR, ("Unknown Error", f"ERROR:\n\n{tb}")))
 
     def create_event_watcher(
         self,
@@ -618,14 +592,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     active_event,
                 ) in self.rattlesnake.event_container.environment_active_events.items():
                     if active_event.is_set():
-                        environment_name = (
-                            self.rattlesnake.environment_manager.environment_names[
-                                queue_name
-                            ]
-                        )
-                        self.environment_uis[
-                            environment_name
-                        ].display_environment_started()
+                        environment_name = self.rattlesnake.environment_manager.environment_names[
+                            queue_name
+                        ]
+                        self.environment_uis[environment_name].display_environment_started()
 
     def load_ui_from_hardware(self):
         """
@@ -657,21 +627,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.update_hardware_widget_visibility()
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                self.task_trigger_selector.setCurrentIndex(
-                    hardware_metadata.task_trigger
-                )
-                self.trigger_output_selector.setText(
-                    hardware_metadata.output_trigger_generator
-                )
+                self.task_trigger_selector.setCurrentIndex(hardware_metadata.task_trigger)
+                self.trigger_output_selector.setText(hardware_metadata.output_trigger_generator)
             case HardwareType.LAN_XI:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("HBK LAN-XI")
                 self.hardware_selector.blockSignals(False)
                 self.update_hardware_widget_visibility()
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                lanxi_sample_rate_index = int(
-                    np.log2(hardware_metadata.sample_rate // 4096)
-                )
+                lanxi_sample_rate_index = int(np.log2(hardware_metadata.sample_rate // 4096))
                 self.lanxi_sample_rate_selector.setCurrentIndex(lanxi_sample_rate_index)
                 self.lanxi_maximum_acquisition_processes_selector.setValue(
                     hardware_metadata.maximum_acquisition_processes
@@ -700,9 +664,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.hardware_file = hardware_metadata.hardware_file
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                self.integration_oversample_selector.setValue(
-                    hardware_metadata.output_oversample
-                )
+                self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
                 self.damping_ratio_selector.setValue(hardware_metadata.damping_ratio)
             case HardwareType.STATE_SPACE:
                 self.hardware_selector.blockSignals(True)
@@ -712,9 +674,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.hardware_file = hardware_metadata.hardware_file
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                self.integration_oversample_selector.setValue(
-                    hardware_metadata.output_oversample
-                )
+                self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
             case HardwareType.SDYNPY_SYSTEM:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("SDynPy System Integration...")
@@ -723,9 +683,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.hardware_file = hardware_metadata.hardware_file
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                self.integration_oversample_selector.setValue(
-                    hardware_metadata.output_oversample
-                )
+                self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
             case HardwareType.SDYNPY_FRF:
                 self.hardware_selector.blockSignals(True)
                 self.hardware_selector.setCurrentText("SDynPy FRF Convolution...")
@@ -734,9 +692,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.hardware_file = hardware_metadata.hardware_file
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
                 self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
-                self.integration_oversample_selector.setValue(
-                    hardware_metadata.output_oversample
-                )
+                self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
             case _:
                 self.display_error(
                     f"Loading from {hardware_metadata.hardware_type} is not yet implemented"
@@ -750,28 +706,21 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         hardware_metadata = self.rattlesnake.hardware_metadata
         environment_metadata_dict = self.rattlesnake.environment_metadata
 
-        for environment_idx, environment_metadata in enumerate(
-            environment_metadata_dict.values()
-        ):
+        for environment_idx, environment_metadata in enumerate(environment_metadata_dict.values()):
             # Add environments
             environment_type = environment_metadata.environment_type
-            self.add_environment(environment_type)
-
             environment_name = environment_metadata.environment_name
+            self.add_environment(environment_type, environment_name)
+            # print(f"Adding environment with {environment_type=}")
+            # print(f"Environment name is {environment_name}")
             if (
                 environment_name not in self.environment_uis.keys()
             ):  # Dont rename if they were already using default name
                 self.rename_environment(environment_idx, environment_name)
 
-            self.environment_uis[environment_name].initialize_hardware(
-                hardware_metadata
-            )
-            self.environment_uis[environment_name].set_environment_metadata(
-                environment_metadata
-            )
-            self.environment_uis[environment_name].initialize_environment(
-                environment_metadata
-            )
+            self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
+            self.environment_uis[environment_name].set_environment_metadata(environment_metadata)
+            self.environment_uis[environment_name].initialize_environment(environment_metadata)
             if (
                 environment_type in SYSID_ENVIRONMENTS
                 and environment_metadata.sysid_metadata is not None
@@ -811,9 +760,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 environment_combobox = self.profile_table.cellWidget(row, 1)
                 environment_combobox.setCurrentText(environment_name)
                 command_combobox = self.profile_table.cellWidget(row, 2)
-                command_combobox.setCurrentText(
-                    UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label
-                )
+                command_combobox.setCurrentText(UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label)
                 data_item = QtWidgets.QTableWidgetItem("")
                 data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
                 self.profile_table.setItem(row, 3, data_item)
@@ -888,9 +835,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     )
                 else:
                     metadata = environment_ui.get_environment_metadata(channel_list)
-                    environment_metadata_dict[environment_ui.environment_name] = (
-                        metadata
-                    )
+                    environment_metadata_dict[environment_ui.environment_name] = metadata
 
             # Profiles
             profile_event_list = []
@@ -1014,9 +959,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             selected_range = selected_ranges[0]
             copied_text = ""
             rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
-            columns = range(
-                selected_range.leftColumn(), selected_range.rightColumn() + 1
-            )
+            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
             # Put tabs inbetween columns, newlines inbetween rows
             copied_text = []
             for row in rows:
@@ -1038,9 +981,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.channel_table.blockSignals(True)
         selection_range = self.channel_table.selectedRanges()
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Fixed
-        )
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         if selection_range:
             # Get top left cell
             top_left_row = selection_range[0].topRow()
@@ -1062,9 +1003,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     for j, cell_text in enumerate(row):
                         cell_text = cell_text if cell_text is not None else ""
                         item = QtWidgets.QTableWidgetItem(cell_text)
-                        self.channel_table.setItem(
-                            top_left_row + i, top_left_column + j, item
-                        )
+                        self.channel_table.setItem(top_left_row + i, top_left_column + j, item)
         self.channel_table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeToContents
         )
@@ -1079,16 +1018,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.channel_table.blockSignals(True)
         selection_range = self.channel_table.selectedRanges()
-        self.channel_table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Fixed
-        )
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         if selection_range:
             # Get the selected range
             selected_range = selection_range[0]
             rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
-            columns = range(
-                selected_range.leftColumn(), selected_range.rightColumn() + 1
-            )
+            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
             # Clear the selected cells
             for row in rows:
                 for column in columns:
@@ -1168,9 +1103,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 channel_list = HardwareMetadata.load_channel_table_from_netcdf(dataset)
             case ".xlsx":
                 workbook = openpyxl.load_workbook(filepath, read_only=True)
-                channel_list = HardwareMetadata.load_channel_table_from_workbook(
-                    workbook
-                )
+                channel_list = HardwareMetadata.load_channel_table_from_workbook(workbook)
 
         self.channel_table.blockSignals(True)
         self.channel_table.setRowCount(len(channel_list))
@@ -1313,9 +1246,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                             )
                             self.channel_table.setCellWidget(row, col, combobox)
                         case HardwareAssistModules.SPINBOX:
-                            spinbox = EditableSpinBox(
-                                valid_values[0], valid_values[1], attr_value
-                            )
+                            spinbox = EditableSpinBox(valid_values[0], valid_values[1], attr_value)
                             spinbox.stringValueChanged.connect(
                                 lambda text, row=row, col=col: self.assist_channel_table_update(
                                     text, row, col
@@ -1373,9 +1304,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     )
                     self.channel_table.setCellWidget(row, col, combobox)
                 case HardwareAssistModules.SPINBOX:
-                    spinbox = EditableSpinBox(
-                        valid_values[0], valid_values[1], attr_value
-                    )
+                    spinbox = EditableSpinBox(valid_values[0], valid_values[1], attr_value)
                     spinbox.stringValueChanged.connect(
                         lambda text, row=row, col=col: self.assist_channel_table_update(
                             text, row, col
@@ -1491,9 +1420,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             environment_channel_list = self.get_environment_channel_list()
             for environment_name, environment_ui in self.environment_uis.items():
-                hardware_metadata.channel_list = environment_channel_list[
-                    environment_name
-                ]
+                hardware_metadata.channel_list = environment_channel_list[environment_name]
                 environment_ui.initialize_hardware(hardware_metadata)
 
         except Exception as e:
@@ -1729,9 +1656,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         for environment_name, environment_ui in self.environment_uis.items():
             system_id_widget = environment_ui.system_id_widget
             if system_id_widget is not None:
-                self.system_id_environment_tabs.addTab(
-                    system_id_widget, environment_name
-                )
+                self.system_id_environment_tabs.addTab(system_id_widget, environment_name)
                 self.rattlesnake_tabs.tabBar().setTabVisible(2, True)
 
         # Prediction tab
@@ -1741,9 +1666,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         for environment_name, environment_ui in self.environment_uis.items():
             prediction_widget = environment_ui.prediction_widget
             if prediction_widget is not None:
-                self.test_prediction_environment_tabs.addTab(
-                    prediction_widget, environment_name
-                )
+                self.test_prediction_environment_tabs.addTab(prediction_widget, environment_name)
                 self.rattlesnake_tabs.tabBar().setTabVisible(3, True)
 
         # Run tab
@@ -1758,7 +1681,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(False)
 
-    def add_environment(self, environment_type: str | EnvironmentType):
+    def add_environment(
+        self, environment_type: str | EnvironmentType, environment_name: str = None
+    ):
         """Function used to add an environment"""
         # If comming from UI, environment_type will be text in combobox
         if isinstance(environment_type, str):
@@ -1767,11 +1692,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if environment_type is None:
             return
 
-        idx = 0
-        environment_name = f"{environment_type.name} {idx}"
-        while environment_name in self.environment_uis.keys():
-            idx += 1
+        if environment_name is None:
+            idx = 0
             environment_name = f"{environment_type.name} {idx}"
+            while environment_name in self.environment_uis.keys():
+                idx += 1
+                environment_name = f"{environment_type.name} {idx}"
+        else:
+            if environment_name in self.environment_uis.keys():
+                raise RattlesnakeError(
+                    f"Environment name {environment_name} already exists.  Please use a unique name."
+                )
 
         environment_ui_class = ENVIRONMENT_UIS[environment_type]
         environment_ui = environment_ui_class(environment_name, self.rattlesnake)
@@ -1813,9 +1744,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 return
             # Remove selected columns from environment table and environment_uis
             selected_range = selected_ranges[0]
-            columns = range(
-                selected_range.leftColumn(), selected_range.rightColumn() + 1
-            )
+            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
 
         for col in sorted(columns, reverse=True):
             header_item = self.environment_channel_table.horizontalHeaderItem(col)
@@ -1835,7 +1764,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         index : int :
             The index of the environment to rename
         """
-
+        print(f"Renaming UI {col_idx} to {new_name}")
         # Pull header text from environment_channel_table
         header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
         current_name = header_item.text()
@@ -1854,9 +1783,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Make sure name does not already exist
         if new_name in self.environment_uis:
-            self.display_error(
-                "The new name already exists. Please choose a different name."
-            )
+            self.display_error("The new name already exists. Please choose a different name.")
             return
 
         # Replace old name in dict with new name while keeping order
@@ -1911,9 +1838,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list)
         self.event_watcher.ready.connect(
-            lambda metadata=environment_metadata: self.initialize_environments_ready(
-                metadata
-            )
+            lambda metadata=environment_metadata: self.initialize_environments_ready(metadata)
         )
         self.event_watcher.error.connect(self.initialize_environments_error)
         self.event_thread.start()
@@ -1969,14 +1894,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def enable_ready_run_tabs(self):
         for i in range(self.run_environment_tabs.count()):
             environment_name = self.run_environment_tabs.tabText(i)
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[
-                environment_name
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[environment_name]
+            bool_ready = self.rattlesnake.environment_manager.acquisition_ready_environments[
+                queue_name
             ]
-            bool_ready = (
-                self.rattlesnake.environment_manager.acquisition_ready_environments[
-                    queue_name
-                ]
-            )
 
             if bool_ready:
                 self.run_environment_tabs.widget(i).setEnabled(True)
@@ -1992,9 +1913,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         else:
             hardware_metadata = self.get_hardware_metadata_no_channels()
 
-        if (self.channel_monitor_window is None) or (
-            not self.channel_monitor_window.isVisible()
-        ):
+        if (self.channel_monitor_window is None) or (not self.channel_monitor_window.isVisible()):
             self.channel_monitor_window = ChannelMonitor(None, hardware_metadata)
         else:
             pass  # TODO Need to raise the window to the front, or close and reopen
@@ -2026,12 +1945,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             stream_metadata = StreamMetadata(stream_type, stream_file)
         elif self.test_level_streaming_radiobutton.isChecked():
             stream_type = StreamType.TEST_LEVEL
-            test_level_environment_name = (
-                self.streaming_environment_select_combobox.currentText()
-            )
-            stream_metadata = StreamMetadata(
-                stream_type, stream_file, test_level_environment_name
-            )
+            test_level_environment_name = self.streaming_environment_select_combobox.currentText()
+            stream_metadata = StreamMetadata(stream_type, stream_file, test_level_environment_name)
         elif self.immediate_streaming_radiobutton.isChecked():
             stream_type = StreamType.IMMEDIATELY
             stream_metadata = StreamMetadata(stream_type, stream_file)
@@ -2101,9 +2016,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rattlesnake.event_container.acquisition_active_event,
             self.rattlesnake.event_container.output_active_event,
         ]
-        self.create_event_watcher(
-            ready_event_list, active_event_list, active_event_check=True
-        )
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.start_acqusition_ready)
         self.event_watcher.error.connect(self.start_acquisition_error)
         self.event_thread.start()
@@ -2149,9 +2062,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rattlesnake.event_container.output_active_event,
             *self.rattlesnake.environment_manager.active_event_list,
         ]
-        self.create_event_watcher(
-            ready_event_list, active_event_list, active_event_check=False
-        )
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
         self.event_watcher.ready.connect(self.stop_acquistion_ready)
         self.event_watcher.error.connect(self.stop_acquisition_error)
         self.event_thread.start()
@@ -2201,9 +2112,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.display_error(f"Netcdf files do not store profile lists")
             case ".xlsx":
                 workbook = openpyxl.load_workbook(filepath, read_only=True)
-                profile_event_list = load_profile_from_workbook(
-                    workbook, environment_types
-                )
+                profile_event_list = load_profile_from_workbook(workbook, environment_types)
                 self.rattlesnake.initialize_profile_event_list(profile_event_list)
                 self.load_ui_from_profile()
 
@@ -2333,9 +2242,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             data = data if data.strip() != "" else ""
 
             # Add point and text to plot at correct location
-            plot_item.plot(
-                [timestamp], [environment_index], pen=None, symbol="o", pxMode=True
-            )
+            plot_item.plot([timestamp], [environment_index], pen=None, symbol="o", pxMode=True)
             text_item = pyqtgraph.TextItem(
                 f"{row + 1}: " + operation + (": " + data), color=text_color, angle=-15
             )
@@ -2348,9 +2255,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Label axis and scale range
         environment_names = list(self.environment_uis.keys())
         axis = plot_item.getAxis("left")
-        axis.setTicks(
-            [[(i, name) for i, name in enumerate(["Global"] + environment_names)], []]
-        )
+        axis.setTicks([[(i, name) for i, name in enumerate(["Global"] + environment_names)], []])
         plot_item.setXRange(0, max_time * 1.1)
         plot_item.setYRange(-1, len(environment_names))
 
@@ -2375,9 +2280,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             )
             profile_timer_list.append(timer)
 
-            event_string = (
-                f"{timestamp:0.2f} {environment_name} {command.label} {data_text}"
-            )
+            event_string = f"{timestamp:0.2f} {environment_name} {command.label} {data_text}"
             event_string_list.append(event_string)
 
         self.upcoming_instructions_list.clear()
@@ -2402,9 +2305,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             data = timer.data
 
             if remaining_time > 0:
-                event_string = (
-                    f"{remaining_time:0.2f} {environment_name} {command.label} {data}"
-                )
+                event_string = f"{remaining_time:0.2f} {environment_name} {command.label} {data}"
                 event_string_list.append(event_string)
 
         self.upcoming_instructions_list.clear()
@@ -2431,9 +2332,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             data_item = self.profile_table.item(row, 3)
             data_text = data_item.text() if data_item is not None else ""
 
-            profile_event = ProfileEvent(
-                timestamp, environment_name, command, data_item
-            )
+            profile_event = ProfileEvent(timestamp, environment_name, command, data_item)
 
             sort_list.append((timestamp, row, profile_event))
 
@@ -2481,16 +2380,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
                 # For start_environment pull instruction from current UI
                 if command is GlobalCommands.START_ENVIRONMENT:
-                    data = self.environment_uis[
-                        environment_name
-                    ].get_environment_instructions()
+                    data = self.environment_uis[environment_name].get_environment_instructions()
                 elif (
                     command is UICommands.SET_ENVIRONMENT_INSTRUCTIONS
                 ):  # Store data to the UI but dont add it as an event
                     data = data_item.data(QtCore.Qt.ItemDataRole.UserRole)
-                    self.environment_uis[environment_name].set_environment_instructions(
-                        data
-                    )
+                    self.environment_uis[environment_name].set_environment_instructions(data)
                     continue
                 elif isinstance(command, GlobalCommands):
                     data = None
@@ -2526,9 +2421,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             # Reset UI to initial UI
             for environment_name, instruction in initial_instructions.items():
-                self.environment_uis[environment_name].set_environment_instructions(
-                    instruction
-                )
+                self.environment_uis[environment_name].set_environment_instructions(instruction)
 
             # Start Rattlesnake from profile_event_list
             self.rattlesnake.start_profile(profile_event_list)

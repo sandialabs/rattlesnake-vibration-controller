@@ -1,18 +1,12 @@
 import numpy as np
 from scipy.optimize import minimize
 from rattlesnake.environment.sds_sys_id_metadata import SDSMetadata
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
 
 
 def default_control_law(
-    environment_parameters: SDSMetadata,
-    transfer_function_frequencies: np.ndarray,
-    transfer_function: np.ndarray,
-    noise_response_cpsd: np.ndarray,
-    noise_reference_cpsd: np.ndarray,
-    sysid_response_cpsd: np.ndarray,
-    sysid_reference_cpsd: np.ndarray,
-    multiple_coherence: np.ndarray,
-    frames: int,
+    environment_metadata: SDSMetadata,
+    sysid_data: SysIdDataPackage,
     last_response_srs: np.ndarray = None,
     last_drive_amplitudes: np.ndarray = None,
     last_drive_decays: np.ndarray = None,
@@ -27,47 +21,12 @@ def default_control_law(
 
     Parameters
     ----------
-    environment_parameters : SDSMetadata
+    environment_metadata : SDSMetadata
         The metadata object describing the environment, including the specification, SRS Parameters,
         sine tone information, and other data used to describe the environment.
-    transfer_function_frequencies : np.ndarray
-        A 1D numpy array containing the frequency lines corresponding to the provided transfer
-        function.
-    transfer_function : np.ndarray
-        A 3D transfer function array with dimension (num_frequencies, num_control_channels,
-        num_drive_channels).  This should be used to take into account the system dynamics when
-        generating excitation signals.
-    noise_response_cpsd : np.ndarray
-        A 3D CPSD matrix consisting of the noise on the control channels measured during the
-        system identification.  This can be used to tailor the drive signals based on the noise
-        level in the test.  The dimensions are (num_frequencies, num_control_channels,
-        num_control_channels).
-    noise_reference_cpsd : np.ndarray
-        A 3D CPSD matrix consisting of the noise on the drive channels measured during the
-        system identification.  This can be used to tailor the drive signals based on the noise
-        level in the test.  The dimensions are (num_frequencies, num_drive_channels,
-        num_drive_channels).
-    sysid_response_cpsd : np.ndarray
-        A 3D CPSD matrix consisting of the response levels on and correlations between
-        the control channels measured during the system identification.  This can be used to
-        identify preferred phasing between response channels in the test.  The dimensions are
-        (num_frequencies, num_control_channels, num_control_channels).
-    sysid_reference_cpsd : np.ndarray
-        A 3D CPSD matrix consisting of the drive levels on and correlations between
-        the drive channels measured during the system identification.  The dimensions are
-        (num_frequencies, num_drive_channels, num_drive_channels).
-    multiple_coherence : np.ndarray
-        A 2D CPSD matrix consisting of the multiple coherence for each control channel, allowing
-        the control law to judge the quality of the measured transfer functions and potentially
-        take that into account during development of drive signals.  The dimensions are (
-        num_frequencies, num_control_channels).
-    frames : int
-        The number of frames of data measured in the system identification.
-    extra_parameters : str, optional
-        A string containing the information typed into the "Control Parameters" box on the
-        environment definition user interface panel.  Control laws may parse this string to allow
-        additional parameters to be supplied to the control law from the graphical user interface.
-        By default, a value of "" is provided.
+    sysid_data: SysIdDataPackage
+        A package of data containing all of the system identification information (transfer
+        functions, data quality metrics, etc.)
     last_response_srs : np.ndarray, optional
         A 2D SRS array with dimension (num_frequencies, num_control_channels).  This is the SRS
         developed from the previous control responses that can be used for error corrections.
@@ -103,10 +62,10 @@ def default_control_law(
         (num_frequencies, num_drive_channels)
     """
     print("Running the default control law!")
-    frequencies = environment_parameters.get_sds_frequencies_w_compensation_pulse()
+    frequencies = environment_metadata.get_sds_frequencies_w_compensation_pulse()
     num_frequencies = len(frequencies)
-    num_drive_signals = environment_parameters.num_reference_channels
-    decays = environment_parameters.get_sds_decays_w_compensation_pulse()
+    num_drive_signals = environment_metadata.num_reference_channels
+    decays = environment_metadata.get_sds_decays_w_compensation_pulse()
     amplitudes = np.ones((num_frequencies, num_drive_signals)) * np.linspace(
         1, 2, num_drive_signals
     )

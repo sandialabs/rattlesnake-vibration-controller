@@ -6,6 +6,7 @@ from multiprocessing.queues import Queue
 from scipy.signal import lfilter, oaconvolve
 from scipy.optimize import minimize, NonlinearConstraint, nnls
 from rattlesnake.environment.abstract_environment import EnvironmentCommands
+import queue as thqueue
 
 
 # %% Commands
@@ -37,6 +38,7 @@ class SDSQueues:
         data_in_queue: Queue,
         data_out_queue: Queue,
         log_file_queue: VerboseMessageQueue,
+        threading: bool,
     ):
         """A container class for the queues that SDS will manage.
 
@@ -65,20 +67,28 @@ class SDSQueues:
         log_file_queue : VerboseMessageQueue
             Queue for putting logging messages that will be read by the logging
             subtask and written to a file.
+        threading : bool
+            Will be True if threading is to be used, if False, multiprocessing will
+            be used.
         """
+        if threading:
+            new_queue = thqueue.Queue  # threading-safe in-memory queue
+        else:
+            new_queue = mp.Queue  # multiprocessing queue
+
         self.environment_command_queue = environment_command_queue
         self.gui_update_queue = gui_update_queue
         self.data_analysis_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Analysis Command Queue"
+            log_file_queue, new_queue(), environment_name + " Data Analysis Command Queue"
         )
         self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Signal Generation Command Queue"
+            log_file_queue, new_queue(), environment_name + " Signal Generation Command Queue"
         )
         self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Spectral Computation Command Queue"
+            log_file_queue, new_queue(), environment_name + " Spectral Computation Command Queue"
         )
         self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, environment_name + " Data Collector Command Queue"
+            log_file_queue, new_queue(), environment_name + " Data Collector Command Queue"
         )
         self.controller_communication_queue = controller_communication_queue
         self.data_in_queue = data_in_queue
