@@ -5,7 +5,11 @@ import multiprocessing as mp
 from multiprocessing.queues import Queue
 from scipy.signal import lfilter, oaconvolve
 from scipy.optimize import minimize, NonlinearConstraint, nnls
-from rattlesnake.environment.abstract_environment import EnvironmentCommands
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentCommands,
+    EnvironmentInstructions,
+)
+from rattlesnake.environment.environment_utilities import EnvironmentType
 import queue as thqueue
 
 
@@ -18,9 +22,17 @@ class SDSCommands(EnvironmentCommands):
     PERFORM_CONTROL_PREDICTION = 2
     SDS_TABLE_PREDICTION = 3
     SDS_RUN_TABLE_PREDICTION = 4
-    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
+    CHECK_FOR_COMPLETE_SHUTDOWN = 5
+    MONITOR_HIT = 6
+
     VALID_PROFILE_COMMANDS = set()
     VALID_DATA = {}
+
+
+class SDSUICommands(Enum):
+    CONTROL_PREDICTIONS = 0
+    RUN_CONTROL_PREDICTIONS = 1
+    CONTROL_UPDATE = 2
 
 
 # %% Queues
@@ -115,6 +127,38 @@ class DecayedSineTable(np.ndarray):
         obj = super().__new__(cls, shape, data_dtype, buffer, offset, strides, order)
         # Finally, we must return the newly created object:
         return obj
+
+
+class SDSInstructions(EnvironmentInstructions):
+    def __init__(
+        self,
+        environment_name: str,
+        control_test_level: float,
+        target_hits_at_level: int,
+        automatic_hits: bool,
+        automatic_interval: float | None,
+        sds_table: DecayedSineTable,
+    ):
+        super().__init__(EnvironmentType.SDS, environment_name)
+        self.control_test_level = control_test_level
+        self.target_hits_at_level = target_hits_at_level
+        self.automatic_hits = automatic_hits
+        self.automatic_interval = automatic_interval
+        self.sds_table = sds_table
+
+    def validate(self):
+        super().validate()
+        if not isinstance(self.control_test_level, (int, float)):
+            raise ValueError("control_test_level must be numeric")
+        if not isinstance(self.target_hits_at_level, int) or self.target_hits_at_level < 1:
+            raise ValueError("target_hits_at_level must be a positive integer")
+        if not isinstance(self.automatic_hits, bool):
+            raise ValueError("automatic_hits must be bool")
+        if self.automatic_hits:
+            if self.automatic_interval is None or self.automatic_interval <= 0:
+                raise ValueError("automatic_interval must be positive in automatic mode")
+        if self.sds_table is None:
+            raise ValueError("sds_table must not be None")
 
 
 def decayed_sine_table(

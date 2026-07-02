@@ -30,6 +30,8 @@ import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import traceback
 from multiprocessing.queues import Queue
+import time
+from datetime import datetime
 
 import netCDF4 as nc4
 import numpy as np
@@ -49,6 +51,7 @@ from rattlesnake.environment.sds_sys_id_metadata import (
 from rattlesnake.environment.sds_sys_id_utilities import (
     SDSQueues,
     SDSCommands,
+    SDSUICommands,
     sum_decayed_sines_reconstruction,
     srs as srs_function,
 )
@@ -75,7 +78,6 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataPackage,
 )
 from rattlesnake.process.data_collector import (
-    FrameBuffer,
     data_collector_process,
 )
 from rattlesnake.process.signal_generation import (
@@ -89,6 +91,7 @@ from rattlesnake.process.signal_generation_process import (
 from rattlesnake.process.spectral_processing import (
     spectral_processing_process,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 # region Globals
 CONTROL_TYPE = EnvironmentType.SDS
@@ -145,7 +148,8 @@ class SDSEnvironment(SysIdEnvironment):
             SDSCommands.SDS_RUN_TABLE_PREDICTION,
             self.perform_run_table_prediction,
         )
-        self.map_command(SDSCommands.START_CONTROL, self.start_control)
+        self.map_command(SDSCommands.MONITOR_HIT, self.monitor_hit)
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
         self.map_command(SDSCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(
             ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
@@ -165,8 +169,6 @@ class SDSEnvironment(SysIdEnvironment):
         self.last_drive_amplitudes = None
         self.last_drive_decays = None
         self.last_drive_delays = None
-        self.hit_level_history = None
-        self.run_metadata = None
         # Prediction information
         self.predicted_response_srs = None
         self.predicted_response_time_history = None
@@ -174,6 +176,30 @@ class SDSEnvironment(SysIdEnvironment):
         self.predicted_decays = None
         self.predicted_delays = None
         self.predicted_drive_time_history = None
+        # Run Information
+        self.run_instructions = None
+        self.hit_history = []
+        self.run_sds_table = None
+
+        self.total_hits = 0
+        self.hits_at_target = 0
+        self.current_test_level_db = 0.0
+        self.current_test_level_scale = 1.0
+
+        self.sequence_active = False
+        self.automatic_hits = False
+        self.automatic_interval = None
+        self.stop_requested = False
+
+        self.hit_in_progress = False
+        self.pending_next_hit_time = None
+
+        self.last_drive_signal = None
+        self.last_response_signal = None
+        self.last_response_srs = None
+
+        self.current_hit_control_data = []
+        self.current_hit_output_data = []
 
         self.set_ready()
 
@@ -393,7 +419,11 @@ class SDSEnvironment(SysIdEnvironment):
             (
                 self.environment_name,
                 (
-                    "control_run_predictions" if run_table else "control_predictions",
+                    (
+                        SDSUICommands.RUN_CONTROL_PREDICTIONS
+                        if run_table
+                        else SDSUICommands.CONTROL_PREDICTIONS
+                    ),
                     (
                         output_amplitudes,
                         output_delays,
@@ -452,7 +482,7 @@ class SDSEnvironment(SysIdEnvironment):
 
     def show_test_prediction(self):
         """Sends the test predictions to the UI"""
-        for message in ("control_predictions", "control_run_predictions"):
+        for message in (SDSUICommands.CONTROL_PREDICTIONS, SDSUICommands.RUN_CONTROL_PREDICTIONS):
             self.gui_update_queue.put(
                 (
                     self.environment_name,
@@ -475,28 +505,384 @@ class SDSEnvironment(SysIdEnvironment):
         """Collects the metadata required to define the signal generation process"""
         return SignalGenerationMetadata(
             samples_per_write=self.hardware_metadata.samples_per_write,
-            level_ramp_samples=self.environment_metadata.test_level_ramp_time
+            level_ramp_samples=0.5  # This isn't really necessary since we won't cancel during a hit
             * self.environment_metadata.sample_rate
             * self.hardware_metadata.output_oversample,
             output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
         )
 
     def start_control(self, data):
-        """Starts up the control to generate the signal"""
-        if self.startup:
-            pass
+        """
+        Start the SDS environment.
+
+        Manual mode:
+            One START_CONTROL performs one hit and then the environment ends.
+
+        Automatic mode:
+            One START_CONTROL performs repeated hits until:
+              - target_hits_at_level is reached, or
+              - stop_environment is requested.
+        """
+        instructions = data
+
+        if self.active:
+            self.log("SDS environment already active; ignoring duplicate start.")
+            return
+
+        instructions.validate()
+
+        self.run_instructions = instructions
+        self.run_sds_table = instructions.sds_table.copy()
+
+        self.current_test_level_db = instructions.control_test_level
+        self.current_test_level_scale = db2scale(instructions.control_test_level)
+
+        self.automatic_hits = instructions.automatic_hits
+        self.automatic_interval = instructions.automatic_interval
+        self.sequence_active = True
+        self.stop_requested = False
+        self.hit_in_progress = False
+        self.pending_next_hit_time = None
+
+        # Reset counters and state for this run request
+        self.total_hits = 0
+        self.hits_at_target = 0
+        self.hit_history = []
+
+        self.last_drive_signal = None
+        self.last_response_signal = None
+        self.last_response_srs = None
+
+        self.current_hit_control_data = []
+        self.current_hit_output_data = []
+
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, instructions),
+            )
+        )
+
+        self.set_active()
+        self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_STARTED, None)))
+
+        self.log(
+            f"Starting SDS environment: automatic_hits={self.automatic_hits}, "
+            f"target_hits_at_level={instructions.target_hits_at_level}, "
+            f"test_level_db={self.current_test_level_db}"
+        )
+
+        self.launch_hit()
+
+    def launch_hit(self):
+        """
+        Launch a single SDS hit by synthesizing one transient drive waveform from
+        the current run SDS table and sending it to the signal generation process.
+        """
+        if self.hit_in_progress:
+            self.log("Attempted to launch a hit while one was already in progress.")
+            return
+
+        self.log("Launching SDS hit")
+
+        frequencies = self.run_sds_table["frequency"]
+        amplitudes = self.run_sds_table["amplitude"]
+        decays = self.run_sds_table["decay"]
+        delays = self.run_sds_table["delay"]
+
+        # Build one finite drive waveform for all drive channels.
+        drive_signal = sum_decayed_sines_reconstruction(
+            frequencies,
+            amplitudes[:, np.newaxis, :].T,
+            decays[:, np.newaxis, :].T,
+            delays[:, np.newaxis, :].T,
+            self.environment_metadata.sample_rate,
+            self.environment_metadata.block_size,
+        )
+
+        self.last_drive_signal = drive_signal
+        self.hit_in_progress = True
+
+        # Reset per-hit data buffers
+        self.current_hit_control_data = []
+        self.current_hit_output_data = []
+
+        # Initialize finite transient output
+        self.queue_container.signal_generation_command_queue.put(
+            self.environment_name,
+            (
+                SignalGenerationCommands.INITIALIZE_PARAMETERS,
+                self.get_signal_generation_metadata(),
+            ),
+        )
+        self.queue_container.signal_generation_command_queue.put(
+            self.environment_name,
+            (
+                SignalGenerationCommands.INITIALIZE_SIGNAL_GENERATOR,
+                TransientSignalGenerator(drive_signal, repeat=False),
+            ),
+        )
+        self.queue_container.signal_generation_command_queue.put(
+            self.environment_name,
+            (SignalGenerationCommands.SET_TEST_LEVEL, self.current_test_level_scale),
+        )
+        self.queue_container.signal_generation_command_queue.put(
+            self.environment_name,
+            (SignalGenerationCommands.GENERATE_SIGNALS, None),
+        )
+
+        # Start hit monitor loop
+        self.queue_container.environment_command_queue.put(
+            self.environment_name, (SDSCommands.MONITOR_HIT, None)
+        )
+
+    def complete_hit(self, full_control, full_output):
+        """
+        Complete one SDS hit by postprocessing the measured time histories.
+
+        Parameters
+        ----------
+        full_control : np.ndarray
+            Measured response/control-channel time history for the hit,
+            shape (num_control_channels, num_samples)
+        full_output : np.ndarray
+            Measured output/drive-channel time history for the hit,
+            shape (num_drive_channels, num_samples)
+        """
+        self.log("Completing SDS hit")
+
+        # First-pass implementation:
+        # keep full measured time histories directly.
+        # Later this can be improved with alignment/cropping against the expected drive.
+        self.last_response_signal = full_control
+
+        response_srs = []
+        for signal in self.last_response_signal:
+            response_srs.append(
+                srs_function(
+                    signal,
+                    1 / self.environment_metadata.sample_rate,
+                    self.environment_metadata.get_sds_frequencies(),
+                    self.environment_metadata.srs_data.srs_damping,
+                    self.environment_metadata.srs_data.srs_type.value
+                    * self.environment_metadata.srs_data.srs_displacement.value,
+                )[0]
+            )
+        self.last_response_srs = np.array(response_srs).T
+
+        # Preserve latest control results for future control-law use
+        self.last_drive_amplitudes = self.run_sds_table["amplitude"].copy()
+        self.last_drive_decays = self.run_sds_table["decay"].copy()
+        self.last_drive_delays = self.run_sds_table["delay"].copy()
+
+        # Counters
+        self.total_hits += 1
+        counted_at_target = abs(self.current_test_level_db) < 1e-12
+        if counted_at_target:
+            self.hits_at_target += 1
+
+        self.hit_history.append(
+            {
+                "hit_index": self.total_hits,
+                "timestamp": datetime.now().isoformat(),
+                "test_level_db": self.current_test_level_db,
+                "counted_at_target": counted_at_target,
+                "total_hits": self.total_hits,
+                "hits_at_target": self.hits_at_target,
+                "target_hits_at_level": (
+                    None
+                    if self.run_instructions is None
+                    else self.run_instructions.target_hits_at_level
+                ),
+            }
+        )
+
+        self.log(
+            f"Hit complete: total_hits={self.total_hits}, "
+            f"hits_at_target={self.hits_at_target}, "
+            f"counted_at_target={counted_at_target}"
+        )
+
+        self.hit_in_progress = False
+
+        # Emit one coherent UI update after the hit
+        self.emit_control_update()
+
+    def monitor_hit(self, data):
+        """
+        Monitor an in-progress SDS hit, or wait between hits during an automatic sequence.
+
+        Responsibilities
+        ----------------
+        - While a hit is active:
+            * gather acquisition blocks
+            * detect hit completion via last_acquisition flag
+            * call complete_hit(...)
+        - After a hit completes:
+            * if manual mode -> finish
+            * if automatic mode -> schedule and launch next hit as appropriate
+        """
+        if not self.active or not self.sequence_active:
+            return
+
+        # Case 1: a hit is currently in progress
+        if self.hit_in_progress:
+            try:
+                acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
+
+                control_data = acquisition_data[self.environment_metadata.control_channel_indices]
+                if self.environment_metadata.response_transformation_matrix is not None:
+                    control_data = (
+                        self.environment_metadata.response_transformation_matrix @ control_data
+                    )
+
+                output_data = acquisition_data[self.environment_metadata.output_channel_indices]
+                if self.environment_metadata.reference_transformation_matrix is not None:
+                    output_data = (
+                        self.environment_metadata.reference_transformation_matrix @ output_data
+                    )
+
+                self.current_hit_control_data.append(control_data)
+                self.current_hit_output_data.append(output_data)
+
+                if last_acquisition:
+                    self.log("Received last acquisition block for SDS hit")
+
+                    full_control = np.concatenate(self.current_hit_control_data, axis=-1)
+                    full_output = np.concatenate(self.current_hit_output_data, axis=-1)
+
+                    self.complete_hit(full_control, full_output)
+
+                    # Manual mode: one hit and done
+                    if not self.automatic_hits:
+                        self.finish_sequence()
+                        return
+
+                    # Automatic mode stop logic
+                    if self.stop_requested:
+                        self.finish_sequence()
+                        return
+
+                    if self.hits_at_target >= self.run_instructions.target_hits_at_level:
+                        self.finish_sequence()
+                        return
+
+                    # Schedule next hit
+                    self.pending_next_hit_time = time.time() + self.automatic_interval
+                    self.log(f"Next automatic hit scheduled in {self.automatic_interval:.3f} s")
+
+                # Continue monitoring either current hit or waiting state
+                if self.sequence_active:
+                    time.sleep(0.05)
+                    self.queue_container.environment_command_queue.put(
+                        self.environment_name, (SDSCommands.MONITOR_HIT, None)
+                    )
+                return
+
+            except Exception:
+                # No data available yet, continue polling
+                time.sleep(0.05)
+                self.queue_container.environment_command_queue.put(
+                    self.environment_name, (SDSCommands.MONITOR_HIT, None)
+                )
+                return
+
+        # Case 2: waiting between automatic hits
+        if self.automatic_hits and self.pending_next_hit_time is not None:
+            if self.stop_requested:
+                self.finish_sequence()
+                return
+
+            if self.hits_at_target >= self.run_instructions.target_hits_at_level:
+                self.finish_sequence()
+                return
+
+            if time.time() >= self.pending_next_hit_time:
+                self.pending_next_hit_time = None
+                self.launch_hit()
+                return
+
+            time.sleep(0.05)
+            self.queue_container.environment_command_queue.put(
+                self.environment_name, (SDSCommands.MONITOR_HIT, None)
+            )
+            return
 
     def shutdown(self):
-        """Let the UI know that this environment has completely shut down"""
+        """
+        Final SDS environment shutdown.
+        """
         self.log("Environment Shut Down")
-        self.gui_update_queue.put((self.environment_name, ("enable_control", None)))
-        self.startup = True
+
+        self.sequence_active = False
+        self.hit_in_progress = False
+        self.pending_next_hit_time = None
+        self.stop_requested = False
+
+        self.clear_active()
+        self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
 
     def stop_environment(self, data):
-        """Starts the shutdown sequence based on commands from the UI"""
-        self.queue_container.signal_generation_command_queue.put(
-            self.environment_name, (SignalGenerationCommands.START_SHUTDOWN, None)
+        """
+        Stop the SDS environment gracefully.
+
+        A currently active hit is allowed to finish. This only prevents future
+        hits from starting in an automatic sequence.
+        """
+        self.log("Stop requested for SDS environment")
+        self.stop_requested = True
+
+        # If nothing is in progress, finish immediately
+        if not self.hit_in_progress:
+            self.finish_sequence()
+            return
+
+        self.log("A hit is currently in progress; stopping after hit completion.")
+
+    def emit_control_update(self):
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (
+                    SDSUICommands.CONTROL_UPDATE,
+                    {
+                        "measured_drive_time_history": (
+                            None
+                            if self.last_drive_signal is None
+                            else self.last_drive_signal.copy()
+                        ),
+                        "measured_response_time_history": (
+                            None
+                            if self.last_response_signal is None
+                            else self.last_response_signal.copy()
+                        ),
+                        "measured_response_srs": (
+                            None
+                            if self.last_response_srs is None
+                            else self.last_response_srs.copy()
+                        ),
+                        "run_sds_table": (
+                            None if self.run_sds_table is None else self.run_sds_table.copy()
+                        ),
+                        "total_hits": self.total_hits,
+                        "hits_at_target": self.hits_at_target,
+                        "target_hits_at_level": (
+                            None
+                            if self.run_instructions is None
+                            else self.run_instructions.target_hits_at_level
+                        ),
+                        "hit_history": list(self.hit_history),
+                    },
+                ),
+            )
         )
+
+    def finish_sequence(self):
+        self.log("Finishing SDS hit sequence")
+        self.sequence_active = False
+        self.hit_in_progress = False
+        self.pending_next_hit_time = None
+        self.shutdown()
 
 
 # region Process

@@ -1,10 +1,9 @@
 from qtpy import QtCore, QtWidgets, uic
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, QTime
 from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
-    SDSRunMetadata,
     ToneStrategy,
     ToneParameters,
     CompPulseParameters,
@@ -24,6 +23,8 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     octspace,
     SDSQueues,
     SDSCommands,
+    SDSUICommands,
+    SDSInstructions,
     sum_decayed_sines_reconstruction,
     srs as srs_function,
 )
@@ -628,9 +629,11 @@ class SDSUI(SysIdEnvironmentUI):
             "environment_metadata",
             "sysid_data",
             "last_response_srs",
+            "last_response_signals",
             "last_drive_amplitudes",
             "last_drive_decays",
             "last_drive_delays",
+            "last_drive_signals",
         }
         valid_control_laws = []
         members = inspect.getmembers(module)
@@ -1420,16 +1423,6 @@ class SDSUI(SysIdEnvironmentUI):
     def show_run_table(self):
         self.run_table_dialog.show()
 
-    def collect_run_metadata(self):
-        metadata = SDSRunMetadata(
-            self.run_table.sds_table,
-            self.run_widget.current_test_level_selector.value(),
-            self.run_widget.target_hits_at_level_selector.value(),
-            self.run_widget.auto_hits_checkbox.isChecked(),
-            QtCore.QTime(0, 0).secsTo(self.run_widget.auto_hit_interval_selector.time()),
-        )
-        return metadata
-
     # def start_control(self):
     #     """Starts the chain of events to start the environment"""
     #     if (
@@ -1464,7 +1457,7 @@ class SDSUI(SysIdEnvironmentUI):
     def enable_control(self, enabled):
         """Enables or disables the buttons to start control if it's already running"""
         for widget in [
-            self.run_widget.test_level_selector,
+            self.run_widget.current_test_level_selector,
             self.run_widget.target_hits_at_level_selector,
             self.run_widget.manual_hits_checkbox,
             self.run_widget.auto_hits_checkbox,
@@ -1502,7 +1495,7 @@ class SDSUI(SysIdEnvironmentUI):
                 return
         for widget in [
             self.run_widget.start_test_button,
-            self.run_widget.test_level_selector,
+            self.run_widget.current_test_level_selector,
             self.run_widget.target_hits_at_level_selector,
             self.run_widget.manual_hits_checkbox,
             self.run_widget.auto_hits_checkbox,
@@ -1512,7 +1505,7 @@ class SDSUI(SysIdEnvironmentUI):
 
         super().start_environment()
         # TODO: This needs to come from the environment, not the UI.
-        if self.run_widget.current_test_level_selector.value >= 0:
+        if self.run_widget.current_test_level_selector.value() >= 0:
             self.rattlesnake.environment_at_target_level(self.environment_name)
 
     def start_environment_ready(self):
@@ -1535,21 +1528,49 @@ class SDSUI(SysIdEnvironmentUI):
         return super().stop_environment_ready()
 
     def get_environment_instructions(self):
-        pass
+        automatic_hits = self.run_widget.auto_hits_checkbox.isChecked()
+        automatic_interval = None
+        if automatic_hits:
+            automatic_interval = QTime(0, 0).secsTo(
+                self.run_widget.auto_hit_interval_selector.time()
+            )
 
-    def set_environment_instructions(self, sds_instructions):
-        pass
+        instructions = SDSInstructions(
+            environment_name=self.environment_name,
+            control_test_level=self.run_widget.current_test_level_selector.value(),
+            target_hits_at_level=self.run_widget.target_hits_at_level_selector.value(),
+            automatic_hits=automatic_hits,
+            automatic_interval=automatic_interval,
+            sds_table=None if self.run_table is None else self.run_table.sds_table,
+        )
+        return instructions
+
+    def set_environment_instructions(self, instructions):
+        self.run_widget.current_test_level_selector.setValue(instructions.control_test_level)
+        self.run_widget.target_hits_at_level_selector.setValue(instructions.target_hits_at_level)
+        self.run_widget.auto_hits_checkbox.setChecked(instructions.automatic_hits)
+        self.run_widget.manual_hits_checkbox.setChecked(not instructions.automatic_hits)
+
+        if instructions.automatic_interval is not None:
+            self.run_widget.auto_hit_interval_selector.setTime(
+                QTime(0, 0).addSecs(int(instructions.automatic_interval))
+            )
+
+        if instructions.sds_table is not None and self.run_table is not None:
+            self.run_table.sds_table = instructions.sds_table
+            self.run_table.update_ui()
+
+        super().set_environment_instructions(instructions)
 
     # region UI Update and Templates
 
-    def retrieve_metadata(self, netcdf_handle: nc4.Dataset = None, environment_name=None):
-        group = super().retrieve_metadata(netcdf_handle, environment_name)
-
     def update_gui(self, queue_data):
+        self.log(f"Updating GUI: {queue_data[0]}")
         if super().update_gui(queue_data):
             return
         message, data = queue_data
-        if message == "control_predictions":
+        if message == SDSUICommands.CONTROL_PREDICTIONS:
+            self.log("Updating Prediction Table Predictions")
             (
                 predicted_amplitudes,
                 predicted_delays,
@@ -1566,7 +1587,8 @@ class SDSUI(SysIdEnvironmentUI):
                 predicted_decays,
                 predicted_drive_time_history,
             )
-        elif message == "control_run_predictions":
+        elif message == SDSUICommands.RUN_CONTROL_PREDICTIONS:
+            self.log("Updating Run Table Predictions")
             (
                 predicted_amplitudes,
                 predicted_delays,
@@ -1583,6 +1605,24 @@ class SDSUI(SysIdEnvironmentUI):
                 predicted_decays,
                 predicted_drive_time_history,
             )
+        elif message == SDSUICommands.CONTROL_UPDATE:
+            self.log("Updating UI with control data")
+            self.run_widget.current_total_hits_display.setValue(data["total_hits"])
+            self.run_widget.current_hits_at_level_display.setValue(data["hits_at_target"])
+
+            target_hits = data["target_hits_at_level"]
+            if target_hits is None:
+                target_hits = 1
+            progress = int(100 * data["hits_at_target"] / max(1, target_hits))
+            self.run_widget.current_hits_progress.setValue(min(progress, 100))
+
+            if data["run_sds_table"] is not None and self.run_table is not None:
+                self.run_table.sds_table = data["run_sds_table"]
+                self.run_table.update_table_ui()
+                self.run_table.update_drive_plot_ui()
+
+            # Placeholder for future history dialog
+            self.shock_history = data["hit_history"]
 
     def set_parameters_from_template(self, worksheet):
         self.definition_widget.block_size_selector.setValue(int(worksheet.cell(2, 2).value))

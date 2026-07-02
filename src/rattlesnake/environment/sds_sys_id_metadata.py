@@ -729,19 +729,3 @@ class SDSMetadata(SysIdEnvironmentMetadata):
 
     def validate(self, hardware_metadata):
         return super().validate(hardware_metadata)
-
-
-class SDSRunMetadata:
-    def __init__(
-        self,
-        sds_table: DecayedSineTable,
-        test_level: int,
-        target_hits_at_level: int,
-        automatic_hits: bool,
-        automatic_interval: float = None,
-    ):
-        self.sds_table = sds_table
-        self.test_level = test_level
-        self.target_hits_at_level = target_hits_at_level
-        self.automatic_hits = automatic_hits
-        self.automatic_interval = automatic_interval
