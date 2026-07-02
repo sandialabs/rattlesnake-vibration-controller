@@ -518,7 +518,14 @@ class SDSPredictionTable:
         volt = self.compute_max_voltage(index)
         if volt is None:
             return
-        self.parent_widget.excitation_voltage_list.item(index).setText(f"{volt:0.2f}")
+
+        this_text = f"{volt:0.2f}"
+        self.parent_widget.excitation_voltage_list.item(index).setText(this_text)
+
+        for voltage_list in self.other_voltage_lists:
+            item = voltage_list.item(index)
+            if item is not None:
+                item.setText(this_text)
 
     def update_tone_selection_ui(self):
         """This gets called when a different row of the table is selected."""
