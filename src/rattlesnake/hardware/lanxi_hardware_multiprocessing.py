@@ -26,6 +26,7 @@ import re
 import socket
 import time
 from typing import List
+from collections import defaultdict
 
 import netCDF4 as nc4
 import openpyxl
@@ -520,10 +521,8 @@ def read_lanxi(socket_handle: socket.socket):
         package.header.message_type
         == OpenapiMessage.Header.EMessageType.e_interpretation
     ):
-        interpretation_dict = {}
+        interpretation_dict = defaultdict(dict)
         for interpretation in package.message.interpretations:
-            if interpretation.signal_id not in interpretation_dict:
-                interpretation_dict[interpretation.signal_id] = {}
             interpretation_dict[interpretation.signal_id][
                 interpretation.descriptor_type
             ] = interpretation.value
