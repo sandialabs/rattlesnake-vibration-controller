@@ -266,7 +266,7 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
             compensation_frequency=self.metadata.compensation_pulse_data.compensation_frequency,
             compensation_decay=self.metadata.compensation_pulse_data.compensation_decay,
             number_of_iterations=self.metadata.sds_data.iterations,
-            convergence=self.metadata.sds_data.convervence,
+            convergence=self.metadata.sds_data.convergence,
             error_tolerance=self.metadata.sds_data.error_tolerance,
             scale_factor=self.metadata.sds_data.scale_factor,
             ignore_compensation_pulse=not self.metadata.compensation_pulse_data.use_compensation_pulse,

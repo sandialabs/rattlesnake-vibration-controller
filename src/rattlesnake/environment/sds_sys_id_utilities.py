@@ -138,6 +138,7 @@ class SDSInstructions(EnvironmentInstructions):
         automatic_hits: bool,
         automatic_interval: float | None,
         sds_table: DecayedSineTable,
+        allow_automatic_updates: bool,
     ):
         super().__init__(EnvironmentType.SDS, environment_name)
         self.control_test_level = control_test_level
@@ -145,6 +146,7 @@ class SDSInstructions(EnvironmentInstructions):
         self.automatic_hits = automatic_hits
         self.automatic_interval = automatic_interval
         self.sds_table = sds_table
+        self.allow_automatic_updates = allow_automatic_updates
 
     def validate(self):
         super().validate()
@@ -159,6 +161,8 @@ class SDSInstructions(EnvironmentInstructions):
                 raise ValueError("automatic_interval must be positive in automatic mode")
         if self.sds_table is None:
             raise ValueError("sds_table must not be None")
+        if not isinstance(self.allow_automatic_updates, bool):
+            raise ValueError("allow_automatic_updates must be bool")
 
 
 def decayed_sine_table(

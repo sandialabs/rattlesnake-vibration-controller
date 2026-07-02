@@ -1542,6 +1542,7 @@ class SDSUI(SysIdEnvironmentUI):
             automatic_hits=automatic_hits,
             automatic_interval=automatic_interval,
             sds_table=None if self.run_table is None else self.run_table.sds_table,
+            allow_automatic_updates=self.run_table_dialog.allow_automatic_updates_checkbox.isChecked(),
         )
         return instructions
 
@@ -1550,6 +1551,9 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_widget.target_hits_at_level_selector.setValue(instructions.target_hits_at_level)
         self.run_widget.auto_hits_checkbox.setChecked(instructions.automatic_hits)
         self.run_widget.manual_hits_checkbox.setChecked(not instructions.automatic_hits)
+        self.run_table_dialog.allow_automatic_updates_checkbox.setChecked(
+            instructions.allow_automatic_updates
+        )
 
         if instructions.automatic_interval is not None:
             self.run_widget.auto_hit_interval_selector.setTime(
