@@ -612,6 +612,25 @@ def lanxi_multisocket_reader(
                         for data_type in socket_data_types
                     ]
                 )
+
+                # Sort the signal ids for the socket and cache the id to index to a dictionary
+                if socket_handle not in cache_id:
+                    sorted_ids = sorted(signal_ids)
+                    cache_id[socket_handle] = {
+                        signal_id: index for index, signal_id in enumerate(sorted_ids)
+                    }
+
+                # Sort socket_data according to cached signal_id order
+                signal_id_order = cache_id[socket_handle]
+                sorted_records = sorted(
+                    zip(signal_ids, socket_data, socket_data_types),
+                    key=lambda item: signal_id_order[item[0]],
+                )
+                signal_ids, socket_data, socket_data_types = map(
+                    list, zip(*sorted_records)
+                )
+
+                # Find the type of data package and process it
                 if (
                     socket_data_types[0]
                     == OpenapiMessage.Header.EMessageType.e_interpretation
