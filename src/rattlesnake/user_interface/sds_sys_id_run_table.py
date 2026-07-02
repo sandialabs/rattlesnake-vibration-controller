@@ -9,7 +9,12 @@ from rattlesnake.utilities import DIRECTORY
 class SDSRunTableDialog(QtWidgets.QDialog):
 
     def __init__(
-        self, rattlesnake: RattlesnakeController, environment_name, prediction_mode, parent=None
+        self,
+        rattlesnake: RattlesnakeController,
+        environment_name,
+        prediction_mode,
+        parent=None,
+        other_voltage_lists=None,
     ):
         super().__init__(parent)
         uic.loadUi(
@@ -22,6 +27,7 @@ class SDSRunTableDialog(QtWidgets.QDialog):
             rattlesnake,
             environment_name,
             prediction_mode=prediction_mode,
+            other_voltage_lists=other_voltage_lists,
         )
 
         self.load_table_button.clicked.connect(self.load_sds_table)

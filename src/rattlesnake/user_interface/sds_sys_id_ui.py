@@ -118,7 +118,11 @@ class SDSUI(SysIdEnvironmentUI):
         self.prediction_table.lock_table(all_data=True)
 
         self.run_table_dialog = SDSRunTableDialog(
-            self.rattlesnake, self.environment_name, prediction_mode=False, parent=self.run_widget
+            self.rattlesnake,
+            self.environment_name,
+            prediction_mode=False,
+            parent=self.run_widget,
+            other_voltage_lists=[self.run_widget.test_output_voltage_list],
         )
         self.run_table = self.run_table_dialog.run_table
         self.run_table.lock_table(frequencies=True)

@@ -26,6 +26,7 @@ class SDSPredictionTable:
         drive_names: None | np.ndarray = None,
         response_names: None | np.ndarray = None,
         sds_parameters: None | SDSMetadata = None,
+        other_voltage_lists=None,
     ):
         uic.loadUi(
             os.path.join(DIRECTORY, "user_interface", "ui_files", "srs_sds_prediction_table.ui"),
@@ -47,6 +48,7 @@ class SDSPredictionTable:
         self.decay_locked = False
         # Keep track of tables and tabs
         self.sds_table_widgets = []
+        self.other_voltage_lists = [] if other_voltage_lists is None else other_voltage_lists
         # Persistent calculated data
         self.predicted_response_time_history = None
         self.predicted_response_srs = None
@@ -502,8 +504,15 @@ class SDSPredictionTable:
         voltages = self.compute_max_voltage()
         if voltages is None:
             return
+
+        voltage_strings = [f"{volt:0.2f}" for volt in voltages]
+
         self.parent_widget.excitation_voltage_list.clear()
-        self.parent_widget.excitation_voltage_list.addItems([f"{volt:0.2f}" for volt in voltages])
+        self.parent_widget.excitation_voltage_list.addItems(voltage_strings)
+
+        for voltage_list in self.other_voltage_lists:
+            voltage_list.clear()
+            voltage_list.addItems(voltage_strings)
 
     def update_voltage_ui(self, index):
         volt = self.compute_max_voltage(index)

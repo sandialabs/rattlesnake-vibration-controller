@@ -449,12 +449,24 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="create_window_button">
+         <widget class="QPushButton" name="create_srs_window_button">
           <property name="toolTip">
            <string>Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.</string>
           </property>
           <property name="text">
-           <string>Create Window</string>
+           <string>Create SRS
+Window</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="create_time_history_window_button">
+          <property name="toolTip">
+           <string>Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.</string>
+          </property>
+          <property name="text">
+           <string>Create Time
+History Window</string>
           </property>
          </widget>
         </item>
@@ -466,13 +478,24 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="show_all_channels_button">
+         <widget class="QPushButton" name="show_all_srs_channels_button">
           <property name="toolTip">
            <string>Show Autospectral Densities (ASDs) for all control channels.  This will create a window for every channel in the test.</string>
           </property>
           <property name="text">
            <string>Show All
-Control Channels</string>
+SRS Channels</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="show_all_time_history_channels_button">
+          <property name="toolTip">
+           <string>Show Autospectral Densities (ASDs) for all control channels.  This will create a window for every channel in the test.</string>
+          </property>
+          <property name="text">
+           <string>Show All
+Time Channels</string>
           </property>
          </widget>
         </item>
