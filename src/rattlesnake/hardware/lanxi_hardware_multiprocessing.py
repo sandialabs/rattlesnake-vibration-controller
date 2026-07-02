@@ -520,17 +520,18 @@ def read_lanxi(socket_handle: socket.socket):
         package.header.message_type
         == OpenapiMessage.Header.EMessageType.e_interpretation
     ):
-        interpretation_dict = {}
-        for interpretation in package.message.interpretations:
-            interpretation_dict[interpretation.descriptor_type] = interpretation.value
-        return (package.header.message_type, interpretation_dict)
+        return (
+            package.header.message_type,
+            package.message.interpretations,
+        )
+
     elif (
         package.header.message_type == OpenapiMessage.Header.EMessageType.e_signal_data
-    ):  # If the data contains signal data
-        array = []
-        for signal in package.message.signals:  # For each signal in the package
-            array.append(np.array([x.calc_value for x in signal.values]) / 2**23)
-        return package.header.message_type, np.concatenate(array, axis=-1)
+    ):
+        return (
+            package.header.message_type,
+            package.message.signals,
+        )
     # If 'quality data' message, then record information on data quality issues
     elif (
         package.header.message_type == OpenapiMessage.Header.EMessageType.e_data_quality
@@ -581,6 +582,7 @@ def lanxi_multisocket_reader(
         )
     )
     try:
+        signal_orders = {}
         while True:
             for socket_handle, active_channels, data_queue in zip(
                 socket_handles, active_channels_list, data_queues
@@ -605,16 +607,54 @@ def lanxi_multisocket_reader(
                     socket_data_types[0]
                     == OpenapiMessage.Header.EMessageType.e_interpretation
                 ):
+                    # Cache signal_id order on the socket
+                    if socket_handle not in signal_orders:
+
+                        signal_orders[socket_handle] = {
+                            interp.signal_id: i
+                            for i, interp in enumerate(
+                                sorted(
+                                    socket_data,
+                                    key=lambda x: x.signal_id,
+                                )
+                            )
+                        }
+                    # Order interpretation by signal_id order
+                    order = signal_orders[socket_handle]
+                    ordered = [None] * len(socket_data)
+                    for interp in socket_data:
+                        ordered[order[interp.signal_id]] = {
+                            interp.descriptor_type: interp.value
+                        }
                     # print('{:}:{:} Putting Interpretation to Queue'.format(
                     #       *socket_handle.getpeername()))
-                    data_queue.put(("Interpretation", socket_data))
+
+                    data_queue.put(("Interpretation", ordered))
                 elif (
                     socket_data_types[0]
                     == OpenapiMessage.Header.EMessageType.e_signal_data
                 ):
                     # print('{:}:{:} Putting Signal to Queue'.format(
                     #        *socket_handle.getpeername()))
-                    data_queue.put(("Signal", socket_data))
+                    # Cache signal order on that socket
+                    if socket_handle not in signal_orders:
+                        signal_orders[socket_handle] = {
+                            signal.signal_id: i
+                            for i, signal in enumerate(
+                                sorted(
+                                    socket_data,
+                                    key=lambda x: x.signal_id,
+                                )
+                            )
+                        }
+                    # Sort signals by signal order
+                    order = signal_orders[socket_handle]
+                    ordered = [None] * len(socket_data)
+                    for signal in socket_data:
+                        ordered[order[signal.signal_id]] = (
+                            np.array([x.calc_value for x in signal.values]) / 2**23
+                        )
+                    data_queue.put(("Signal", ordered))
                 else:
                     raise ValueError(
                         "Unknown Signal Type {:} in {:}:{:}".format(  # pylint: disable=consider-using-f-string
