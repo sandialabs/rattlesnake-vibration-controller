@@ -539,6 +539,7 @@ def read_lanxi(socket_handle: socket.socket):
         signal_ids = []
         for signal in package.message.signals:  # For each signal in the package
             array.append(np.array([x.calc_value for x in signal.values]) / 2**23)
+            array = np.concatenate(array, axis=-1)
             signal_ids.append(signal.signal_id)
         return (
             package.header.message_type,
@@ -651,7 +652,6 @@ def lanxi_multisocket_reader(
                     signal_ids, socket_data, socket_data_types = map(
                         list, zip(*sorted_records)
                     )
-                    socket_data = np.concatenate(socket_data, axis=-1)
 
                     data_queue.put(("Signal", (signal_ids, socket_data)))
                 else:
@@ -1089,10 +1089,10 @@ class LanXIAcquisition(HardwareAcquisition):
                             data  # Store the interpretation
                         )
                     elif data_type == "Signal":
-                        signal_ids, data = data
+                        signal_ids, time_data = data
                         for signal_id, signal, channel_number, interpretation in zip(
                             signal_ids,
-                            data,
+                            time_data,
                             sorted(self.acquisition_map[acquisition_device]),
                             self.interpretations[acquisition_device],
                         ):
