@@ -197,6 +197,7 @@ class SDSEnvironment(SysIdEnvironment):
         self.pending_next_hit_time = None
 
         self.last_drive_signal = None
+        self.last_measured_drive_signal = None
         self.last_response_signal = None
         self.last_response_srs = None
 
@@ -525,8 +526,10 @@ class SDSEnvironment(SysIdEnvironment):
 
         Automatic mode:
             One START_CONTROL performs repeated hits until:
-            - target_hits_at_level is reached, or
-            - stop_environment is requested.
+              - target_hits_at_level is reached, or
+              - stop_environment is requested.
+
+        Hit counters and history are cumulative across runs and are NOT reset here.
         """
         instructions = data
 
@@ -553,6 +556,7 @@ class SDSEnvironment(SysIdEnvironment):
         self.last_hit_completion_time = None
 
         self.last_drive_signal = None
+        self.last_measured_drive_signal = None
         self.last_response_signal = None
         self.last_response_srs = None
 
@@ -576,6 +580,7 @@ class SDSEnvironment(SysIdEnvironment):
             f"allow_automatic_updates={self.allow_automatic_updates}"
         )
 
+        # Always perform at least one hit when start is pressed
         self.launch_hit()
 
     def launch_hit(self):
@@ -633,6 +638,7 @@ class SDSEnvironment(SysIdEnvironment):
             (SignalGenerationCommands.GENERATE_SIGNALS, None),
         )
 
+        # Begin monitoring this hit
         self.queue_container.environment_command_queue.put(
             self.environment_name, (SDSCommands.MONITOR_HIT, None)
         )
@@ -663,7 +669,6 @@ class SDSEnvironment(SysIdEnvironment):
 
         if aligned_output is None:
             self.log("Could not align measured output to expected drive signal.")
-            # Fall back to raw truncation
             samples_to_keep = min(full_control.shape[-1], self.environment_metadata.block_size)
             self.last_response_signal = full_control[..., :samples_to_keep]
             measured_drive_signal = full_output[..., :samples_to_keep]
@@ -691,6 +696,8 @@ class SDSEnvironment(SysIdEnvironment):
                 sample_delay,
                 phase_change,
             )
+
+        self.last_measured_drive_signal = measured_drive_signal
 
         response_srs = []
         for signal in self.last_response_signal:
@@ -730,7 +737,7 @@ class SDSEnvironment(SysIdEnvironment):
             self.run_sds_table["decay"] = output_decays
             self.run_sds_table["delay"] = output_delays
 
-        # Counters
+        # Update cumulative counters
         self.total_hits += 1
         counted_at_target = abs(self.current_test_level_db) < 1e-12
         if counted_at_target:
@@ -814,7 +821,7 @@ class SDSEnvironment(SysIdEnvironment):
                         self.finish_sequence()
                         return
 
-                    # Automatic mode: if stop requested or target hit count reached, end
+                    # Automatic mode: stop if requested or threshold reached
                     if self.stop_requested:
                         self.finish_sequence()
                         return
@@ -823,12 +830,12 @@ class SDSEnvironment(SysIdEnvironment):
                         self.finish_sequence()
                         return
 
-                    # Otherwise schedule next hit. If processing took longer than the interval,
-                    # the next hit should be sent as soon as possible.
+                    # Otherwise schedule next hit.
+                    # If computation took longer than the interval, the next hit will occur immediately.
                     self.pending_next_hit_time = (
                         self.last_hit_completion_time + self.automatic_interval
                     )
-                    self.log(f"Next automatic hit time set to " f"{self.pending_next_hit_time:.3f}")
+                    self.log(f"Next automatic hit time set to {self.pending_next_hit_time:.3f}")
 
                 if self.sequence_active:
                     time.sleep(0.05)
@@ -905,8 +912,8 @@ class SDSEnvironment(SysIdEnvironment):
                     {
                         "measured_drive_time_history": (
                             None
-                            if self.last_drive_signal is None
-                            else self.last_drive_signal.copy()
+                            if self.last_measured_drive_signal is None
+                            else self.last_measured_drive_signal.copy()
                         ),
                         "measured_response_time_history": (
                             None
