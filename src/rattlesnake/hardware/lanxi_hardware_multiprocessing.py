@@ -27,6 +27,7 @@ import socket
 import time
 from typing import List
 from collections import defaultdict
+from functools import partial
 
 import netCDF4 as nc4
 import openpyxl
@@ -521,7 +522,7 @@ def read_lanxi(socket_handle: socket.socket):
         package.header.message_type
         == OpenapiMessage.Header.EMessageType.e_interpretation
     ):
-        interpretation_dict = defaultdict(dict)
+        interpretation_dict = defaultdict(partial(defaultdict, int))
         for interpretation in package.message.interpretations:
             interpretation_dict[interpretation.signal_id][
                 interpretation.descriptor_type
@@ -895,7 +896,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.sockets = {}
         self.processes = {}
         self.process_data_queues = {}
-        self.interpretations = None
+        self.interpretations = defaultdict(dict)
         self.master_address = None
         self.slave_addresses = set([])
         self.samples_per_read = None
@@ -1082,8 +1083,6 @@ class LanXIAcquisition(HardwareAcquisition):
                     # print('Reading from queue')
                     data_type, data = self.process_data_queues[acquisition_device].get()
                     if data_type == "Interpretation":
-                        if self.interpretations is None:
-                            self.interpretations = {}
                         self.interpretations[acquisition_device] = (
                             data  # Store the interpretation
                         )
@@ -1169,7 +1168,7 @@ class LanXIAcquisition(HardwareAcquisition):
         print("All processes recovered, ready for next acquire.")
         self.processes = {}
         self.process_data_queues = {}
-        self.interpretations = None
+        self.interpretations = defaultdict(dict)
         self.last_acquisition_time = None
 
     def close(self):
