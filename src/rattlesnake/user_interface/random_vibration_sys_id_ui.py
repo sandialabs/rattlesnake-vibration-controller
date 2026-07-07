@@ -768,6 +768,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 dtype=coord_dtype,
             )
         try:
+            frequency_spacing = (
+                self.definition_widget.sample_rate_display.value()
+                / self.definition_widget.samples_per_frame_selector.value()
+            )
             (
                 self.specification_frequency_lines,
                 self.specification_cpsd_matrix,
@@ -776,7 +780,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             ) = load_specification(
                 filename,
                 self.definition_widget.fft_lines_display.value(),
-                self.definition_widget.frequency_spacing_display.value(),
+                frequency_spacing,
                 control_coordinate,
             )
         except ValueError as e:
