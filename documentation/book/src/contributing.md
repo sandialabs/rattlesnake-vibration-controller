@@ -115,7 +115,7 @@ uv run pylint src/rattlesnake
 uv run pylint src/rattlesnake --disable=all --enable=line-too-long
 ```
 
-#### Running `uv` format
+#### Running Ruff Format
 
 ```bash
 # Auto-format a specific file, e.g.,
@@ -124,6 +124,16 @@ uv run ruff format src/rattlesnake/utilities.py
 # Auto-format the entire source directory
 uv run ruff format src/rattlesnake/
 ```
+
+#### Checking Formatting Without Modifying Files
+
+Before pushing, you can check whether any files are out of compliance with the project's formatting rules without actually rewriting them by adding the `--check` flag:
+
+```bash
+uv run ruff format --check src/rattlesnake
+```
+
+This is the same command the `lint` job in `ci.yml` runs on every push. It is intentionally **non-blocking** in CI — a formatting drift surfaces as a warning annotation on the workflow run rather than failing the job, so it will not block a merge. If it reports files that need formatting, run `uv run ruff format src/rattlesnake` locally (as shown above) to fix them before committing.
 
 ## Documentation
 
