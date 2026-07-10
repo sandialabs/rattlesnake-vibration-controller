@@ -21,7 +21,7 @@ from rattlesnake.testing.mock_user_interface import (
 
 """USER INPUTS"""
 THREADED = False
-TIMEOUT = 20
+TIMEOUT = 40
 IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.NONE
 ENVIRONMENT_TYPE = EnvironmentType.SINE
