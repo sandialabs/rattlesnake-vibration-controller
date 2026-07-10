@@ -94,6 +94,37 @@ deactivate
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
 
+## Development
+
+### Lint
+
+Rattlesnake uses **pylint** for static code analysis and **ruff** for code formatting. Both tools are configured to work together with `uv` to catch issues early and maintain consistent code quality.
+
+#### Running Pylint
+
+To lint the source code locally, use `uv` to run pylint:
+
+```bash
+# Lint a specific file, e.g.,
+uv run pylint src/rattlesnake/utilities.py
+
+# Lint the entire source directory
+uv run pylint src/rattlesnake
+
+# Lint and show only line-too-long warnings
+uv run pylint src/rattlesnake --disable=all --enable=line-too-long
+```
+
+#### Running `uv` format
+
+```bash
+# Auto-format a specific file, e.g.,
+uv run ruff format src/rattlesnake/utilities.py
+
+# Auto-format the entire source directory
+uv run ruff format src/rattlesnake/
+```
+
 ## Documentation
 
 The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Below are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
