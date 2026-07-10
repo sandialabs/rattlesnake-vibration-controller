@@ -1,11 +1,17 @@
+"""Classes for validating and running a test profile of timed events.
+
+A profile event list schedules commands (e.g., start/stop an environment,
+start/stop streaming) to be fired at specific timestamps during a test."""
+
+import threading
 from datetime import datetime
 from typing import List
-import threading
 
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
 
-from rattlesnake.environment.environment_utilities import EnvironmentType
+# unused import
+# from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
 
@@ -46,7 +52,28 @@ for control_type, command_type in ENVIRONMENT_COMMANDS.items():
 
 # region ProfileEvent
 class ProfileEvent:
+    """A single scheduled command in a test profile
+
+    Stores the timestamp at which the command should fire, the environment
+    it applies to, the command itself, and any data the command requires.
+    The queue_name and environment_type are assigned later by the
+    environment manager once the event has been validated."""
+
     def __init__(self, timestamp: float, environment_name: str, command, data=None):
+        """
+        Parameters
+        ----------
+        timestamp : float
+            The time, in seconds from the start of the profile, at which
+            this event should fire
+        environment_name : str
+            The name of the environment this event applies to, or "Global"
+            for controller-wide commands
+        command : GlobalCommands or an environment-specific command Enum
+            The command to execute when this event fires
+        data : optional
+            Data to pass along with the command (Default value = None)
+        """
         self.timestamp = timestamp
         self.environment_name = environment_name
         self.command = command
@@ -56,13 +83,25 @@ class ProfileEvent:
 
     @property
     def environment_type(self):
+        """The EnvironmentType assigned to this event's environment_name"""
         return self._environment_type
 
     @property
     def queue_name(self):
+        """The queue_name assigned to this event's environment_name"""
         return self._queue_name
 
     def validate(self):
+        """Validates that this event is well-formed and ready to be fired
+
+        Checks that environment_name, timestamp, environment_type, command,
+        queue_name, and data are all valid and consistent with each other.
+
+        Raises
+        ------
+        RattlesnakeError
+            If any of the event's fields are invalid
+        """
         # Check if environment_name is a string
         if not isinstance(self.environment_name, str):
             raise RattlesnakeError(
@@ -118,7 +157,17 @@ class ProfileEvent:
 
 # region Manager
 class ProfileManager:
+    """Validates and runs a test profile, firing timed commands to the
+    controller as each profile event's timestamp is reached."""
+
     def __init__(self, queue_container: QueueContainer):
+        """
+        Parameters
+        ----------
+        queue_container : QueueContainer
+            The container holding the queues used to log messages and send
+            commands to the controller
+        """
         self._log_file_queue = queue_container.log_file_queue
         self._controller_command_queue = queue_container.controller_command_queue
 
@@ -138,14 +187,33 @@ class ProfileManager:
 
     @property
     def log_file_queue(self):
+        """The queue used to write messages to the log file"""
         return self._log_file_queue
 
     @property
     def controller_command_queue(self):
+        """The queue used to send commands to the controller"""
         return self._controller_command_queue
 
     def validate_profile_list(self, profile_event_list: List[ProfileEvent]):
-        """Validate list of profile events. Since each event needs"""
+        """Validates a list of profile events and sorts it by timestamp
+
+        Each event is checked for a valid type, internal consistency (via
+        ProfileEvent.validate), and that its command has a handler
+        registered in command_map.
+
+        Parameters
+        ----------
+        profile_event_list : List[ProfileEvent]
+            The list of profile events to validate. Sorted in place by
+            timestamp once validation succeeds.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the list contains an invalid type or an unimplemented
+            command
+        """
         for profile_event in profile_event_list:
             if not isinstance(profile_event, ProfileEvent):
                 raise RattlesnakeError("Profile event list contains invalid type")
@@ -163,6 +231,17 @@ class ProfileManager:
         profile_event_list.sort(key=lambda event: event.timestamp)
 
     def start_profile(self, profile_event_list: List[ProfileEvent]):
+        """Schedules a timer to fire each profile event at its timestamp
+
+        Also schedules a final closeout event, EXTRA_CLOSEOUT_TIME seconds
+        after the last profile event, to tell Rattlesnake the profile is
+        finished.
+
+        Parameters
+        ----------
+        profile_event_list : List[ProfileEvent]
+            The validated, timestamp-sorted list of profile events to run
+        """
         self.log("Starting Profile")
         self.profile_timers = []
         max_timestamp = 0
@@ -191,10 +270,22 @@ class ProfileManager:
         self.profile_timers.append(timer)
 
     def fire_profile_event(self, queue_name, command, data):
+        """Logs and dispatches a single profile event to its command handler
+
+        Parameters
+        ----------
+        queue_name : str
+            The queue name of the environment this event applies to
+        command : GlobalCommands or an environment-specific command Enum
+            The command to execute
+        data : optional
+            Data to pass along with the command
+        """
         self.log(f"Profile Firing Event {queue_name} {command} {data}")
         self.command_map[command](queue_name, command, data)
 
     def stop_profile(self):
+        """Cancels all pending profile timers and schedules a closeout event"""
         self.log("Stopping Profile")
         for timer in self.profile_timers:
             timer.cancel()
@@ -205,16 +296,49 @@ class ProfileManager:
         self.profile_timers.append(timer)
 
     def stop_hardware(self, queue_name: str, command: GlobalCommands, data: None):
+        """Sends a STOP_HARDWARE command to the controller
+
+        Parameters
+        ----------
+        queue_name : str
+            Unused; present for a uniform command_map handler signature
+        command : GlobalCommands
+            Unused; present for a uniform command_map handler signature
+        data : None
+            Unused; present for a uniform command_map handler signature
+        """
         self.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
         )
 
     def start_streaming(self, queue_name: str, command: GlobalCommands, data: None):
+        """Sends a START_STREAMING command to the controller
+
+        Parameters
+        ----------
+        queue_name : str
+            Unused; present for a uniform command_map handler signature
+        command : GlobalCommands
+            Unused; present for a uniform command_map handler signature
+        data : None
+            Unused; present for a uniform command_map handler signature
+        """
         self.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.START_STREAMING, False)
         )
 
     def stop_streaming(self, queue_name: str, command: GlobalCommands, data: None):
+        """Sends a STOP_STREAMING command to the controller
+
+        Parameters
+        ----------
+        queue_name : str
+            Unused; present for a uniform command_map handler signature
+        command : GlobalCommands
+            Unused; present for a uniform command_map handler signature
+        data : None
+            Unused; present for a uniform command_map handler signature
+        """
         self.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.STOP_STREAMING, None)
         )
@@ -222,23 +346,58 @@ class ProfileManager:
     def start_environment(
         self, queue_name: str, command: GlobalCommands, data: EnvironmentInstructions
     ):
+        """Sends a START_ENVIRONMENT command for the given environment
+
+        Parameters
+        ----------
+        queue_name : str
+            The queue name of the environment to start
+        command : GlobalCommands
+            Unused; present for a uniform command_map handler signature
+        data : EnvironmentInstructions
+            The instructions to start the environment with
+        """
         instructions = data
         self.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions))
         )
 
     def stop_environment(self, queue_name: str, command: GlobalCommands, data: None):
+        """Sends a STOP_ENVIRONMENT command for the given environment
+
+        Parameters
+        ----------
+        queue_name : str
+            The queue name of the environment to stop
+        command : GlobalCommands
+            Unused; present for a uniform command_map handler signature
+        data : None
+            Unused; present for a uniform command_map handler signature
+        """
         self.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name)
         )
 
     def send_environment_command(self, queue_name: str, command: GlobalCommands, data):
+        """Forwards an environment-specific command to the given environment
+
+        Parameters
+        ----------
+        queue_name : str
+            The queue name of the environment to send the command to
+        command : GlobalCommands or an environment-specific command Enum
+            The environment-specific command to send
+        data : optional
+            Data to pass along with the command
+        """
         self.controller_command_queue.put(
             TASK_NAME,
             (GlobalCommands.SEND_ENVIRONMENT_COMMAND, (queue_name, command, data)),
         )
 
     def fire_closeout_event(self):
+        """Sends a PROFILE_CLOSEOUT command telling Rattlesnake the profile
+        has finished firing all of its events"""
         self.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.PROFILE_CLOSEOUT, None)
         )

@@ -44,7 +44,7 @@ env:
 
 jobs:
 
-  # Detect what files changed to optimize the workflow
+  # Categorize changes (docs, code) to allow the workflow to be optimized.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -191,7 +191,18 @@ jobs:
       # if the pyproject.toml file changes, run "uv sync" and check into
       # GitHub both the pyproject.toml file and the uv.lock file.
       run: uv sync --all-extras --dev
-        
+
+    - name: Ruff format check (non-blocking)
+      # This step always exits 0. If ruff finds unformatted files, it
+      # surfaces a GitHub Actions warning annotation instead of failing
+      # the job, so formatting drift is visible without blocking merges.
+      run: |
+        if uv run ruff format --check src/rattlesnake; then
+          echo "✅ All files are properly formatted."
+        else
+          echo "::warning::ruff format found files that are not formatted. Run 'uv run ruff format src/rattlesnake' locally to fix."
+        fi
+
     - name: lint analysis and custom lint HTML report
       run: |
         # Create a timestamp for the output file
