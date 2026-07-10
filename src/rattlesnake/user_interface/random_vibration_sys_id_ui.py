@@ -694,6 +694,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
                 metadata.control_python_function_type
             )
+        self.definition_widget.control_parameters_text_input.setPlainText(
+            metadata.control_python_function_parameters or ""
+        )
         self.definition_widget.frequency_lines_out_spinbox.setValue(
             metadata.percent_lines_out
         )
