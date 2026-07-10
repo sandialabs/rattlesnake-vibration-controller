@@ -180,7 +180,8 @@ class EnvironmentManager:
         metadata_list: List[EnvironmentMetadata],
         hardware_metadata: HardwareMetadata,
     ):
-        # TODO: Remove this, set an equivalency to a sysid data container to see if this needs to be cleared
+        # TODO: Remove this, set an equivalency to a sysid data container to
+        # see if this needs to be cleared
         self.clear_sysid_events()
 
         self.log("Initializing Environments")
@@ -260,7 +261,8 @@ class EnvironmentManager:
         # Check if there are available queues
         if len(metadata_list) > self.num_queues:
             raise RattlesnakeError(
-                "Not enough environment command queues. Increase max_environments in rattlesnake.py"
+                "Not enough environment command queues. Increase "
+                "max_environments in rattlesnake.py"
             )
 
         # Validate individual environments
@@ -269,7 +271,8 @@ class EnvironmentManager:
             # Check for valid class
             if not isinstance(metadata, EnvironmentMetadata):
                 raise RattlesnakeError(
-                    "Rattlesnake.set_environment was given an object that is not an EnvironmentMetadata class"
+                    "Rattlesnake.set_environment was given an object that "
+                    "is not an EnvironmentMetadata class"
                 )
             # Check for unique name
             environment_name = metadata.environment_name
@@ -295,7 +298,8 @@ class EnvironmentManager:
         environment_type = self.environment_types[queue_name]
         if environment_type not in SYSID_ENVIRONMENTS:
             raise RattlesnakeError(
-                f"{environment_name} is a {environment_type} environment which does not require system identification"
+                f"{environment_name} is a {environment_type} environment "
+                "which does not require system identification"
             )
 
         return queue_name
@@ -315,7 +319,8 @@ class EnvironmentManager:
 
         if not isinstance(data_package, SysIdDataPackage):
             raise RattlesnakeError(
-                "Rattlesnake was provided an sysid_data_package that was not an SysIdDataPackage type"
+                "Rattlesnake was provided an sysid_data_package that was "
+                "not an SysIdDataPackage type"
             )
 
         data_package.validate()
@@ -326,8 +331,11 @@ class EnvironmentManager:
             != data_package.num_response_channels
         ):
             raise RattlesnakeError(
-                f"The system identification data has {data_package.num_response_channels} response channels "
-                f"and the environment has {environment_metadata.num_response_channels} response channels"
+                "The system identification data has "
+                f"{data_package.num_response_channels} response channels "
+                "and the environment has "
+                f"{environment_metadata.num_response_channels} response "
+                "channels"
             )
 
         if (
@@ -335,8 +343,11 @@ class EnvironmentManager:
             != data_package.num_reference_channels
         ):
             raise RattlesnakeError(
-                f"The system identification data has {data_package.num_reference_channels} reference channels "
-                f"and the environment has {environment_metadata.num_reference_channels} reference channels"
+                "The system identification data has "
+                f"{data_package.num_reference_channels} reference "
+                "channels and the environment has "
+                f"{environment_metadata.num_reference_channels} reference "
+                "channels"
             )
 
         return queue_name
@@ -346,7 +357,8 @@ class EnvironmentManager:
         # Validate class
         if not isinstance(instructions, EnvironmentInstructions):
             raise RattlesnakeError(
-                "Rattlesnake was provided an environment_instruction that was not an EnvironmentInstructions type"
+                "Rattlesnake was provided an environment_instruction that "
+                "was not an EnvironmentInstructions type"
             )
         # Validate name
         environment_name = instructions.environment_name
@@ -360,13 +372,16 @@ class EnvironmentManager:
         environment_type = instructions.environment_type
         if environment_type != self.environment_types[queue_name]:
             raise RattlesnakeError(
-                f"Instructions for {environment_name} is the wrong type for {environment_type} vs {self.environment_types[queue_name]}"
+                f"Instructions for {environment_name} is the wrong type "
+                f"for {environment_type} vs "
+                f"{self.environment_types[queue_name]}"
             )
 
         if environment_type in SYSID_ENVIRONMENTS:
             if not self.environment_sysid_stored_events[queue_name].is_set():
                 raise RattlesnakeError(
-                    f"{environment_name} requires a system identification before starting"
+                    f"{environment_name} requires a system identification "
+                    "before starting"
                 )
         # Validate instruction
         instructions.validate()
@@ -381,7 +396,8 @@ class EnvironmentManager:
             # Validate class
             if not isinstance(profile_event, ProfileEvent):
                 raise RattlesnakeError(
-                    "The profile_events_list contains an object that is not a ProfileEvent type"
+                    "The profile_events_list contains an object that is "
+                    "not a ProfileEvent type"
                 )
             # Validate environment_name and assign queue_name and type
             environment_name = profile_event.environment_name
@@ -393,7 +409,8 @@ class EnvironmentManager:
                     queue_name = self.queue_names_dict[environment_name]
                 except KeyError:
                     raise RattlesnakeError(
-                        f"No environments exist for {environment_name} when validating instruction"
+                        f"No environments exist for {environment_name} "
+                        "when validating instruction"
                     )
                 profile_event._queue_name = queue_name
                 profile_event._environment_type = self.environment_types[queue_name]
@@ -423,7 +440,8 @@ class EnvironmentManager:
 
         if queue_name is None:
             raise RattlesnakeError(
-                "Not enough environment command queues. Increase max_environments in rattlesnake.py"
+                "Not enough environment command queues. Increase "
+                "max_environments in rattlesnake.py"
             )
 
         environment_type = metadata.environment_type
@@ -489,7 +507,8 @@ class EnvironmentManager:
         # Check if index corresponds to an existing environment
         if queue_name in self.queue_names:
             self.log(
-                f"Removing {self.environment_names[queue_name]}, Clearing up {queue_name} Queue"
+                f"Removing {self.environment_names[queue_name]}, "
+                f"Clearing up {queue_name} Queue"
             )
             self.queue_names.remove(queue_name)
             self.environment_names.pop(queue_name, None)
