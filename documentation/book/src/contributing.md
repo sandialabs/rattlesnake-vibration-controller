@@ -37,6 +37,56 @@ Others should first **fork** the repository to their own GitHub account. Once fo
 A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is **highly** recommended.
 This ensures project dependencies do not conflict with the system-wide Python installation.
 
+Two approaches are documented below: 
+
+* the traditional `venv` + `pip` workflow, and 
+* [`uv`](https://docs.astral.sh/uv/), a faster, modern alternative that every other command in this document (testing, linting, formatting) assumes is installed. New contributors are encouraged to use `uv` and we present that first.
+
+### Using `uv` (Recommended)
+
+[`uv`](https://docs.astral.sh/uv/) is a fast, modern Python package and project manager, written in Rust. It replaces `pip`, `venv`, and several other tools with a single command line interface, and it is what every other section of this document (testing, linting, formatting) assumes you are using.
+
+Compared to `pip` and `venv`, `uv`:
+
+- Is **significantly faster** at resolving and installing dependencies, thanks to a Rust-based resolver and aggressive caching.
+- **Manages the virtual environment for you.** Commands like `uv run` and `uv sync` create and use a `.venv` automatically, so there is no separate activate/deactivate step.
+- Uses a **lockfile** (`uv.lock`) to guarantee that everyone — and CI — installs the exact same dependency versions, which plain `pip` does not do without extra tooling.
+- Can **install and manage Python itself**, so a separate Python version manager is not required.
+
+#### Installing `uv`
+
+Follow the official [installation guide](https://docs.astral.sh/uv/getting-started/installation/) for your platform, or use one of the quick install commands:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+#### Setting Up the Environment
+
+From the repository root:
+
+```bash
+uv sync --all-extras --dev
+```
+
+This creates a `.venv` automatically (if one does not already exist), installs Rattlesnake in editable mode, installs all `[dev]` dependencies, and pins everything to the versions recorded in `uv.lock`.
+
+To run a command inside that environment without manually activating it, prefix it with `uv run`, e.g.:
+
+```bash
+uv run python -c "import rattlesnake; print(rattlesnake.__file__)"
+```
+
+This `uv run <command>` pattern is used throughout the rest of this document.
+
+### Using `venv` and `pip` (if `uv` is not an option)
+
 Create a new virtual environment folder within your project directory. It is conventional to name this folder `.venv`.
 
 ```bash
@@ -44,34 +94,23 @@ Create a new virtual environment folder within your project directory. It is con
 python3 -m venv .venv
 ```
 
-Activating the environment tells your shell to use the Python interpreter and pip packages located inside the `.venv` folder.
-
-#### macOS / Linux:
+Activate the environment to tell your shell to use the Python interpreter and pip packages located inside the `.venv` folder using the command appropriate to your system:
 
 ```bash
-source .venv/bin/activate
-```
-
-#### Windows (PowerShell):
-
-```sh
-.venv\Scripts\Activate.ps1
-```
-
-#### Windows (Command Prompt), DOS
-
-```sh
-.venv\Scripts\activate.bat
+source .venv/bin/activate  # macOS / Linux:
+.venv\Scripts\Activate.ps1 # Windows (PowerShell):
+.venv\Scripts\activate.bat # Windows (Command Prompt), DOS
 ```
 
 Once activated, your terminal prompt will typically show `(.venv)`. You can now install dependencies safely.
 
 ```bash
-# Install specific packages, for example, the "requests" package
-pip install requests
-
-# Or install the entire Rattlesnake development in editable mode
+# Install the entire Rattlesnake development in editable mode
 pip install -e .[dev]
+
+# Additional packages can be installed on an as-needed basis.  For example, to install
+# the "requests" package
+pip install requests
 ```
 
 Confirm that your shell is pointing to the correct Python binary.
@@ -95,6 +134,57 @@ deactivate
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
 
 ## Development
+
+Before pushing changes, contributors should check code quality locally rather than relying solely on CI to catch problems. This means running the test suite (pytest), linting (pylint), format checking (ruff), code coverage, and confirming that the Jupyter Book documentation still builds — all on your own machine. Catching issues locally is faster than waiting on a CI run, and it keeps the CI pipeline green for everyone else.
+
+### Test
+
+Rattlesnake uses [pytest](https://docs.pytest.org/en/stable/) for its test suite. Tests are split into groups based on how long they take to run:
+
+```bash
+tests/
+tests/short/
+tests/long/
+```
+
+`tests/long` contains slower, heavier tests (e.g., full qualification runs), while `tests/short` and the top-level `tests/` files run quickly and are meant to give fast feedback during development.
+
+To run the **full test suite** locally with `uv`:
+
+```bash
+uv run pytest tests/
+```
+
+To run only the **fast tests**, matching CI's default scope:
+
+```bash
+uv run pytest tests/short
+```
+
+To run a **single test file**, e.g.,
+
+```bash
+uv run pytest tests/short/test_environment_manager.py
+```
+
+To also collect a **coverage report** for the entire repository while testing:
+
+```bash
+uv run pytest tests/ --cov=rattlesnake --cov-report=term-missing
+```
+
+To collect a coverage report for a **single test file**, e.g.,
+
+```bash
+uv run pytest tests/short/test_environment_manager.py --cov=rattlesnake.environment_manager --cov-report=term-missing
+```
+
+```{note}
+This mirrors the scope CI uses: pushes and pull requests targeting `main` or
+`dev` run the full suite (`tests`, including `tests/long`); everything else
+runs just `tests/short` by default, unless `[all tests]` appears in the
+commit message, which forces the full suite on any branch.
+```
 
 ### Lint
 
