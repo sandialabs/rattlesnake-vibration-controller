@@ -1,11 +1,66 @@
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.utilities import QueueContainer, EventContainer, VerboseMessageQueue
+from rattlesnake.utilities import (
+    QueueContainer,
+    EventContainer,
+    VerboseMessageQueue,
+    flush_queue,
+)
+import atexit
 import multiprocessing as mp
 import threading
 import queue as thqueue
 from unittest import mock
 
 MAX_ENVIRONMENTS = 4
+
+# A single shared manager for queue names.  Creating one mp.Manager per
+# mock_queue_container call starts a new server process per test, and the
+# accumulated leaked processes can hang the interpreter at exit on spawn
+# platforms (macOS).
+_QUEUE_NAME_MANAGER = None
+
+
+def queue_name_manager():
+    global _QUEUE_NAME_MANAGER
+    if _QUEUE_NAME_MANAGER is None:
+        _QUEUE_NAME_MANAGER = mp.Manager()
+        atexit.register(_QUEUE_NAME_MANAGER.shutdown)
+    return _QUEUE_NAME_MANAGER
+
+
+def flush_queue_container(queue_container):
+    """Drains every real queue in a QueueContainer and detaches its feeder.
+
+    Use in fixture teardown: an mp.Queue with undelivered data leaves its
+    feeder thread blocked on the pipe, which hangs the interpreter at exit.
+    Draining is best-effort (non-blocking); cancel_join_thread guarantees
+    the exit does not wait on the feeder regardless.  Queues a test replaced
+    with mocks are skipped — a mock's get() never raises Empty, so flushing
+    one would loop forever.
+    """
+    queues = [
+        queue_container.controller_command_queue,
+        queue_container.acquisition_command_queue,
+        queue_container.output_command_queue,
+        queue_container.streaming_command_queue,
+        queue_container.input_output_sync_queue,
+        queue_container.single_process_hardware_queue,
+        queue_container.gui_update_queue,
+        *queue_container.environment_command_queues.values(),
+        *queue_container.environment_data_in_queues.values(),
+        *queue_container.environment_data_out_queues.values(),
+        queue_container.log_file_queue,
+    ]
+    for queue in queues:
+        if isinstance(queue, VerboseMessageQueue):
+            base_queue = queue.base_queue
+        elif isinstance(queue, (mp.queues.Queue, thqueue.Queue)):
+            base_queue = queue
+        else:
+            continue
+        flush_queue(queue)
+        if hasattr(base_queue, "cancel_join_thread"):
+            base_queue.cancel_join_thread()
 
 
 def mock_channel_list():
@@ -32,7 +87,7 @@ def mock_queue_container(use_thread):
     else:
         new_queue = mp.Queue
 
-    controller_queue_name_manager = mp.Manager()
+    controller_queue_name_manager = queue_name_manager()
     log_file_queue = mp.Queue()
     controller_command_queue = VerboseMessageQueue(
         log_file_queue,
