@@ -333,8 +333,7 @@ def main() -> None:
 
     # 5. Run actual validation steps
     sync_flag = "--no-sync" if args.no_sync else ""
-    # TODO: CBH re-enable once test_acquisition hanging issue is resolved with Dan
-    # cov_flags = "--cov=rattlesnake --cov-report=term-missing" if args.coverage else ""
+    cov_flags = "--cov=rattlesnake --cov-report=term-missing" if args.coverage else ""
 
     if args.all_tests:
         steps = [
@@ -346,10 +345,10 @@ def main() -> None:
                 f"uv run {sync_flag} pylint src/rattlesnake",
                 "Full Pylint Analysis",
             ),
-            # TODO: CBH re-enable once test_acquisition hang is resolved with Dan
-            # (f"uv run {sync_flag} pytest tests/ {cov_flags}",
-            #  "Full Test Suite"
-            #  + (" (with coverage)" if args.coverage else "")),
+            (
+                f"uv run {sync_flag} pytest tests/ {cov_flags}",
+                "Full Test Suite" + (" (with coverage)" if args.coverage else ""),
+            ),
         ]
     else:
         steps = [
@@ -361,10 +360,11 @@ def main() -> None:
                 f"uv run {sync_flag} pylint src/rattlesnake",
                 "Pylint Analysis",
             ),
-            # TODO: CBH re-enable once test_acquisition hang is resolved with Dan
-            # (f"uv run {sync_flag} pytest tests/ --ignore=tests/long {cov_flags}",
-            #  "Tests (tests/ --ignore=tests/long)"
-            #  + (" with coverage" if args.coverage else "")),
+            (
+                f"uv run {sync_flag} pytest tests/ --ignore=tests/long {cov_flags}",
+                "Tests (tests/ --ignore=tests/long)"
+                + (" with coverage" if args.coverage else ""),
+            ),
         ]
 
     all_passed = True
