@@ -426,10 +426,7 @@ def test_random_metadata_netcdf_round_trip(random_metadata, with_transformations
 # region Worksheet round trip
 def test_random_metadata_worksheet_round_trip(tmp_path, random_metadata):
     # This is the profile .xlsx flow: metadata is saved to a worksheet that
-    # references an external specification file, then loaded back.  The
-    # specification .npz is written without a coordinate key because the
-    # worksheet loader builds its reduction coordinate from the output
-    # channels rather than the control channels (suspected pre-existing bug).
+    # references an external specification file, then loaded back
     spec_path = str(tmp_path / "spec.npz")
     spec_data = write_cpsd_spec_npz(spec_path, 5.0 * np.arange(101), 1)
 
@@ -487,6 +484,56 @@ def test_random_metadata_worksheet_round_trip_no_specification(random_metadata):
 
     assert loaded_metadata.specification_cpsd_matrix is None
     assert loaded_metadata.specification_frequency_lines is None
+
+
+def test_random_metadata_worksheet_round_trip_coordinate_reduction(
+    tmp_path, random_metadata
+):
+    # A coordinate-tagged specification must be reduced onto the CONTROL
+    # channels of the environment channel list, exactly as
+    # load_specification does.  Node 1 (the control channel) is the second
+    # spec channel, whose diagonal PSD is 2
+    spec_path = str(tmp_path / "spec.npz")
+    coordinate = outer_coordinate([2, 1], [1, 1])
+    write_cpsd_spec_npz(spec_path, 5.0 * np.arange(101), 2, coordinate=coordinate)
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    random_metadata.save_metadata_to_worksheet(worksheet)
+    worksheet.cell(34, 2, spec_path)
+
+    loaded_metadata = RandomVibrationMetadata.load_metadata_from_worksheet(
+        worksheet,
+        ENVIRONMENT_NAME,
+        [True, True],
+        numeric_hardware_metadata(),
+    )
+
+    cpsd = loaded_metadata.specification_cpsd_matrix
+    assert cpsd.shape == (101, 1, 1)
+    np.testing.assert_allclose(cpsd[:, 0, 0], 2.0)
+
+
+def test_random_metadata_netcdf_round_trip_no_control_script(random_metadata):
+    # A profile with an empty control-script cell loads with a None
+    # function type, which must survive a netCDF save/load
+    random_metadata.control_python_script = ""
+    random_metadata.control_python_function = ""
+    random_metadata.control_python_function_type = None
+    dataset = nc4.Dataset("temp.nc", mode="w", diskless=True, persist=False)
+    netcdf_group = dataset.createGroup(ENVIRONMENT_NAME)
+
+    random_metadata.save_metadata_to_netcdf(netcdf_group)
+    loaded_metadata = RandomVibrationMetadata.load_metadata_from_netcdf(
+        netcdf_group,
+        ENVIRONMENT_NAME,
+        [True, True],
+        numeric_hardware_metadata(),
+    )
+
+    assert loaded_metadata.control_python_function_type is None
+
+    dataset.close()
 
 
 # region Instructions

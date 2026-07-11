@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import copy
+import warnings
 from enum import Enum
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
@@ -316,7 +317,13 @@ class TimeMetadata(EnvironmentMetadata):
                         output_signal = load_time_history(
                             signal_file, hardware_metadata.sample_rate
                         )
-                    except:
+                    except Exception as error:
+                        # Keep the zero-signal fallback, but don't let a bad
+                        # signal file path go unnoticed
+                        warnings.warn(
+                            f"Could not load signal file {signal_file!r} "
+                            f"({error}); using a zero output signal"
+                        )
                         output_signal = np.zeros((1, 1))
                 case "cancel_rampdown_time":
                     cancel_rampdown_time = float(value)

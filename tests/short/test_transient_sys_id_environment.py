@@ -270,6 +270,30 @@ def test_transient_metadata_netcdf_round_trip(
     dataset.close()
 
 
+def test_transient_metadata_netcdf_round_trip_no_control_script(
+    transient_metadata,
+):
+    # A profile with an empty control-script cell loads with a None
+    # function type, which must survive a netCDF save/load
+    transient_metadata.control_python_script = ""
+    transient_metadata.control_python_function = ""
+    transient_metadata.control_python_function_type = None
+    dataset = nc4.Dataset("temp.nc", mode="w", diskless=True, persist=False)
+    netcdf_group = dataset.createGroup(ENVIRONMENT_NAME)
+
+    transient_metadata.save_metadata_to_netcdf(netcdf_group)
+    loaded_metadata = TransientMetadata.load_metadata_from_netcdf(
+        netcdf_group,
+        ENVIRONMENT_NAME,
+        [True, True],
+        numeric_hardware_metadata(),
+    )
+
+    assert loaded_metadata.control_python_function_type is None
+
+    dataset.close()
+
+
 def test_transient_metadata_worksheet_round_trip(transient_metadata):
     # This is the profile .xlsx flow.  The control signal comes from a
     # separate signal file which the saver does not write, so the loaded

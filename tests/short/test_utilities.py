@@ -232,3 +232,20 @@ def test_verbose_queue_close(verbose_fixture):
     verbose_queue.join_thread()
 
     assert True
+
+
+# region IPAddress
+@mock.patch("rattlesnake.utilities.requests.get")
+def test_ip_address_validate_uses_ipv4_address(mock_get):
+    from rattlesnake.utilities import IPAddress
+
+    mock_response = mock.MagicMock()
+    mock_response.json.return_value = {}
+    mock_get.return_value = mock_response
+    ip_address = IPAddress(ipv4_address="192.168.1.50")
+
+    ip_address.validate()
+
+    assert ip_address.valid_ip
+    requested_url = mock_get.call_args_list[0][0][0]
+    assert "192.168.1.50" in requested_url
