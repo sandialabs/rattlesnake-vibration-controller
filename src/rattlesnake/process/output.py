@@ -32,7 +32,6 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_OUTPUT
-from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands, QueueContainer, flush_queue, rms_time

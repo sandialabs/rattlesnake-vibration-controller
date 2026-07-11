@@ -79,7 +79,7 @@ class LanXIMetadata(HardwareMetadata):
         time_per_write: float,
         output_oversample: float,
         maximum_acquisition_processes: int,
-        ip_addresses: List[IPAddress] = [],
+        ip_addresses: List[IPAddress] = None,
         use_ipv6: bool = False,
     ):
         super().__init__(
@@ -91,7 +91,7 @@ class LanXIMetadata(HardwareMetadata):
             output_oversample=output_oversample,
         )
         self.maximum_acquisition_processes = maximum_acquisition_processes
-        self.ip_addresses = ip_addresses
+        self.ip_addresses = [] if ip_addresses is None else ip_addresses
         self.update_ip_addresses()
 
         self.use_ipv6 = use_ipv6
@@ -667,7 +667,7 @@ def lanxi_multisocket_reader(
                 peer = socket_handle.getpeername()
                 ip = peer[0]
                 port = peer[1]
-            except OSError as exc:
+            except OSError:
                 ip, port = "<disconnected>", -1
             print(f"Closing Socket {ip}:{port}")
             while True:
@@ -936,7 +936,7 @@ class LanXIAcquisition(HardwareAcquisition):
             channel.feedback_device
             for channel in channel_data
             if (
-                not (channel.feedback_device is None)
+                channel.feedback_device is not None
                 and not (
                     channel.feedback_device.startswith("#")
                     or channel.feedback_device.strip() == ""
@@ -1235,7 +1235,7 @@ class LanXIOutput(HardwareOutput):
             channel.feedback_device
             for channel in channel_data
             if (
-                not (channel.feedback_device is None)
+                channel.feedback_device is not None
                 and not (channel.feedback_device.strip() == "")
             )
         ]

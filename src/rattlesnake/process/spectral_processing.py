@@ -29,7 +29,12 @@ from enum import Enum
 import numpy as np
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
+from rattlesnake.utilities import (
+    GlobalCommands,
+    VerboseMessageQueue,
+    flush_queue,
+    metadata_fields_equal,
+)
 
 WAIT_TIME = 0.05
 
@@ -95,12 +100,7 @@ class SpectralProcessingMetadata:
         self.compute_apsd = compute_apsd
 
     def __eq__(self, other):
-        try:
-            return np.all(
-                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
-            )
-        except (AttributeError, KeyError):
-            return False
+        return metadata_fields_equal(self, other)
 
     @property
     def requires_full_spectral_response(self):

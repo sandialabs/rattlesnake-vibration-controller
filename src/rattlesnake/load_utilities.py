@@ -1,6 +1,4 @@
 import numpy as np
-import netCDF4 as nc4
-import openpyxl
 
 from rattlesnake.utilities import RattlesnakeError, GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
@@ -33,7 +31,7 @@ def load_metadata_from_netcdf(dataset):
                 environment_index
             ]
             environment_type = EnvironmentType(environment_type_int)
-        except:
+        except Exception:
             environment_type = discover_environment_type_in_old_netcdf(
                 environment_group
             )

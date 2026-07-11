@@ -22,13 +22,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import copy
 import ctypes
-import multiprocessing as mp
 import os
 import re
 import sys
-import time
 import traceback
 from typing import Any
 from datetime import datetime
@@ -2198,7 +2195,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         filename, filetype = os.path.splitext(filepath)
         match filetype:
             case ".nc4":
-                self.display_error(f"Netcdf files do not store profile lists")
+                self.display_error("Netcdf files do not store profile lists")
             case ".xlsx":
                 workbook = openpyxl.load_workbook(filepath, read_only=True)
                 profile_event_list = load_profile_from_workbook(

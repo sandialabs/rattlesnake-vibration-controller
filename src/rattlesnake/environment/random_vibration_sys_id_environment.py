@@ -32,7 +32,6 @@ import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import time
 from enum import Enum
-from multiprocessing.queues import Queue
 from typing import List
 
 import netCDF4 as nc4
@@ -739,7 +738,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 break
             try:
                 control_channel_indices.append(int(channel_ind) - 1)
-            except:
+            except (TypeError, ValueError):
                 break
             column_index += 1
         sigma_clip = float(worksheet.cell(17, 2).value)

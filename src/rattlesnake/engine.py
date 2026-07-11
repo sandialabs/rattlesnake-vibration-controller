@@ -26,14 +26,11 @@ from rattlesnake.load_utilities import (
     load_metadata_from_workbook,
     save_rattlesnake_to_workbook,
 )
-from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
 from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentMetadata,
 )
-from rattlesnake.environment.environment_registry import ENVIRONMENT_METADATA
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
 from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
@@ -1099,7 +1096,7 @@ class RattlesnakeController:
                 f"Invalid state for starting streaming: {self.state}"
             )
         if self.streaming:
-            raise RattlesnakeError(f"Rattlesnake is currently streaming")
+            raise RattlesnakeError("Rattlesnake is currently streaming")
 
         self.queue_container.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.STREAM_MANUAL, None)
@@ -1114,7 +1111,7 @@ class RattlesnakeController:
 
     def stop_streaming(self):
         if not self.streaming:
-            raise RattlesnakeError(f"Rattlesnake is not currently streaming")
+            raise RattlesnakeError("Rattlesnake is not currently streaming")
 
         self.queue_container.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.STOP_STREAMING, None)

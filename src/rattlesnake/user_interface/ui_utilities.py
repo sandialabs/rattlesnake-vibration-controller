@@ -22,13 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import socket
 import numpy as np
 import pyqtgraph
-import requests
 import time
 import threading
-import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from qtpy import QtCore, QtGui, QtWidgets, uic

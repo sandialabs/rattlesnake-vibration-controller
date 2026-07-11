@@ -153,8 +153,8 @@ class SDynPySystemMetadata(HardwareMetadata):
             channel_indices = {
                 tuple([abs(v) for v in val]) for val in sdynpy_system_data["coordinate"]
             }
-        except:
-            raise RattlesnakeError("Invalid SDynPy system file")
+        except Exception as error:
+            raise RattlesnakeError("Invalid SDynPy system file") from error
 
         # Map node directions to node numbers
         self._node_dict = defaultdict(set)

@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import multiprocessing as mp
 import time
-import os
 from pathlib import Path
 from abc import abstractmethod
 from copy import deepcopy
@@ -40,6 +39,7 @@ from scipy.io import savemat
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
+    metadata_fields_equal,
     read_transformation_matrix_from_worksheet,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -178,15 +178,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         return super().validate(hardware_metadata)
 
     def __eq__(self, other):
-        try:
-            return np.all(
-                [
-                    np.all(value == other.__dict__[field])
-                    for field, value in self.__dict__.items()
-                ]
-            )
-        except (AttributeError, KeyError):
-            return False
+        return metadata_fields_equal(self, other)
 
     # endregion
 

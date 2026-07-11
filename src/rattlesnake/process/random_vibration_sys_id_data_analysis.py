@@ -38,7 +38,6 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.utilities import (
-    GlobalCommands,
     VerboseMessageQueue,
     flush_queue,
     power2db,
@@ -481,7 +480,6 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 and self.frames == self.environment_metadata.frames_in_cpsd
                 and self.environment_metadata.allow_automatic_aborts
             ):
-                print(f"Aborting due to channel indices {abort_channels}")
                 self.log(f"Aborting due to channel indices {abort_channels}")
                 self.environment_command_queue.put(
                     self.process_name,
@@ -612,7 +610,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         # Remove any run_transfer_function or run_control from the queue
         instructions = self.command_queue.flush(self.process_name)
         for instruction in instructions:
-            if not instruction[0] in [RandomVibrationDataAnalysisCommands.RUN_CONTROL]:
+            if instruction[0] not in [RandomVibrationDataAnalysisCommands.RUN_CONTROL]:
                 self.command_queue.put(self.process_name, instruction)
         flush_queue(self.data_out_queue)
         self.startup = True

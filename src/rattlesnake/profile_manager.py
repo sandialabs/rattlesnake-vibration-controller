@@ -5,7 +5,6 @@ import threading
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
 
-from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
 

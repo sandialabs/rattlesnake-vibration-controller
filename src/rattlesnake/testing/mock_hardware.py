@@ -1,5 +1,3 @@
-from enum import Enum
-from unittest import mock
 
 import numpy as np
 
@@ -11,7 +9,6 @@ from rattlesnake.hardware.abstract_hardware import (
 )
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.hardware_registry import (
-    UNIMPLEMENTED_HARDWARE,
     HARDWARE_METADATA,
     HARDWARE_ACQUISITION,
     HARDWARE_OUTPUT,
@@ -49,7 +46,7 @@ def acquisition_dict():
         HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIAcquisition",
         HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsAcquisition",
         HardwareType.DP_900: "rattlesnake.hardware.data_physics_dp900_hardware.DataPhysicsDP900Acquisition",
-        HardwareType.EXODUS: "rattlesnake.hardwaare.exodus_modal_solution_hardware.ExodusAcquisition",
+        HardwareType.EXODUS: "rattlesnake.hardware.exodus_modal_solution_hardware.ExodusAcquisition",
         HardwareType.STATE_SPACE: "rattlesnake.hardware.state_space_virtual_hardware.StateSpaceAcquisition",
         HardwareType.SDYNPY_SYSTEM: "rattlesnake.hardware.sdynpy_system_virtual_hardware.SDynPySystemAcquisition",
         HardwareType.SDYNPY_FRF: "rattlesnake.hardware.sdynpy_frf_virtual_hardware.SDynPyFRFAcquisition",
@@ -63,7 +60,7 @@ def output_dict():
         HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIOutput",
         HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsOutput",
         HardwareType.DP_900: "rattlesnake.hardware.data_physics_dp900_hardware.DataPhysicsDP900Output",
-        HardwareType.EXODUS: "rattlesnake.hardwaare.exodus_modal_solution_hardware.ExodusOutput",
+        HardwareType.EXODUS: "rattlesnake.hardware.exodus_modal_solution_hardware.ExodusOutput",
         HardwareType.STATE_SPACE: "rattlesnake.hardware.state_space_virtual_hardware.StateSpaceOutput",
         HardwareType.SDYNPY_SYSTEM: "rattlesnake.hardware.sdynpy_system_virtual_hardware.SDynPySystemOutput",
         HardwareType.SDYNPY_FRF: "rattlesnake.hardware.sdynpy_frf_virtual_hardware.SDynPyFRFOutput",

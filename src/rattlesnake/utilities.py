@@ -438,6 +438,43 @@ def flush_queue(queue, timeout=None):
             return data
 
 
+def metadata_fields_equal(first, second):
+    """NaN-aware field-by-field equality for metadata container classes.
+
+    Array fields containing NaN (e.g. warning/abort matrices) compare equal
+    when the NaNs are in the same locations, so a metadata object always
+    equals a copy of itself.
+
+    Parameters
+    ----------
+    first : object
+        Object whose ``__dict__`` fields will be compared.
+    second : object
+        Object to compare against.
+
+    Returns
+    -------
+    bool
+        True if every field of ``first`` equals the same field of ``second``.
+    """
+    try:
+        for field, value in first.__dict__.items():
+            other_value = second.__dict__[field]
+            if isinstance(value, np.ndarray) or isinstance(other_value, np.ndarray):
+                try:
+                    if not np.array_equal(value, other_value, equal_nan=True):
+                        return False
+                except TypeError:
+                    # Non-numeric dtypes do not support equal_nan
+                    if not np.array_equal(value, other_value):
+                        return False
+            elif not np.all(value == other_value):
+                return False
+        return True
+    except (AttributeError, KeyError):
+        return False
+
+
 _direction_map = {
     "X+": 1,
     "X": 1,
@@ -1375,7 +1412,6 @@ def align_signals(
         correlation = correlation_metric(measurement_buffer, specification)
     delay = np.argmax(correlation)
     found_correlation = correlation[delay]
-    print(f"Max Correlation: {found_correlation}")
     if found_correlation < correlation_threshold:
         return None, None, None, None
     # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,

@@ -31,7 +31,12 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
+from rattlesnake.utilities import (
+    GlobalCommands,
+    VerboseMessageQueue,
+    flush_queue,
+    metadata_fields_equal,
+)
 
 
 # region Commands
@@ -148,15 +153,7 @@ class SysIdMetadata:
         return
 
     def __eq__(self, other):
-        try:
-            return np.all(
-                [
-                    np.all(value == other.__dict__[field])
-                    for field, value in self.__dict__.items()
-                ]
-            )
-        except (AttributeError, KeyError):
-            return False
+        return metadata_fields_equal(self, other)
 
     # endregion
 
@@ -954,7 +951,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         # Remove any run_transfer_function or run_control from the queue
         instructions = self.command_queue.flush(self.process_name)
         for instruction in instructions:
-            if not instruction[0] in [
+            if instruction[0] not in [
                 SysIdDataAnalysisCommands.RUN_NOISE,
                 SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION,
             ]:

@@ -1,14 +1,12 @@
 import inspect
 import os
-import multiprocessing as mp
 
-import netCDF4 as nc4
 import numpy as np
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor  # pylint: disable=no-name-in-module
 
-from rattlesnake.utilities import DIRECTORY, load_python_module, db2scale
+from rattlesnake.utilities import DIRECTORY, load_python_module
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sine_sys_id_environment import (
@@ -23,7 +21,6 @@ from rattlesnake.user_interface.ui_utilities import (
     TransformationMatrixWindow,
     multiline_plotter,
     blended_scatter_plot,
-    UICommands,
 )
 from rattlesnake.user_interface.sine_sys_id_ui_utilities import (
     VaryingNumberOfLinePlot,
@@ -1687,7 +1684,7 @@ class SineUI(SysIdEnvironmentUI):
                 self.log("Sending Prediction Plot Choices...")
                 self.send_response_prediction_plot_choices()
                 self.send_excitation_prediction_plot_choices()
-            case SineUICommands.EXCITATION_PRECDICTION:
+            case SineUICommands.EXCITATION_PREDICTION:
                 self.plot_excitation_prediction(*data)
             case SineUICommands.RESPONSE_PREDICTION:
                 self.plot_response_prediction(*data)
