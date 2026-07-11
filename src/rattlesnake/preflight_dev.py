@@ -76,7 +76,8 @@ def _local_context() -> dict[str, str]:
         "github.repository": repo,
         "github.server_url": "https://github.com",
         "github.event.repository.name": repo.split("/")[-1] if "/" in repo else repo,
-        "github.event.head_commit.message || github.event.pull_request.title": commit_msg,
+        "github.event.head_commit.message || "
+        "github.event.pull_request.title": commit_msg,
         "github.event.inputs.test_level": "",
         "env.DEPLOY_SUBDIR": "dev",  # local runs are treated as dev
     }
@@ -204,10 +205,7 @@ def changes_from_git() -> tuple[bool, bool]:
 
     results: dict[str, bool] = {}
     for category, globs in patterns.items():
-        matched = [
-            f for f in changed
-            if any(fnmatch.fnmatch(f, pat) for pat in globs)
-        ]
+        matched = [f for f in changed if any(fnmatch.fnmatch(f, pat) for pat in globs)]
         results[category] = bool(matched)
         status = "YES" if matched else "no"
         print(f"  '{category}' changed: {status}", end="")
