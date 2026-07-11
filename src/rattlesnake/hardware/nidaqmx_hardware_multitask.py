@@ -849,7 +849,7 @@ class NIDAQmxOutput(HardwareOutput):
         task_names = set()
         extra_task_index = 1
         for channel in channel_data:
-            if not (channel.feedback_device is None) and not (
+            if channel.feedback_device is not None and not (
                 channel.feedback_device.strip() == ""
             ):
                 device_name = channel.feedback_device
@@ -875,7 +875,7 @@ class NIDAQmxOutput(HardwareOutput):
         index = 0
         extra_task_index = 1
         for channel in channel_data:
-            if not (channel.feedback_device is None) and not (
+            if channel.feedback_device is not None and not (
                 (
                     channel.feedback_device.startswith("#")
                     or channel.feedback_device.strip() == ""

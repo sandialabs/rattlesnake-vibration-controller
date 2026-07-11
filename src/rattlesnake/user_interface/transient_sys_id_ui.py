@@ -1,6 +1,5 @@
 import inspect
 import os
-from multiprocessing.queues import Queue
 
 import netCDF4 as nc4
 import numpy as np

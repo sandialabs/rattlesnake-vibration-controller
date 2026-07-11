@@ -37,6 +37,7 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
     flush_queue,
     load_python_module,
+    metadata_fields_equal,
     rms_time,
 )
 
@@ -545,15 +546,7 @@ class CollectorMetadata:
         self.kurtosis_buffer_length = kurtosis_buffer_length
 
     def __eq__(self, other):
-        try:
-            return np.all(
-                [
-                    np.all(value == other.__dict__[field])
-                    for field, value in self.__dict__.items()
-                ]
-            )
-        except (AttributeError, KeyError):
-            return False
+        return metadata_fields_equal(self, other)
 
 
 class DataCollectorProcess(AbstractMessageProcess):

@@ -27,7 +27,6 @@ import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from multiprocessing import queues
 from typing import List
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
@@ -105,7 +104,7 @@ class EnvironmentMetadata(ABC):
         self,
         environment_type: EnvironmentType,
         environment_name: str,
-        channel_list_bools: list = [],
+        channel_list_bools: list = None,
         sample_rate: int = None,
     ):
         """
@@ -123,7 +122,9 @@ class EnvironmentMetadata(ABC):
             environment_name  # Name used for logging TASK_NAMES, UI, etc.
         )
         self.sample_rate = sample_rate
-        self.channel_list_bools = channel_list_bools
+        self.channel_list_bools = (
+            [] if channel_list_bools is None else channel_list_bools
+        )
         self.queue_name = (
             None  # Unique name used to track specific environment. Used for queues.
         )

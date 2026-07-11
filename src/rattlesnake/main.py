@@ -19,8 +19,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import datetime
-import multiprocessing as mp
 import sys
 
 from qtpy import QtWidgets, QtCore

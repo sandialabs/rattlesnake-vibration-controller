@@ -5,13 +5,12 @@ import netCDF4 as nc4
 import numpy as np
 import pyqtgraph as pg
 from qtpy import QtWidgets, uic
-from scipy.io import loadmat, savemat
+from scipy.io import loadmat
 
 from rattlesnake.utilities import DIRECTORY
 from rattlesnake.engine import RattlesnakeController, RattlesnakeState
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironmentMetadata,
     SysIdUICommands,
@@ -21,13 +20,11 @@ from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.process.data_collector import DataCollectorUICommands
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
-    SysIdDataAnalysisCommands,
     SysIdDataAnalysisUICommands,
     SysIdDataPackage,
 )
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
 from rattlesnake.user_interface.ui_utilities import (
-    error_message_qt,
     RotatedAxisItem,
     SysIdSelector,
 )

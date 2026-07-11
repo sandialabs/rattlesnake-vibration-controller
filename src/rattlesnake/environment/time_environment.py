@@ -35,7 +35,6 @@ from typing import List
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
-from qtpy import QtCore, QtWidgets, uic
 
 from rattlesnake.environment.abstract_environment import (
     Environment,
@@ -90,7 +89,7 @@ class TimeMetadata(EnvironmentMetadata):
     def __init__(
         self,
         environment_name: str = "Time",
-        channel_list_bools: list = [],
+        channel_list_bools: list = None,
         sample_rate: int = None,
         output_oversample: float = None,
         output_signal: np.array = None,

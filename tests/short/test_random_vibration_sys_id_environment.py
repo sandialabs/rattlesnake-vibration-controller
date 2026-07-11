@@ -13,6 +13,8 @@ end-to-end by tests/long/test_qualification.py, so it is not covered here.
 
 from unittest import mock
 
+import copy
+
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
@@ -182,6 +184,16 @@ def initialized_environment(random_environment, random_metadata):
 
 
 # region Metadata
+def test_random_metadata_nan_aware_equality(random_metadata):
+    # The all-NaN entries in the warning/abort matrices must not defeat
+    # equality: a metadata object equals a copy of itself
+    assert random_metadata == copy.deepcopy(random_metadata)
+
+    modified_metadata = copy.deepcopy(random_metadata)
+    modified_metadata.samples_per_frame = 400
+    assert not random_metadata == modified_metadata
+
+
 def test_random_metadata_init(random_metadata):
     assert isinstance(random_metadata, RandomVibrationMetadata)
     assert isinstance(random_metadata, EnvironmentMetadata)
@@ -605,9 +617,7 @@ def test_random_environment_initialize_environment(
     random_environment.initialize_hardware(numeric_hardware_metadata())
     random_environment.initialize_environment(random_metadata)
 
-    # Identity check: the metadata __eq__ is defeated by NaN entries in the
-    # warning/abort matrices, so equality cannot be used here
-    assert random_environment.environment_metadata is random_metadata
+    assert random_environment.environment_metadata == random_metadata
 
     queues = random_environment.queue_container
     (analysis_message,) = get_queue_messages(

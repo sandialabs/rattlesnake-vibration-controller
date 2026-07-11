@@ -29,7 +29,6 @@ import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 
 import netCDF4 as nc
-import numpy as np
 
 from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
 from rattlesnake.load_utilities import save_rattlesnake_to_netcdf

@@ -37,7 +37,6 @@ from rattlesnake.hardware.abstract_hardware import (
     HardwareOutput,
 )
 from rattlesnake.utilities import flush_queue
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 
 DEBUG = False

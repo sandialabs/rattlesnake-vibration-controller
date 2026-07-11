@@ -70,7 +70,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from rattlesnake.utilities import GlobalCommands
 
 
 class ControlLawCommands(Enum):

@@ -495,7 +495,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
                 break
             try:
                 control_channel_indices.append(int(channel_ind) - 1)
-            except:
+            except (TypeError, ValueError):
                 break
             column_index += 1
         output_channel_indices = [

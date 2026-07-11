@@ -1,7 +1,6 @@
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.hardware_registry import UNIMPLEMENTED_HARDWARE
 from rattlesnake.environment.environment_utilities import EnvironmentType
-from qtpy import QtWidgets, uic, QtGui
 from rattlesnake.environment.environment_registry import UNIMPLEMENTED_ENVIRONMENT
 
 # region Hardware
