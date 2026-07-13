@@ -11,6 +11,7 @@ class HardwareType(Enum):
     STATE_SPACE = 5
     SDYNPY_SYSTEM = 6
     SDYNPY_FRF = 7
+    SKELETON = 8
 
 
 class Channel:

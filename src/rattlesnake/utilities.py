@@ -580,7 +580,7 @@ def find_lanxi_devices():
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(test_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates
+            executor.submit(check_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates
         }
 
         for future in as_completed(futures):
@@ -595,7 +595,7 @@ def find_lanxi_devices():
     return results
 
 
-def test_lanxi_candidate(ipv4_address):
+def check_lanxi_candidate(ipv4_address):
     """Queries a candidate IP address to check if it is a valid LAN-XI device
 
     Parameters
