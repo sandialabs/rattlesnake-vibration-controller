@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>799</width>
-    <height>379</height>
+    <width>1134</width>
+    <height>491</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -152,48 +152,37 @@
          </layout>
         </item>
         <item>
-         <widget class="QTableWidget" name="device_table">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <layout class="QHBoxLayout" name="test_level_layout">
+          <property name="topMargin">
+           <number>0</number>
           </property>
-          <column>
-           <property name="text">
-            <string>Device</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Plot?</string>
-           </property>
-          </column>
-         </widget>
+          <item>
+           <widget class="QLabel" name="test_level_label">
+            <property name="text">
+             <string>Test Level</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="test_level_spinbox"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="button_spacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QPushButton" name="add_device_button">
-         <property name="text">
-          <string>Add Device</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="remove_device_button">
-         <property name="text">
-          <string>Remove Device</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>
