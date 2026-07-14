@@ -16,7 +16,6 @@ from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_INSTRUCTION,
     ENVIRONMENT_CLASS,
     ENVIRONMENT_PROCESS,
-    UNIMPLEMENTED_ENVIRONMENT,
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.examples.example_registry import ENVIRONMENT_DICT
@@ -478,29 +477,29 @@ def test_environment_initialize_hardware(environment_type, hardware_metadata):
     assert environment.ready is True
 
 
-# def test_environment_initialize_hardware(environment, hardware_metadata):
-#     """
-#     Verifies that a skeleton environment subclass stores the supplied hardware
-#     metadata and sets itself as ready at the end of the function.
-#     """
-#     environment.initialize_hardware(hardware_metadata)
-
-#     assert environment.hardware_metadata is hardware_metadata
-#     assert environment.ready is True
-
-
-def test_environment_initialize_environment(environment):
+@pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
+def test_environment_initialize_environment(environment_type, hardware_metadata):
     """
     Verifies that a skeleton environment subclass stores the supplied
     environment metadata and updates the environment name. Checks
     that subclasses set their ready event at the end of the function.
     """
-    metadata = skeleton_environment_metadata(environment_name="Updated Environment")
+    environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
+    environment_metadata = instantiate_with_mocks(
+        environment_metadata_class,
+        environment_name="Environment A",
+    )
+    environment_class = ENVIRONMENT_CLASS[environment_type]
+    environment = instantiate_with_mocks(
+        environment_class,
+        environment_name="test_environment",
+        ready_event=mp.Event(),
+    )
+    environment.hardware_metadata = hardware_metadata
+    environment.initialize_environment(environment_metadata)
 
-    environment.initialize_environment(metadata)
-
-    assert environment.environment_metadata is metadata
-    assert environment.environment_name == "Updated Environment"
+    assert environment.environment_metadata is environment_metadata
+    assert environment.environment_name == environment_metadata.environment_name
     assert environment.ready is True
 
 
