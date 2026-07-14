@@ -28,6 +28,8 @@ class SDSShockHistoryDialog(QtWidgets.QDialog):
         self._setup_table()
         self._connect_callbacks()
 
+        self.history_table_groupbox.setVisible(self.show_history_table_checkbox.isChecked())
+
     def _connect_callbacks(self):
         self.close_button.clicked.connect(self.hide)
         self.show_history_table_checkbox.toggled.connect(self.history_table_groupbox.setVisible)

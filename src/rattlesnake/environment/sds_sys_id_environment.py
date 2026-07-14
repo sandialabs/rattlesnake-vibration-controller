@@ -694,11 +694,23 @@ class SDSEnvironment(SysIdEnvironment):
         """
         self.log("Completing SDS hit")
 
+        # Scale back to full level:
+        full_control = full_control / self.current_test_level_scale
+        full_output = full_output / self.current_test_level_scale
+
         expected_output = self.last_drive_signal[:, :: self.hardware_metadata.output_oversample]
 
         print(
             f"Completing Hit, {expected_output.shape=}, {full_control.shape=}, {full_output.shape=}"
         )
+
+        # np.savez(
+        #     "completed_hit_investigation.npz",
+        #     expected_output=expected_output,
+        #     full_control=full_control,
+        #     full_output=full_output,
+        #     last_drive_signal=self.last_drive_signal,
+        # )
 
         aligned_output, sample_delay, phase_change, found_correlation = align_signals(
             full_output,
