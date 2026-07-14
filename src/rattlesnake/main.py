@@ -65,9 +65,6 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     _ = RattlesnakeUI(rattlesnake)
     app.exec_()
 
-    # Shutdown processes
-    rattlesnake.shutdown()
-
 
 def main():
     """Main Rattlesnake Application Entry Point"""
@@ -76,6 +73,9 @@ def main():
     rattlesnake = RattlesnakeController()
 
     launch_rattlesnake_ui(rattlesnake)
+
+    # Shutdown processes
+    rattlesnake.shutdown()
 
 
 if __name__ == "__main__":

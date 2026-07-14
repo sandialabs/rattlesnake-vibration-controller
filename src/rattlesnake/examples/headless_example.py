@@ -100,3 +100,5 @@ if __name__ == "__main__":
 
     # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
     launch_rattlesnake_ui(rattlesnake)
+
+    rattlesnake.shutdown()
