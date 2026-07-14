@@ -87,9 +87,7 @@ class GlobalCommands(Enum):
     INITIALIZE_ENVIRONMENT = 4  # Stores metadata to processes
     START_ENVIRONMENT = 5  # Tells output to start that environment
     STOP_ENVIRONMENT = 6  # Tells output to stop that environment
-    INITIALIZE_SYSTEM_ID = (
-        7  # Stores system id metadata to environment and system id process
-    )
+    INITIALIZE_SYSTEM_ID = 7  # Stores system id metadata to environment and system id process
     START_SYSTEM_ID_NOISE = 8  # Start up system identification noise
     START_SYSTEM_ID_TRANSFER = 9  # Start up system identification transfer function
     STOP_SYSTEM_ID = 10  # Stop system identification process
@@ -103,13 +101,12 @@ class GlobalCommands(Enum):
     START_PROFILE = 18  # Start test from profile
     STOP_PROFILE = 19  # Stop test from profile
     PROFILE_CLOSEOUT = 20  # Tells controller the profile events are over
-    STREAM_AT_TARGET_LEVEL = (
-        21  # Notifies controller that environment has hit its target level
-    )
+    STREAM_AT_TARGET_LEVEL = 21  # Notifies controller that environment has hit its target level
     STREAM_MANUAL = 22  # Notifies controller that manual streaming has been enabled
     SEND_ENVIRONMENT_COMMAND = 23  # Sends environment specific command to environment
     SAVE_SYSTEM_ID = 24
     LOAD_SYSTEM_ID = 25
+    RESTART_ENVIRONMENT_OUTPUT = 26  # Tells the output to start listening again for an environment
 
     @property
     def label(self):
@@ -244,9 +241,7 @@ class VerboseMessageQueue:
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
-            self.log_queue.put(
-                f"{datetime.now()}: {task_name} flushed {self.log_name}\n"
-            )
+            self.log_queue.put(f"{datetime.now()}: {task_name} flushed {self.log_name}\n")
             self.last_flush = flush_time
         data = []
         while True:
@@ -424,9 +419,7 @@ def flush_queue(queue, timeout=None):
                     )
                 )
             else:
-                data.append(
-                    queue.get(block=False if timeout is None else True, timeout=timeout)
-                )
+                data.append(queue.get(block=False if timeout is None else True, timeout=timeout))
         except (thqueue.Empty, mpqueue.Empty):
             return data
 
@@ -548,9 +541,7 @@ def find_lanxi_devices():
     results = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(test_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates
-        }
+        futures = {executor.submit(test_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates}
 
         for future in as_completed(futures):
             host_name, ipv4, info, sync, valid = future.result()
@@ -594,9 +585,7 @@ class IPAddress:
     """Container for information about IPAddress, mainly used to make
     sure each address has a values for relevant information"""
 
-    def __init__(
-        self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False
-    ):
+    def __init__(self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False):
         self.host_name = host_name
         self.ipv4_address = ipv4_address
         self.ipv6_address = ipv6_address
@@ -718,9 +707,7 @@ def load_time_history(signal_path, sample_rate):
         try:
             times = data["t"].squeeze()
             fn = interp1d(times, signal)
-            abscissa = np.arange(
-                0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
-            )
+            abscissa = np.arange(0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate)
             abscissa = abscissa[abscissa <= max(times)]
             signal = fn(abscissa)
         except KeyError:
@@ -731,9 +718,7 @@ def load_time_history(signal_path, sample_rate):
         try:
             times = data["t"].squeeze()
             fn = interp1d(times, signal)
-            abscissa = np.arange(
-                0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate
-            )
+            abscissa = np.arange(0, max(times) + 1 / sample_rate - 1e-10, 1 / sample_rate)
             abscissa = abscissa[abscissa <= max(times)]
             signal = fn(abscissa)
         except KeyError:
@@ -809,13 +794,9 @@ def load_python_module(module_path):
     return module
 
 
-def read_transformation_matrix_from_worksheet(
-    worksheet, start_row, num_rows, start_col
-):
+def read_transformation_matrix_from_worksheet(worksheet, start_row, num_rows, start_col):
     first_cell = worksheet.cell(start_row, start_col).value
-    if first_cell is None or (
-        isinstance(first_cell, str) and first_cell.strip().lower() == "none"
-    ):
+    if first_cell is None or (isinstance(first_cell, str) and first_cell.strip().lower() == "none"):
         return None
 
     matrix = []
@@ -826,8 +807,7 @@ def read_transformation_matrix_from_worksheet(
         while True:
             value = worksheet.cell(start_row + i, col_idx).value
             if value is None or (
-                isinstance(value, str)
-                and (value.startswith("#") or value.strip() == "")
+                isinstance(value, str) and (value.startswith("#") or value.strip() == "")
             ):
                 break
             row.append(float(value))
@@ -867,9 +847,7 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     """
     if row_column is None:
         diag = np.einsum("ijj->ij", cpsd_matrix)
-        return np.real(
-            np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :])
-        )
+        return np.real(np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :]))
     else:
         row, column = row_column
         return np.real(
@@ -968,9 +946,7 @@ def reduce_array_by_coordinate(
     # transforming control_coordinate from array of shape (N,) to (N, N, 2)
     # (equivalent to SDynPy outer_product)
     if array.ndim == 3:
-        control_coordinate = np.array(
-            np.meshgrid(control_coordinate, excitation_coordinate)
-        ).T
+        control_coordinate = np.array(np.meshgrid(control_coordinate, excitation_coordinate)).T
     elif array.ndim == 2:
         control_coordinate = np.tile(control_coordinate, (2, 1)).T
     output_shape = control_coordinate.shape[:-1]
@@ -985,9 +961,9 @@ def reduce_array_by_coordinate(
     for index in np.ndindex(output_shape):
         positive_key = positive_control_coordinates[index]
         try:
-            index_array[index] = np.where(
-                np.all(positive_coordinates == positive_key, axis=-1)
-            )[0][0]
+            index_array[index] = np.where(np.all(positive_coordinates == positive_key, axis=-1))[0][
+                0
+            ]
         except IndexError as exc:
             raise ValueError(
                 f"Coordinate {str(control_coordinate[index])} not found in data array"
@@ -1143,9 +1119,7 @@ def corr_norm_signal_spec(signal, specification):
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
     norm_signal[norm_signal == 0] = 1e14
     return correlation / norm_specification / norm_signal
 
@@ -1186,9 +1160,7 @@ def norm_ratio(signal, specification):
         The norm ratio signal
     """
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
     return 1 - np.abs((norm_signal / norm_specification) ** 2 - 1)
 
 
@@ -1209,12 +1181,8 @@ def correlation_norm_spec_ratio(signal, specification):
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
-    return correlation / norm_specification**2 - abs(
-        1 - (norm_signal / norm_specification) ** 2
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
+    return correlation / norm_specification**2 - abs(1 - (norm_signal / norm_specification) ** 2)
 
 
 def correlation_norm_signal_spec_ratio(signal, specification):
@@ -1234,9 +1202,7 @@ def correlation_norm_signal_spec_ratio(signal, specification):
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
     norm_signal_divide = norm_signal.copy()
     norm_signal_divide[norm_signal_divide == 0] = 1e14
     return correlation / norm_specification / norm_signal_divide - abs(
@@ -1297,9 +1263,7 @@ def align_signals(
     # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
     #          specification = specification,
     #          correlation_threshold = correlation_threshold)
-    specification_portion = measurement_buffer[
-        :, delay : delay + specification.shape[-1]
-    ]
+    specification_portion = measurement_buffer[:, delay : delay + specification.shape[-1]]
 
     if perform_subsample:
         # Compute ffts for subsample alignment
@@ -1308,9 +1272,7 @@ def align_signals(
 
         # Compute phase angle differences for subpixel alignment
         phase_difference = np.angle(spec_portion_fft / spec_fft)
-        phase_slope = (
-            phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
-        )
+        phase_slope = phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
         mean_phase_slope = np.median(
             phase_slope
         )  # Use Median to discard outliers due to potentially noisy phase
@@ -1381,9 +1343,7 @@ class OverlapBuffer:
         """
         self._buffer_data = np.empty(shape, dtype)
         self._buffer_data[:] = starting_value
-        self._buffer_axis = (
-            buffer_axis % self.buffer_data.ndim
-        )  # Makes a positive index
+        self._buffer_axis = buffer_axis % self.buffer_data.ndim  # Makes a positive index
         self._buffer_position = 0
 
     @property

@@ -99,7 +99,7 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 # region Globals
 CONTROL_TYPE = EnvironmentType.SDS
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
-
+MONITOR_SLEEP_TIME = 0.5
 # region Environment Process
 
 
@@ -532,10 +532,12 @@ class SDSEnvironment(SysIdEnvironment):
 
         Hit counters and history are cumulative across runs and are NOT reset here.
         """
+        print("Starting Control")
         instructions = data
 
         if self.active:
             self.log("SDS environment already active; ignoring duplicate start.")
+            print("SDS environment already active; ignoring duplicate start.")
             return
 
         instructions.validate()
@@ -571,10 +573,19 @@ class SDSEnvironment(SysIdEnvironment):
             )
         )
 
+        print(f"Sent instructions {instructions} to the GUI Update Queue")
+
         self.set_active()
         self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_STARTED, None)))
-
+        print("Set active and notified environment start.")
         self.log(
+            f"Starting SDS environment: automatic_hits={self.automatic_hits}, "
+            f"target_hits_at_level={instructions.target_hits_at_level}, "
+            f"test_level_db={self.current_test_level_db}, "
+            f"allow_automatic_updates={self.allow_automatic_updates}"
+        )
+
+        print(
             f"Starting SDS environment: automatic_hits={self.automatic_hits}, "
             f"target_hits_at_level={instructions.target_hits_at_level}, "
             f"test_level_db={self.current_test_level_db}, "
@@ -583,6 +594,7 @@ class SDSEnvironment(SysIdEnvironment):
 
         # Always perform at least one hit when start is pressed
         self.launch_hit()
+        print("Hit launched.")
 
     def launch_hit(self):
         """
@@ -591,9 +603,11 @@ class SDSEnvironment(SysIdEnvironment):
         """
         if self.hit_in_progress:
             self.log("Attempted to launch a hit while one was already in progress.")
+            print("Attempted to launch a hit while one was already in progress.")
             return
 
         self.log("Launching SDS hit")
+        print("Launching SDS hit")
 
         frequencies = self.run_sds_table["frequency"]
         amplitudes = self.run_sds_table["amplitude"]
@@ -624,6 +638,7 @@ class SDSEnvironment(SysIdEnvironment):
         self.current_hit_control_data = []
         self.current_hit_output_data = []
 
+        print("Sending signal generation metadata")
         self.queue_container.signal_generation_command_queue.put(
             self.environment_name,
             (
@@ -631,6 +646,7 @@ class SDSEnvironment(SysIdEnvironment):
                 self.get_signal_generation_metadata(),
             ),
         )
+        print("Initializing Signal Generator")
         self.queue_container.signal_generation_command_queue.put(
             self.environment_name,
             (
@@ -638,16 +654,19 @@ class SDSEnvironment(SysIdEnvironment):
                 TransientSignalGenerator(drive_signal, repeat=False),
             ),
         )
+        print("Setting Test Level")
         self.queue_container.signal_generation_command_queue.put(
             self.environment_name,
             (SignalGenerationCommands.SET_TEST_LEVEL, self.current_test_level_scale),
         )
+        print("Starting signal generation")
         self.queue_container.signal_generation_command_queue.put(
             self.environment_name,
             (SignalGenerationCommands.GENERATE_SIGNALS, None),
         )
 
         # Begin monitoring this hit
+        print("Sending monitor hit signal.")
         self.queue_container.environment_command_queue.put(
             self.environment_name, (SDSCommands.MONITOR_HIT, None)
         )
@@ -720,7 +739,7 @@ class SDSEnvironment(SysIdEnvironment):
             )
 
         self.last_measured_drive_signal = measured_drive_signal
-
+        print("Computing SRS")
         response_srs = []
         for signal in self.last_response_signal:
             response_srs.append(
@@ -739,7 +758,7 @@ class SDSEnvironment(SysIdEnvironment):
         self.last_drive_amplitudes = self.run_sds_table["amplitude"].copy()
         self.last_drive_decays = self.run_sds_table["decay"].copy()
         self.last_drive_delays = self.run_sds_table["delay"].copy()
-
+        print("Running control based on last result.")
         # Always call control law after each hit
         if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
             output_amplitudes, output_decays, output_delays = self.control_law(
@@ -770,16 +789,19 @@ class SDSEnvironment(SysIdEnvironment):
 
         # Only persist updated SDS table if automatic updates are enabled
         if self.allow_automatic_updates:
+            print("Updating SRS Table")
             self.run_sds_table["amplitude"] = output_amplitudes
             self.run_sds_table["decay"] = output_decays
             self.run_sds_table["delay"] = output_delays
 
         # Update cumulative counters
+        print("Updating counters")
         self.total_hits += 1
         counted_at_target = abs(self.current_test_level_db) < 1e-12
         if counted_at_target:
             self.hits_at_target += 1
 
+        print("Logging completion time and hit history")
         self.last_hit_completion_time = time.time()
 
         self.hit_history.append(
@@ -806,6 +828,7 @@ class SDSEnvironment(SysIdEnvironment):
 
         self.hit_in_progress = False
 
+        print("Sending control update")
         self.emit_control_update()
 
     def monitor_hit(self, data):
@@ -822,11 +845,14 @@ class SDSEnvironment(SysIdEnvironment):
             * if manual mode -> finish
             * if automatic mode -> wait until the next launch time, then launch next hit
         """
+        print("Monitoring Hit")
         if not self.active or not self.sequence_active:
+            print(f"Monitoring cancelled because {self.active=} or {self.sequence_active=}")
             return
 
         # Case 1: a hit is currently active
         if self.hit_in_progress:
+            print("Monitoring: A hit is currently in progress.")
             try:
                 acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
 
@@ -851,21 +877,25 @@ class SDSEnvironment(SysIdEnvironment):
                     full_control = np.concatenate(self.current_hit_control_data, axis=-1)
                     full_output = np.concatenate(self.current_hit_output_data, axis=-1)
 
-                    print(f"Recieved last hit, {full_control.shape=}, {full_output.shape=}")
+                    print(f"Received last acquisition, {full_control.shape=}, {full_output.shape=}")
+                    print("Completing hit.")
 
                     self.complete_hit(full_control, full_output)
 
                     # Manual mode: one hit and done
                     if not self.automatic_hits:
+                        print("Not using automatic hits, finishing sequence.")
                         self.finish_sequence()
                         return
 
                     # Automatic mode: stop if requested or threshold reached
                     if self.stop_requested:
+                        print("Using automatic hits, but stop was requested, finishing sequence.")
                         self.finish_sequence()
                         return
 
                     if self.hits_at_target >= self.run_instructions.target_hits_at_level:
+                        print("Number of requested hits completed, finishing sequence.")
                         self.finish_sequence()
                         return
 
@@ -875,9 +905,11 @@ class SDSEnvironment(SysIdEnvironment):
                         self.last_hit_completion_time + self.automatic_interval
                     )
                     self.log(f"Next automatic hit time set to {self.pending_next_hit_time:.3f}")
+                    print(f"Next automatic hit time set to {self.pending_next_hit_time:.3f}")
 
                 if self.sequence_active:
-                    time.sleep(0.05)
+                    print("Sequence active, continuing to monitor hits.")
+                    time.sleep(MONITOR_SLEEP_TIME)
                     self.queue_container.environment_command_queue.put(
                         self.environment_name, (SDSCommands.MONITOR_HIT, None)
                     )
@@ -885,7 +917,8 @@ class SDSEnvironment(SysIdEnvironment):
 
             except (thqueue.Empty, mp.queues.Empty):
                 # No data available yet
-                time.sleep(0.05)
+                print("No data was available yet, continuing to monitor hits.")
+                time.sleep(MONITOR_SLEEP_TIME)
                 self.queue_container.environment_command_queue.put(
                     self.environment_name, (SDSCommands.MONITOR_HIT, None)
                 )
@@ -893,20 +926,31 @@ class SDSEnvironment(SysIdEnvironment):
 
         # Case 2: waiting between automatic hits
         if self.automatic_hits and self.pending_next_hit_time is not None:
+            print(
+                f"Waiting between automatic hits: {self.automatic_hits=}, {self.pending_next_hit_time=}"
+            )
             if self.stop_requested:
+                print("Using automatic hits, but stop was requested, finishing sequence.")
                 self.finish_sequence()
                 return
 
             if self.hits_at_target >= self.run_instructions.target_hits_at_level:
+                print("Number of requested hits completed, finishing sequence.")
                 self.finish_sequence()
                 return
 
             if time.time() >= self.pending_next_hit_time:
+                print("Next hit time reached, launching next hit.")
                 self.pending_next_hit_time = None
+                self.queue_container.controller_communication_queue.put(
+                    self.environment_name,
+                    (GlobalCommands.RESTART_ENVIRONMENT_OUTPUT, self.queue_name),
+                )
                 self.launch_hit()
                 return
 
-            time.sleep(0.05)
+            time.sleep(MONITOR_SLEEP_TIME)
+            print("Waiting for next automatic hit, continuing to monitor hits.")
             self.queue_container.environment_command_queue.put(
                 self.environment_name, (SDSCommands.MONITOR_HIT, None)
             )
@@ -917,13 +961,14 @@ class SDSEnvironment(SysIdEnvironment):
         Final SDS environment shutdown.
         """
         self.log("Environment Shut Down")
-
+        print("Shutting down.")
         self.sequence_active = False
         self.hit_in_progress = False
         self.pending_next_hit_time = None
         self.stop_requested = False
 
         self.clear_active()
+        print("Sending environment ended to GUI update queue.")
         self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
 
     def stop_environment(self, data):
@@ -983,10 +1028,12 @@ class SDSEnvironment(SysIdEnvironment):
         )
 
     def finish_sequence(self):
+        print("Finishing sequence")
         self.log("Finishing SDS hit sequence")
         self.sequence_active = False
         self.hit_in_progress = False
         self.pending_next_hit_time = None
+        print("Starting Shutdown")
         self.shutdown()
 
 
