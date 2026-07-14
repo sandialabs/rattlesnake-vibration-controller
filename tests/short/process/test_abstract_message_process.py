@@ -17,18 +17,6 @@ from rattlesnake.utilities import GlobalCommands
 
 # region Fixtures
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
-def process_setup(request):
-    """
-    Create queue and event containers for threaded and multiprocessing modes.
-    """
-    use_thread = request.param
-    queue_container = mock_queue_container(use_thread)
-    event_container = mock_event_container(use_thread)
-
-    return queue_container, event_container
-
-
-@pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def abstract_message_process(request):
     """
     Create an ``AbstractMessageProcess`` in threaded and multiprocessing modes.
@@ -81,23 +69,15 @@ def test_message_process_properties(abstract_message_process):
     Verifies that process properties return expected values and that the
     default command map contains ``GlobalCommands.QUIT``.
     """
+    abstract_message_process.gui_update_queue
+    abstract_message_process.command_queue
+    abstract_message_process.log_file_queue
+    abstract_message_process.ready_event
+
     assert abstract_message_process.process_name == "Process Name"
     assert abstract_message_process.command_map == {
         GlobalCommands.QUIT: abstract_message_process.quit
     }
-
-    assert abstract_message_process.gui_update_queue is (
-        abstract_message_process._gui_update_queue
-    )
-    assert abstract_message_process.command_queue is (
-        abstract_message_process._command_queue
-    )
-    assert abstract_message_process.log_file_queue is (
-        abstract_message_process._log_file_queue
-    )
-    assert abstract_message_process.ready_event is (
-        abstract_message_process._ready_event
-    )
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.datetime")
@@ -122,7 +102,6 @@ def test_message_process_set_ready(abstract_message_process):
     Verifies that calling ``set_ready`` sets the ready event.
     """
     abstract_message_process._ready_event.clear()
-
     abstract_message_process.set_ready()
 
     assert abstract_message_process._ready_event.is_set()
@@ -133,7 +112,6 @@ def test_message_process_clear_ready(abstract_message_process):
     Verifies that calling ``clear_ready`` clears the ready event.
     """
     abstract_message_process._ready_event.set()
-
     abstract_message_process.clear_ready()
 
     assert not abstract_message_process._ready_event.is_set()
@@ -174,14 +152,11 @@ def test_abstract_message_process_run_dispatches_mapped_command(
     """
     handler = mock.MagicMock(return_value=False)
     payload = object()
-
     abstract_message_process.map_command("Test Key", handler)
-
     mock_get.side_effect = [
         ("Test Key", payload),
         (GlobalCommands.QUIT, None),
     ]
-
     shutdown_event = mp.Event()
 
     abstract_message_process.run(shutdown_event)
@@ -205,7 +180,6 @@ def test_abstract_message_process_run_ignores_empty_queue(
         thqueue.Empty(),
         (GlobalCommands.QUIT, None),
     ]
-
     shutdown_event = mp.Event()
 
     abstract_message_process.run(shutdown_event)
@@ -227,7 +201,6 @@ def test_abstract_message_process_run_undefined_command(
         ("Undefined Command", None),
         (GlobalCommands.QUIT, None),
     ]
-
     shutdown_event = mp.Event()
 
     abstract_message_process.run(shutdown_event)
@@ -257,32 +230,27 @@ def test_abstract_message_process_run_command_exception(
         raise RuntimeError("BOOM")
 
     abstract_message_process.map_command("Boom", boom)
-
     mock_get.side_effect = [
         ("Boom", None),
         (GlobalCommands.QUIT, None),
     ]
-
     shutdown_event = mp.Event()
 
     abstract_message_process.run(shutdown_event)
     time.sleep(1)
 
     assert any("ERROR" in call.args[0] for call in mock_log.call_args_list)
-
     mock_gui_update_queue.put.assert_called_once()
     gui_message, gui_data = mock_gui_update_queue.put.call_args.args[0]
-
     assert gui_message == UICommands.ERROR
     assert gui_data[0] == "Process Name Error"
     assert "RuntimeError: BOOM" in gui_data[1]
-
     mock_log.assert_any_call("Stopping Process")
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.get")
-def test_abstract_message_process_run_halts_on_truthy_return(
+def test_abstract_message_process_run_exits_correctly(
     mock_get,
     mock_log,
     abstract_message_process,
@@ -292,13 +260,10 @@ def test_abstract_message_process_run_halts_on_truthy_return(
     truthy halt flag.
     """
     halt_handler = mock.MagicMock(return_value=True)
-
     abstract_message_process.map_command("Halt", halt_handler)
-
     mock_get.side_effect = [
         ("Halt", None),
     ]
-
     shutdown_event = mp.Event()
 
     abstract_message_process.run(shutdown_event)
@@ -375,7 +340,6 @@ def test_abstract_message_process_run_halt_flag_truthiness(
     """
     handler = mock.MagicMock(return_value=command_return)
     abstract_message_process.map_command("Command", handler)
-
     if expected_stop:
         mock_get.side_effect = [
             ("Command", None),
@@ -385,7 +349,6 @@ def test_abstract_message_process_run_halt_flag_truthiness(
             ("Command", None),
             (GlobalCommands.QUIT, None),
         ]
-
     shutdown_event = mp.Event()
 
     abstract_message_process.run(shutdown_event)

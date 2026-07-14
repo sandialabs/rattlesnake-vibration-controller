@@ -14,20 +14,19 @@ Rules to follow
 ## Tests I need example for
     utilities
     engine
-environment_manager
+environment_manager: Needs to split up validation/tests to seperate tests. Is currently way overusing mark.parametrize
 main
 
-hardware_utilities/registry
     abstract_hardware
 sdynpy_system_virtual_hardware
 lanxi_hardware
 
-environment_utilities/registry
+    environment_utilities/registry
     abstract_environment
 modal_environment
 abstract_control_law
 
-abstract_message_process
+    abstract_message_process
 controller
 acqusition
 abstract_sysid_data_analysis
@@ -105,7 +104,7 @@ No Tests
 
 # Test Similarity
 Utilities
-    utilities
+    utilities: Use as example
     load_utilities
     hardware_utilities
     hardware_registry
@@ -117,13 +116,13 @@ Utilities
 
 Main
     main
-    engine
+    engine: Use as example
     environment_manager
     profile_manager
 
 Abstract Classes
-    abstract_hardware
-    abstract_environment
+    abstract_hardware: Use as example
+    abstract_environment: Use as example
     abstract_sys_id_environment
     abstract_message_process
 
