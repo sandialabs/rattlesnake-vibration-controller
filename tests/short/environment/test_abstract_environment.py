@@ -290,6 +290,13 @@ def test_environment_metadata_load_save_netcdf(
 def test_environment_metadata_load_save_worksheet(
     environment_type, hardware_metadata: SkeletonHardwareMetadata
 ):
+    """
+    Saves a valid metadata subclass to an Excel worksheet and then loads
+    it back into a metadata object. Verifies that the worksheet contains
+    the expected metadata header values and that the loaded metadata
+    preserves the expected environment name, channel selection, and sample
+    rate before passing validation.
+    """
     metadata_class = ENVIRONMENT_METADATA[environment_type]
     metadata = ENVIRONMENT_DICT[environment_type]["manual"](hardware_metadata)
     metadata.environment_name = "Environment Name"
@@ -488,6 +495,11 @@ def test_environment_initialize_hardware(
     environment_type,
     hardware_metadata: SkeletonHardwareMetadata,
 ):
+    """
+    Verifies that each implemented environment stores the supplied hardware
+    metadata during hardware initialization and sets its ready event when
+    initialization completes.
+    """
     environment_class = ENVIRONMENT_CLASS[environment_type]
     environment = instantiate_with_mocks(
         environment_class,
@@ -505,6 +517,11 @@ def test_environment_initialize_environment(
     environment_type,
     hardware_metadata: SkeletonHardwareMetadata,
 ):
+    """
+    Verifies that each implemented environment stores the supplied environment
+    metadata during environment initialization, updates its environment name
+    from the metadata, and sets its ready event when initialization completes.
+    """
     environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
     environment_metadata = instantiate_with_mocks(
         environment_metadata_class,
