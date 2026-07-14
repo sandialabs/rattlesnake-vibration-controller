@@ -952,7 +952,166 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
     ):
-        pass
+        sample_rate = hardware_metadata.sample_rate
+        num_channels = sum(channel_list_bools)
+        block_size = int(netcdf_group_handle.block_size)
+
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools)
+            if channel_bool
+        ]
+
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
+        # ----------------------------
+        # Tone parameters
+        # ----------------------------
+        tone_grp = netcdf_group_handle.groups["tone_parameters"]
+        tone_strategy = ToneStrategy(tone_grp.strategy)
+        if "tone_data" in tone_grp.variables:
+            tone_values = np.array(tone_grp.variables["tone_data"][...]).flatten()
+        else:
+            tone_values = None
+        tone_data = ToneParameters(tone_strategy, tone_values)
+
+        # ----------------------------
+        # Compensation pulse parameters
+        # ----------------------------
+        comp_grp = netcdf_group_handle.groups["compensation_pulse_parameters"]
+        use_compensation_pulse = bool(comp_grp.use_compensation_pulse)
+        compensation_frequency = (
+            comp_grp.compensation_frequency if hasattr(comp_grp, "compensation_frequency") else None
+        )
+        compensation_decay = (
+            comp_grp.compensation_decay if hasattr(comp_grp, "compensation_decay") else None
+        )
+        compensation_pulse_data = CompPulseParameters(
+            use_compensation_pulse=use_compensation_pulse,
+            compensation_frequency=compensation_frequency,
+            compensation_decay=compensation_decay,
+        )
+
+        # ----------------------------
+        # Decay parameters
+        # ----------------------------
+        decay_grp = netcdf_group_handle.groups["decay_parameters"]
+        decay_strategy = DecayStrategy(decay_grp.decay_strategy)
+        common_decay = bool(decay_grp.common_decay)
+        if "decay_data" in decay_grp.variables:
+            decay_values = np.array(decay_grp.variables["decay_data"][...]).flatten()
+        else:
+            decay_values = np.array([decay_grp.decay_data], dtype=float)
+        decay_data = DecayParameters(decay_strategy, common_decay, decay_values)
+
+        # ----------------------------
+        # SRS parameters
+        # ----------------------------
+        srs_grp = netcdf_group_handle.groups["srs_parameters"]
+        srs_data = SRSParameters(
+            SRSType(srs_grp.srs_type),
+            SRSDisplacementType(srs_grp.srs_displacement),
+            float(srs_grp.srs_damping),
+        )
+
+        # ----------------------------
+        # SDS parameters
+        # ----------------------------
+        sds_grp = netcdf_group_handle.groups["sds_parameters"]
+        sds_data = SDSParameters(
+            iterations=int(sds_grp.iterations),
+            convergence=float(sds_grp.convergence),
+            scale_factor=float(sds_grp.scale_factor),
+            error_tolerance=float(sds_grp.error_tolerance),
+        )
+
+        # ----------------------------
+        # Specification parameters
+        # ----------------------------
+        spec_grp = netcdf_group_handle.groups["specification_parameters"]
+        specification_data = SpecParameters(
+            frequencies=np.array(spec_grp.variables["frequencies"][...]),
+            srs_spec=np.array(spec_grp.variables["srs_spec"][...]),
+            srs_lower_limit=np.array(spec_grp.variables["srs_lower_limit"][...]),
+            srs_upper_limit=np.array(spec_grp.variables["srs_upper_limit"][...]),
+            num_hits=int(spec_grp.num_hits),
+        )
+
+        # ----------------------------
+        # Control parameters
+        # ----------------------------
+        control_grp = netcdf_group_handle.groups["control_parameters"]
+        control_type = ControlLawType(control_grp.control_type)
+        control_script = control_grp.control_script
+        control_object = control_grp.control_object
+
+        control_parameters = {}
+        if "control_extra_parameters" in control_grp.groups:
+            control_grp_params = control_grp.groups["control_extra_parameters"]
+            for key in control_grp_params.ncattrs():
+                control_parameters[key] = getattr(control_grp_params, key)
+
+        control_script_data = ControlParameters(
+            control_script=control_script,
+            control_object=control_object,
+            control_type=control_type,
+            control_parameters=control_parameters,
+        )
+
+        # ----------------------------
+        # Control channel indices
+        # ----------------------------
+        control_channel_indices = np.array(
+            netcdf_group_handle.variables["control_channel_indices"][...],
+            dtype=int,
+        )
+
+        # ----------------------------
+        # Transformation matrices
+        # ----------------------------
+        response_transformation_matrix = None
+        if "response_transformation_matrix" in netcdf_group_handle.variables:
+            response_transformation_matrix = np.array(
+                netcdf_group_handle.variables["response_transformation_matrix"][...]
+            )
+
+        excitation_transformation_matrix = None
+        if "reference_transformation_matrix" in netcdf_group_handle.variables:
+            excitation_transformation_matrix = np.array(
+                netcdf_group_handle.variables["reference_transformation_matrix"][...]
+            )
+
+        # ----------------------------
+        # SysID metadata
+        # ----------------------------
+        sysid_metadata = SysIdMetadata.load_metadata_from_netcdf(
+            netcdf_group_handle,
+            hardware_metadata,
+        )
+
+        return cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+            block_size=block_size,
+            tone_data=tone_data,
+            compensation_pulse_data=compensation_pulse_data,
+            decay_data=decay_data,
+            srs_data=srs_data,
+            sds_data=sds_data,
+            control_script_data=control_script_data,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=np.array(output_channel_indices, dtype=int),
+            response_transformation_matrix=response_transformation_matrix,
+            excitation_transformation_matrix=excitation_transformation_matrix,
+            specification_data=specification_data,
+            sysid_metadata=sysid_metadata,
+        )
 
     def save_metadata_to_netcdf(
         self,
