@@ -31,6 +31,7 @@ from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentM
 from rattlesnake.environment.sds_sys_id_utilities import octspace, DecayedSineTable
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 
 
 class ToneStrategy(Enum):
@@ -357,6 +358,36 @@ class ControlParameters:
         self.control_parameters = control_parameters
 
 
+def _parse_scalar_string(value):
+    if isinstance(value, (int, float, bool)):
+        return value
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return value
+
+    text = value.strip()
+    if text == "":
+        return ""
+
+    if text.lower() in ("true", "y", "yes"):
+        return True
+    if text.lower() in ("false", "n", "no"):
+        return False
+
+    try:
+        return int(text)
+    except ValueError:
+        pass
+
+    try:
+        return float(text)
+    except ValueError:
+        pass
+
+    return text
+
+
 class SDSMetadata(SysIdEnvironmentMetadata):
     """Metadata required to define a Shock control law in rattlesnake."""
 
@@ -513,7 +544,115 @@ class SDSMetadata(SysIdEnvironmentMetadata):
 
     @classmethod
     def create_blank_worksheet_template(cls, worksheet):
-        pass
+        super().create_blank_worksheet_template(worksheet)
+
+        worksheet.cell(1, 2, "SDS")
+
+        worksheet.cell(2, 1, "Block Size")
+        worksheet.cell(2, 3, "# Number of samples in one SDS hit block")
+
+        worksheet.cell(3, 1, "Tone Strategy")
+        worksheet.cell(3, 3, '# One of "From Spec", "Octave", or "Manual"')
+
+        worksheet.cell(4, 1, "Tone Data")
+        worksheet.cell(
+            4,
+            3,
+            '# If "From Spec", leave blank. If "Octave", fill columns as min_freq, max_freq, tones/octave. '
+            'If "Manual", fill columns with tone frequencies.',
+        )
+
+        worksheet.cell(5, 1, "Use Compensation Pulse")
+        worksheet.cell(5, 3, "# Y or N")
+
+        worksheet.cell(6, 1, "Compensation Frequency")
+        worksheet.cell(6, 3, '# Frequency in Hz or "Auto"')
+
+        worksheet.cell(7, 1, "Compensation Decay")
+        worksheet.cell(7, 3, "# Compensation decay as fraction (e.g. 0.95)")
+
+        worksheet.cell(8, 1, "Decay Strategy")
+        worksheet.cell(
+            8,
+            3,
+            '# One of "Damping", "Time Constant", or "Num Time Constants"',
+        )
+
+        worksheet.cell(9, 1, "Common Decay")
+        worksheet.cell(9, 3, "# Y or N")
+
+        worksheet.cell(10, 1, "Decay Data")
+        worksheet.cell(
+            10,
+            3,
+            "# If common decay, put one value in column 2. Otherwise fill one value per tone across columns.",
+        )
+
+        worksheet.cell(11, 1, "SRS Type")
+        worksheet.cell(11, 3, "# Name of SRS type enumeration")
+
+        worksheet.cell(12, 1, "SRS Displacement")
+        worksheet.cell(12, 3, '# One of "Absolute" or "Relative"')
+
+        worksheet.cell(13, 1, "SRS Damping")
+        worksheet.cell(13, 3, "# Fractional damping, e.g. 0.03")
+
+        worksheet.cell(14, 1, "SDS Iterations")
+        worksheet.cell(14, 3, "# Number of SDS synthesis iterations")
+
+        worksheet.cell(15, 1, "SDS Convergence")
+        worksheet.cell(15, 3, "# Fractional convergence, e.g. 0.8")
+
+        worksheet.cell(16, 1, "SDS Scale Factor")
+        worksheet.cell(16, 3, "# Scale factor, e.g. 1.02")
+
+        worksheet.cell(17, 1, "SDS Error Tolerance")
+        worksheet.cell(17, 3, "# Fractional error tolerance, e.g. 0.05")
+
+        worksheet.cell(18, 1, "Specification File")
+        worksheet.cell(18, 3, "# Path to .npz specification file to load")
+
+        worksheet.cell(19, 1, "Control Python Script")
+        worksheet.cell(19, 3, "# Path to control law Python script")
+
+        worksheet.cell(20, 1, "Control Python Function/Object")
+        worksheet.cell(20, 3, "# Function or class name in script")
+
+        worksheet.cell(21, 1, "Control Python Type")
+        worksheet.cell(
+            21,
+            3,
+            '# One of "Function", "Class", or "Interactive"',
+        )
+
+        worksheet.cell(22, 1, "Control Channels (1-based)")
+        worksheet.cell(22, 3, "# List of channels, one per cell on this row")
+
+        worksheet.cell(23, 1, "Control Parameters")
+        worksheet.cell(
+            23,
+            3,
+            '# key=value pairs, one per cell, e.g. "rcond=1e-10"',
+        )
+
+        worksheet.cell(24, 1, "Specification Num Hits")
+        worksheet.cell(24, 3, "# Integer number of target hits")
+
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=26)
+
+        worksheet.cell(42, 1, "Response Transformation Matrix:")
+        worksheet.cell(
+            42,
+            2,
+            "# Type None if not used, otherwise put matrix values starting in column 2",
+        )
+
+        worksheet.cell(43, 1, "Output Transformation Matrix:")
+        worksheet.cell(
+            43,
+            2,
+            "# Type None if not used, otherwise put matrix values starting in column 2",
+        )
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -523,10 +662,287 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
     ):
-        pass
+        sample_rate = hardware_metadata.sample_rate
+        num_channels = sum(channel_list_bools)
+
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools)
+            if channel_bool
+        ]
+
+        output_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
+        block_size = int(worksheet.cell(2, 2).value)
+
+        # Tone strategy
+        tone_strategy_text = str(worksheet.cell(3, 2).value).strip().lower()
+        if tone_strategy_text in ["from spec", "from specification", "from_spec"]:
+            tone_data = ToneParameters(ToneStrategy.FROM_SPEC, None)
+        elif tone_strategy_text in ["octave", "oct"]:
+            octave_values = []
+            col = 2
+            while True:
+                value = worksheet.cell(4, col).value
+                if value is None or (isinstance(value, str) and value.strip() == ""):
+                    break
+                octave_values.append(float(value))
+                col += 1
+            tone_data = ToneParameters(ToneStrategy.OCTAVE, np.array(octave_values))
+        elif tone_strategy_text in ["manual"]:
+            manual_values = []
+            col = 2
+            while True:
+                value = worksheet.cell(4, col).value
+                if value is None or (isinstance(value, str) and value.strip() == ""):
+                    break
+                manual_values.append(float(value))
+                col += 1
+            tone_data = ToneParameters(ToneStrategy.MANUAL, np.array(manual_values))
+        else:
+            raise ValueError(f"Unknown Tone Strategy {worksheet.cell(3, 2).value}")
+
+        # Compensation pulse
+        use_comp = str(worksheet.cell(5, 2).value).strip().upper() == "Y"
+        comp_freq_raw = worksheet.cell(6, 2).value
+        if isinstance(comp_freq_raw, str) and comp_freq_raw.strip().lower() == "auto":
+            compensation_frequency = None
+        elif comp_freq_raw is None or comp_freq_raw == "":
+            compensation_frequency = None
+        else:
+            compensation_frequency = float(comp_freq_raw)
+
+        comp_decay_raw = worksheet.cell(7, 2).value
+        compensation_decay = None if comp_decay_raw in (None, "") else float(comp_decay_raw)
+
+        compensation_pulse_data = CompPulseParameters(
+            use_compensation_pulse=use_comp,
+            compensation_frequency=compensation_frequency,
+            compensation_decay=compensation_decay,
+        )
+
+        # Decay
+        decay_strategy_text = str(worksheet.cell(8, 2).value).strip().lower().replace("_", " ")
+        if decay_strategy_text in ["damping", "zeta"]:
+            decay_strategy = DecayStrategy.DAMPING
+        elif decay_strategy_text in ["time constant", "tau", "time const"]:
+            decay_strategy = DecayStrategy.TIME_CONSTANT
+        elif decay_strategy_text in ["num time constants", "number of time constants", "ntc"]:
+            decay_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+        else:
+            raise ValueError(f"Unknown Decay Strategy {worksheet.cell(8, 2).value}")
+
+        common_decay = str(worksheet.cell(9, 2).value).strip().upper() == "Y"
+
+        decay_values = []
+        col = 2
+        while True:
+            value = worksheet.cell(10, col).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            decay_values.append(float(value))
+            col += 1
+        decay_data = np.array(decay_values)
+
+        decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
+
+        # SRS parameters
+        srs_type = SRSType[str(worksheet.cell(11, 2).value).strip().upper()]
+        srs_disp_text = str(worksheet.cell(12, 2).value).strip().lower()
+        if srs_disp_text == "absolute":
+            srs_displacement = SRSDisplacementType.ABSOLUTE
+        elif srs_disp_text == "relative":
+            srs_displacement = SRSDisplacementType.RELATIVE
+        else:
+            raise ValueError(f"Unknown SRS displacement {worksheet.cell(12, 2).value}")
+
+        srs_damping = float(worksheet.cell(13, 2).value)
+        srs_data = SRSParameters(srs_type, srs_displacement, srs_damping)
+
+        # SDS synthesis parameters
+        sds_data = SDSParameters(
+            iterations=int(worksheet.cell(14, 2).value),
+            convergence=float(worksheet.cell(15, 2).value),
+            scale_factor=float(worksheet.cell(16, 2).value),
+            error_tolerance=float(worksheet.cell(17, 2).value),
+        )
+
+        # Specification file
+        spec_filename = worksheet.cell(18, 2).value
+        if spec_filename is None or (
+            isinstance(spec_filename, str) and spec_filename.strip() == ""
+        ):
+            raise ValueError("SDS worksheet requires a specification file path in row 18 column 2.")
+
+        spec_data = np.load(spec_filename)
+        specification_data = SpecParameters(
+            frequencies=spec_data["f"],
+            srs_spec=spec_data["srs"],
+            srs_lower_limit=spec_data["lower_limit"],
+            srs_upper_limit=spec_data["upper_limit"],
+            num_hits=int(spec_data["num_hits"]),
+        )
+
+        # Control data
+        control_script = worksheet.cell(19, 2).value
+        control_object = worksheet.cell(20, 2).value
+        control_type_text = str(worksheet.cell(21, 2).value).strip().lower()
+        if control_type_text == "function":
+            control_type = ControlLawType.FUNCTION
+        elif control_type_text == "class":
+            control_type = ControlLawType.CLASS
+        elif control_type_text == "interactive":
+            control_type = ControlLawType.INTERACTIVE_CLASS
+        else:
+            raise ValueError(f"Unknown control type {worksheet.cell(21, 2).value}")
+
+        control_channel_indices = []
+        col = 2
+        while True:
+            value = worksheet.cell(22, col).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            control_channel_indices.append(int(value) - 1)
+            col += 1
+        control_channel_indices = np.array(control_channel_indices, dtype=int)
+
+        control_parameters = {}
+        col = 2
+        while True:
+            value = worksheet.cell(23, col).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            text = str(value)
+            if "=" not in text:
+                raise ValueError(f'Invalid control parameter entry "{text}", expected key=value')
+            key, raw_val = text.split("=", 1)
+            control_parameters[key.strip()] = _parse_scalar_string(raw_val.strip())
+            col += 1
+
+        control_script_data = ControlParameters(
+            control_script=control_script,
+            control_object=control_object,
+            control_type=control_type,
+            control_parameters=control_parameters,
+        )
+
+        # Override num_hits from worksheet if desired
+        num_hits_cell = worksheet.cell(24, 2).value
+        if num_hits_cell is not None and str(num_hits_cell).strip() != "":
+            specification_data.num_hits = int(num_hits_cell)
+
+        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
+            worksheet, hardware_metadata, start_row=26
+        )
+
+        response_transformation_matrix, output_transformation_matrix = (
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=42)
+        )
+
+        return cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+            block_size=block_size,
+            tone_data=tone_data,
+            compensation_pulse_data=compensation_pulse_data,
+            decay_data=decay_parameters,
+            srs_data=srs_data,
+            sds_data=sds_data,
+            control_script_data=control_script_data,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=np.array(output_channel_indices, dtype=int),
+            response_transformation_matrix=response_transformation_matrix,
+            excitation_transformation_matrix=output_transformation_matrix,
+            specification_data=specification_data,
+            sysid_metadata=sysid_metadata,
+        )
 
     def save_metadata_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        pass
+        super().save_metadata_to_worksheet(worksheet)
+
+        worksheet.cell(2, 2, self.block_size)
+
+        tone_strategy_names = {
+            ToneStrategy.FROM_SPEC: "From Spec",
+            ToneStrategy.OCTAVE: "Octave",
+            ToneStrategy.MANUAL: "Manual",
+        }
+        worksheet.cell(3, 2, tone_strategy_names[self.tone_data.tone_strategy])
+
+        if self.tone_data.tone_strategy == ToneStrategy.OCTAVE:
+            for i, value in enumerate(self.tone_data.tone_data):
+                worksheet.cell(4, 2 + i, float(value))
+        elif self.tone_data.tone_strategy == ToneStrategy.MANUAL:
+            for i, value in enumerate(self.tone_data.tone_data):
+                worksheet.cell(4, 2 + i, float(value))
+
+        worksheet.cell(5, 2, "Y" if self.compensation_pulse_data.use_compensation_pulse else "N")
+        worksheet.cell(
+            6,
+            2,
+            (
+                "Auto"
+                if self.compensation_pulse_data.compensation_frequency is None
+                else self.compensation_pulse_data.compensation_frequency
+            ),
+        )
+        if self.compensation_pulse_data.compensation_decay is not None:
+            worksheet.cell(7, 2, self.compensation_pulse_data.compensation_decay)
+
+        decay_strategy_names = {
+            DecayStrategy.DAMPING: "Damping",
+            DecayStrategy.TIME_CONSTANT: "Time Constant",
+            DecayStrategy.NUM_TIME_CONSTANTS: "Num Time Constants",
+        }
+        worksheet.cell(8, 2, decay_strategy_names[self.decay_data.decay_strategy])
+        worksheet.cell(9, 2, "Y" if self.decay_data.common_decay else "N")
+
+        if self.decay_data.common_decay:
+            worksheet.cell(10, 2, float(self.decay_data.decay_data[0]))
+        else:
+            for i, value in enumerate(self.decay_data.decay_data):
+                worksheet.cell(10, 2 + i, float(value))
+
+        worksheet.cell(11, 2, self.srs_data.srs_type.name)
+        worksheet.cell(12, 2, self.srs_data.srs_displacement.name.title())
+        worksheet.cell(13, 2, self.srs_data.srs_damping)
+
+        worksheet.cell(14, 2, self.sds_data.iterations)
+        worksheet.cell(15, 2, self.sds_data.convergence)
+        worksheet.cell(16, 2, self.sds_data.scale_factor)
+        worksheet.cell(17, 2, self.sds_data.error_tolerance)
+
+        # Intentionally leave spec file blank when saving template
+        worksheet.cell(18, 2, "")
+        worksheet.cell(18, 3, "# Required for loading: path to .npz specification file")
+
+        worksheet.cell(19, 2, self.control_script_data.control_script)
+        worksheet.cell(20, 2, self.control_script_data.control_object)
+        worksheet.cell(21, 2, self.control_script_data.control_type.name.title().replace("_", " "))
+
+        for idx, channel_ind in enumerate(self.control_channel_indices):
+            worksheet.cell(22, 2 + idx, int(channel_ind) + 1)
+
+        if self.control_script_data.control_parameters is not None:
+            for idx, (key, value) in enumerate(self.control_script_data.control_parameters.items()):
+                worksheet.cell(23, 2 + idx, f"{key}={value}")
+
+        worksheet.cell(24, 2, int(self.specification_data.num_hits))
+
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=26)
+
+        self.save_sysid_matrix_to_worksheet(
+            worksheet,
+            self.response_transformation_matrix,
+            self.reference_transformation_matrix,
+            start_row=42,
+        )
 
     @classmethod
     def load_metadata_from_netcdf(
@@ -537,88 +953,6 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         hardware_metadata: HardwareMetadata,
     ):
         pass
-        # TODO: Replace this with data from the netcdf4 file
-        # tone_parameters = ToneParameters(tone_strategy=ToneStrategy.FROM_SPEC, tone_data=None)
-
-        # compensation_pulse_parameters = CompPulseParameters(
-        #     use_compensation_pulse=True, compensation_frequency=None, compensation_decay=0.95
-        # )
-
-        # decay_parameters = DecayParameters(
-        #     decay_strategy=DecayStrategy.NUM_TIME_CONSTANTS, common_decay=True, decay_data=5.0
-        # )
-
-        # srs_parameters = SRSParameters(
-        #     srs_type=SRSType.MAXIMUM_ABSMAX,
-        #     srs_displacement=SRSDisplacementType.ABSOLUTE,
-        #     srs_damping=0.03,
-        # )
-
-        # sds_parameters = SDSParameters(
-        #     iterations=3, convergence=0.8, scale_factor=1.02, error_tolerance=0.05
-        # )
-
-        # spec_data = np.load(
-        #     r"C:\Users\dprohe\Documents\Test_Problems\Rattlesnake_MIMO_SDS\srs_spec.npz"
-        # )
-        # specification = SpecParameters(
-        #     frequencies=spec_data["f"],
-        #     srs_spec=spec_data["srs"],
-        #     srs_lower_limit=spec_data["lower_limit"],
-        #     srs_upper_limit=spec_data["upper_limit"],
-        #     num_hits=spec_data["num_hits"],
-        # )
-
-        # control_parameters = ControlParameters(
-        #     control_script="rattlesnake.environment.sds_sys_id_control_law",
-        #     control_object="default_control_law",
-        #     control_type=ControlLawType.FUNCTION,
-        #     control_parameters={},
-        # )
-
-        # sysid_parameters = SysIdMetadata(
-        #     sample_rate=sample_rate,
-        #     sysid_frame_size=4000,
-        #     sysid_averaging_type="Linear",
-        #     sysid_noise_averages=5,
-        #     sysid_averages=20,
-        #     sysid_exponential_averaging_coefficient=0.01,
-        #     sysid_estimator="H1",
-        #     sysid_level=0.01,
-        #     sysid_level_ramp_time=0.5,
-        #     sysid_signal_type="Random",
-        #     sysid_window="Hann",
-        #     sysid_overlap=0.5,
-        #     sysid_burst_on=0.5,
-        #     sysid_pretrigger=0.05,
-        #     sysid_burst_ramp_fraction=0.05,
-        #     sysid_low_frequency_cutoff=0,
-        #     sysid_high_frequency_cutoff=int(sample_rate / 2),
-        #     stream_file=None,
-        # )
-
-        # response_transform = None
-        # excitation_transform = None
-
-        # environment_metadata = SDSMetadata(
-        #     environment_name="SDS",
-        #     channel_list_bools=[True] * len(hardware_metadata.channel_list),
-        #     sample_rate=sample_rate,
-        #     num_channels=len(hardware_metadata.channel_list),
-        #     block_size=8000,
-        #     tone_data=tone_parameters,
-        #     compensation_pulse_data=compensation_pulse_parameters,
-        #     decay_data=decay_parameters,
-        #     srs_data=srs_parameters,
-        #     sds_data=sds_parameters,
-        #     control_script_data=control_parameters,
-        #     control_channel_indices=np.arange(len(output_nodes)),
-        #     output_channel_indices=np.arange(len(input_nodes)) + len(output_nodes),
-        #     response_transformation_matrix=response_transform,
-        #     excitation_transformation_matrix=excitation_transform,
-        #     specification_data=specification,
-        #     sysid_metadata=sysid_parameters,
-        # )
 
     def save_metadata_to_netcdf(
         self,
@@ -638,7 +972,7 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         tone_grp.strategy = self.tone_data.tone_strategy.value
         if self.tone_data.tone_data is not None:
             tone_grp.createDimension("tone_data_size", self.tone_data.tone_data)
-            var = tone_grp.createVariable("tone_data", "f8", ("tone_data_size"))
+            var = tone_grp.createVariable("tone_data", "f8", ("tone_data_size",))
             var[...] = self.tone_data.tone_data
         # Compensation pulse
         comp_grp.use_compensation_pulse = (
