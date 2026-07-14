@@ -382,6 +382,15 @@ class ModalMetadata(EnvironmentMetadata):
         if self.signal_generator is None:
             raise ValueError(f"Invalid Signal Type {self.signal_generator_type}")
 
+        if self.trigger_type not in ("Free Run", "First Frame", "Every Frame"):
+            raise ValueError(f"Invalid Acquisition Type: {self.trigger_type}")
+
+        if self.accept_type not in ("Accept All", "Manual", "Autoreject..."):
+            raise ValueError(f"Invalid Acceptance Type: {self.accept_type}")
+
+        if self.frf_window not in ("hann", "rectangle", "exponential"):
+            raise ValueError(f"Invalid Window Type: {self.frf_window}")
+
         return super().validate(hardware_metadata)
 
     # endregion
@@ -1119,9 +1128,8 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.trigger_type == "Every Frame":
             acquisition_type = AcquisitionType.TRIGGER_EVERY_FRAME
         else:
-            raise ValueError(
-                f"Invalid Acquisition Type: {self.environment_metadata.trigger_type}"
-            )
+            acquisition_type = None
+            print(f"Invalid Acquisition Type: {self.environment_metadata.trigger_type}")
         if self.environment_metadata.accept_type == "Accept All":
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = None
@@ -1132,9 +1140,9 @@ class ModalEnvironment(Environment):
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = self.environment_metadata.acceptance_function
         else:
-            raise ValueError(
-                f"Invalid Acceptance Type: {self.environment_metadata.accept_type}"
-            )
+            acceptance = None
+            acceptance_function = None
+            print(f"Invalid Acceptance Type: {self.environment_metadata.accept_type}")
         overlap_fraction = self.environment_metadata.overlap
         trigger_channel_index = self.environment_metadata.trigger_channel
         trigger_slope = (
@@ -1157,9 +1165,7 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            raise ValueError(
-                f"Invalid Window Type: {self.environment_metadata.frf_window}"
-            )
+            print(f"Invalid Window Type: {self.environment_metadata.frf_window}")
         window_parameter = -(frame_size) / np.log(
             self.environment_metadata.exponential_window_value_at_frame_end
         )
