@@ -9,7 +9,14 @@ import pytest
 import multiprocessing as mp
 
 from rattlesnake.utilities import RattlesnakeError, GlobalCommands, VerboseMessageQueue
+from rattlesnake.hardware.skeleton_hardware import SkeletonHardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.skeleton_environment import (
+    SkeletonMetadata,
+    SkeletonInstructions,
+    SkeletonQueues,
+    SkeletonEnvironment,
+)
 from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_COMMANDS,
     ENVIRONMENT_METADATA,
@@ -46,6 +53,11 @@ def environment_metadata():
 @pytest.fixture()
 def environment_instructions():
     return skeleton_environment_instructions()
+
+
+@pytest.fixture()
+def queue_container():
+    return skeleton_queues()
 
 
 @pytest.fixture
@@ -191,7 +203,10 @@ def test_environment_metadata_environment_channel_list():
     assert metadata.environment_channel_list(channel_list) == ["ch0", "ch2"]
 
 
-def test_environment_metadata_validate_truth(hardware_metadata, environment_metadata):
+def test_environment_metadata_validate_truth(
+    hardware_metadata: SkeletonHardwareMetadata,
+    environment_metadata: SkeletonMetadata,
+):
     """
     Verifies that valid skeleton metadata class passes the validation check.
     """
@@ -200,7 +215,8 @@ def test_environment_metadata_validate_truth(hardware_metadata, environment_meta
 
 
 def test_environment_metadata_validate_invalid_environment_type(
-    hardware_metadata, environment_metadata
+    hardware_metadata: SkeletonHardwareMetadata,
+    environment_metadata: SkeletonMetadata,
 ):
     """
     Verifies that an error is thrown with an invalid environment type object.
@@ -211,7 +227,9 @@ def test_environment_metadata_validate_invalid_environment_type(
         environment_metadata.validate(hardware_metadata)
 
 
-def test_environment_metadata_validate_invalid_environment_name(hardware_metadata):
+def test_environment_metadata_validate_invalid_environment_name(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
     Verifies that an error is thrown when the environment name is not a string.
     """
@@ -221,7 +239,9 @@ def test_environment_metadata_validate_invalid_environment_name(hardware_metadat
         metadata.validate(hardware_metadata)
 
 
-def test_environment_metadata_validate_invalid_channel_list(hardware_metadata):
+def test_environment_metadata_validate_invalid_channel_list(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
     Verifies that an error is thrown when an invalid channel list is given to the metadata.
     """
@@ -233,7 +253,7 @@ def test_environment_metadata_validate_invalid_channel_list(hardware_metadata):
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
 def test_environment_metadata_load_save_netcdf(
-    environment_type, tmp_path, hardware_metadata
+    environment_type, tmp_path, hardware_metadata: SkeletonHardwareMetadata
 ):
     """
     Saves a valid metadata subclass to a netcdf file and then loads
@@ -267,7 +287,9 @@ def test_environment_metadata_load_save_netcdf(
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_metadata_load_save_worksheet(environment_type, hardware_metadata):
+def test_environment_metadata_load_save_worksheet(
+    environment_type, hardware_metadata: SkeletonHardwareMetadata
+):
     metadata_class = ENVIRONMENT_METADATA[environment_type]
     metadata = ENVIRONMENT_DICT[environment_type]["manual"](hardware_metadata)
     metadata.environment_name = "Environment Name"
@@ -323,7 +345,9 @@ def test_environment_instructions_init():
     assert instructions.environment_name == "Env A"
 
 
-def test_environment_instructions_validate_truth(environment_instructions):
+def test_environment_instructions_validate_truth(
+    environment_instructions: SkeletonInstructions,
+):
     """
     Verifies that a valid skeleton instruction subclass passes the validation
     check.
@@ -369,7 +393,7 @@ def test_environment_init():
     assert GlobalCommands.STOP_ENVIRONMENT in environment.command_map
 
 
-def test_environment_command_map(environment):
+def test_environment_command_map(environment: SkeletonEnvironment):
     """
     Verifies that the default command map contains expected global
     commands and maps them to callable methods.
@@ -386,7 +410,7 @@ def test_environment_command_map(environment):
     )
 
 
-def test_environment_map_command(environment):
+def test_environment_map_command(environment: SkeletonEnvironment):
     """
     Confirms that a new command can be added to the command map and maps
     to the provided callable.
@@ -401,7 +425,7 @@ def test_environment_map_command(environment):
     assert environment.command_map[command] == handler
 
 
-def test_environment_set_ready(environment):
+def test_environment_set_ready(environment: SkeletonEnvironment):
     """
     Verifies that calling this method sets the ready event.
     """
@@ -410,7 +434,7 @@ def test_environment_set_ready(environment):
     assert environment.ready is True
 
 
-def test_environment_clear_ready(environment):
+def test_environment_clear_ready(environment: SkeletonEnvironment):
     """
     Verifies that calling this method clears the ready event.
     """
@@ -420,7 +444,7 @@ def test_environment_clear_ready(environment):
     assert environment.ready is False
 
 
-def test_environment_set_active(environment):
+def test_environment_set_active(environment: SkeletonEnvironment):
     """
     Verifies that calling this method sets the active event.
     """
@@ -429,7 +453,7 @@ def test_environment_set_active(environment):
     assert environment.active is True
 
 
-def test_environment_clear_active(environment):
+def test_environment_clear_active(environment: SkeletonEnvironment):
     """
     Verifies that calling this method clears the active event.
     """
@@ -439,7 +463,7 @@ def test_environment_clear_active(environment):
     assert environment.active is False
 
 
-def test_environment_acquisition_active(environment):
+def test_environment_acquisition_active(environment: SkeletonEnvironment):
     """
     Verifies that this property reflects the state of the acquisition
     active event.
@@ -449,7 +473,7 @@ def test_environment_acquisition_active(environment):
     assert environment.acquisition_active is True
 
 
-def test_environment_output_active(environment):
+def test_environment_output_active(environment: SkeletonEnvironment):
     """
     Verifies that this property reflects the state of the output active
     event.
@@ -460,11 +484,10 @@ def test_environment_output_active(environment):
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_initialize_hardware(environment_type, hardware_metadata):
-    """
-    Verifies that a skeleton environment subclass stores the supplied hardware
-    metadata and sets itself as ready at the end of the function.
-    """
+def test_environment_initialize_hardware(
+    environment_type,
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     environment_class = ENVIRONMENT_CLASS[environment_type]
     environment = instantiate_with_mocks(
         environment_class,
@@ -478,12 +501,10 @@ def test_environment_initialize_hardware(environment_type, hardware_metadata):
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_initialize_environment(environment_type, hardware_metadata):
-    """
-    Verifies that a skeleton environment subclass stores the supplied
-    environment metadata and updates the environment name. Checks
-    that subclasses set their ready event at the end of the function.
-    """
+def test_environment_initialize_environment(
+    environment_type,
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
     environment_metadata = instantiate_with_mocks(
         environment_metadata_class,
@@ -503,7 +524,7 @@ def test_environment_initialize_environment(environment_type, hardware_metadata)
     assert environment.ready is True
 
 
-def test_environment_queue_name(environment):
+def test_environment_queue_name(environment: SkeletonEnvironment):
     """
     Verifies that this property returns the queue name supplied during
     initialization.
@@ -511,12 +532,11 @@ def test_environment_queue_name(environment):
     assert environment.queue_name == "Queue Name"
 
 
-def test_environment_environment_command_queue():
+def test_environment_environment_command_queue(queue_container: SkeletonQueues):
     """
     Verifies that this property returns the command queue supplied during
     initialization.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     assert (
         environment.environment_command_queue
@@ -524,42 +544,38 @@ def test_environment_environment_command_queue():
     )
 
 
-def test_environment_data_in_queue():
+def test_environment_data_in_queue(queue_container: SkeletonQueues):
     """
     Verifies that this property returns the data input queue supplied
     during initialization.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     assert environment.data_in_queue is queue_container.data_in_queue
 
 
-def test_environment_data_out_queue():
+def test_environment_data_out_queue(queue_container: SkeletonQueues):
     """
     Verifies that this property returns the data output queue supplied
     during initialization.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     assert environment.data_out_queue is queue_container.data_out_queue
 
 
-def test_environment_gui_update_queue():
+def test_environment_gui_update_queue(queue_container: SkeletonQueues):
     """
     Verifies that this property returns the GUI update queue supplied
     during initialization.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     assert environment.gui_update_queue is queue_container.gui_update_queue
 
 
-def test_environment_controller_command_queue():
+def test_environment_controller_command_queue(queue_container: SkeletonQueues):
     """
     Verifies that this property returns the controller command queue
     supplied during initialization.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     assert (
         environment.controller_command_queue
@@ -567,17 +583,16 @@ def test_environment_controller_command_queue():
     )
 
 
-def test_environment_log_file_queue():
+def test_environment_log_file_queue(queue_container: SkeletonQueues):
     """
     Verifies that this property returns the log file queue supplied during
     initialization.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     assert environment.log_file_queue is queue_container.log_file_queue
 
 
-def test_environment_log(environment):
+def test_environment_log(environment: SkeletonEnvironment):
     """
     Verifies that calling this method places a formatted log message on
     the log file queue.
@@ -590,12 +605,11 @@ def test_environment_log(environment):
     assert "Environment Name -- hello world" in log_message
 
 
-def test_environment_run_quit():
+def test_environment_run_quit(queue_container: SkeletonQueues):
     """
     Verifies that the command loop exits when a mapped command returns a
     truthy halt flag.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     shutdown_event = threading.Event()
 
@@ -614,12 +628,11 @@ def test_environment_run_quit():
     assert any("Stopping Process" in message for message in logs)
 
 
-def test_environment_run_undefined_command():
+def test_environment_run_undefined_command(queue_container: SkeletonQueues):
     """
     Verifies that an undefined command is logged and does not halt the
     environment.
     """
-    queue_container = skeleton_queues()
     environment = skeleton_environment(queue_container=queue_container)
     shutdown_event = threading.Event()
 
@@ -672,7 +685,7 @@ def test_environment_run_command_exception():
     assert "RuntimeError: BOOM" in gui_data[1]
 
 
-def test_environment_stop_environment(environment):
+def test_environment_stop_environment(environment: SkeletonEnvironment):
     """
     Verifies that a skeleton environment subclass sets the shutdown flag so
     the control loop can perform a graceful shutdown on its next iteration.

@@ -5,6 +5,7 @@ Rules to follow
     - Put the functions that initialize fixtures in mock_utilities
     - Use fixtures when needing default/valid base class, use functions
     when needing to mutate base class
+    - When using fixtures, use type hints 
 - Abstract Classes
     - For relevant functions, test the subclasses for required behavior (set_ready, store required attributes, etc.)
         - Use instantiate with mocks for building subclasses. Get the subclasses from registries
@@ -18,8 +19,6 @@ Rules to follow
 ### Hardware Types
 
 ## Environment
-
-### 
 
 ### Environment File
 Fixtures
