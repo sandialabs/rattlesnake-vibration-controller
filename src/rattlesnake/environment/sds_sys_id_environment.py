@@ -548,6 +548,7 @@ class SDSEnvironment(SysIdEnvironment):
         self.run_sds_table = instructions.sds_table.copy()
 
         self.current_test_level_db = instructions.control_test_level
+        self.hits_at_target = self.count_hits_at_level(self.current_test_level_db)
         self.current_test_level_scale = db2scale(instructions.control_test_level)
 
         self.automatic_hits = instructions.automatic_hits
@@ -671,6 +672,11 @@ class SDSEnvironment(SysIdEnvironment):
         print("Sending monitor hit signal.")
         self.queue_container.environment_command_queue.put(
             self.environment_name, (SDSCommands.MONITOR_HIT, None)
+        )
+
+    def count_hits_at_level(self, level_db, tol=1e-9):
+        return sum(
+            1 for entry in self.hit_history if abs(entry.get("test_level_db", 0.0) - level_db) < tol
         )
 
     def complete_hit(self, full_control, full_output):
@@ -799,9 +805,7 @@ class SDSEnvironment(SysIdEnvironment):
         # Update cumulative counters
         print("Updating counters")
         self.total_hits += 1
-        counted_at_target = abs(self.current_test_level_db) < 1e-12
-        if counted_at_target:
-            self.hits_at_target += 1
+        counted_at_target = True
 
         print("Logging completion time and hit history")
         self.last_hit_completion_time = time.time()
@@ -813,7 +817,7 @@ class SDSEnvironment(SysIdEnvironment):
                 "test_level_db": self.current_test_level_db,
                 "counted_at_target": counted_at_target,
                 "total_hits": self.total_hits,
-                "hits_at_target": self.hits_at_target,
+                "hits_at_target": None,  # fill below
                 "target_hits_at_level": (
                     None
                     if self.run_instructions is None
@@ -821,6 +825,9 @@ class SDSEnvironment(SysIdEnvironment):
                 ),
             }
         )
+
+        self.hits_at_target = self.count_hits_at_level(self.current_test_level_db)
+        self.hit_history[-1]["hits_at_target"] = self.hits_at_target
 
         self.log(
             f"Hit complete: total_hits={self.total_hits}, "

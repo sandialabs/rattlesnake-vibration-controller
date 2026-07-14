@@ -203,6 +203,9 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
         self.run_widget.shock_history_button.clicked.connect(self.show_shock_history)
         self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
+        self.run_widget.current_test_level_selector.valueChanged.connect(
+            self.update_hits_at_selected_level_display
+        )
 
     # region UI Data Acquisition
 
@@ -1524,6 +1527,19 @@ class SDSUI(SysIdEnvironmentUI):
         if self.run_widget.current_test_level_selector.value() >= 0:
             self.rattlesnake.environment_at_target_level(self.environment_name)
 
+    def update_hits_at_selected_level_display(self):
+        if self.shock_history is None:
+            self.run_widget.current_hits_at_level_display.setValue(0)
+            return
+
+        current_level = self.run_widget.current_test_level_selector.value()
+        hits = sum(
+            1
+            for entry in self.shock_history
+            if abs(entry.get("test_level_db", 0.0) - current_level) < 1e-9
+        )
+        self.run_widget.current_hits_at_level_display.setValue(hits)
+
     def start_environment_ready(self):
         return super().start_environment_ready()
 
@@ -1644,7 +1660,6 @@ class SDSUI(SysIdEnvironmentUI):
         elif message == SDSUICommands.CONTROL_UPDATE:
             self.log("Updating UI with control data")
             self.run_widget.current_total_hits_display.setValue(data["total_hits"])
-            self.run_widget.current_hits_at_level_display.setValue(data["hits_at_target"])
 
             target_hits = data["target_hits_at_level"]
             if target_hits is None:
@@ -1664,6 +1679,7 @@ class SDSUI(SysIdEnvironmentUI):
                 self.update_global_srs_plot(data["measured_response_srs"])
 
             self.shock_history = data["hit_history"]
+            self.update_hits_at_selected_level_display()
 
             self.shock_history_dialog.update_history(
                 hit_history=self.shock_history,
