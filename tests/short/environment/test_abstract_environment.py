@@ -49,6 +49,11 @@ def environment_metadata():
     return skeleton_environment_metadata()
 
 
+@pytest.fixture()
+def environment_instructions():
+    return skeleton_environment_instructions()
+
+
 @pytest.fixture
 def environment():
     return skeleton_environment()
@@ -319,14 +324,12 @@ def test_environment_instructions_init():
     assert instructions.environment_name == "Env A"
 
 
-def test_environment_instructions_validate_truth():
+def test_environment_instructions_validate_truth(environment_instructions):
     """
     Verifies that a valid skeleton instruction subclass passes the validation
     check.
     """
-    instructions = skeleton_environment_instructions()
-
-    instructions.validate()
+    environment_instructions.validate()
 
 
 # endregion
