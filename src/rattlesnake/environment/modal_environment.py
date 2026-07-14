@@ -262,7 +262,7 @@ class ModalMetadata(EnvironmentMetadata):
                 output_oversample=self.output_oversample,
             )
         else:
-            raise ValueError(f"Invalid Signal Type {self.signal_generator_type}")
+            signal_generator = None
         return signal_generator
 
     @property
@@ -379,6 +379,9 @@ class ModalMetadata(EnvironmentMetadata):
 
     # region Validation
     def validate(self, hardware_metadata):
+        if self.signal_generator is None:
+            raise ValueError(f"Invalid Signal Type {self.signal_generator_type}")
+
         return super().validate(hardware_metadata)
 
     # endregion
