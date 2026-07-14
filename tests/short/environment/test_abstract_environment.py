@@ -21,9 +21,7 @@ from rattlesnake.environment.environment_registry import (
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.examples.example_registry import ENVIRONMENT_DICT
 from rattlesnake.testing.mock_utilities import (
-    mock_queue_container,
     instantiate_with_mocks,
-    mock_channel_list,
     mock_channel_list_bools,
     skeleton_hardware_metadata,
     skeleton_environment_metadata,
@@ -44,6 +42,11 @@ IMPLEMENTED_ENVIRONMENT = [
 @pytest.fixture
 def hardware_metadata():
     return skeleton_hardware_metadata()
+
+
+@pytest.fixture()
+def environment_metadata():
+    return skeleton_environment_metadata()
 
 
 @pytest.fixture
@@ -184,35 +187,31 @@ def test_environment_metadata_environment_channel_list():
     assert metadata.environment_channel_list(channel_list) == ["ch0", "ch2"]
 
 
-def test_environment_metadata_validate_truth(hardware_metadata):
+def test_environment_metadata_validate_truth(hardware_metadata, environment_metadata):
     """
     Verifies that valid skeleton metadata class passes the validation check.
     """
-    metadata = skeleton_environment_metadata(
-        environment_name="Env A",
-        channel_list_bools=[True, False],
-    )
 
-    metadata.validate(hardware_metadata)
+    environment_metadata.validate(hardware_metadata)
 
 
-def test_environment_metadata_validate_invalid_environment_type(hardware_metadata):
+def test_environment_metadata_validate_invalid_environment_type(
+    hardware_metadata, environment_metadata
+):
     """
     Verifies that an error is thrown with an invalid environment type object.
     """
-    metadata = skeleton_environment_metadata()
-    metadata.environment_type = object()
+    environment_metadata.environment_type = object()
 
     with pytest.raises(RattlesnakeError):
-        metadata.validate(hardware_metadata)
+        environment_metadata.validate(hardware_metadata)
 
 
 def test_environment_metadata_validate_invalid_environment_name(hardware_metadata):
     """
     Verifies that an error is thrown when the environment name is not a string.
     """
-    metadata = skeleton_environment_metadata()
-    metadata.environment_name = 123
+    metadata = skeleton_environment_metadata(environment_name=123)
 
     with pytest.raises(RattlesnakeError):
         metadata.validate(hardware_metadata)
@@ -222,8 +221,7 @@ def test_environment_metadata_validate_invalid_channel_list(hardware_metadata):
     """
     Verifies that an error is thrown when an invalid channel list is given to the metadata.
     """
-    metadata = skeleton_environment_metadata()
-    metadata.channel_list_bools = [True, False, True]
+    metadata = skeleton_environment_metadata(channel_list_bools=[True, False, True])
 
     with pytest.raises(RattlesnakeError):
         metadata.validate(hardware_metadata)

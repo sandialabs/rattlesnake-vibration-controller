@@ -101,11 +101,11 @@ class TransientCommands(EnvironmentCommands):
     SET_REPEAT = 6
     SET_NO_REPEAT = 7
 
-    VALID_PROFILE_COMMANDS = {
+    VALID_PROFILE_COMMANDS = (
         SET_TEST_LEVEL,
         SET_REPEAT,
         SET_NO_REPEAT,
-    }
+    )
     VALID_DATA = {
         SET_TEST_LEVEL: int,
         SET_REPEAT: type(None),

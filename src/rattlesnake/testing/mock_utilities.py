@@ -29,25 +29,39 @@ import multiprocessing as mp
 MAX_ENVIRONMENTS = 4
 
 
-def mock_channel_list():
-    response_channel = Channel()
-    for attr in response_channel.channel_attr_list:
-        setattr(response_channel, attr, attr)
-    response_channel.feedback_channel = None
-    response_channel.feedback_device = None
+# region Main
+def instantiate_with_mocks(cls, **overrides):
+    """
+    Instantiate `cls` by passing a MagicMock for every constructor argument,
+    except arguments explicitly provided in `overrides`.
+    """
+    signature = inspect.signature(cls)
 
-    excitation_channel = Channel()
-    for attr in excitation_channel.channel_attr_list:
-        setattr(excitation_channel, attr, attr)
+    positional_args = []
+    keyword_args = {}
 
-    return [response_channel, excitation_channel]
+    for name, parameter in signature.parameters.items():
+        if name == "self":
+            continue
 
+        if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+            continue
 
-def mock_channel_list_bools():
-    return [True, True]
+        if parameter.kind == inspect.Parameter.VAR_KEYWORD:
+            continue
+
+        value = overrides.get(name, mock.MagicMock(name=name))
+
+        if parameter.kind == inspect.Parameter.POSITIONAL_ONLY:
+            positional_args.append(value)
+        else:
+            keyword_args[name] = value
+
+    return cls(*positional_args, **keyword_args)
 
 
 def mock_queue_container(use_thread=True):
+    """Build out queue container with multiprocessing or threaded queues."""
     if use_thread:
         new_queue = thqueue.Queue
     else:
@@ -114,6 +128,7 @@ def mock_queue_container(use_thread=True):
 
 
 def mock_event_container(use_thread=True):
+    """Build out an event container with multiprocessing or threaded events."""
     if use_thread:
         new_event = threading.Event
     else:
@@ -176,41 +191,15 @@ def mock_event_container(use_thread=True):
 
 
 def fake_time():
+    """
+    datetime.datetime is a weird function and requires another function to be able to
+    mock it consistently.
+    """
     return "Datetime"
 
 
-def instantiate_with_mocks(cls, **overrides):
-    """
-    Instantiate `cls` by passing a MagicMock for every constructor argument,
-    except arguments explicitly provided in `overrides`.
-    """
-    signature = inspect.signature(cls)
-
-    positional_args = []
-    keyword_args = {}
-
-    for name, parameter in signature.parameters.items():
-        if name == "self":
-            continue
-
-        if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
-            continue
-
-        if parameter.kind == inspect.Parameter.VAR_KEYWORD:
-            continue
-
-        value = overrides.get(name, mock.MagicMock(name=name))
-
-        if parameter.kind == inspect.Parameter.POSITIONAL_ONLY:
-            positional_args.append(value)
-        else:
-            keyword_args[name] = value
-
-    return cls(*positional_args, **keyword_args)
-
-
-def clear_verbose_queue(q, task_name, verbose_array):
-    # Mock the datetime and message_id objects used during the log message in the VerboseQueue.get function
+def clear_verbose_queue(queue, task_name, verbose_array):
+    """Function to clear verbose queue in seperate process for testing purposes."""
     with (
         mock.patch("rattlesnake.utilities.datetime") as mock_time,
         mock.patch(
@@ -222,22 +211,36 @@ def clear_verbose_queue(q, task_name, verbose_array):
 
         # Clear the queue and store data to verbose_array
         idx = 0
-        while not q.empty():
-            output_value = q.get(task_name)
+        while not queue.empty():
+            output_value = queue.get(task_name)
             verbose_array[idx] = output_value[1]
             idx += 1
 
 
-# Clear the log_file_queue
-def clear_log_queue(q, log_string):
-    # Get string from queue and store it to the log_string bstring
-    while not q.empty():
-        output_string = q.get()
+def clear_log_queue(queue, log_string):
+    """Get string from queue and store it to the log_string bstring."""
+    while not queue.empty():
+        output_string = queue.get()
         output_string = output_string.encode("utf-8")
         log_string.value = log_string.value + output_string
 
 
 # region Hardware
+def mock_channel_list():
+    """Builds a default channel list with one physical and one feedback device"""
+    response_channel = Channel()
+    for attr in response_channel.channel_attr_list:
+        setattr(response_channel, attr, attr)
+    response_channel.feedback_channel = None
+    response_channel.feedback_device = None
+
+    excitation_channel = Channel()
+    for attr in excitation_channel.channel_attr_list:
+        setattr(excitation_channel, attr, attr)
+
+    return [response_channel, excitation_channel]
+
+
 def skeleton_hardware_metadata(**overrides):
     """Builds a SkeletonHardwareMetadata with sensible test defaults."""
     kwargs = dict(
@@ -255,8 +258,12 @@ def skeleton_hardware_metadata(**overrides):
 
 
 # region Environment
+def mock_channel_list_bools():
+    return [True, True]
+
+
 def skeleton_environment_metadata(**overrides):
-    """Builds a SkeletonMetadata (plain environment) with sensible test defaults."""
+    """Builds a SkeletonMetadata with test defaults."""
     kwargs = dict(
         environment_name="Skeleton Environment",
         channel_list_bools=mock_channel_list_bools(),
@@ -268,14 +275,14 @@ def skeleton_environment_metadata(**overrides):
 
 
 def skeleton_environment_instructions(**overrides):
-    """Builds a SkeletonInstructions (plain environment) with sensible test defaults."""
+    """Builds a SkeletonInstructions with test defaults."""
     kwargs = dict(environment_name="Skeleton Environment", example_test_level=1.0)
     kwargs.update(overrides)
     return SkeletonInstructions(**kwargs)
 
 
 def skeleton_queues(**overrides):
-    """Builds a SkeletonQueues (plain environment) with fresh default queues."""
+    """Builds a SkeletonQueues with test defaults."""
     log_file_queue = overrides.get("log_file_queue", mp.Queue())
     kwargs = dict(
         environment_command_queue=VerboseMessageQueue(
@@ -294,7 +301,7 @@ def skeleton_queues(**overrides):
 
 
 def skeleton_environment(**overrides):
-    """Builds a SkeletonEnvironment (plain environment) with fresh test defaults."""
+    """Builds a SkeletonEnvironment with test defaults."""
     kwargs = dict(
         environment_name="Environment Name",
         queue_name="Queue Name",
@@ -313,7 +320,7 @@ def skeleton_environment(**overrides):
 
 # region SysId Environment
 def skeleton_sysid_environment_metadata(**overrides):
-    """Builds a SkeletonMetadata (sysid environment) with sensible test defaults."""
+    """Builds a SkeletonMetadata with test defaults."""
     kwargs = dict(
         environment_name="Skeleton SysId Environment",
         channel_list_bools=mock_channel_list_bools(),
@@ -447,9 +454,7 @@ def sysid_measurement_data_package(sysid_metadata, num_response=1, num_reference
         1 - 0.5j
     )
     coherence = np.ones((fft_lines, num_response))
-    response_cpsd = np.ones(
-        (fft_lines, num_response, num_response), dtype="complex128"
-    )
+    response_cpsd = np.ones((fft_lines, num_response, num_response), dtype="complex128")
     reference_cpsd = np.ones(
         (fft_lines, num_reference, num_reference), dtype="complex128"
     )
