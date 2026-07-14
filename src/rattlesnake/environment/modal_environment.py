@@ -391,6 +391,11 @@ class ModalMetadata(EnvironmentMetadata):
         if self.frf_window not in ("hann", "rectangle", "exponential"):
             raise ValueError(f"Invalid Window Type: {self.frf_window}")
 
+        if self.frf_technique not in ("H1", "H2", "H3", "Hv"):
+            raise ValueError(
+                f"Invalid FRF Estimator {self.frf_technique}. " "How did you get here?"
+            )
+
         return super().validate(hardware_metadata)
 
     # endregion
@@ -1211,7 +1216,8 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.frf_technique == "Hv":
             frf_estimator = Estimator.HV
         else:
-            raise ValueError(
+            frf_estimator = None
+            print(
                 f"Invalid FRF Estimator {self.environment_metadata.frf_technique}. "
                 "How did you get here?"
             )
