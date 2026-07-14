@@ -147,6 +147,8 @@ class LanXIMetadata(HardwareMetadata):
                     address = IPAddress(ipv4_address=channel.physical_device)
                 elif is_ipv6:
                     address = IPAddress(ipv6_address=channel.physical_device)
+                else:
+                    address = IPAddress()
                 address.get_host_name_from_ip()
                 address.get_ip_from_host_name()
                 self.ip_addresses.append(address)

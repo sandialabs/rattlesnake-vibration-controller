@@ -1,48 +1,91 @@
+from __future__ import annotations
+
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
 import pytest
+from typing import List
 
+from rattlesnake.utilities import RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import (
-    HardwareAcquisition,
     HardwareMetadata,
+    HardwareAcquisition,
     HardwareOutput,
 )
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
-from rattlesnake.testing.mock_utilities import mock_channel_list
+from rattlesnake.hardware.hardware_registry import (
+    HARDWARE_METADATA,
+    HARDWARE_ACQUISITION,
+    HARDWARE_OUTPUT,
+)
 from rattlesnake.hardware.skeleton_hardware import (
     SkeletonHardwareMetadata,
     SkeletonHardwareAcquisition,
     SkeletonHardwareOutput,
 )
 from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
-from rattlesnake.utilities import RattlesnakeError
+from rattlesnake.testing.mock_utilities import (
+    IMPLEMENTED_HARDWARE,
+    instantiate_with_mocks,
+    mock_channel_list,
+    skeleton_hardware_metadata,
+)
 
 
 # region Fixtures
 @pytest.fixture
-def channel_list():
+def channel_list() -> list[Channel]:
     return mock_channel_list()
 
 
 @pytest.fixture
-def hardware_metadata(channel_list):
-    return SkeletonHardwareMetadata(
-        channel_list=channel_list,
-        sample_rate=1024,
-        time_per_read=0.25,
-        time_per_write=0.125,
-    )
+def hardware_metadata() -> SkeletonHardwareMetadata:
+    return skeleton_hardware_metadata()
+
+
+@pytest.fixture
+def hardware_acquisition() -> SkeletonHardwareAcquisition:
+    return SkeletonHardwareAcquisition()
+
+
+@pytest.fixture
+def hardware_output() -> SkeletonHardwareOutput:
+    return SkeletonHardwareOutput()
 
 
 # endregion
 
 
 # region Hardware Metadata
-def test_hardware_metadata_init(hardware_metadata):
+@pytest.mark.parametrize("hardware_type", IMPLEMENTED_HARDWARE)
+def test_hardware_metadata(hardware_type, channel_list: list[Channel]):
     """
-    Verifies that mock hardware metadata initializes required attributes
-    and is an instance of ``HardwareMetadata``.
+    Verifies that metadata subclasses from the hardware registry initialize
+    required metadata attributes and preserve the supplied channel list,
+    sample rate, read time, and write time.
+    """
+    metadata_class = HARDWARE_METADATA[hardware_type]
+
+    metadata = instantiate_with_mocks(
+        metadata_class,
+        channel_list=channel_list,
+        sample_rate=1024,
+        time_per_read=0.25,
+        time_per_write=0.125,
+    )
+
+    assert isinstance(metadata, HardwareMetadata)
+    assert metadata.hardware_type == hardware_type
+    assert metadata.channel_list is channel_list
+    assert metadata.sample_rate == 1024
+    assert metadata.time_per_read == 0.25
+    assert metadata.time_per_write == 0.125
+
+
+def test_hardware_metadata_init(hardware_metadata: SkeletonHardwareMetadata):
+    """
+    Verifies that skeleton hardware metadata initializes required attributes
+    with the expected default values.
     """
     assert isinstance(hardware_metadata, HardwareMetadata)
 
@@ -60,89 +103,89 @@ def test_hardware_metadata_init(hardware_metadata):
     assert hardware_metadata.output_oversample == 1
 
 
-def test_hardware_metadata_channel_list_property(channel_list):
+def test_hardware_metadata_channel_list_property(channel_list: list[Channel]):
     """
-    Verifies that the channel list property returns and stores the configured
-    hardware channel list.
+    Verifies that the channel list property returns the configured hardware
+    channel list and can be updated.
     """
-    metadata = SkeletonHardwareMetadata(
-        channel_list=[], sample_rate=1024, time_per_read=0.25, time_per_write=0.125
-    )
-
+    metadata = skeleton_hardware_metadata(channel_list=[])
     assert metadata.channel_list == []
 
     metadata.channel_list = channel_list
-
     assert metadata.channel_list is channel_list
 
 
-def test_hardware_metadata_samples_per_read(hardware_metadata):
+def test_hardware_metadata_samples_per_read():
     """
     Verifies that ``samples_per_read`` returns the expected number of samples
     per acquisition frame.
     """
-    hardware_metadata.sample_rate = 1000
-    hardware_metadata.time_per_read = 0.25
+    metadata = skeleton_hardware_metadata(sample_rate=1000, time_per_read=0.25)
 
-    assert hardware_metadata.samples_per_read == 250
+    assert metadata.samples_per_read == 250
 
 
-def test_hardware_metadata_samples_per_write(hardware_metadata):
+def test_hardware_metadata_samples_per_write():
     """
     Verifies that ``samples_per_write`` includes the output oversampling
     factor.
     """
-    hardware_metadata.sample_rate = 1000
-    hardware_metadata.time_per_write = 0.3
-    hardware_metadata.output_oversample = 10
+    metadata = skeleton_hardware_metadata(
+        sample_rate=1000,
+        time_per_write=0.3,
+        output_oversample=10,
+    )
 
-    assert hardware_metadata.samples_per_write == 3000
+    assert metadata.samples_per_write == 3000
 
 
-def test_hardware_metadata_nyquist_frequency(hardware_metadata):
+def test_hardware_metadata_nyquist_frequency():
     """
     Verifies that the Nyquist frequency is half the acquisition sample rate.
     """
-    hardware_metadata.sample_rate = 1000
+    metadata = skeleton_hardware_metadata(sample_rate=1000)
 
-    assert hardware_metadata.nyquist_frequency == 500
+    assert metadata.nyquist_frequency == 500
 
 
-def test_hardware_metadata_output_sample_rate(hardware_metadata):
+def test_hardware_metadata_output_sample_rate():
     """
     Verifies that output sample rate is the acquisition sample rate multiplied
     by the output oversampling factor.
     """
-    hardware_metadata.sample_rate = 1000
-    hardware_metadata.output_oversample = 10
+    metadata = skeleton_hardware_metadata(sample_rate=1000, output_oversample=10)
 
-    assert hardware_metadata.output_sample_rate == 10000
+    assert metadata.output_sample_rate == 10000
 
 
-def test_hardware_metadata_validate_truth(hardware_metadata):
+def test_hardware_metadata_validate_truth(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
-    Verifies that a valid channel list passes base metadata validation.
+    Verifies that a valid skeleton hardware metadata object passes validation.
     """
     hardware_metadata.validate()
 
 
 def test_hardware_metadata_validate_duplicate_channels(
-    hardware_metadata,
-    channel_list,
+    channel_list: list[Channel],
 ):
     """
     Verifies that duplicate channels raise ``RattlesnakeError``.
     """
-    hardware_metadata.channel_list = channel_list + [channel_list[0]]
+    metadata = skeleton_hardware_metadata(channel_list=channel_list + [channel_list[0]])
 
     with pytest.raises(RattlesnakeError):
-        hardware_metadata.validate()
+        metadata.validate()
 
 
-def test_hardware_metadata_valid_channel_dict(hardware_metadata, channel_list):
+def test_hardware_metadata_valid_channel_dict(
+    hardware_metadata: SkeletonHardwareMetadata,
+    channel_list: list[Channel],
+):
     """
-    Verifies that the base valid-channel dictionary contains all channel
-    attributes and maps them to lists.
+    Verifies that the valid-channel dictionary contains all channel attributes
+    and maps each attribute to a list of valid values.
     """
     valid_channel_dict = hardware_metadata.valid_channel_dict(channel_list[0])
 
@@ -150,10 +193,12 @@ def test_hardware_metadata_valid_channel_dict(hardware_metadata, channel_list):
     assert all(isinstance(value, list) for value in valid_channel_dict.values())
 
 
-def test_hardware_metadata_assist_mode_modules(hardware_metadata):
+def test_hardware_metadata_assist_mode_modules(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
-    Verifies that the base assist-mode module dictionary contains all channel
-    attributes and defaults to ``HardwareAssistModules.NONE``.
+    Verifies that the assist-mode module dictionary contains all channel
+    attributes and defaults each attribute to ``HardwareAssistModules.NONE``.
     """
     assist_mode_modules = hardware_metadata.assist_mode_modules
 
@@ -163,9 +208,13 @@ def test_hardware_metadata_assist_mode_modules(hardware_metadata):
     )
 
 
-def test_hardware_metadata_save_channel_table_to_workbook(channel_list):
+def test_hardware_metadata_save_channel_table_to_workbook(
+    channel_list: list[Channel],
+):
     """
-    Verifies that a hardware channel table is written to an Excel workbook.
+    Saves a hardware channel table to an Excel workbook and verifies that the
+    worksheet contains the expected title, section headers, column labels, and
+    channel indices.
     """
     workbook = openpyxl.Workbook()
 
@@ -186,10 +235,13 @@ def test_hardware_metadata_save_channel_table_to_workbook(channel_list):
     assert worksheet.cell(row=4, column=1).value == 1
 
 
-def test_hardware_metadata_load_channel_table_from_workbook(channel_list):
+def test_hardware_metadata_load_channel_table_from_workbook(
+    channel_list: list[Channel],
+):
     """
-    Verifies that a hardware channel table can be reconstructed from an Excel
-    workbook.
+    Saves a hardware channel table to an Excel workbook and then loads it back
+    into a channel list. Verifies that each loaded channel preserves the
+    expected channel attribute values.
     """
     workbook = openpyxl.Workbook()
     SkeletonHardwareMetadata.save_channel_table_to_workbook(channel_list, workbook)
@@ -213,8 +265,8 @@ def test_hardware_metadata_load_channel_table_from_workbook(channel_list):
 
 def test_hardware_metadata_load_channel_table_from_workbook_multiple_channel_sheets():
     """
-    Verifies that multiple candidate channel table worksheets raise
-    ``RattlesnakeError``.
+    Verifies that loading a channel table from a workbook with multiple
+    candidate channel table worksheets raises ``RattlesnakeError``.
     """
     workbook = openpyxl.Workbook()
     workbook.active.title = "Channel Table"
@@ -226,7 +278,8 @@ def test_hardware_metadata_load_channel_table_from_workbook_multiple_channel_she
 
 def test_hardware_metadata_save_blank_hardware_to_workbook():
     """
-    Verifies that a blank hardware worksheet is created with expected labels.
+    Saves a blank hardware worksheet to an Excel workbook and verifies that
+    the expected hardware metadata labels are written.
     """
     workbook = openpyxl.Workbook()
 
@@ -248,31 +301,13 @@ def test_hardware_metadata_save_blank_hardware_to_workbook():
     assert worksheet.cell(10, 1).value == "Damping Ratio"
 
 
-def test_hardware_metadata_save_and_load_metadata_from_workbook(hardware_metadata):
+def test_hardware_metadata_save_metadata_to_workbook(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
-    Verifies that hardware metadata saved to an Excel workbook can be loaded
-    into a metadata object.
-    """
-    workbook = openpyxl.Workbook()
-
-    SkeletonHardwareMetadata.save_blank_hardware_to_workbook(workbook)
-    hardware_metadata.save_metadata_to_workbook(workbook)
-
-    loaded_metadata = SkeletonHardwareMetadata.load_metadata_from_workbook(workbook)
-
-    assert isinstance(loaded_metadata, SkeletonHardwareMetadata)
-    assert loaded_metadata.hardware_type == hardware_metadata.hardware_type
-    assert loaded_metadata.sample_rate == hardware_metadata.sample_rate
-    assert loaded_metadata.time_per_read == hardware_metadata.time_per_read
-    assert loaded_metadata.time_per_write == hardware_metadata.time_per_write
-    assert loaded_metadata.output_oversample == hardware_metadata.output_oversample
-    assert len(loaded_metadata.channel_list) == len(hardware_metadata.channel_list)
-
-
-def test_hardware_metadata_save_metadata_to_workbook(hardware_metadata):
-    """
-    Verifies that saving metadata to a workbook writes hardware fields and
-    channel table information.
+    Saves skeleton hardware metadata to an Excel workbook and verifies that the
+    hardware worksheet and channel table are created with expected metadata
+    field values.
     """
     workbook = openpyxl.Workbook()
 
@@ -292,42 +327,47 @@ def test_hardware_metadata_save_metadata_to_workbook(hardware_metadata):
     assert hardware_worksheet.cell(5, 2).value == str(hardware_metadata.time_per_write)
 
 
-def test_hardware_metadata_save_and_load_metadata_from_netcdf(
-    hardware_metadata,
-    tmp_path,
+@pytest.mark.parametrize("hardware_type", IMPLEMENTED_HARDWARE)
+def test_hardware_metadata_load_save_workbook(
+    hardware_type, channel_list: List[Channel]
 ):
     """
-    Verifies that hardware metadata saved to netCDF can be loaded into a
-    metadata object.
+    Saves skeleton hardware metadata to an Excel workbook and then loads it
+    back into a metadata object. Verifies that the loaded metadata preserves
+    the expected hardware type, timing parameters, output oversampling, and
+    channel list length.
     """
-    path = tmp_path / "hardware_metadata.nc4"
+    metadata_class = HARDWARE_METADATA[hardware_type]
 
-    with nc4.Dataset(path, "w", format="NETCDF4") as dataset:
-        hardware_metadata.save_metadata_to_netcdf(dataset)
+    hardware_metadata = instantiate_with_mocks(
+        metadata_class,
+        channel_list=channel_list,
+        sample_rate=1024,
+        time_per_read=0.25,
+        time_per_write=0.125,
+    )
 
-    with nc4.Dataset(path, "r") as dataset:
-        loaded_metadata = SkeletonHardwareMetadata.load_metadata_from_netcdf(dataset)
+    workbook = openpyxl.Workbook()
 
-    assert isinstance(loaded_metadata, SkeletonHardwareMetadata)
-    assert loaded_metadata.hardware_type == hardware_metadata.hardware_type
+    hardware_metadata.save_blank_hardware_to_workbook(workbook)
+    hardware_metadata.save_metadata_to_workbook(workbook)
+
+    loaded_metadata = metadata_class.load_metadata_from_workbook(workbook)
+
     assert loaded_metadata.sample_rate == hardware_metadata.sample_rate
-    assert loaded_metadata.time_per_read == pytest.approx(
-        hardware_metadata.samples_per_read / hardware_metadata.sample_rate
-    )
-    assert loaded_metadata.time_per_write == pytest.approx(
-        hardware_metadata.samples_per_write / hardware_metadata.output_sample_rate
-    )
+    assert loaded_metadata.time_per_read == hardware_metadata.time_per_read
+    assert loaded_metadata.time_per_write == hardware_metadata.time_per_write
     assert loaded_metadata.output_oversample == hardware_metadata.output_oversample
     assert len(loaded_metadata.channel_list) == len(hardware_metadata.channel_list)
 
 
 def test_hardware_metadata_save_metadata_to_netcdf_contents(
-    hardware_metadata,
+    hardware_metadata: SkeletonHardwareMetadata,
     tmp_path,
 ):
     """
-    Verifies that saving hardware metadata to netCDF creates expected
-    dimensions, attributes, and variables.
+    Saves skeleton hardware metadata to a netCDF dataset and verifies that the
+    expected dimensions, variables, groups, and dataset attributes are created.
     """
     path = tmp_path / "hardware_metadata.nc4"
 
@@ -351,138 +391,167 @@ def test_hardware_metadata_save_metadata_to_netcdf_contents(
         )
 
 
-def test_hardware_metadata_load_channel_table_from_netcdf(
-    hardware_metadata,
+@pytest.mark.parametrize("hardware_type", IMPLEMENTED_HARDWARE)
+def test_hardware_metadata_load_save_netcdf(
+    hardware_type,
+    channel_list: List[Channel],
     tmp_path,
 ):
     """
-    Verifies that a channel table can be reconstructed from a netCDF dataset.
+    Saves skeleton hardware metadata to a netCDF dataset and then loads it
+    back into a metadata object. Verifies that the loaded metadata preserves
+    the expected hardware type, sample rate, timing parameters, output
+    oversampling, and channel list length.
     """
+    metadata_class = HARDWARE_METADATA[hardware_type]
+
+    hardware_metadata = instantiate_with_mocks(
+        metadata_class,
+        channel_list=channel_list,
+        sample_rate=1024,
+        time_per_read=0.25,
+        time_per_write=0.125,
+    )
+
     path = tmp_path / "hardware_metadata.nc4"
 
     with nc4.Dataset(path, "w", format="NETCDF4") as dataset:
         hardware_metadata.save_metadata_to_netcdf(dataset)
 
     with nc4.Dataset(path, "r") as dataset:
-        loaded_channel_list = SkeletonHardwareMetadata.load_channel_table_from_netcdf(
-            dataset
-        )
+        loaded_metadata = metadata_class.load_metadata_from_netcdf(dataset)
 
-    assert len(loaded_channel_list) == len(hardware_metadata.channel_list)
-
-    for loaded_channel, expected_channel in zip(
-        loaded_channel_list,
-        hardware_metadata.channel_list,
-    ):
-        for attr in Channel().channel_attr_list:
-            expected_value = getattr(expected_channel, attr)
-            loaded_value = getattr(loaded_channel, attr)
-
-            if expected_value is None:
-                assert loaded_value in (None, "")
-            else:
-                assert str(loaded_value) == str(expected_value)
+    assert loaded_metadata.sample_rate == hardware_metadata.sample_rate
+    assert loaded_metadata.time_per_read == pytest.approx(
+        hardware_metadata.samples_per_read / hardware_metadata.sample_rate
+    )
+    assert loaded_metadata.time_per_write == pytest.approx(
+        hardware_metadata.samples_per_write / hardware_metadata.output_sample_rate
+    )
+    assert loaded_metadata.output_oversample == hardware_metadata.output_oversample
+    assert len(loaded_metadata.channel_list) == len(hardware_metadata.channel_list)
 
 
 # endregion
 
 
 # region Hardware Acquisition
-def test_hardware_acquisition_init():
+@pytest.mark.parametrize("hardware_type", IMPLEMENTED_HARDWARE)
+def test_hardware_acquisition(hardware_type: HardwareType):
     """
-    Verifies that the mock acquisition class is an instance of
-    ``HardwareAcquisition``.
+    Verifies that acquisition subclasses from the hardware registry can be
+    instantiated and implement the hardware acquisition interface.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
+    acquisition_class = HARDWARE_ACQUISITION[hardware_type]
+
+    hardware_acquisition = instantiate_with_mocks(acquisition_class)
 
     assert isinstance(hardware_acquisition, HardwareAcquisition)
 
 
-def test_hardware_acquisition_initialize_hardware(hardware_metadata):
+def test_hardware_acquisition_initialize_hardware(
+    hardware_metadata: SkeletonHardwareMetadata,
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that acquisition hardware stores supplied metadata during
-    initialization.
+    Verifies that acquisition subclasses store the supplied hardware metadata
+    during hardware initialization.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
 
     hardware_acquisition.initialize_hardware(hardware_metadata)
 
-    assert hardware_acquisition.metadata is hardware_metadata
+    assert hardware_acquisition.metadata == hardware_metadata
 
 
-def test_hardware_acquisition_start():
+def test_hardware_acquisition_init(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that acquisition hardware can be started.
+    Verifies that the skeleton acquisition class implements the hardware
+    acquisition interface.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
+    assert isinstance(hardware_acquisition, HardwareAcquisition)
 
+
+def test_hardware_acquisition_start(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
+    """
+    Verifies that skeleton acquisition hardware can be started.
+    """
     hardware_acquisition.start()
 
     assert hardware_acquisition.started is True
 
 
-def test_hardware_acquisition_read():
+def test_hardware_acquisition_read(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that reading from acquisition hardware returns a NumPy array.
+    Verifies that reading from skeleton acquisition hardware returns a NumPy
+    array with the expected shape.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
-
     data = hardware_acquisition.read()
 
     assert isinstance(data, np.ndarray)
     assert data.shape == (2, 10)
 
 
-def test_hardware_acquisition_read_remaining():
+def test_hardware_acquisition_read_remaining(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that reading remaining acquisition data returns a NumPy array.
+    Verifies that reading remaining acquisition data from skeleton acquisition
+    hardware returns a NumPy array with the expected shape.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
-
     data = hardware_acquisition.read_remaining()
 
     assert isinstance(data, np.ndarray)
     assert data.shape == (2, 3)
 
 
-def test_hardware_acquisition_stop():
+def test_hardware_acquisition_stop(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that acquisition hardware can be stopped.
+    Verifies that skeleton acquisition hardware can be stopped.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
-
     hardware_acquisition.stop()
 
     assert hardware_acquisition.stopped is True
 
 
-def test_hardware_acquisition_close():
+def test_hardware_acquisition_close(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that acquisition hardware can be closed.
+    Verifies that skeleton acquisition hardware can be closed.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
-
     hardware_acquisition.close()
 
     assert hardware_acquisition.closed is True
 
 
-def test_hardware_acquisition_get_acquisition_delay():
+def test_hardware_acquisition_get_acquisition_delay(
+    hardware_acquisition: SkeletonHardwareAcquisition,
+):
     """
-    Verifies that acquisition delay is returned as an integer.
+    Verifies that skeleton acquisition hardware returns the expected
+    acquisition delay.
     """
-    hardware_acquisition = SkeletonHardwareAcquisition()
-
     acquisition_delay = hardware_acquisition.get_acquisition_delay()
 
     assert isinstance(acquisition_delay, int)
     assert acquisition_delay == 0
 
 
-def test_hardware_acquisition_functions(hardware_metadata):
+def test_hardware_acquisition_functions(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
-    Calls all acquisition interface methods on a mock implementation and
-    verifies expected return types.
+    Calls all skeleton acquisition interface methods and verifies that the
+    methods store metadata, update state flags, and return expected data
+    types.
     """
     hardware_acquisition = SkeletonHardwareAcquisition()
 
@@ -507,43 +576,58 @@ def test_hardware_acquisition_functions(hardware_metadata):
 
 
 # region Hardware Output
-def test_hardware_output_init():
+@pytest.mark.parametrize("hardware_type", IMPLEMENTED_HARDWARE)
+def test_hardware_output(hardware_type: HardwareType):
     """
-    Verifies that the mock output class is an instance of ``HardwareOutput``.
+    Verifies that output subclasses from the hardware registry can be
+    instantiated and implement the hardware output interface.
     """
-    hardware_output = SkeletonHardwareOutput()
+    output_class = HARDWARE_OUTPUT[hardware_type]
+
+    hardware_output = instantiate_with_mocks(output_class)
 
     assert isinstance(hardware_output, HardwareOutput)
 
 
-def test_hardware_output_initialize_hardware(hardware_metadata):
+def test_hardware_output_initialize_hardware(
+    hardware_metadata: SkeletonHardwareMetadata, hardware_output: SkeletonHardwareOutput
+):
     """
-    Verifies that output hardware stores supplied metadata during
-    initialization.
+    Verifies that output subclasses store the supplied hardware metadata
+    during hardware initialization.
     """
-    hardware_output = SkeletonHardwareOutput()
-
     hardware_output.initialize_hardware(hardware_metadata)
 
     assert hardware_output.metadata is hardware_metadata
 
 
-def test_hardware_output_start():
+def test_hardware_output_init(
+    hardware_output: SkeletonHardwareOutput,
+):
     """
-    Verifies that output hardware can be started.
+    Verifies that the skeleton output class implements the hardware output
+    interface.
     """
-    hardware_output = SkeletonHardwareOutput()
+    assert isinstance(hardware_output, HardwareOutput)
 
+
+def test_hardware_output_start(
+    hardware_output: SkeletonHardwareOutput,
+):
+    """
+    Verifies that skeleton output hardware can be started.
+    """
     hardware_output.start()
 
     assert hardware_output.started is True
 
 
-def test_hardware_output_write():
+def test_hardware_output_write(
+    hardware_output: SkeletonHardwareOutput,
+):
     """
-    Verifies that output hardware accepts and stores output data.
+    Verifies that skeleton output hardware accepts and stores output data.
     """
-    hardware_output = SkeletonHardwareOutput()
     output_data = np.zeros((1, 100))
 
     hardware_output.write(output_data)
@@ -551,40 +635,44 @@ def test_hardware_output_write():
     assert hardware_output.last_write is output_data
 
 
-def test_hardware_output_stop():
+def test_hardware_output_stop(
+    hardware_output: SkeletonHardwareOutput,
+):
     """
-    Verifies that output hardware can be stopped.
+    Verifies that skeleton output hardware can be stopped.
     """
-    hardware_output = SkeletonHardwareOutput()
-
     hardware_output.stop()
 
     assert hardware_output.stopped is True
 
 
-def test_hardware_output_close():
+def test_hardware_output_close(
+    hardware_output: SkeletonHardwareOutput,
+):
     """
-    Verifies that output hardware can be closed.
+    Verifies that skeleton output hardware can be closed.
     """
-    hardware_output = SkeletonHardwareOutput()
-
     hardware_output.close()
 
     assert hardware_output.closed is True
 
 
-def test_hardware_output_ready_for_new_output():
+def test_hardware_output_ready_for_new_output(
+    hardware_output: SkeletonHardwareOutput,
+):
     """
-    Verifies that output hardware reports readiness for new output.
+    Verifies that skeleton output hardware reports readiness for new output.
     """
-    hardware_output = SkeletonHardwareOutput()
-
     assert hardware_output.ready_for_new_output() is True
 
 
-def test_hardware_output_functions(hardware_metadata):
+def test_hardware_output_functions(
+    hardware_metadata: SkeletonHardwareMetadata,
+):
     """
-    Calls all output interface methods on a mock implementation.
+    Calls all skeleton output interface methods and verifies that the methods
+    store metadata, update state flags, store output data, and report readiness
+    for additional output.
     """
     hardware_output = SkeletonHardwareOutput()
     output_data = np.zeros((1, 100))

@@ -37,10 +37,10 @@ Fixtures
 
 
 # Unit Test Completeness
-Completed
+Has Tests and Documentation
     abstract_environment
-Good Tests
-    
+Has Tests I Like
+    abstract_hardware
 Has Tests
     engine
     environment_manager
@@ -48,7 +48,6 @@ Has Tests
     utilities
     load_utilities
     hardware_utilities
-    abstract_hardware
     environment_utilities
     environment_registry
     time_environment

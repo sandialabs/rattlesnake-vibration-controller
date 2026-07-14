@@ -552,12 +552,10 @@ class HardwareOutput(ABC):
             Hardware specific metdata class that defines the sampling properties
             and channel list for a given hardware.
         """
-        pass
 
     @abstractmethod
     def start(self) -> None:
         """Method to start outputting data to the hardware"""
-        pass
 
     @abstractmethod
     def write(self, data) -> None:
@@ -569,22 +567,18 @@ class HardwareOutput(ABC):
         data : np.ndarray :
         num_channels x buffer_size array to write to the output hardware
         """
-        pass
 
     @abstractmethod
     def stop(self) -> None:
         """Method to stop the output"""
-        pass
 
     @abstractmethod
     def close(self) -> None:
         """Method to close down the hardware"""
-        pass
 
     @abstractmethod
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal"""
-        pass
 
 
 # endregion

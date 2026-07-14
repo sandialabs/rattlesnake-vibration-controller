@@ -6,8 +6,9 @@ import queue as thqueue
 
 import numpy as np
 
-from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.hardware.skeleton_hardware import SkeletonHardwareMetadata
+from rattlesnake.hardware.hardware_registry import UNIMPLEMENTED_HARDWARE
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.skeleton_environment import (
     SkeletonEnvironment,
@@ -228,6 +229,11 @@ def clear_log_queue(queue, log_string):
 
 
 # region Hardware
+IMPLEMENTED_HARDWARE = [
+    hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE
+]
+
+
 def mock_channel_list():
     """Builds a default channel list with one physical and one feedback device"""
     response_channel = Channel()

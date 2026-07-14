@@ -1,6 +1,6 @@
 from rattlesnake.hardware.hardware_utilities import HardwareType
 
-UNIMPLEMENTED_HARDWARE = []
+UNIMPLEMENTED_HARDWARE = [HardwareType.NONE]
 
 
 HARDWARE_METADATA = {}
@@ -22,6 +22,16 @@ for hardware_type in HardwareType:
             HARDWARE_METADATA[HardwareType.NONE] = HardwareMetadata
             HARDWARE_ACQUISITION[HardwareType.NONE] = HardwareAcquisition
             HARDWARE_OUTPUT[HardwareType.NONE] = HardwareOutput
+        case HardwareType.SKELETON:
+            from rattlesnake.hardware.skeleton_hardware import (
+                SkeletonHardwareMetadata,
+                SkeletonHardwareAcquisition,
+                SkeletonHardwareOutput,
+            )
+
+            HARDWARE_METADATA[HardwareType.SKELETON] = SkeletonHardwareMetadata
+            HARDWARE_ACQUISITION[HardwareType.SKELETON] = SkeletonHardwareAcquisition
+            HARDWARE_OUTPUT[HardwareType.SKELETON] = SkeletonHardwareOutput
         case HardwareType.NI_DAQMX:
             from rattlesnake.hardware.nidaqmx_hardware_multitask import (
                 NIDAQmxMetadata,
