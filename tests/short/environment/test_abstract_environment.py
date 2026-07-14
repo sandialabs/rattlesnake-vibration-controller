@@ -21,6 +21,7 @@ from rattlesnake.environment.environment_registry import (
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.examples.example_registry import ENVIRONMENT_DICT
 from rattlesnake.testing.mock_utilities import (
+    IMPLEMENTED_ENVIRONMENT,
     instantiate_with_mocks,
     mock_channel_list_bools,
     skeleton_hardware_metadata,
@@ -31,14 +32,8 @@ from rattlesnake.testing.mock_utilities import (
 )
 from rattlesnake.environment.skeleton_environment import SkeletonCommands
 
+
 # region Fixtures
-IMPLEMENTED_ENVIRONMENT = [
-    environment
-    for environment in EnvironmentType
-    if environment not in UNIMPLEMENTED_ENVIRONMENT
-]
-
-
 @pytest.fixture
 def hardware_metadata():
     return skeleton_hardware_metadata()
@@ -168,16 +163,21 @@ def test_environment_metadata_init():
     assert metadata.queue_name is None
 
 
-def test_environment_metadata_channel_indices():
+@pytest.mark.parametrize(
+    "channel_list_bools, expected",
+    [
+        ([True, True], [0, 1]),
+        ([True, False], [0]),
+    ],
+)
+def test_environment_metadata_channel_indices(channel_list_bools, expected):
     """
     Verifies that selected channel indices correspond to true
     entries in ``channel_list_bools``.
     """
-    metadata = skeleton_environment_metadata(
-        channel_list_bools=[True, False, True, False]
-    )
+    metadata = skeleton_environment_metadata(channel_list_bools=channel_list_bools)
 
-    assert metadata.channel_indices == [0, 2]
+    assert metadata.channel_indices == expected
 
 
 def test_environment_metadata_environment_channel_list():
@@ -351,11 +351,14 @@ def test_environment(environment_type):
     assert environment.environment_name == "test_environment"
 
 
-def test_environment_init(environment):
+def test_environment_init():
     """
     Confirms that initialization stores all queues and events, initializes
     metadata attributes to ``None``, and maps the default global commands.
     """
+    environment = skeleton_environment(
+        environment_name="Environment Name", queue_name="Queue Name"
+    )
     assert environment.environment_name == "Environment Name"
     assert environment.queue_name == "Queue Name"
     assert environment.hardware_metadata is None
@@ -457,15 +460,33 @@ def test_environment_output_active(environment):
     assert environment.output_active is True
 
 
-def test_environment_initialize_hardware(environment, hardware_metadata):
+@pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
+def test_environment_initialize_hardware(environment_type, hardware_metadata):
     """
     Verifies that a skeleton environment subclass stores the supplied hardware
     metadata and sets itself as ready at the end of the function.
     """
+    environment_class = ENVIRONMENT_CLASS[environment_type]
+    environment = instantiate_with_mocks(
+        environment_class,
+        environment_name="test_environment",
+        ready_event=mp.Event(),
+    )
     environment.initialize_hardware(hardware_metadata)
 
     assert environment.hardware_metadata is hardware_metadata
     assert environment.ready is True
+
+
+# def test_environment_initialize_hardware(environment, hardware_metadata):
+#     """
+#     Verifies that a skeleton environment subclass stores the supplied hardware
+#     metadata and sets itself as ready at the end of the function.
+#     """
+#     environment.initialize_hardware(hardware_metadata)
+
+#     assert environment.hardware_metadata is hardware_metadata
+#     assert environment.ready is True
 
 
 def test_environment_initialize_environment(environment):

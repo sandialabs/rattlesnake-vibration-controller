@@ -7,9 +7,8 @@ Rules to follow
     when needing to mutate base class
 - Abstract Classes
     - For relevant functions, test the subclasses for required behavior (set_ready, store required attributes, etc.)
-        - Use instantiate with mocks for building subclasses
+        - Use instantiate with mocks for building subclasses. Get the subclasses from registries
     - Split verification tests into multiple tests that describe what the test is checking for
-    - 
 - 
 
 ## Main

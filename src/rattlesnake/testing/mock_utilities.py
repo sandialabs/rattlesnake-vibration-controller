@@ -8,6 +8,7 @@ import numpy as np
 
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.skeleton_hardware import SkeletonHardwareMetadata
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.skeleton_environment import (
     SkeletonEnvironment,
     SkeletonInstructions,
@@ -19,6 +20,7 @@ from rattlesnake.environment.skeleton_sys_id_environment import (
     SkeletonMetadata as SysIdSkeletonMetadata,
     SkeletonQueues as SysIdSkeletonQueues,
 )
+from rattlesnake.environment.environment_registry import UNIMPLEMENTED_ENVIRONMENT
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataPackage,
     SysIdMetadata,
@@ -258,6 +260,13 @@ def skeleton_hardware_metadata(**overrides):
 
 
 # region Environment
+IMPLEMENTED_ENVIRONMENT = [
+    environment
+    for environment in EnvironmentType
+    if environment not in UNIMPLEMENTED_ENVIRONMENT
+]
+
+
 def mock_channel_list_bools():
     return [True, True]
 
