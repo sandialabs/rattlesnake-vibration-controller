@@ -152,8 +152,10 @@ class SDSEnvironment(SysIdEnvironment):
             self.perform_run_table_prediction,
         )
         self.map_command(SDSCommands.MONITOR_HIT, self.monitor_hit)
+        self.map_command(SDSCommands.START_CONTROL, self.start_control)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
         self.map_command(SDSCommands.STOP_CONTROL, self.stop_environment)
+        self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(
             ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,

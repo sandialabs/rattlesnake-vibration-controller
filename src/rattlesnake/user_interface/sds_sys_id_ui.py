@@ -49,6 +49,7 @@ from multiprocessing.queues import Queue
 from rattlesnake.user_interface.sds_sys_id_prediction_table import SDSPredictionTable
 from rattlesnake.user_interface.sds_sys_id_synthesize_dialog import SDSSynthesizeDialog
 from rattlesnake.user_interface.sds_sys_id_run_table import SDSRunTableDialog
+from rattlesnake.user_interface.sds_sys_id_shock_history import SDSShockHistoryDialog
 import inspect
 import numpy as np
 import importlib
@@ -129,6 +130,8 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_table = self.run_table_dialog.run_table
         self.run_table.lock_table(frequencies=True)
 
+        self.shock_history_dialog = SDSShockHistoryDialog(self.run_widget)
+
         self.plotwidgets = [
             self.definition_widget.specification_plot,
             self.run_widget.global_test_performance_plot,
@@ -198,6 +201,8 @@ class SDSUI(SysIdEnvironmentUI):
         # Run Test
         self.run_widget.sds_table_button.clicked.connect(self.show_run_table)
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
+        self.run_widget.shock_history_button.clicked.connect(self.show_shock_history)
+        self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
 
     # region UI Data Acquisition
 
@@ -1429,6 +1434,11 @@ class SDSUI(SysIdEnvironmentUI):
     def show_run_table(self):
         self.run_table_dialog.show()
 
+    def show_shock_history(self):
+        self.shock_history_dialog.show()
+        self.shock_history_dialog.raise_()
+        self.shock_history_dialog.activateWindow()
+
     # def start_control(self):
     #     """Starts the chain of events to start the environment"""
     #     if (
@@ -1654,6 +1664,13 @@ class SDSUI(SysIdEnvironmentUI):
                 self.update_global_srs_plot(data["measured_response_srs"])
 
             self.shock_history = data["hit_history"]
+
+            self.shock_history_dialog.update_history(
+                hit_history=self.shock_history,
+                total_hits=data["total_hits"],
+                hits_at_target=data["hits_at_target"],
+                target_hits=data["target_hits_at_level"],
+            )
 
     def set_parameters_from_template(self, worksheet):
         self.definition_widget.block_size_selector.setValue(int(worksheet.cell(2, 2).value))
