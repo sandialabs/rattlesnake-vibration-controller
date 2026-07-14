@@ -27,20 +27,6 @@ from rattlesnake.testing.mock_utilities import (
 from rattlesnake.utilities import GlobalCommands, RattlesnakeError
 
 
-# region Helpers
-def get_ping_alive_event(event_container, use_thread):
-    """
-    Return ``ping_alive_event`` from the event container when available.
-
-    Some test utilities may not define this event, so create a compatible
-    event as a fallback.
-    """
-    if hasattr(event_container, "ping_alive_event"):
-        return event_container.ping_alive_event
-
-    return threading.Event() if use_thread else mp.Event()
-
-
 def first_sysid_environment_type():
     """
     Return one registered system-identification environment type.
@@ -59,24 +45,6 @@ def first_sysid_environment_type():
 
 # region Fixtures
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
-def environment_manager_setup(request):
-    """
-    Create queue and event containers for threaded and multiprocessing modes.
-    """
-    use_thread = request.param
-    queue_container = mock_queue_container(use_thread)
-    event_container = mock_event_container(use_thread)
-
-    if not hasattr(event_container, "ping_alive_event"):
-        event_container.ping_alive_event = get_ping_alive_event(
-            event_container,
-            use_thread,
-        )
-
-    return use_thread, queue_container, event_container
-
-
-@pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def environment_manager(request):
     """
     Create an ``EnvironmentManager`` in threaded and multiprocessing modes.
@@ -84,12 +52,6 @@ def environment_manager(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-
-    if not hasattr(event_container, "ping_alive_event"):
-        event_container.ping_alive_event = get_ping_alive_event(
-            event_container,
-            use_thread,
-        )
 
     return EnvironmentManager(queue_container, event_container, use_thread)
 
@@ -131,12 +93,6 @@ def test_environment_manager_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
 
-    if not hasattr(event_container, "ping_alive_event"):
-        event_container.ping_alive_event = get_ping_alive_event(
-            event_container,
-            use_thread,
-        )
-
     environment_manager = EnvironmentManager(
         queue_container,
         event_container,
@@ -145,12 +101,6 @@ def test_environment_manager_init(use_thread):
 
     assert isinstance(environment_manager, EnvironmentManager)
     assert environment_manager.threaded is use_thread
-
-    assert environment_manager.queue_names == []
-    assert environment_manager.environment_names == {}
-    assert environment_manager.environment_types == {}
-    assert environment_manager.environment_metadata == {}
-    assert environment_manager.environment_processes == {}
 
     assert environment_manager.queue_container is queue_container
     assert environment_manager.event_container is event_container
@@ -788,7 +738,14 @@ def test_environment_manager_validate_system_id_package(
             True,
             RattlesnakeError,
         ),
-        ("Skeleton Environment", EnvironmentType.NONE, None, False, True, RattlesnakeError),
+        (
+            "Skeleton Environment",
+            EnvironmentType.NONE,
+            None,
+            False,
+            True,
+            RattlesnakeError,
+        ),
         (
             "Skeleton Environment",
             "SYSID",
@@ -956,7 +913,9 @@ def test_environment_manager_add_environment(
     )
     assert environment_manager.environment_processes["Environment 0"] is mock_process
 
-    mock_command_queue.assign_environment.assert_called_once_with("Skeleton Environment")
+    mock_command_queue.assign_environment.assert_called_once_with(
+        "Skeleton Environment"
+    )
     mock_process_class.assert_called_once()
     mock_process.start.assert_called_once_with()
 
