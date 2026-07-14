@@ -1,13 +1,20 @@
 # name: CI
-# name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
+# name: # keep this field blank to automatically show the filename that triggers it in the CI/CD web UI
 name: ci.yml
 
 on:
   push:
     branches:
       - '**'
+  pull_request:
+    branches:
+      - main
+      - dev
   workflow_call:  # CRITICAL: Allow this workflow to be called by other workflows
   # Does the workflow_dispatch work? CBH can't seem to find on the GitHub UI.
+  # Answer: Yes, it should work.  Possible that the workflow file must appear on the
+  # default branch (main) before it shows up in the UI.  Since this updated ci.yml is
+  # not yet in the main branch, it might not be visible in the UI until it is merged.
   workflow_dispatch:
     inputs:
       test_level:
@@ -28,14 +35,16 @@ env:
   # Force all JavaScript actions to run on Node 24 (The 2026 Standard)
   # After 02 June 2026, the following line can be removed since on that date,
   # Node.js 24 will be the GitHub default.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 2026-06-12: Now running NODE24 by default on GitHub.
+  #
   # `BASE_URL` determines the website is served from, including CSS & JS assets
   # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
   BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
 
 jobs:
 
-  # Detect what files changed to optimize the workflow
+  # Categorize changes (docs, code) to allow the workflow to be optimized.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -52,7 +61,8 @@ jobs:
         id: filter
         with:
           list-files: shell
-          base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
+          # Allowing base only can let a bug sneak in.
+          # base: ${{ github.event.before }} # Compare the current commit with the previous one to see what changed
           filters: |
             docs:
               - 'documentation/**'
@@ -78,16 +88,25 @@ jobs:
   # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
-        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
+        # Full mode
+        #   main/dev branch, PR targeting main/dev, manual 'full', or '[all tests]' in commit/PR title):
+        #   run on Linux, macOS, and Windows.
+        # Fast mode (all other branches): ubuntu-latest only.
+        os: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["macos-latest","ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        # Full mode: test against Python 3.11 and 3.12. Fast mode: 3.12 only.
+        python-version: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.base_ref == 'main' || github.base_ref == 'dev' || github.event.inputs.test_level == 'full' || (github.event.head_commit && contains(github.event.head_commit.message, '[all tests]')) || (github.event.pull_request && contains(github.event.pull_request.title, '[all tests]'))) && fromJSON('["3.11","3.12"]') || fromJSON('["3.12"]') }}
 
     steps:
 
@@ -118,38 +137,40 @@ jobs:
 
       - name: Run tests
         shell: bash
+        env:
+          # Securely map the context parameter into the environment context first
+          RESOLVED_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
         run: |
-          # Detect message from Push OR Pull Request
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          TEST_PATHS="tests/short"
           BRANCH_NAME="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
           
-          # Root tests + short tests should likely be the default "small" suite
-          TEST_PATHS="tests/*.py tests/short"
-
-          # Trigger full suite if:
-          # 1. Commit message contains [all tests]
-          # 2. Manual dispatch 'test_level' is 'full'
-          # 3. Current branch is exactly 'main' or 'dev'
-          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+          if [[ "$RESOLVED_MSG" == *"[all tests]"* ]] || \
              [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
              [[ "$BRANCH_NAME" == "main" ]] || \
-             [[ "$BRANCH_NAME" == "dev" ]]; then
-            echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
+             [[ "$BRANCH_NAME" == "dev" ]] || \
+             [[ "$TARGET_BRANCH" == "main" ]] || \
+             [[ "$TARGET_BRANCH" == "dev" ]]; then
+            echo "⏱️⏱️⏱️ ALL TESTS MODE: Scaling up to include heavy simulations from tests/long"
             TEST_PATHS="tests"
           else
-            echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+            echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
           fi
-
-          # Execute pytest on selected directories
+     
           python -m pytest -vs $TEST_PATHS
 
   lint:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
+
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -157,7 +178,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
       with:
         enable-cache: true
         # Note: 'version' refers to the uv version itself
@@ -170,7 +191,18 @@ jobs:
       # if the pyproject.toml file changes, run "uv sync" and check into
       # GitHub both the pyproject.toml file and the uv.lock file.
       run: uv sync --all-extras --dev
-        
+
+    - name: Ruff format check (non-blocking)
+      # This step always exits 0. If ruff finds unformatted files, it
+      # surfaces a GitHub Actions warning annotation instead of failing
+      # the job, so formatting drift is visible without blocking merges.
+      run: |
+        if uv run ruff format --check src/rattlesnake; then
+          echo "✅ All files are properly formatted."
+        else
+          echo "::warning::ruff format found files that are not formatted. Run 'uv run ruff format src/rattlesnake' locally to fix."
+        fi
+
     - name: lint analysis and custom lint HTML report
       run: |
         # Create a timestamp for the output file
@@ -191,13 +223,17 @@ jobs:
         echo "    📄 Output file: $LINT_OUTPUT_FILE"
         echo "    🏆 Lint score: $SCORE out of 10"
 
+        # github.head_ref is the source branch name on PRs; empty on push events.
+        # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
+        REF_NAME="${{ github.head_ref || github.ref_name }}"
+
         # The report_lint.py script still needs the file, which we created above.
         uv run python src/rattlesnake/cicd/report_lint.py \
           --input_file "$LINT_OUTPUT_FILE" \
           --output_file lint_report.html \
           --timestamp "$TIMESTAMP" \
           --run_id ${{ github.run_id }} \
-          --ref_name ${{ github.ref_name }} \
+          --ref_name "$REF_NAME" \
           --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
 
@@ -211,11 +247,15 @@ jobs:
 
   coverage:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run job if code changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.code_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -224,7 +264,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
           version: "latest"
@@ -234,33 +274,43 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: coverage analysis and custom coverage HTML report
+        env:
+          # Securely map complex strings to environment variables to prevent shell injection errors
+          RESOLVED_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
         run: |
-          # Create a timestamp for the output file
+          # 1. Establish a safe, explicit default path
+          TEST_PATHS="tests/short"
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          # Match logic from pytest_matrix
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
-          TEST_PATHS="tests/*.py tests/short"
+          # 2. Extract branch metadata
           BRANCH_NAME="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
 
-          if [[ "$COMMIT_MSG" == *"[all tests]"* ]] || \
+          # 3. Check override conditions cleanly from the environment block
+          if [[ "$RESOLVED_MSG" == *"[all tests]"* ]] || \
                [[ "${{ github.event.inputs.test_level }}" == "full" ]] || \
                [[ "$BRANCH_NAME" == "main" ]] || \
-               [[ "$BRANCH_NAME" == "dev" ]]; then
+               [[ "$BRANCH_NAME" == "dev" ]] || \
+               [[ "$TARGET_BRANCH" == "main" ]] || \
+               [[ "$TARGET_BRANCH" == "dev" ]]; then
               echo "⏱️⏱️⏱️ ALL TESTS MODE: Including heavy simulations from tests/long"
               TEST_PATHS="tests"
           else
-              echo "🚀 FAST TEST MODE: Running core tests and tests/short only"
+            echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
           fi
 
           uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+
+          # github.head_ref is the source branch name on PRs; empty on push events.
+          # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
+          REF_NAME="${{ github.head_ref || github.ref_name }}"
 
           uv run python src/rattlesnake/cicd/report_coverage.py \
             --input_file coverage.xml \
             --output_file coverage_report.html \
             --timestamp "$TIMESTAMP" \
             --run_id ${{ github.run_id }} \
-            --ref_name ${{ github.ref_name }} \
+            --ref_name "$REF_NAME" \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
@@ -280,11 +330,15 @@ jobs:
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
     needs: changes
-    # Run if code changed OR if we're on a primary branch
+    # Run job if docs changed
+    # OR if we're on a primary branch (main/dev)
+    # OR if it's a PR targeting a primary branch (main/dev)
     if: |
       needs.changes.outputs.docs_changed == 'true' ||
       github.ref_name == 'main' ||
-      github.ref_name == 'dev'
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -293,7 +347,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
           version: "latest"
@@ -307,11 +361,16 @@ jobs:
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
+          # github.ref_name is the internal merge ref on PRs (e.g. "83/merge"),
+          # which produces a 404 URL. github.head_ref is the actual source branch
+          # name for PRs; it is empty on push events so ref_name is the fallback.
+          REF_NAME="${{ github.head_ref || github.ref_name }}"
+
           uv run python src/rattlesnake/cicd/report_jupyter_book.py \
             --myst_file documentation/myst.yml \
             --timestamp "$TIMESTAMP" \
             --run_id ${{ github.run_id }} \
-            --ref_name ${{ github.ref_name }} \
+            --ref_name "$REF_NAME" \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
@@ -333,6 +392,45 @@ jobs:
     if: |
       (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
 
+    # Required to push commits to the gh-pages branch
+    permissions:
+      contents: write
+
+    # Serialize all gh-pages deployments across branches into a single queue.
+    # cancel-in-progress: false ensures a queued deploy is never dropped — if
+    # main and dev push simultaneously, one waits rather than being cancelled,
+    # preventing a race condition that would corrupt the gh-pages branch.
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
+
+    # gh-pages branch layout (after deploy):
+    # ├── index.html               (Dashboard — new each run by cicd/report_dashboard.py)
+    # ├── main/                    (Released content, deployed from main)
+    # │   ├── badges/
+    # │   │   ├── lint.svg
+    # │   │   └── coverage.svg
+    # │   ├── reports/
+    # │   │   ├── lint/
+    # │   │   │   └── index.html   (Pylint Summary)
+    # │   │   └── coverage/
+    # │   │       ├── index.html   (Coverage Summary)
+    # │   │       └── htmlcov/     (Detailed Pytest-cov HTML)
+    # │   └── book/
+    # │       └── jupyter/         (User Manual — Jupyter Book)
+    # └── dev/                     (Development content, deployed from dev)
+    #     ├── badges/
+    #     │   ├── lint.svg
+    #     │   └── coverage.svg
+    #     ├── reports/
+    #     │   ├── lint/
+    #     │   │   └── index.html
+    #     │   └── coverage/
+    #     │       ├── index.html
+    #     │       └── htmlcov/
+    #     └── book/
+    #         └── jupyter/
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -340,7 +438,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0  # v8+ is Node.js 24 compatible (v4 targets Node.js 20)
         with:
           enable-cache: true
           version: "latest"
@@ -349,20 +447,23 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
+      # Download unconditionally; the script gates handle folder absences gracefully
       - name: Download lint artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: lint-report
           path: lint-report
           
       - name: Download coverage artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
           path: coverage-report
 
       - name: Download jupyter book artifact
-        uses: actions/download-artifact@v7
+        # Only download if the job was actually expected to run based on pathing or branch triggers
+        if: needs.changes.outputs.docs_changed == 'true' || github.ref_name == 'main' || github.ref_name == 'dev'
+        uses: actions/download-artifact@v8
         with:
           name: jupyter-book-report
           path: jupyter-book-report
@@ -377,24 +478,32 @@ jobs:
 
       - name: Create badges
         run: |
-          # Lint badge (now using Python script)
-          LINT_LOG=$(ls lint-report/lint_output_*.txt)
-          uv run python src/rattlesnake/cicd/badge_lint.py \
-            --input_file "$LINT_LOG" \
-            --output_dir badges \
-            --github_repo ${{ github.repository }} \
-            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
-            --run_id ${{ github.run_id }} \
-            --github_server_url ${{ github.server_url }}
+          # Use bash compgen to safely see if any logs exist without throwing a shell crash
+          if compgen -G "lint-report/lint_output_*.txt" > /dev/null; then
+            LINT_LOG=$(ls lint-report/lint_output_*.txt)
+            uv run python src/rattlesnake/cicd/badge_lint.py \
+              --input_file "$LINT_LOG" \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No lint output log files discovered; skipping lint badge generation."
+          fi
 
-          # Coverage badge (now using Python script)
-          uv run python src/rattlesnake/cicd/badge_coverage.py \
-            --input_file coverage-report/coverage.xml \
-            --output_dir badges \
-            --github_repo ${{ github.repository }} \
-            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
-            --run_id ${{ github.run_id }} \
-            --github_server_url ${{ github.server_url }}
+          # Safe evaluation operator check for the coverage xml file
+          if [ -f "coverage-report/coverage.xml" ]; then
+            uv run python src/rattlesnake/cicd/badge_coverage.py \
+              --input_file coverage-report/coverage.xml \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No coverage report xml file found; skipping coverage badge generation."
+          fi
 
       - name: Assemble pages directory
         run: |
@@ -403,12 +512,23 @@ jobs:
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
-          mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
-          mv coverage-report/coverage_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
-          mv coverage-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
-          mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
-          cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
+          if [ -d "lint-report" ]; then
+            mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
+          fi
           
+          if [ -d "coverage-report" ]; then
+            mv coverage-report/coverage_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
+            mv coverage-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
+          fi
+          
+          if [ -d "jupyter-book-report" ]; then
+            mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          fi
+          
+          if [ -d "badges" ]; then
+            cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
+          fi
+
           # Create a root index.html using the Python script
           uv run python src/rattlesnake/cicd/report_dashboard.py \
             --github_repo ${{ github.repository }} \
@@ -418,27 +538,52 @@ jobs:
             --github_sha ${{ github.sha }} \
             --output_file pages/index.html
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./pages
-          publish_branch: gh-pages
-          keep_files: true
-          commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
+      # Push built artifacts directly to the gh-pages branch rather than using
+      # peaceiris/actions-gh-pages (keep_files: true) or actions/deploy-pages.
+      #
+      # Why not peaceiris with keep_files?
+      #   keep_files is imprecise — it tries to preserve other content but can
+      #   behave unexpectedly when main and dev deploy close together, risking
+      #   one branch's content overwriting the other's.
+      #
+      # Why not actions/deploy-pages?
+      #   It replaces the entire site on every run and cannot preserve
+      #   subdirectories from other branches (main/ and dev/ must coexist).
+      #
+      # This approach clones gh-pages, replaces only the current branch's
+      # subdirectory (main/ or dev/), refreshes index.html at the root, and
+      # pushes back. The job-level concurrency group above ensures only one
+      # branch deploys at a time, preventing push conflicts.
+      # Commit is skipped entirely if the staged content is identical to what
+      # is already on gh-pages (e.g., a re-run with no code changes).
+      - name: Deploy to gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Step 1: Clone the existing gh-pages branch into a local staging directory.
+          # --depth 1 fetches only the latest commit (no history needed for deployment).
+          # The token is injected into the URL so git can authenticate and push later.
+          git clone --branch gh-pages --depth 1 \
+            https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git \
+            gh-pages-deploy
 
-    # TODO: Chad to reconsider peaceiris/actions-gh-pages vs. GitHub's built-in pages deployment via the "pages" folder in the repository. The built-in method is simpler but less flexible, while peaceiris allows for more control over commit messages, history, and deployment process.`
+          # Step 2: Replace only this branch's subdirectory (main/ or dev/).
+          # Wiping and re-copying ensures stale files from prior runs are removed.
+          # The other branch's subdirectory is untouched — both coexist on gh-pages.
+          rm -rf gh-pages-deploy/${{ env.DEPLOY_SUBDIR }}
+          mkdir -p gh-pages-deploy/${{ env.DEPLOY_SUBDIR }}
+          cp -r pages/${{ env.DEPLOY_SUBDIR }}/. gh-pages-deploy/${{ env.DEPLOY_SUBDIR }}/
 
-    #       1. The "Official" Way (actions/upload-pages-artifact & actions/deploy-pages)
-    #    * How it works: It packages your files into an internal GitHub "artifact" and deploys it directly to the Pages
-    #      infrastructure.
-    #    * Pros: No extra branch required. It doesn't clutter your Git history with automated commits. It's faster and more secure
-    #      (uses OIDC tokens).
-    #    * Cons: You can't easily "see" the source of the current site in your repo without looking at the Actions run.
-    # 
-    #   2. The "Traditional" Way (peaceiris/actions-gh-pages)
-    #    * How it works: it takes your files and commits them to a branch (usually gh-pages). GitHub then serves the site from that
-    #      branch.
-    #    * Pros: You have a permanent record of every deployment in a branch. It's easy to roll back by reverting a commit.
-    #    * Cons: It creates a massive amount of automated commits that "bloat" your repository size over time. It requires contents:
-     #      write permissions.
+          # Step 3: Refresh the root dashboard (index.html) so it always reflects
+          # the latest run metadata regardless of which branch triggered the deploy.
+          cp pages/index.html gh-pages-deploy/index.html
+
+          # Step 4: Commit and push. Bot identity is required for the commit author.
+          # 'git diff --staged --quiet' exits 0 if nothing changed, skipping the
+          # commit entirely on re-runs that produce identical output.
+          cd gh-pages-deploy
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Deploy ${{ env.DEPLOY_SUBDIR }} from ${{ github.sha }}"
+          git push origin gh-pages

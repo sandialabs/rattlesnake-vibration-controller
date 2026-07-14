@@ -2619,13 +2619,13 @@ class SineEnvironment(SysIdEnvironment):
     def shutdown(self):
         """Handles the environment after it has shut down"""
         self.log("Environment Shut Down")
-        self.log(
-            f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
-        )
+        # self.log(
+        #     f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
+        # )
         flush_queue(self.queue_container.time_history_to_generate_queue, timeout=0.01)
-        self.log(
-            f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
-        )
+        # self.log(
+        #     f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}"
+        # )
         self.clear_active()
         self.gui_update_queue.put(
             (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))

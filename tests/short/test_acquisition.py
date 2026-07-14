@@ -33,6 +33,7 @@ def acquisition(request):
         event_container.acquisition_active_event,
         event_container.streaming_active_event,
         event_container.acquisition_ready_event,
+        event_container.ping_alive_event,
     )
     return acquisition
 
@@ -49,6 +50,7 @@ def test_acquisition_init(use_thread):
         event_container.acquisition_active_event,
         event_container.streaming_active_event,
         event_container.acquisition_ready_event,
+        event_container.ping_alive_event,
     )
 
     # Make sure it is the correct class
@@ -312,6 +314,7 @@ def test_acquisition_process_func(mock_acquisition, use_thread):
         event_container.acquisition_ready_event,
         event_container.streaming_active_event,
         event_container.acquisition_close_event,
+        event_container.ping_alive_event,
     )
 
     mock_instance = mock_acquisition.return_value

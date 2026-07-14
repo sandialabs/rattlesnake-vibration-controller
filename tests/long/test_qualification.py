@@ -40,6 +40,7 @@ def test_rattlesnake_qualification(
 
     rattlesnake = build_rattlesnake_object(
         threaded=threaded,
+        timeout=60,
         import_method=import_method,
         hardware_type=hardware_type,
         environment_type=environment_type,
@@ -82,6 +83,7 @@ def not_test_rattlesnake_ui_profile_qualification(
 ):
     rattlesnake = build_rattlesnake_object(
         threaded=threaded,
+        timeout=30,
         import_method=import_method,
         hardware_type=hardware_type,
         environment_type=environment_type,
@@ -122,6 +124,7 @@ def not_test_rattlesnake_ui_start_environment_qualification(
 ):
     rattlesnake = build_rattlesnake_object(
         threaded=threaded,
+        timeout=30,
         import_method=import_method,
         hardware_type=hardware_type,
         environment_type=environment_type,
@@ -159,6 +162,7 @@ def not_test_minimal_qualification(
 ):
     rattlesnake = build_rattlesnake_object(
         threaded=threaded,
+        timeout=30,
         import_method=import_method,
         hardware_type=hardware_type,
         environment_type=environment_type,

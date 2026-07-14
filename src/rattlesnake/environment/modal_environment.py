@@ -729,7 +729,7 @@ class ModalMetadata(EnvironmentMetadata):
         if self.accept_type is not None:
             worksheet.cell(11, 2, self.accept_type)
         if self.trigger_channel is not None:
-            worksheet.cell(12, 2, self.trigger_channel)
+            worksheet.cell(12, 2, self.trigger_channel + 1)
         if self.pretrigger is not None:
             worksheet.cell(13, 2, self.pretrigger)
         if self.trigger_slope_positive is not None:
@@ -819,7 +819,7 @@ class ModalMetadata(EnvironmentMetadata):
             ]
         else:
             acceptance_function = None
-        trigger_channel = worksheet.cell(12, 2).value
+        trigger_channel = worksheet.cell(12, 2).value - 1
         pretrigger = worksheet.cell(13, 2).value
         pretrigger_percent = pretrigger * 100 if pretrigger else 0
         trigger_slope_positive = (

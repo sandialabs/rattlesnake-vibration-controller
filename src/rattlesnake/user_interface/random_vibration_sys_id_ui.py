@@ -684,9 +684,19 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         if metadata.control_python_script:
             self.select_python_module(None, metadata.control_python_script)
-            self.definition_widget.control_function_input.setCurrentIndex(
+            function_index = self.definition_widget.control_function_input.findText(
+                metadata.control_python_function
+            )
+            if function_index >= 0:
+                self.definition_widget.control_function_input.setCurrentIndex(
+                    function_index
+                )
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
                 metadata.control_python_function_type
             )
+        self.definition_widget.control_parameters_text_input.setPlainText(
+            metadata.control_python_function_parameters or ""
+        )
         self.definition_widget.frequency_lines_out_spinbox.setValue(
             metadata.percent_lines_out
         )
@@ -768,6 +778,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 dtype=coord_dtype,
             )
         try:
+            frequency_spacing = (
+                self.definition_widget.sample_rate_display.value()
+                / self.definition_widget.samples_per_frame_selector.value()
+            )
             (
                 self.specification_frequency_lines,
                 self.specification_cpsd_matrix,
@@ -776,7 +790,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             ) = load_specification(
                 filename,
                 self.definition_widget.fft_lines_display.value(),
-                self.definition_widget.frequency_spacing_display.value(),
+                frequency_spacing,
                 control_coordinate,
             )
         except ValueError as e:
