@@ -104,6 +104,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.python_function_extra_arguments = []
         self.python_function_extra_argument_widgets = {}
         self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+        self.shock_history = None
 
         self.control_selector_widgets = [self.definition_widget.specification_plot_selector]
 
@@ -123,6 +124,7 @@ class SDSUI(SysIdEnvironmentUI):
             prediction_mode=False,
             parent=self.run_widget,
             other_voltage_lists=[self.run_widget.test_output_voltage_list],
+            other_error_lists=[self.run_widget.test_response_error_list],
         )
         self.run_table = self.run_table_dialog.run_table
         self.run_table.lock_table(frequencies=True)
@@ -1570,6 +1572,22 @@ class SDSUI(SysIdEnvironmentUI):
 
         super().set_environment_instructions(instructions)
 
+    def update_global_srs_plot(self, measured_response_srs):
+        plot_item = self.run_widget.global_test_performance_plot.getPlotItem()
+        plot_item.clear()
+        plot_item.showGrid(True, True, 0.25)
+        plot_item.enableAutoRange()
+        plot_item.getViewBox().enableAutoRange(enable=True)
+        plot_item.setLogMode(True, True)
+
+        if measured_response_srs is None:
+            return
+
+        freqs = self.environment_metadata.get_sds_frequencies()
+        for i in range(measured_response_srs.shape[1]):
+            pen = {"color": colororder[i % len(colororder)], "width": 1}
+            plot_item.plot(freqs, measured_response_srs[:, i], pen=pen)
+
     # region UI Update and Templates
 
     def update_gui(self, queue_data):
@@ -1624,12 +1642,17 @@ class SDSUI(SysIdEnvironmentUI):
             progress = int(100 * data["hits_at_target"] / max(1, target_hits))
             self.run_widget.current_hits_progress.setValue(min(progress, 100))
 
-            if data["run_sds_table"] is not None and self.run_table is not None:
-                self.run_table.sds_table = data["run_sds_table"]
-                self.run_table.update_table_ui()
-                self.run_table.update_drive_plot_ui()
+            if self.run_table is not None:
+                self.run_table.update_control_information(
+                    measured_response_time_history=data["measured_response_time_history"],
+                    measured_response_srs=data["measured_response_srs"],
+                    run_sds_table=data["run_sds_table"],
+                )
 
-            # Placeholder for future history dialog
+            # update global plot
+            if data["measured_response_srs"] is not None:
+                self.update_global_srs_plot(data["measured_response_srs"])
+
             self.shock_history = data["hit_history"]
 
     def set_parameters_from_template(self, worksheet):

@@ -27,6 +27,7 @@ import importlib
 import threading
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import queue as thqueue
 import os
 import traceback
 from multiprocessing.queues import Queue
@@ -604,8 +605,16 @@ class SDSEnvironment(SysIdEnvironment):
             amplitudes[:, np.newaxis, :].T,
             decays[:, np.newaxis, :].T,
             delays[:, np.newaxis, :].T,
-            self.environment_metadata.sample_rate,
-            self.environment_metadata.block_size,
+            self.environment_metadata.sample_rate * self.hardware_metadata.output_oversample,
+            self.environment_metadata.block_size * self.hardware_metadata.output_oversample,
+        )
+
+        print(f"Drive signal generated with shape {drive_signal.shape}")
+        print(
+            f"  Generated with sample rate {self.environment_metadata.sample_rate * self.hardware_metadata.output_oversample}"
+        )
+        print(
+            f"  For a total duration of {drive_signal.shape[-1]/(self.environment_metadata.sample_rate * self.hardware_metadata.output_oversample)}"
         )
 
         self.last_drive_signal = drive_signal
@@ -660,6 +669,10 @@ class SDSEnvironment(SysIdEnvironment):
 
         expected_output = self.last_drive_signal[:, :: self.hardware_metadata.output_oversample]
 
+        print(
+            f"Completing Hit, {expected_output.shape=}, {full_control.shape=}, {full_output.shape=}"
+        )
+
         aligned_output, sample_delay, phase_change, found_correlation = align_signals(
             full_output,
             expected_output,
@@ -667,13 +680,22 @@ class SDSEnvironment(SysIdEnvironment):
             perform_subsample=True,
         )
 
+        print(
+            f"Completed alignment, {aligned_output.shape=}, {sample_delay=}, {found_correlation=}"
+        )
+
         if aligned_output is None:
             self.log("Could not align measured output to expected drive signal.")
+            print("Could not align output.")
             samples_to_keep = min(full_control.shape[-1], self.environment_metadata.block_size)
             self.last_response_signal = full_control[..., :samples_to_keep]
             measured_drive_signal = full_output[..., :samples_to_keep]
         else:
             self.log(
+                f"Alignment found: sample_delay={sample_delay}, "
+                f"phase_change={phase_change}, correlation={found_correlation}"
+            )
+            print(
                 f"Alignment found: sample_delay={sample_delay}, "
                 f"phase_change={phase_change}, correlation={found_correlation}"
             )
@@ -719,17 +741,32 @@ class SDSEnvironment(SysIdEnvironment):
         self.last_drive_delays = self.run_sds_table["delay"].copy()
 
         # Always call control law after each hit
-        output_amplitudes, output_decays, output_delays = self.control_law(
-            environment_metadata=self.environment_metadata,
-            sysid_data=self.sysid_data,
-            last_response_srs=self.last_response_srs,
-            last_response_signals=self.last_response_signal,
-            last_drive_amplitudes=self.last_drive_amplitudes,
-            last_drive_decays=self.last_drive_decays,
-            last_drive_delays=self.last_drive_delays,
-            last_drive_signals=measured_drive_signal,
-            **self.environment_metadata.control_script_data.control_parameters,
-        )
+        if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
+            output_amplitudes, output_decays, output_delays = self.control_law(
+                environment_metadata=self.environment_metadata,
+                sysid_data=self.sysid_data,
+                last_response_srs=self.last_response_srs,
+                last_response_signals=self.last_response_signal,
+                last_drive_amplitudes=self.last_drive_amplitudes,
+                last_drive_decays=self.last_drive_decays,
+                last_drive_delays=self.last_drive_delays,
+                last_drive_signals=measured_drive_signal,
+                **self.environment_metadata.control_script_data.control_parameters,
+            )
+        elif self.environment_metadata.control_script_data.control_type in (
+            ControlLawType.CLASS,
+            ControlLawType.INTERACTIVE_CLASS,
+        ):
+            output_amplitudes, output_decays, output_delays = self.control_law.control(
+                last_response_srs=self.last_response_srs,
+                last_response_signals=self.last_response_signal,
+                last_drive_amplitudes=self.last_drive_amplitudes,
+                last_drive_decays=self.last_drive_decays,
+                last_drive_delays=self.last_drive_delays,
+                last_drive_signals=measured_drive_signal,
+            )
+        else:
+            raise ValueError("Unsupported SDS control law type")
 
         # Only persist updated SDS table if automatic updates are enabled
         if self.allow_automatic_updates:
@@ -804,7 +841,7 @@ class SDSEnvironment(SysIdEnvironment):
                     output_data = (
                         self.environment_metadata.reference_transformation_matrix @ output_data
                     )
-
+                print(f"Monitoring hit, {control_data.shape=}, {output_data.shape=}")
                 self.current_hit_control_data.append(control_data)
                 self.current_hit_output_data.append(output_data)
 
@@ -813,6 +850,8 @@ class SDSEnvironment(SysIdEnvironment):
 
                     full_control = np.concatenate(self.current_hit_control_data, axis=-1)
                     full_output = np.concatenate(self.current_hit_output_data, axis=-1)
+
+                    print(f"Recieved last hit, {full_control.shape=}, {full_output.shape=}")
 
                     self.complete_hit(full_control, full_output)
 
@@ -844,7 +883,7 @@ class SDSEnvironment(SysIdEnvironment):
                     )
                 return
 
-            except Exception:
+            except (thqueue.Empty, mp.queues.Empty):
                 # No data available yet
                 time.sleep(0.05)
                 self.queue_container.environment_command_queue.put(

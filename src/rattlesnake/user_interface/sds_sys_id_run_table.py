@@ -15,6 +15,7 @@ class SDSRunTableDialog(QtWidgets.QDialog):
         prediction_mode,
         parent=None,
         other_voltage_lists=None,
+        other_error_lists=None,
     ):
         super().__init__(parent)
         uic.loadUi(
@@ -28,6 +29,7 @@ class SDSRunTableDialog(QtWidgets.QDialog):
             environment_name,
             prediction_mode=prediction_mode,
             other_voltage_lists=other_voltage_lists,
+            other_error_lists=other_error_lists,
         )
 
         self.load_table_button.clicked.connect(self.load_sds_table)

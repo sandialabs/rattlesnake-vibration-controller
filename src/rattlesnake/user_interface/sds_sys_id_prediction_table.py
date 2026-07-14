@@ -1,5 +1,5 @@
 import numpy as np
-from qtpy import uic, QtWidgets
+from qtpy import uic, QtWidgets, QtGui
 from qtpy.QtCore import Qt
 import os
 from rattlesnake.environment.sds_sys_id_metadata import SRSParameters, SpecParameters, SDSMetadata
@@ -27,6 +27,7 @@ class SDSPredictionTable:
         response_names: None | np.ndarray = None,
         sds_parameters: None | SDSMetadata = None,
         other_voltage_lists=None,
+        other_error_lists=None,
     ):
         uic.loadUi(
             os.path.join(DIRECTORY, "user_interface", "ui_files", "srs_sds_prediction_table.ui"),
@@ -49,6 +50,7 @@ class SDSPredictionTable:
         # Keep track of tables and tabs
         self.sds_table_widgets = []
         self.other_voltage_lists = [] if other_voltage_lists is None else other_voltage_lists
+        self.other_error_lists = [] if other_error_lists is None else other_error_lists
         # Persistent calculated data
         self.predicted_response_time_history = None
         self.predicted_response_srs = None
@@ -123,8 +125,9 @@ class SDSPredictionTable:
             pen={"color": "r", "width": 1},
             name="Single Tone",
         )
+
         self.plot_data_items[
-            "full_time_history_response"
+            "full_time_history_response_predicted"
         ] = self.parent_widget.response_display_plot.getPlotItem().plot(
             np.array(
                 [
@@ -138,7 +141,25 @@ class SDSPredictionTable:
             ),
             np.nan * np.ones(2),
             pen={"color": "b", "width": 1},
-            name="Time History",
+            name="Predicted Time History",
+        )
+
+        self.plot_data_items[
+            "full_time_history_response_measured"
+        ] = self.parent_widget.response_display_plot.getPlotItem().plot(
+            np.array(
+                [
+                    0,
+                    (
+                        self.sds_parameters.block_size / self.sds_parameters.sample_rate
+                        if self.sds_parameters is not None
+                        else 1
+                    ),
+                ]
+            ),
+            np.nan * np.ones(2),
+            pen={"color": (0, 180, 0), "width": 1},
+            name="Measured Time History",
         )
 
         self.plot_data_items[
@@ -220,6 +241,52 @@ class SDSPredictionTable:
         self.update_drive_plot_ui()
         self.update_response_plot_ui()
         self.update_all_voltages_ui()
+        self.update_all_response_errors_ui(
+            other_error_lists=self.other_error_lists,
+            use_measured=False,
+        )
+        for widget in self.sds_table_widgets:
+            widget.blockSignals(False)
+
+    def update_control_information(
+        self,
+        measured_response_time_history=None,
+        measured_response_srs=None,
+        run_sds_table=None,
+    ):
+        """
+        Update the table and plots using measured post-hit control data.
+
+        Parameters
+        ----------
+        measured_response_time_history : np.ndarray | None
+            Measured control response time histories with shape
+            (num_control_channels, num_samples)
+        measured_response_srs : np.ndarray | None
+            Measured control response SRS with shape
+            (num_frequencies, num_control_channels)
+        run_sds_table : DecayedSineTable | None
+            Updated SDS table. If None, the current table is left unchanged.
+        """
+        for widget in self.sds_table_widgets:
+            widget.blockSignals(True)
+
+        if measured_response_time_history is not None:
+            self.measured_response_time_history = measured_response_time_history
+        if measured_response_srs is not None:
+            self.measured_response_srs = measured_response_srs
+        if run_sds_table is not None:
+            self.sds_table = run_sds_table
+
+        self.update_table_ui()
+        self.update_drive_plot_ui()
+        self.update_response_plot_ui()
+        self.update_all_voltages_ui()
+        self.update_all_response_errors_ui(
+            other_error_lists=self.other_error_lists,
+            use_measured=True,
+        )
+
         for widget in self.sds_table_widgets:
             widget.blockSignals(False)
 
@@ -434,26 +501,55 @@ class SDSPredictionTable:
 
     def update_response_plot_ui(self):
         """This function is called to update the response plots"""
-        if self.response_names is None:
+        if self.response_names is None or self.sds_parameters is None:
             return
+
         index = self.parent_widget.response_selector.currentIndex()
-        if self.sds_parameters is not None:
-            # Get the specification
-            abscissa = self.sds_parameters.specification_data.frequencies
-            srs = self.sds_parameters.specification_data.srs_spec[:, index]
-            lower = self.sds_parameters.specification_data.srs_lower_limit[:, index]
-            upper = self.sds_parameters.specification_data.srs_upper_limit[:, index]
-            self.plot_data_items["specification_srs"].setData(abscissa, srs)
-            self.plot_data_items["specification_lower_limit"].setData(abscissa, lower)
-            self.plot_data_items["specification_upper_limit"].setData(abscissa, upper)
+
+        # Specification SRS
+        abscissa = self.sds_parameters.specification_data.frequencies
+        srs = self.sds_parameters.specification_data.srs_spec[:, index]
+        lower = self.sds_parameters.specification_data.srs_lower_limit[:, index]
+        upper = self.sds_parameters.specification_data.srs_upper_limit[:, index]
+        self.plot_data_items["specification_srs"].setData(abscissa, srs)
+        self.plot_data_items["specification_lower_limit"].setData(abscissa, lower)
+        self.plot_data_items["specification_upper_limit"].setData(abscissa, upper)
+
+        # Predicted SRS
         if self.predicted_response_srs is not None:
             abscissa = self.sds_parameters.get_sds_frequencies()
             srs = self.predicted_response_srs[:, index]
             self.plot_data_items["srs_predicted"].setData(abscissa, srs)
+        else:
+            self.plot_data_items["srs_predicted"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+
+        # Measured SRS
+        if self.measured_response_srs is not None:
+            abscissa = self.sds_parameters.get_sds_frequencies()
+            srs = self.measured_response_srs[:, index]
+            self.plot_data_items["srs_measured"].setData(abscissa, srs)
+        else:
+            self.plot_data_items["srs_measured"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+
+        # Predicted response time history
         if self.predicted_response_time_history is not None:
             th = self.predicted_response_time_history[index, :]
             abscissa = np.arange(th.size) / self.sds_parameters.sample_rate
-            self.plot_data_items["full_time_history_response"].setData(abscissa, th)
+            self.plot_data_items["full_time_history_response_predicted"].setData(abscissa, th)
+        else:
+            self.plot_data_items["full_time_history_response_predicted"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
+
+        # Measured response time history
+        if self.measured_response_time_history is not None:
+            th = self.measured_response_time_history[index, :]
+            abscissa = np.arange(th.size) / self.sds_parameters.sample_rate
+            self.plot_data_items["full_time_history_response_measured"].setData(abscissa, th)
+        else:
+            self.plot_data_items["full_time_history_response_measured"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
 
     def update_drive_plot_ui(self):
         """This function is called to update the drive plots"""
@@ -520,11 +616,22 @@ class SDSPredictionTable:
             return
 
         this_text = f"{volt:0.2f}"
-        self.parent_widget.excitation_voltage_list.item(index).setText(this_text)
 
-        for voltage_list in self.other_voltage_lists:
-            item = voltage_list.item(index)
-            if item is not None:
+        # Local list
+        local_item = self.parent_widget.excitation_voltage_list.item(index)
+        if local_item is None:
+            # If the list hasn't been built yet, rebuild all rows
+            self.update_all_voltages_ui()
+        else:
+            local_item.setText(this_text)
+
+            # Mirror to any linked lists
+            for voltage_list in self.other_voltage_lists:
+                item = voltage_list.item(index)
+                if item is None:
+                    # fall back to full rebuild for that list set
+                    self.update_all_voltages_ui()
+                    break
                 item.setText(this_text)
 
     def update_tone_selection_ui(self):
@@ -550,6 +657,142 @@ class SDSPredictionTable:
                 np.nan * np.ones(2),
                 np.nan * np.ones(2),
             )
+
+    def compute_peak_response_error(self, index=None, use_measured=True):
+        """
+        Compute the worst-case dB error for each response channel relative to the specification.
+
+        Parameters
+        ----------
+        index : int | None
+            If specified, compute only for one response channel. Otherwise compute for all.
+        use_measured : bool
+            If True, use measured_response_srs. Otherwise use predicted_response_srs.
+
+        Returns
+        -------
+        error_db : float | list[float] | None
+            Worst-case absolute dB error(s)
+        warning_flag : bool | list[bool] | None
+            Whether any limit was exceeded for the channel(s)
+        """
+        if self.sds_parameters is None:
+            return None, None
+
+        srs_data = self.measured_response_srs if use_measured else self.predicted_response_srs
+        if srs_data is None:
+            return None, None
+
+        spec = self.sds_parameters.specification_data
+        target_srs = spec.srs_spec
+        lower_limit = spec.srs_lower_limit
+        upper_limit = spec.srs_upper_limit
+
+        def _compute_one(channel_index):
+            measured = srs_data[:, channel_index]
+            target = target_srs[:, channel_index]
+            lower = lower_limit[:, channel_index]
+            upper = upper_limit[:, channel_index]
+
+            valid = (~np.isnan(measured)) & (~np.isnan(target)) & (target > 0)
+            if np.any(valid):
+                error_db = np.max(np.abs(20 * np.log10(measured[valid] / target[valid])))
+            else:
+                error_db = np.nan
+
+            lower_valid = (~np.isnan(lower)) & (~np.isnan(measured))
+            upper_valid = (~np.isnan(upper)) & (~np.isnan(measured))
+
+            lower_exceeded = np.any(measured[lower_valid] < lower[lower_valid])
+            upper_exceeded = np.any(measured[upper_valid] > upper[upper_valid])
+
+            warning_flag = lower_exceeded or upper_exceeded
+            return error_db, warning_flag
+
+        if index is not None:
+            return _compute_one(index)
+
+        errors = []
+        warnings = []
+        for channel_index in range(srs_data.shape[1]):
+            err, warn = _compute_one(channel_index)
+            errors.append(err)
+            warnings.append(warn)
+
+        return errors, warnings
+
+    def update_all_response_errors_ui(self, other_error_lists=None, use_measured=True):
+        """
+        Update the response error list(s) using the current measured or predicted SRS.
+
+        Parameters
+        ----------
+        other_error_lists : list[QListWidget] | None
+            Additional list widgets to mirror the same values into.
+        use_measured : bool
+            If True, use measured_response_srs. Otherwise use predicted_response_srs.
+        """
+        if other_error_lists is None:
+            other_error_lists = []
+
+        errors, warnings = self.compute_peak_response_error(use_measured=use_measured)
+        if errors is None:
+            return
+
+        all_lists = [self.parent_widget.response_error_list] + list(other_error_lists)
+
+        # Styling depending on whether these are measured or predicted values
+        if use_measured:
+            text_brush = None
+            normal_background = None
+            warning_background = Qt.yellow
+        else:
+            text_brush = Qt.gray
+            normal_background = None
+            warning_background = QtGui.QColor(255, 255, 200)  # pale yellow
+
+        for error_list in all_lists:
+            error_list.clear()
+            for err, warn in zip(errors, warnings):
+                item = QtWidgets.QListWidgetItem("nan" if np.isnan(err) else f"{err:0.3f}")
+
+                if text_brush is not None:
+                    item.setForeground(text_brush)
+
+                if warn:
+                    item.setBackground(warning_background)
+
+                error_list.addItem(item)
+
+    def update_response_error_ui(self, index, other_error_lists=None, use_measured=True):
+        if other_error_lists is None:
+            other_error_lists = []
+
+        err, warn = self.compute_peak_response_error(index=index, use_measured=use_measured)
+        if err is None:
+            return
+
+        all_lists = [self.parent_widget.response_error_list] + list(other_error_lists)
+        text = "nan" if np.isnan(err) else f"{err:0.3f}"
+
+        if use_measured:
+            text_brush = None
+            warning_background = Qt.yellow
+        else:
+            text_brush = Qt.gray
+            warning_background = QtGui.QColor(255, 255, 200)
+
+        for error_list in all_lists:
+            item = error_list.item(index)
+            if item is None:
+                continue
+            item.setText(text)
+
+            if text_brush is not None:
+                item.setForeground(text_brush)
+
+            if warn:
+                item.setBackground(warning_background)
 
     def update_response_selector(self, item):
         index = self.parent_widget.response_error_list.row(item)

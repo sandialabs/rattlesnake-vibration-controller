@@ -1288,6 +1288,7 @@ def align_signals(
         )
     else:
         correlation = correlation_metric(measurement_buffer, specification)
+    correlation = np.atleast_1d(correlation)
     delay = np.argmax(correlation)
     found_correlation = correlation[delay]
     print(f"Max Correlation: {found_correlation}")

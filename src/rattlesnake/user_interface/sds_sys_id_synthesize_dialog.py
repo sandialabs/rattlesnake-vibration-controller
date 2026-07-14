@@ -35,7 +35,7 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
             self,
         )
         self.parent_widget = parent
-        self.metadata = parent.collect_environment_definition_parameters()
+        self.metadata = parent.get_environment_metadata(parent.hardware_metadata.channel_list)
         self.setWindowTitle("Sum-of-Decayed-Sines Synthesis")
         self.plot_data_items = {}
         self.sds_tables = [None for i in parent.initialized_control_names]
