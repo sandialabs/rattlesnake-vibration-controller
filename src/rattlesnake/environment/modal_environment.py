@@ -1165,6 +1165,7 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
+            window = None
             print(f"Invalid Window Type: {self.environment_metadata.frf_window}")
         window_parameter = -(frame_size) / np.log(
             self.environment_metadata.exponential_window_value_at_frame_end
