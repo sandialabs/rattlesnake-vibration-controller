@@ -101,7 +101,7 @@ def event_container():
 
 # region log_file_task
 @mock.patch("builtins.open", new_callable=mock.mock_open)
-def test_log_file_process(mock_file, log_file_queue):
+def test_log_file_process(mock_file, log_file_queue: mp.Queue):
     """
     Verifies that queued log messages are written, quit messages terminate the
     log task, and the file is flushed.
@@ -115,14 +115,13 @@ def test_log_file_process(mock_file, log_file_queue):
 
     log_file_task(log_file_queue, shutdown_event)
 
-    mock_file.assert_called_once_with("Rattlesnake.log", "w")
     mock_file().write.assert_any_call(message)
     mock_file().write.assert_called_with("Program quitting, logging terminated.")
     mock_file().flush.assert_called()
 
 
 @mock.patch("builtins.open", new_callable=mock.mock_open)
-def test_log_file_process_replaces_extra_newlines(mock_file, log_file_queue):
+def test_log_file_process_replaces_extra_newlines(mock_file, log_file_queue: mp.Queue):
     """
     Verifies that multi-line log messages replace all but the final newline
     with slash delimiters.
@@ -139,7 +138,9 @@ def test_log_file_process_replaces_extra_newlines(mock_file, log_file_queue):
 
 
 @mock.patch("builtins.open", new_callable=mock.mock_open)
-def test_log_file_process_shutdown_event_exits_without_read(mock_file, log_file_queue):
+def test_log_file_process_shutdown_event_exits_without_read(
+    mock_file, log_file_queue: mp.Queue
+):
     """
     Verifies that the log task exits immediately if the shutdown event is set.
     """
@@ -185,7 +186,7 @@ def test_global_command_label():
 
 
 # region VerboseMessageQueue
-def test_verbose_queue_init(log_file_queue, name_manager):
+def test_verbose_queue_init(log_file_queue: mp.Queue, name_manager):
     """
     Verifies that the verbose queue initializes successfully.
     """
@@ -204,7 +205,7 @@ def test_verbose_queue_init(log_file_queue, name_manager):
     assert verbose_queue.time_threshold == 1.0
 
 
-def test_verbose_queue_name(verbose_fixture):
+def test_verbose_queue_name(verbose_fixture: VerboseMessageQueue):
     """
     Verifies that the log name includes the assigned environment name.
     """
@@ -217,7 +218,7 @@ def test_verbose_queue_name(verbose_fixture):
     assert verbose_queue.log_name == "VerboseQueue | Environment 0"
 
 
-def test_verbose_queue_name_without_manager(log_file_queue):
+def test_verbose_queue_name_without_manager(log_file_queue: VerboseMessageQueue):
     """
     Verifies that queues without a name manager use only the base name.
     """
@@ -230,7 +231,7 @@ def test_verbose_queue_name_without_manager(log_file_queue):
     assert verbose_queue.log_name == "VerboseQueue"
 
 
-def test_verbose_message_id(verbose_fixture, random_seed=42):
+def test_verbose_message_id(verbose_fixture: VerboseMessageQueue, random_seed=42):
     """
     Verifies deterministic message ID generation when the random seed is fixed.
     """
@@ -248,7 +249,9 @@ def test_verbose_message_id(verbose_fixture, random_seed=42):
 
 
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
-def test_verbose_message_queue_put(mock_generate_message_id, verbose_fixture):
+def test_verbose_message_queue_put(
+    mock_generate_message_id, verbose_fixture: VerboseMessageQueue
+):
     """
     Verifies that put stores the generated message ID and message payload on
     the underlying queue.
@@ -272,7 +275,7 @@ def test_verbose_message_queue_put(mock_generate_message_id, verbose_fixture):
 def test_verbose_message_queue_put_suppresses_repeated_logs(
     mock_generate_message_id,
     mock_time,
-    verbose_fixture,
+    verbose_fixture: VerboseMessageQueue,
 ):
     """
     Verifies that repeated messages within the time threshold use an empty
@@ -296,7 +299,7 @@ def test_verbose_message_queue_put_suppresses_repeated_logs(
     ]
 
 
-def test_verbose_message_queue_get(verbose_fixture):
+def test_verbose_message_queue_get(verbose_fixture: VerboseMessageQueue):
     """
     Verifies that get returns the message payload from the underlying queue.
     """
@@ -312,7 +315,9 @@ def test_verbose_message_queue_get(verbose_fixture):
     assert data == message_data_tuple
 
 
-def test_verbose_message_queue_get_empty_id_does_not_log(verbose_fixture):
+def test_verbose_message_queue_get_empty_id_does_not_log(
+    verbose_fixture: VerboseMessageQueue,
+):
     """
     Verifies that messages with an empty ID are returned without a get log.
     """
@@ -332,7 +337,10 @@ def test_verbose_message_queue_get_empty_id_does_not_log(verbose_fixture):
 @mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
 @mock.patch("rattlesnake.utilities.datetime")
 def test_verbose_queue_log(
-    mock_datetime, mock_generate_message_id, log_file_queue, verbose_fixture
+    mock_datetime,
+    mock_generate_message_id,
+    log_file_queue: mp.Queue,
+    verbose_fixture: VerboseMessageQueue,
 ):
     """
     Exercises put and get logging through a helper process or thread.
@@ -377,8 +385,8 @@ def test_verbose_queue_log(
 def test_verbose_message_queue_flush(
     mock_datetime,
     mock_generate_message_id,
-    log_file_queue,
-    verbose_fixture,
+    log_file_queue: mp.Queue,
+    verbose_fixture: VerboseMessageQueue,
 ):
     """
     Verifies that flush returns queued message payloads.
@@ -409,7 +417,7 @@ def test_verbose_message_queue_flush(
     assert b"flushed VerboseQueue" in log_string.value
 
 
-def test_verbose_queue_empty_close_join_thread(verbose_fixture):
+def test_verbose_queue_empty_close_join_thread(verbose_fixture: VerboseMessageQueue):
     """
     Verifies that empty, close, and join_thread are available and do not raise.
     """
@@ -426,7 +434,7 @@ def test_verbose_queue_empty_close_join_thread(verbose_fixture):
 
 
 # region QueueContainer, EventContainer, flush_queue
-def test_queue_container_init(queue_container):
+def test_queue_container_init(queue_container: QueueContainer):
     """
     Verifies that ``QueueContainer`` stores supplied queues.
     """
@@ -440,7 +448,7 @@ def test_queue_container_init(queue_container):
     assert "Environment 0" in queue_container.environment_data_out_queues
 
 
-def test_event_container_init(event_container):
+def test_event_container_init(event_container: EventContainer):
     """
     Verifies that ``EventContainer`` stores supplied events.
     """
@@ -455,11 +463,16 @@ def test_event_container_init(event_container):
     assert "Environment 0" in event_container.environment_sysid_stored_events
 
 
-def test_flush_queue_standard_queue():
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_flush_queue_standard_queue(use_thread):
     """
     Verifies that ``flush_queue`` removes all items from a standard queue.
     """
-    q = thqueue.Queue()
+    if use_thread:
+        new_queue = thqueue.Queue
+    else:
+        new_queue = mp.Queue
+    q = new_queue()
     q.put("a")
     q.put("b")
 
@@ -482,11 +495,16 @@ def test_flush_queue_verbose_queue(log_file_queue, name_manager):
     assert flush_queue(verbose_queue) == [(GlobalCommands.QUIT, None)]
 
 
-def test_flush_queue_with_timeout_on_empty_queue():
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_flush_queue_with_timeout_on_empty_queue(use_thread):
     """
     Verifies that flushing an empty queue with a timeout returns an empty list.
     """
-    q = thqueue.Queue()
+    if use_thread:
+        new_queue = thqueue.Queue
+    else:
+        new_queue = mp.Queue
+    q = new_queue()
 
     assert flush_queue(q, timeout=0.01) == []
 

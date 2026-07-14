@@ -1274,3 +1274,127 @@ def test_rattlesnake_stop_acquisition(
         new_callable=mock.PropertyMock,
     ) as mock_state:
         mock_state
+
+
+# endregion
+
+
+# region Profile
+@pytest.mark.parametrize(
+    "state, expected",
+    [
+        (RattlesnakeState.INIT, RattlesnakeError),
+        (RattlesnakeState.HARDWARE_STORE, RattlesnakeError),
+        (RattlesnakeState.ENVIRONMENT_STORE, RattlesnakeError),
+        (RattlesnakeState.HARDWARE_ACTIVE, True),
+        (RattlesnakeState.ENVIRONMENT_ACTIVE, RattlesnakeError),
+    ],
+)
+def test_rattlesnake_start_profile(state, expected, rattlesnake_package):
+    rattlesnake, threaded, blocking = rattlesnake_package
+    mock_profile = mock.MagicMock()
+    profile_event_list = [mock_profile]
+
+    mock_wait_event = mock.MagicMock()
+    mock_environment_manager = mock.MagicMock()
+    mock_profile_manager = mock.MagicMock()
+    rattlesnake.wait_for_events = mock_wait_event
+    rattlesnake.environment_manager = mock_environment_manager
+    rattlesnake.profile_manager = mock_profile_manager
+
+    with mock.patch.object(
+        RattlesnakeController, "state", new_callable=mock.PropertyMock
+    ) as mock_state:
+        mock_state.return_value = state
+
+        if expected is RattlesnakeError:
+            with pytest.raises(RattlesnakeError):
+                rattlesnake.start_profile(profile_event_list)
+        else:
+            rattlesnake.start_profile(profile_event_list)
+            mock_environment_manager.validate_profile_events.assert_called_with(
+                profile_event_list
+            )
+            mock_profile_manager.validate_profile_list(profile_event_list)
+            mock_profile_manager.start_profile.assert_called_with(profile_event_list)
+
+
+# region Shutdown
+@pytest.mark.parametrize(
+    "first_alive, second_alive", [(False, False), (True, False), (True, True)]
+)
+@mock.patch("rattlesnake.engine.flush_queue")
+def test_rattlesnake_shutdown(
+    mock_flush, first_alive, second_alive, rattlesnake_package
+):
+    rattlesnake, threaded, blocking = rattlesnake_package
+    mock_log_file_queue = mock.MagicMock()
+    mock_controller_queue = mock.MagicMock()
+    mock_acquisition_queue = mock.MagicMock()
+    mock_output_queue = mock.MagicMock()
+    mock_streaming_queue = mock.MagicMock()
+    mock_log_file = mock.MagicMock()
+    mock_controller = mock.MagicMock()
+    mock_controller.is_alive.side_effect = [first_alive, second_alive]
+    mock_acquisition = mock.MagicMock()
+    mock_acquisition.is_alive.side_effect = [first_alive, second_alive]
+    mock_output = mock.MagicMock()
+    mock_output.is_alive.side_effect = [first_alive, second_alive]
+    mock_streaming = mock.MagicMock()
+    mock_streaming.is_alive.side_effect = [first_alive, second_alive]
+    mock_environment_manager = mock.MagicMock()
+
+    rattlesnake.queue_container.log_file_queue = mock_log_file_queue
+    rattlesnake.queue_container.controller_command_queue = mock_controller_queue
+    rattlesnake.queue_container.acquisition_command_queue = mock_acquisition_queue
+    rattlesnake.queue_container.output_command_queue = mock_output_queue
+    rattlesnake.queue_container.streaming_command_queue = mock_streaming_queue
+    rattlesnake.log_file_process = mock_log_file
+    rattlesnake.controller_proc = mock_controller
+    rattlesnake.acquisition_proc = mock_acquisition
+    rattlesnake.output_proc = mock_output
+    rattlesnake.streaming_proc = mock_streaming
+    rattlesnake.environment_manager = mock_environment_manager
+
+    with mock.patch.object(
+        RattlesnakeController, "state", new_callable=mock.PropertyMock
+    ) as mock_state:
+        mock_state.return_value = RattlesnakeState.ENVIRONMENT_ACTIVE
+        mock_stop = mock.MagicMock()
+        rattlesnake.stop_acquisition = mock_stop
+
+        rattlesnake.shutdown()
+
+        mock_stop.assert_called()
+
+        mock_controller_queue.put.assert_called_with(
+            "Rattlesnake", (GlobalCommands.QUIT, None)
+        )
+        mock_acquisition_queue.put.assert_called_with(
+            "Rattlesnake", (GlobalCommands.QUIT, None)
+        )
+        mock_output_queue.put.assert_called_with(
+            "Rattlesnake", (GlobalCommands.QUIT, None)
+        )
+        mock_streaming_queue.put.assert_called_with(
+            "Rattlesnake", (GlobalCommands.QUIT, None)
+        )
+
+        mock_controller.join.assert_called()
+        mock_acquisition.join.assert_called()
+        mock_output.join.assert_called()
+        mock_streaming.join.assert_called()
+        mock_environment_manager.close_environments.assert_called()
+        mock_log_file.join.assert_called()
+
+        if first_alive:
+            assert rattlesnake.event_container.controller_close_event.is_set()
+            assert rattlesnake.event_container.acquisition_close_event.is_set()
+            assert rattlesnake.event_container.output_close_event.is_set()
+            assert rattlesnake.event_container.streaming_close_event.is_set()
+
+        if first_alive and second_alive and not threaded:
+            mock_controller.terminate.assert_called()
+            mock_acquisition.terminate.assert_called()
+            mock_output.terminate.assert_called()
+            mock_streaming.terminate.assert_called()
