@@ -15,7 +15,7 @@ Rules to follow
     utilities
     engine
 environment_manager: Needs to split up validation/tests to seperate tests. Is currently way overusing mark.parametrize
-main
+main: This is going to need a qbot from pyqt-pytest pluggin
 
     abstract_hardware
 sdynpy_system_virtual_hardware
@@ -115,7 +115,6 @@ Utilities
     ui_registry
 
 Main
-    main
     engine: Use as example
     environment_manager
     profile_manager
@@ -175,6 +174,7 @@ UI Utilities
     random_vibration_sys_id_ui_utilities
 
 User Interface
+    main
     user_interface
     abstract_user_interface
     abstract_sys_id_user_interface
