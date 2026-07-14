@@ -694,8 +694,6 @@ class TransientEnvironment(SysIdEnvironment):
             ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
         )
         # Persistent data
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.queue_container = queue_container
         self.control_function_type = None
         self.extra_control_parameters = None

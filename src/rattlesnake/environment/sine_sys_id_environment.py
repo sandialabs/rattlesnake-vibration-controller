@@ -1136,8 +1136,6 @@ class SineEnvironment(SysIdEnvironment):
         )
         self.map_command(SineCommands.SET_TEST_LEVEL, self.set_test_level)
         # Persistent data
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.queue_container = queue_container
         self.plot_downsample = None
         # Control data

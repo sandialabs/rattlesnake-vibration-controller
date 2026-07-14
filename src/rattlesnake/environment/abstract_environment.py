@@ -449,6 +449,8 @@ class Environment(ABC):
         }
         self._acquisition_active_event = acquisition_active_event
         self._output_active_event = output_active_event
+        self.hardware_metadata = None
+        self.environment_metadata = None
         # self.set_ready() # Call this at the end of your function
 
     # region Commands
@@ -523,6 +525,7 @@ class Environment(ABC):
             specific hardware metadata. Assume you are only getting
             the attributes in the base HardwareMetadata class.
         """
+        self.hardware_metadata = hardware_metadata
         # self.set_ready() # Call this at the end of your function
 
     @abstractmethod

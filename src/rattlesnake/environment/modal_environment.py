@@ -1018,8 +1018,6 @@ class ModalEnvironment(Environment):
             ready_event,
         )
         self.queue_container = queue_container
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.frame_number = 0
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
