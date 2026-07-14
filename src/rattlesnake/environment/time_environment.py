@@ -448,8 +448,6 @@ class TimeEnvironment(Environment):
         self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_no_repeat
         self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         # Persistent data
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.shutdown_flag = False
         self.current_test_level = 0.0
         self.target_test_level = 0.0

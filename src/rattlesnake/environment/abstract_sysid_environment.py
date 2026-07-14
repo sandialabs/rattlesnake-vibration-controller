@@ -541,8 +541,6 @@ class SysIdEnvironment(Environment):
         self.signal_generator_command_queue = signal_generator_command_queue
         self.spectral_processing_command_queue = spectral_processing_command_queue
         self.data_analysis_command_queue = data_analysis_command_queue
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.sysid_data = SysIdDataPackage()
         self.collector_shutdown_achieved = True
         self.spectral_shutdown_achieved = True
@@ -588,8 +586,7 @@ class SysIdEnvironment(Environment):
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """
-        self.hardware_metadata = hardware_metadata
-        self.set_ready()
+        super().initialize_hardware(hardware_metadata)
 
     @abstractmethod
     def initialize_environment(self, environment_metadata: SysIdEnvironmentMetadata):
