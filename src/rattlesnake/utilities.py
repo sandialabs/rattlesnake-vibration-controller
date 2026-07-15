@@ -717,7 +717,7 @@ class IPAddress:
         if self.ipv6_address:
             host = "http://" + self.ipv6_address
         elif self.ipv4_address:
-            host = "http://" + self.ipv6_address
+            host = "http://" + self.ipv4_address
         else:
             self.valid_ip = False
             return
