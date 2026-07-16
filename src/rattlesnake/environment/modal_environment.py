@@ -538,7 +538,9 @@ class ModalMetadata(EnvironmentMetadata):
         signal_generator_max_frequency = (
             netcdf_group_handle.signal_generator_max_frequency
         )
-        signal_generator_on_percent = netcdf_group_handle.signal_generator_level * 100
+        signal_generator_on_percent = (
+            netcdf_group_handle.signal_generator_on_fraction * 100
+        )
         reference_channel_indices = netcdf_group_handle.variables[
             "reference_channel_indices"
         ][...]

@@ -97,6 +97,11 @@ for environment_type in EnvironmentType:
     if environment_type in UNIMPLEMENTED_ENVIRONMENT:
         continue
     match environment_type:
+        case EnvironmentType.SKELETON:
+            from rattlesnake.user_interface.skeleton_ui import SkeletonUI
+
+            ENVIRONMENT_UIS[EnvironmentType.SKELETON] = SkeletonUI
+            UI_ENVIRONMENT_OPTIONS["Skeleton Environment"] = EnvironmentType.SKELETON
         case EnvironmentType.TIME:
             from rattlesnake.user_interface.time_ui import TimeUI
 

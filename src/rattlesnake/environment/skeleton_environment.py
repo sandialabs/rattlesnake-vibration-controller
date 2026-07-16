@@ -306,7 +306,7 @@ class SkeletonMetadata(EnvironmentMetadata):
                 case "control_type":
                     continue
                 case "example_window_size":
-                    example_window_size = str(value)
+                    example_window_size = float(value)
                 case "":
                     continue
                 case _:

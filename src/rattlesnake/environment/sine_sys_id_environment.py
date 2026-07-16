@@ -561,6 +561,10 @@ class SineMetadata(SysIdEnvironmentMetadata):
                     warning_breakpoints=warning,
                     abort_breakpoints=abort,
                 )
+                # The constructor only accepts N-1 sweep breakpoints, so restore
+                # the trailing entry directly to match what was saved.
+                spec.breakpoint_table["sweep_type"][-1] = sweep_type[-1]
+                spec.breakpoint_table["sweep_rate"][-1] = sweep_rate[-1]
                 specifications.append(spec)
         return cls(
             environment_name=environment_name,
