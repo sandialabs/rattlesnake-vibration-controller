@@ -1,12 +1,14 @@
 import numpy as np
 from scipy.optimize import minimize
 from rattlesnake.environment.sds_sys_id_metadata import SDSMetadata
+from rattlesnake.environment.sds_sys_id_utilities import sum_decayed_sines
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
 import os
 import pickle
 from datetime import datetime
+from scipy.interpolate import interp1d
 
-DEBUG = True
+DEBUG = False
 DEBUG_FILENAME = None
 
 
@@ -29,7 +31,7 @@ def optimize_phase_targets_pinv(
     b_amplitude : ndarray
         Desired response amplitudes, shape (num_control_channels,)
     weight_accuracy : float
-        Weight for accuracy of Ax ≈ b
+        Weight for accuracy of Ax = b
     weight_magnitude : float
         Weight for small drive magnitude
     rcond : float or None
@@ -132,96 +134,126 @@ def default_control_law(
 
     # Main control frequencies (not including compensation pulse)
     control_frequencies = environment_metadata.get_sds_frequencies()
-    all_frequencies = environment_metadata.get_sds_frequencies_w_compensation_pulse()
-
-    num_control_freqs = len(control_frequencies)
-    num_all_freqs = len(all_frequencies)
-    num_drive_channels = environment_metadata.num_reference_channels
-    num_control_channels = environment_metadata.num_response_channels
 
     # Use metadata-defined decays
     control_decays = environment_metadata.get_sds_decays()
-    all_decays = environment_metadata.get_sds_decays_w_compensation_pulse()
 
     # Pull target SRS from metadata
     target_srs = np.array(environment_metadata.specification_data.srs_spec, dtype=float)
+    target_frequencies = np.array(environment_metadata.specification_data.frequencies, dtype=float)
 
-    # Sanity check shape
-    if target_srs.shape[0] != num_control_freqs:
-        raise ValueError(
-            f"Specification SRS frequency dimension ({target_srs.shape[0]}) does not match "
-            f"number of SDS frequencies ({num_control_freqs})."
+    sds_amplitudes = []
+    sds_decays = []
+    for index, specification in enumerate(target_srs.T):
+        breakpoint_table = np.concatenate(
+            (target_frequencies[:, np.newaxis], specification[:, np.newaxis]), axis=-1
         )
-
-    if target_srs.shape[1] != num_control_channels:
-        raise ValueError(
-            f"Specification SRS channel dimension ({target_srs.shape[1]}) does not match "
-            f"number of control channels ({num_control_channels})."
+        _, _, _, _, sine_amplitudes, sine_decays, _ = sum_decayed_sines(
+            environment_metadata.sample_rate,
+            environment_metadata.block_size,
+            sine_frequencies=control_frequencies,
+            sine_decays=control_decays,
+            srs_breakpoints=breakpoint_table,
+            srs_damping=environment_metadata.srs_data.srs_damping,
+            srs_type=environment_metadata.srs_data.srs_type.value
+            * environment_metadata.srs_data.srs_displacement.value,
+            ignore_compensation_pulse=True,
         )
+        sds_amplitudes.append(sine_amplitudes)
+        sds_decays.append(sine_decays)
+    sds_amplitudes = np.array(sds_amplitudes)
+    sds_decays = np.array(sds_decays)
 
-    # FRFs should align to these frequencies already through system ID frame spacing.
-    frf_frequencies = np.array(sysid_data.frequencies)
-    frf_matrix = np.array(sysid_data.sysid_frf)
+    # Set up the initial optimization problem
+    x_opt = []
+    b_opt = []
+    result = []
 
-    # Allocate outputs for the main SRS frequencies
-    drive_amplitudes = np.zeros((num_control_freqs, num_drive_channels), dtype=float)
-    drive_delays = np.zeros((num_control_freqs, num_drive_channels), dtype=float)
+    # Get the transfer functions
+    sysid_frequencies = sysid_data.frequencies
+    frfs = sysid_data.sysid_frf
+    frf_interpolator = interp1d(sysid_frequencies, frfs, axis=0, kind="linear", bounds_error=True)
+    A_all = frf_interpolator(control_frequencies)
+    b_all = sds_amplitudes[:, :-1].T
 
-    previous_response_phases = None
-
-    for i_freq, freq in enumerate(control_frequencies):
-        frf_index = np.argmin(np.abs(frf_frequencies - freq))
-        A_full = frf_matrix[frf_index]  # shape: (num_control_channels, num_drive_channels)
-
-        target_amplitudes_full = target_srs[i_freq]  # shape: (num_control_channels,)
-
-        # Ignore unconstrained channels at this frequency
-        valid = np.isfinite(target_amplitudes_full) & (target_amplitudes_full > 0)
-
-        if not np.any(valid):
-            continue
-
-        A = A_full[valid, :]
-        b_amplitude = target_amplitudes_full[valid]
-
-        phi0 = None
-        if (
-            previous_response_phases is not None
-            and previous_response_phases.size == b_amplitude.size
-        ):
-            phi0 = previous_response_phases
-
-        x_opt, b_opt, _ = optimize_phase_targets_pinv(
+    # Solve for the specification phases that result in the best accuracy and force
+    for A, b_amplitude in zip(A_all, b_all):
+        x_o, b_o, r_o = optimize_phase_targets_pinv(
             A,
             b_amplitude,
+            rcond=rcond,
             weight_accuracy=accuracy_weight,
             weight_magnitude=input_weight,
+        )
+        x_opt.append(x_o)
+        b_opt.append(b_o)
+        result.append(r_o)
+
+    x_opt = np.array(x_opt)
+    b_opt = np.array(b_opt)
+
+    # Now that we know the phases, recompute the SRSs with adjusted phases
+    # to get better amplitude estimates
+    phases = np.angle(b_opt).T
+    delays = -phases / (2 * np.pi * control_frequencies)
+    decays = sds_decays[:, :-1]
+
+    sds_amplitudes = []
+    sds_decays = []
+    for index, specification in enumerate(target_srs.T):
+        breakpoint_table = np.concatenate(
+            (target_frequencies[:, np.newaxis], specification[:, np.newaxis]), axis=-1
+        )
+        _, _, _, _, sine_amplitudes, sine_decays, _ = sum_decayed_sines(
+            environment_metadata.sample_rate,
+            environment_metadata.block_size,
+            sine_frequencies=control_frequencies,
+            sine_decays=decays[index],
+            sine_delays=delays[index],
+            srs_breakpoints=breakpoint_table,
+            srs_damping=environment_metadata.srs_data.srs_damping,
+            srs_type=environment_metadata.srs_data.srs_type.value
+            * environment_metadata.srs_data.srs_displacement.value,
+            ignore_compensation_pulse=True,
+        )
+        sds_amplitudes.append(sine_amplitudes)
+        sds_decays.append(sine_decays)
+    sds_amplitudes = np.array(sds_amplitudes)
+    sds_decays = np.array(sds_decays)
+
+    # Now again solve for the drive signals to match this preferred phasing
+    x_opt = []
+    result = []
+    angle_guess = np.angle(b_opt)
+    b_all = sds_amplitudes[:, :-1].T
+    b_opt2 = []
+
+    for A, b, phi0 in zip(A_all, b_all, angle_guess):
+        x_o, b_o, r_o = optimize_phase_targets_pinv(
+            A,
+            np.abs(b),
             rcond=rcond,
             phi0=phi0,
+            weight_accuracy=accuracy_weight,
+            weight_magnitude=input_weight,
         )
+        x_opt.append(x_o)
+        b_opt2.append(b_o)
+        result.append(r_o)
 
-        previous_response_phases = np.angle(b_opt)
+    x_opt = np.array(x_opt).T
+    b_opt2 = np.array(b_opt2).T
 
-        drive_amplitudes[i_freq, :] = np.abs(x_opt)
+    # Extract the drive amplitudes and phases
+    amplitudes = np.abs(x_opt).T
+    drive_phases = np.angle(x_opt)
+    delays = (-drive_phases / (2 * np.pi * control_frequencies)).T
+    decays = np.tile(sds_decays[:1, :-1], [amplitudes.shape[-1], 1]).T
 
-        # Convert drive phase to delay
-        # delay = -phase / (2*pi*f)
-        if freq > 0:
-            drive_delays[i_freq, :] = -np.angle(x_opt) / (2 * np.pi * freq)
-        else:
-            drive_delays[i_freq, :] = 0.0
-
-    # Build full arrays including compensation pulse row
-    amplitudes = np.zeros((num_all_freqs, num_drive_channels), dtype=float)
-    delays = np.zeros((num_all_freqs, num_drive_channels), dtype=float)
-    decays = np.ones((num_all_freqs, num_drive_channels), dtype=float) * all_decays[:, np.newaxis]
-
-    amplitudes[:-1, :] = drive_amplitudes
-    delays[:-1, :] = drive_delays
-
-    # Compensation pulse initialized to zero amplitude and zero delay.
-    # Synthesis machinery will still see the row and can handle compensation consistently.
-    amplitudes[-1, :] = 0.0
-    delays[-1, :] = 0.0
+    # Add back the compensation pulse if necessary
+    if environment_metadata.compensation_pulse_data.use_compensation_pulse:
+        amplitudes = np.concatenate((amplitudes, np.zeros((1, amplitudes.shape[-1]))))
+        delays = np.concatenate((delays, np.zeros((1, delays.shape[-1]))))
+        decays = np.concatenate((decays, np.zeros((1, decays.shape[-1]))))
 
     return amplitudes, decays, delays
