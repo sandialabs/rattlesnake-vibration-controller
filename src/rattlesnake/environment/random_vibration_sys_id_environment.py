@@ -588,7 +588,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(10, 1, "CPSD Overlap %:")
         worksheet.cell(10, 3, "# Overlap percentage for CPSD calculations")
         worksheet.cell(11, 1, "Percent Lines Out")
-        worksheet.cell(11, 3, "# asdf")
+        worksheet.cell(
+            11,
+            3,
+            "# The Percent of Frequency Lines that the Signal Must be Over for Warning/Abort Levels",
+        )
         worksheet.cell(12, 1, "Allow Automatic Aborts")
         worksheet.cell(
             12,

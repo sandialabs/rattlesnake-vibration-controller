@@ -26,6 +26,8 @@ import re
 import socket
 import time
 from typing import List
+from collections import defaultdict
+from functools import partial
 
 import netCDF4 as nc4
 import openpyxl
@@ -520,17 +522,30 @@ def read_lanxi(socket_handle: socket.socket):
         package.header.message_type
         == OpenapiMessage.Header.EMessageType.e_interpretation
     ):
-        interpretation_dict = {}
+        interpretation_dict = defaultdict(partial(defaultdict, int))
         for interpretation in package.message.interpretations:
-            interpretation_dict[interpretation.descriptor_type] = interpretation.value
-        return (package.header.message_type, interpretation_dict)
+            interpretation_dict[interpretation.signal_id][
+                interpretation.descriptor_type
+            ] = interpretation.value
+        return (
+            package.header.message_type,
+            interpretation_dict,
+            [None],
+        )
     elif (
         package.header.message_type == OpenapiMessage.Header.EMessageType.e_signal_data
     ):  # If the data contains signal data
         array = []
+        signal_ids = []
         for signal in package.message.signals:  # For each signal in the package
             array.append(np.array([x.calc_value for x in signal.values]) / 2**23)
-        return package.header.message_type, np.concatenate(array, axis=-1)
+            array = np.concatenate(array, axis=-1)
+            signal_ids.append(signal.signal_id)
+        return (
+            package.header.message_type,
+            array,
+            signal_ids,
+        )
     # If 'quality data' message, then record information on data quality issues
     elif (
         package.header.message_type == OpenapiMessage.Header.EMessageType.e_data_quality
@@ -545,7 +560,7 @@ def read_lanxi(socket_handle: socket.socket):
                 print(f"Invalid Data Detected on {ip}:{port}")
             if q.validity_flags.overrun:
                 print(f"Overrun Detected on {ip}:{port}")
-        return None, None
+        return None, None, [None]
     else:
         raise LanXIError(f"Unknown Message Type: {package.header.message_type}")
 
@@ -581,17 +596,20 @@ def lanxi_multisocket_reader(
         )
     )
     try:
+        cache_id = {}
         while True:
             for socket_handle, active_channels, data_queue in zip(
                 socket_handles, active_channels_list, data_queues
             ):
+                signal_ids = []
                 socket_data = []
                 socket_data_types = []
                 while len(socket_data) < active_channels:
-                    message_type, data = read_lanxi(socket_handle)
+                    message_type, data, signal_id = read_lanxi(socket_handle)
                     # print('Reading {:}:{:} Data Type {:}'.format(
                     #       *socket_handle.getpeername(),message_type))
                     if message_type is not None:
+                        signal_ids.extend(signal_id)
                         socket_data.append(data)
                         socket_data_types.append(message_type)
                 # Make sure they are all the same type
@@ -601,6 +619,8 @@ def lanxi_multisocket_reader(
                         for data_type in socket_data_types
                     ]
                 )
+
+                # Find the type of data package and process it
                 if (
                     socket_data_types[0]
                     == OpenapiMessage.Header.EMessageType.e_interpretation
@@ -614,7 +634,26 @@ def lanxi_multisocket_reader(
                 ):
                     # print('{:}:{:} Putting Signal to Queue'.format(
                     #        *socket_handle.getpeername()))
-                    data_queue.put(("Signal", socket_data))
+
+                    # Sort the signal ids for the socket and cache the id to correct index to a dictionary
+                    if socket_handle not in cache_id:
+                        sorted_ids = sorted(signal_ids)
+                        cache_id[socket_handle] = {
+                            signal_id: index
+                            for index, signal_id in enumerate(sorted_ids)
+                        }
+
+                    # Sort socket_data according to cached signal_id order
+                    signal_id_order = cache_id[socket_handle]
+                    sorted_records = sorted(
+                        zip(signal_ids, socket_data, socket_data_types),
+                        key=lambda item: signal_id_order[item[0]],
+                    )
+                    signal_ids, socket_data, socket_data_types = map(
+                        list, zip(*sorted_records)
+                    )
+
+                    data_queue.put(("Signal", (signal_ids, socket_data)))
                 else:
                     raise ValueError(
                         "Unknown Signal Type {:} in {:}:{:}".format(  # pylint: disable=consider-using-f-string
@@ -857,7 +896,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.sockets = {}
         self.processes = {}
         self.process_data_queues = {}
-        self.interpretations = None
+        self.interpretations = defaultdict(dict)
         self.master_address = None
         self.slave_addresses = set([])
         self.samples_per_read = None
@@ -1044,14 +1083,14 @@ class LanXIAcquisition(HardwareAcquisition):
                     # print('Reading from queue')
                     data_type, data = self.process_data_queues[acquisition_device].get()
                     if data_type == "Interpretation":
-                        if self.interpretations is None:
-                            self.interpretations = {}
                         self.interpretations[acquisition_device] = (
                             data  # Store the interpretation
                         )
                     elif data_type == "Signal":
-                        for signal, channel_number, interpretation in zip(
-                            data,
+                        signal_ids, time_data = data
+                        for signal_id, signal, channel_number, interpretation in zip(
+                            signal_ids,
+                            time_data,
                             sorted(self.acquisition_map[acquisition_device]),
                             self.interpretations[acquisition_device],
                         ):
@@ -1060,10 +1099,10 @@ class LanXIAcquisition(HardwareAcquisition):
                             ][channel_number]
                             array = (
                                 signal
-                                * interpretation[
+                                * interpretation[signal_id][
                                     OpenapiMessage.Interpretation.EDescriptorType.scale_factor
                                 ]  # This is the scale factor
-                                + interpretation[
+                                + interpretation[signal_id][
                                     OpenapiMessage.Interpretation.EDescriptorType.offset
                                 ]  # This is the offset
                             )
@@ -1129,7 +1168,7 @@ class LanXIAcquisition(HardwareAcquisition):
         print("All processes recovered, ready for next acquire.")
         self.processes = {}
         self.process_data_queues = {}
-        self.interpretations = None
+        self.interpretations = defaultdict(dict)
         self.last_acquisition_time = None
 
     def close(self):

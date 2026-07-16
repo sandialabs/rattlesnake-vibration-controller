@@ -1,23 +1,39 @@
 import numpy as np
 import netCDF4 as nc4
 import openpyxl
-import datetime
 
-from rattlesnake.utilities import RattlesnakeError, GlobalCommands
-from rattlesnake.profile_manager import ProfileEvent
-from rattlesnake.hardware.hardware_utilities import HardwareType
+import numpy as np
+
+from rattlesnake.environment.environment_registry import (
+    ENVIRONMENT_COMMANDS,
+    ENVIRONMENT_METADATA,
+)
+from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.environment.environment_registry import (
-    ENVIRONMENT_METADATA,
-    ENVIRONMENT_COMMANDS,
-)
+from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import GlobalCommands, RattlesnakeError
 
 
 def load_metadata_from_netcdf(dataset):
-    """Loads a test file using a file dialog"""
+    """Loads hardware and environment metadata from an open netCDF4 dataset
+
+    Parameters
+    ----------
+    dataset : netCDF4.Dataset
+        An open netCDF4 dataset containing Rattlesnake hardware and
+        environment metadata
+
+    Returns
+    -------
+    hardware_metadata : HardwareMetadata
+        The hardware metadata loaded from the dataset
+    environment_metadata_list : list
+        A list of environment metadata objects, one per environment stored
+        in the dataset
+    """
     hardware_type = HardwareType(dataset.hardware)
     hardware_metadata_class = HARDWARE_METADATA[hardware_type]
     hardware_metadata = hardware_metadata_class.load_metadata_from_netcdf(dataset)
@@ -34,7 +50,7 @@ def load_metadata_from_netcdf(dataset):
                 environment_index
             ]
             environment_type = EnvironmentType(environment_type_int)
-        except:
+        except (KeyError, ValueError):
             environment_type = discover_environment_type_in_old_netcdf(
                 environment_group
             )
@@ -55,19 +71,41 @@ def load_metadata_from_netcdf(dataset):
     return (hardware_metadata, environment_metadata_list)
 
 
+_LEGACY_ENVIRONMENT_TYPE_ATTRIBUTES = {
+    "tracking_filter_type": EnvironmentType.SINE,
+    "update_tf_during_control": EnvironmentType.RANDOM,
+    "num_averages": EnvironmentType.MODAL,
+    "test_level_ramp_time": EnvironmentType.TRANSIENT,
+    "cancel_rampdown_time": EnvironmentType.TIME,
+}
+
+
 def discover_environment_type_in_old_netcdf(environment_group):
-    if hasattr(environment_group, "tracking_filter_type"):
-        return EnvironmentType.SINE
-    elif hasattr(environment_group, "update_tf_during_control"):
-        return EnvironmentType.RANDOM
-    elif hasattr(environment_group, "num_averages"):
-        return EnvironmentType.MODAL
-    elif hasattr(environment_group, "test_level_ramp_time"):
-        return EnvironmentType.TRANSIENT
-    elif hasattr(environment_group, "cancel_rampdown_time"):
-        return EnvironmentType.TIME
-    else:
-        raise RattlesnakeError("Invalid netcdf4 file")
+    """Infers the environment type from attributes in a legacy netCDF4 file
+
+    Older netCDF4 files do not store an explicit environment type, so this
+    function infers it from the presence of environment-specific attributes.
+
+    Parameters
+    ----------
+    environment_group : netCDF4.Group
+        The netCDF4 group corresponding to a single environment
+
+    Returns
+    -------
+    EnvironmentType
+        The inferred environment type
+
+    Raises
+    ------
+    RattlesnakeError
+        If the environment type cannot be determined from the group's
+        attributes
+    """
+    for attribute, environment_type in _LEGACY_ENVIRONMENT_TYPE_ATTRIBUTES.items():
+        if hasattr(environment_group, attribute):
+            return environment_type
+    raise RattlesnakeError("Invalid netcdf4 file")
 
 
 def save_rattlesnake_to_netcdf(
@@ -75,6 +113,18 @@ def save_rattlesnake_to_netcdf(
     hardware_metadata=None,
     environment_metadata_dict=None,
 ):
+    """Saves hardware and environment metadata to an open netCDF4 dataset
+
+    Parameters
+    ----------
+    netcdf_dataset : netCDF4.Dataset
+        An open, writable netCDF4 dataset to save the metadata to
+    hardware_metadata : HardwareMetadata, optional
+        The hardware metadata to save
+    environment_metadata_dict : dict, optional
+        A dictionary where the keys are environment names and the values are
+        the environment metadata objects to save, one per environment
+    """
     hardware_metadata.save_metadata_to_netcdf(netcdf_dataset)
     netcdf_dataset.createDimension("num_environments", len(environment_metadata_dict))
     var = netcdf_dataset.createVariable("environment_names", str, ("num_environments",))
@@ -97,6 +147,23 @@ def save_rattlesnake_to_netcdf(
 
 
 def load_metadata_from_workbook(workbook):
+    """Loads hardware, environment, and profile metadata from an Excel workbook
+
+    Parameters
+    ----------
+    workbook : openpyxl.workbook.Workbook
+        An open Excel workbook containing a "Hardware" sheet, a channel
+        sheet, one sheet per environment, and a "Test Profile" sheet
+
+    Returns
+    -------
+    hardware_metadata : HardwareMetadata
+        The hardware metadata loaded from the workbook
+    environment_metadata_list : list
+        A list of environment metadata objects, one per environment sheet
+    profile_event_list : list[ProfileEvent]
+        The list of profile events loaded from the "Test Profile" sheet
+    """
     hardware_sheet = workbook["Hardware"]
     for row in hardware_sheet.rows:
         name = str(row[0].value).lower().strip().replace(" ", "_")
@@ -172,6 +239,23 @@ def save_rattlesnake_to_workbook(
     environment_metadata_dict=None,
     profile_event_list=None,
 ):
+    """Saves hardware, environment, and profile metadata to an Excel workbook
+
+    Parameters
+    ----------
+    workbook : openpyxl.workbook.Workbook
+        The workbook to save the metadata to. The active sheet is used as
+        the channel sheet and additional sheets are created for each
+        environment and for the test profile.
+    hardware_metadata : HardwareMetadata, optional
+        The hardware metadata to save
+    environment_metadata_dict : dict, optional
+        A dictionary where the keys are environment names and the values are
+        either an EnvironmentType (to create a blank template) or an
+        environment metadata object to save
+    profile_event_list : list[ProfileEvent], optional
+        The list of profile events to save to the "Test Profile" sheet
+    """
     # Open workbook and save to blank template
     channel_worksheet = workbook.active
     HardwareMetadata.save_blank_hardware_to_workbook(workbook)
@@ -204,6 +288,21 @@ def save_rattlesnake_to_workbook(
 
 
 def load_profile_from_workbook(workbook, environment_types):
+    """Loads the test profile event list from an Excel workbook
+
+    Parameters
+    ----------
+    workbook : openpyxl.workbook.Workbook
+        An open Excel workbook containing a "Test Profile" sheet
+    environment_types : dict
+        A dictionary mapping environment names to their EnvironmentType,
+        used to resolve environment-specific commands
+
+    Returns
+    -------
+    list[ProfileEvent]
+        The list of profile events loaded from the "Test Profile" sheet
+    """
     profile_sheet = workbook["Test Profile"]
     index = 2
     profile_event_list = []
@@ -232,7 +331,8 @@ def load_profile_from_workbook(workbook, environment_types):
             continue
         else:
             raise RattlesnakeError(
-                f"Invalid command: {command} for {environment_name} | {environment_type}"
+                f"Invalid command: {command} for {environment_name} | "
+                f"{environment_type}"
             )
 
         data = profile_sheet.cell(index, 4).value
@@ -247,6 +347,16 @@ def load_profile_from_workbook(workbook, environment_types):
 
 
 def save_profile_to_workbook(profile_sheet, profile_event_list):
+    """Saves a test profile event list to an Excel worksheet
+
+    Parameters
+    ----------
+    profile_sheet : openpyxl.worksheet.worksheet.Worksheet
+        The worksheet to write the profile event list to
+    profile_event_list : list[ProfileEvent]
+        The list of profile events to save. Events with the
+        SET_ENVIRONMENT_INSTRUCTIONS command are skipped.
+    """
     profile_sheet.cell(1, 1, "Time (s)")
     profile_sheet.cell(1, 2, "Environment")
     profile_sheet.cell(1, 3, "Operation")

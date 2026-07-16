@@ -21,19 +21,21 @@ from rattlesnake.testing.mock_user_interface import (
 
 """USER INPUTS"""
 THREADED = True
-IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
+TIMEOUT = 40
+IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
+HARDWARE_TYPE = HardwareType.NONE
 ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = True
+LOAD_SYSID = False
 RUN_SYSID = False
-START_HARDWARE = True
+START_HARDWARE = False
 START_ENVIRONMENT = False
 RUN_PROFILE = False
 
 
 def build_rattlesnake_object(
     threaded=THREADED,
+    timeout=TIMEOUT,
     import_method=IMPORT_METHOD,
     hardware_type=HARDWARE_TYPE,
     environment_type=ENVIRONMENT_TYPE,
@@ -98,3 +100,5 @@ if __name__ == "__main__":
 
     # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
     launch_rattlesnake_ui(rattlesnake)
+
+    rattlesnake.shutdown()
