@@ -28,7 +28,7 @@ import numpy as np
 import netCDF4 as nc4
 import openpyxl
 
-from rattlesnake.utilities import RattlesnakeError
+from rattlesnake.utilities import RattlesnakeError, worksheet_cell_str
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
@@ -226,9 +226,8 @@ class HardwareMetadata:
         for row in worksheet.iter_rows(min_row=3, min_col=2, max_col=23):
             channel = Channel()
             for col, cell in enumerate(row):
-                value = cell.value
-                value = None if isinstance(value, str) and not value.strip() else value
-                setattr(channel, channel_attr_list[col], cell.value)
+                value = worksheet_cell_str(cell.value, default=None)
+                setattr(channel, channel_attr_list[col], value)
             if channel.is_empty:
                 break
             channel_list.append(channel)

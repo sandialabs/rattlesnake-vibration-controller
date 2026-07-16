@@ -717,7 +717,7 @@ class IPAddress:
         if self.ipv6_address:
             host = "http://" + self.ipv6_address
         elif self.ipv4_address:
-            host = "http://" + self.ipv6_address
+            host = "http://" + self.ipv4_address
         else:
             self.valid_ip = False
             return
@@ -868,6 +868,25 @@ def load_python_module(module_path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def worksheet_cell_str(value, default=""):
+    """
+    This is used to cleanse inputs before writing them to excel as
+    the GUI automatically converts everything to a string but the
+    headless mode will keep it as ints/floats/etc. which changes how
+    openpyxl stores the information to an excel sheet.
+    """
+    if value is None:
+        return default
+    if isinstance(value, str):
+        value = value.strip()
+        return value if value else default
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    return str(value)
 
 
 def read_transformation_matrix_from_worksheet(

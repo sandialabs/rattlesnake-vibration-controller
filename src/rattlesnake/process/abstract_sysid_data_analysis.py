@@ -647,7 +647,16 @@ class SysIdDataPackage:
 
     @classmethod
     def load_package_from_mat_field(cls, field_dict):
-        pass
+        for field in [
+            "frf_data",
+            "response_cpsd",
+            "reference_cpsd",
+            "coherence",
+            "response_noise_cpsd",
+            "reference_noise_cpsd",
+        ]:
+            field_dict[field] = np.moveaxis(field_dict[field], -1, 0)
+        return cls.load_package_from_numpy_field(field_dict)
 
     def save_package_to_numpy_field(self, field_dict):
         field_dict["frf_data"] = self.sysid_frf
@@ -687,16 +696,52 @@ class SysIdDataPackage:
         )
 
     @classmethod
-    def load_package_from_worksheet(cls, worksheet):
-        pass
-
-    @classmethod
     def load_package_from_sdynpy_frf(cls, field_dict):
-        pass
+        if field_dict["function_type"].item() != 4:
+            raise ValueError(
+                "File must contain a Sdynpy FrequencyResponseFunctionArray"
+            )
+        sysid_frames = 1
+        sysid_frf = np.moveaxis(np.array(field_dict["data"]["ordinate"]), -1, 0)
+        frequencies = np.array(field_dict["data"]["abscissa"][0][0])
+        sysid_coherence = np.zeros((0, sysid_frf.shape[1]))
+        sysid_condition = np.linalg.cond(sysid_frf)
+
+        return cls(
+            sysid_frames,
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            None,
+            None,
+            sysid_condition,
+            None,
+            None,
+        )
 
     @classmethod
     def load_package_from_forcefinder_spr(cls, field_dict):
-        pass
+        sysid_frames = 1
+        # training frf will generally be the one used for testing
+        sysid_frf = np.array(field_dict["training_frf"])
+        frequencies = np.array(field_dict["abscissa"])
+        sysid_coherence = np.zeros((0, sysid_frf.shape[1]))
+        sysid_condition = np.linalg.cond(sysid_frf)
+        sysid_response_cpsd = (
+            np.array(field_dict["buzz_cpsd"]) if "buzz_cpsd" in field_dict else None
+        )
+
+        return cls(
+            sysid_frames,
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            sysid_response_cpsd,
+            None,
+            sysid_condition,
+            None,
+            None,
+        )
 
     # endregion
 

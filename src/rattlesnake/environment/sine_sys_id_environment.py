@@ -43,6 +43,7 @@ from rattlesnake.utilities import (
     scale2db,
     wrap,
     db2scale,
+    worksheet_cell_str,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import (
@@ -780,11 +781,17 @@ class SineMetadata(SysIdEnvironmentMetadata):
 
         ramp_time = float(worksheet.cell(2, 2).value)
         control_convergence = float(worksheet.cell(3, 2).value)
-        update_drives_after_environment = worksheet.cell(4, 2).value.upper() == "Y"
-        phase_fit = worksheet.cell(5, 2).value.upper() == "Y"
-        allow_automatic_aborts = worksheet.cell(6, 2).value.upper() == "Y"
+        update_drives_after_environment = (
+            worksheet_cell_str(worksheet.cell(4, 2).value).upper() == "Y"
+        )
+        phase_fit = worksheet_cell_str(worksheet.cell(5, 2).value).upper() == "Y"
+        allow_automatic_aborts = (
+            worksheet_cell_str(worksheet.cell(6, 2).value).upper() == "Y"
+        )
         buffer_blocks = int(worksheet.cell(7, 2).value)
-        tracking_filter_type = 1 if worksheet.cell(8, 2).value.upper() == "VK" else 0
+        tracking_filter_type = (
+            1 if worksheet_cell_str(worksheet.cell(8, 2).value).upper() == "VK" else 0
+        )
         tracking_filter_cutoff = float(worksheet.cell(9, 2).value)
         tracking_filter_order = int(worksheet.cell(10, 2).value)
         vk_filter_order = int(worksheet.cell(11, 2).value)

@@ -1,5 +1,6 @@
-"""Functions for loading and saving Rattlesnake hardware/environment/profile
-metadata to and from netCDF4 datasets and Excel workbooks."""
+import numpy as np
+import netCDF4 as nc4
+import openpyxl
 
 import numpy as np
 

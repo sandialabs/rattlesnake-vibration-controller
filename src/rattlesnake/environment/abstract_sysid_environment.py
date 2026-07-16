@@ -324,16 +324,16 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         response_row = start_row
         output_row = start_row + 1
         if response_matrix is not None:
-            worksheet.cell(start_row + 1, 1, None)
-            worksheet.cell(start_row + 1, 2, None)
+            worksheet.cell(start_row + 1, 1).value = None
+            worksheet.cell(start_row + 1, 2).value = None
             for i, row in enumerate(response_matrix):
                 for j, value in enumerate(row):
                     worksheet.cell(i + response_row, j + 2, value)
             # Shift output transfomation matrix down
-            output_row = i + 1
-            worksheet.cell(i + 1, 1, "Output Transformation Matrix:")
+            output_row = response_row + i + 1
+            worksheet.cell(output_row, 1, "Output Transformation Matrix:")
             worksheet.cell(
-                i + 1,
+                output_row,
                 2,
                 "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
                 "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
