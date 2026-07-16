@@ -4,6 +4,7 @@ import inspect
 import time
 
 import netCDF4 as nc4
+import numpy as np
 import openpyxl
 import pytest
 import multiprocessing as mp
@@ -25,7 +26,14 @@ from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_PROCESS,
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
-from rattlesnake.examples.example_registry import ENVIRONMENT_DICT
+from rattlesnake.examples.example_registry import (
+    ENVIRONMENT_DICT,
+    EXAMPLE_NETCDF,
+    EXAMPLE_WORKSHEET,
+)
+from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
+    manual_sdynpy_system_metadata,
+)
 from rattlesnake.testing.mock_utilities import (
     IMPLEMENTED_ENVIRONMENT,
     instantiate_with_mocks,
@@ -37,6 +45,116 @@ from rattlesnake.testing.mock_utilities import (
     skeleton_environment,
 )
 from rattlesnake.environment.skeleton_environment import SkeletonCommands
+
+# Environment types that ship an example netCDF/worksheet file (used by the
+# headless example) and are therefore usable for load/save round-trip checks.
+EXAMPLE_ENVIRONMENT_TYPES = list(EXAMPLE_NETCDF)
+
+# Attributes/fields that are intentionally overwritten with an absolute path
+# after loading (e.g. control law scripts), so their value in the example file
+# will never match what gets saved back out.
+_NETCDF_SKIP_ATTRIBUTES = {"control_python_script"}
+
+
+def _diff_netcdf_groups(original_group, saved_group, prefix=""):
+    """Recursively compares attributes, variables, and subgroups between two
+    netCDF4 groups, returning a list of human-readable differences.
+
+    Attributes that only appear in ``saved_group`` are ignored, since example
+    files may predate fields that were added later (the loaders fall back to
+    a default in that case). Attributes only in ``original_group`` indicate
+    real data loss and are reported.
+    """
+    differences = []
+
+    original_attrs = set(original_group.ncattrs()) - _NETCDF_SKIP_ATTRIBUTES
+    saved_attrs = set(saved_group.ncattrs()) - _NETCDF_SKIP_ATTRIBUTES
+
+    for name in sorted(original_attrs - saved_attrs):
+        differences.append(f"{prefix}{name}: present in example, missing after save")
+
+    for name in sorted(original_attrs & saved_attrs):
+        original_value = getattr(original_group, name)
+        saved_value = getattr(saved_group, name)
+        if isinstance(original_value, np.ndarray) or isinstance(
+            saved_value, np.ndarray
+        ):
+            equal = np.array_equal(original_value, saved_value, equal_nan=True)
+        else:
+            equal = original_value == saved_value
+        if not equal:
+            differences.append(f"{prefix}{name}: {original_value!r} != {saved_value!r}")
+
+    original_vars = set(original_group.variables)
+    saved_vars = set(saved_group.variables)
+    for name in sorted(original_vars ^ saved_vars):
+        differences.append(f"{prefix}variables/{name}: only present in one file")
+
+    for name in sorted(original_vars & saved_vars):
+        original_data = np.ma.filled(original_group.variables[name][...], np.nan)
+        saved_data = np.ma.filled(saved_group.variables[name][...], np.nan)
+        if not np.array_equal(original_data, saved_data, equal_nan=True):
+            differences.append(f"{prefix}variables/{name}: values differ")
+
+    original_groups = set(original_group.groups)
+    saved_groups = set(saved_group.groups)
+    for name in sorted(original_groups & saved_groups):
+        differences.extend(
+            _diff_netcdf_groups(
+                original_group.groups[name],
+                saved_group.groups[name],
+                prefix=f"{prefix}{name}/",
+            )
+        )
+    for name in sorted(original_groups ^ saved_groups):
+        differences.append(f"{prefix}groups/{name}: only present in one file")
+
+    return differences
+
+
+def _normalize_cell_value(value):
+    """Treats a blank cell and an empty string as equivalent."""
+    return "" if value is None else value
+
+
+def _is_comment_cell(value):
+    """Identifies human-readable documentation cells (e.g. '# ...') that are
+    regenerated fresh by ``save_metadata_to_worksheet`` and aren't expected to
+    match older example files that predate a given field."""
+    return isinstance(value, str) and value.strip().startswith("#")
+
+
+def _diff_worksheets(original_worksheet, saved_worksheet):
+    """Compares two worksheets cell by cell, returning a list of
+    ``(row, col, original_value, saved_value)`` tuples for values that differ.
+
+    Documentation/comment cells are ignored, as are rows whose label mentions
+    a "script", since those are always overwritten with an absolute path after
+    loading rather than sourced from the worksheet's saved value.
+    """
+    differences = []
+    max_row = max(original_worksheet.max_row, saved_worksheet.max_row)
+    max_col = max(original_worksheet.max_column, saved_worksheet.max_column)
+
+    for row in range(1, max_row + 1):
+        row_label = str(
+            original_worksheet.cell(row, 1).value
+            or saved_worksheet.cell(row, 1).value
+            or ""
+        ).lower()
+        if "script" in row_label:
+            continue
+        for col in range(1, max_col + 1):
+            original_value = _normalize_cell_value(
+                original_worksheet.cell(row, col).value
+            )
+            saved_value = _normalize_cell_value(saved_worksheet.cell(row, col).value)
+            if _is_comment_cell(original_value) or _is_comment_cell(saved_value):
+                continue
+            if original_value != saved_value:
+                differences.append((row, col, original_value, saved_value))
+
+    return differences
 
 
 # region Fixtures
@@ -252,7 +370,7 @@ def test_environment_metadata_validate_invalid_channel_list(
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_metadata_load_save_netcdf(
+def test_environment_metadata_save_load_netcdf(
     environment_type, tmp_path, hardware_metadata: SkeletonHardwareMetadata
 ):
     """
@@ -287,7 +405,7 @@ def test_environment_metadata_load_save_netcdf(
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_metadata_load_save_worksheet(
+def test_environment_metadata_save_load_worksheet(
     environment_type, hardware_metadata: SkeletonHardwareMetadata
 ):
     """
@@ -320,6 +438,66 @@ def test_environment_metadata_load_save_worksheet(
     assert loaded.channel_list_bools == [True, True]
     assert loaded.sample_rate == 1024
     loaded.validate(hardware_metadata)
+
+
+@pytest.mark.parametrize("environment_type", EXAMPLE_ENVIRONMENT_TYPES)
+def test_environment_metadata_load_save_netcdf(environment_type, tmp_path):
+    """
+    Loads environment metadata from the example netCDF file used by the
+    headless example, saves it back out to a new netCDF file, and confirms
+    the saved file reproduces the example aside from fields that are always
+    overwritten at load time (e.g. absolute paths to control law scripts)
+    or fields the example predates (which fall back to defaults).
+    """
+    hardware_metadata = manual_sdynpy_system_metadata()
+    metadata = ENVIRONMENT_DICT[environment_type]["netcdf"](hardware_metadata)
+
+    path = tmp_path / "metadata.nc4"
+    with nc4.Dataset(path, "w", format="NETCDF4") as dataset:
+        group = dataset.createGroup(metadata.environment_name)
+        metadata.save_metadata_to_netcdf(group)
+        dataset.close()
+
+    with (
+        nc4.Dataset(EXAMPLE_NETCDF[environment_type], "r") as original_dataset,
+        nc4.Dataset(path, "r") as saved_dataset,
+    ):
+        original_group = original_dataset.groups[metadata.environment_name]
+        saved_group = saved_dataset.groups[metadata.environment_name]
+        differences = _diff_netcdf_groups(original_group, saved_group)
+
+        original_dataset.close()
+        saved_dataset.close()
+
+    assert differences == []
+
+
+@pytest.mark.parametrize("environment_type", EXAMPLE_ENVIRONMENT_TYPES)
+def test_environment_metadata_load_save_worksheet(environment_type):
+    """
+    Loads environment metadata from the example worksheet used by the
+    headless example, saves it back out to a new worksheet, and confirms
+    the saved worksheet reproduces the example aside from fields that are
+    always overwritten at load time (e.g. absolute paths to control law
+    scripts) or documentation comments regenerated from the current template.
+    """
+    hardware_metadata = manual_sdynpy_system_metadata()
+    metadata = ENVIRONMENT_DICT[environment_type]["worksheet"](hardware_metadata)
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = metadata.environment_name
+    metadata.save_metadata_to_worksheet(worksheet)
+
+    original_workbook = openpyxl.load_workbook(
+        EXAMPLE_WORKSHEET[environment_type], read_only=True
+    )
+    original_worksheet = original_workbook[metadata.environment_name]
+
+    differences = _diff_worksheets(original_worksheet, worksheet)
+    original_workbook.close()
+
+    assert differences == []
 
 
 # endregion
