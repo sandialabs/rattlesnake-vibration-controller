@@ -1,6 +1,7 @@
 import numpy as np
 import netCDF4 as nc4
 import openpyxl
+import datetime
 
 from rattlesnake.utilities import RattlesnakeError, GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent

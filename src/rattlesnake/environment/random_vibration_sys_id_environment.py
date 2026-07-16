@@ -63,6 +63,7 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
     db2scale,
     load_python_module,
+    worksheet_cell_str,
     _direction_map,
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
@@ -706,12 +707,16 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         cola_window = worksheet.cell(4, 2).value
         cola_overlap = float(worksheet.cell(5, 2).value)
         cola_window_exponent = float(worksheet.cell(6, 2).value)
-        update_tf_during_control = worksheet.cell(7, 2).value.upper() == "Y"
+        update_tf_during_control = (
+            worksheet_cell_str(worksheet.cell(7, 2).value).upper() == "Y"
+        )
         frames_in_cpsd = int(worksheet.cell(8, 2).value)
         cpsd_window = worksheet.cell(9, 2).value
         cpsd_overlap = float(worksheet.cell(10, 2).value)
         percent_lines_out = float(worksheet.cell(11, 2).value)
-        allow_automatic_aborts = worksheet.cell(12, 2).value.upper() == "Y"
+        allow_automatic_aborts = (
+            worksheet_cell_str(worksheet.cell(12, 2).value).upper() == "Y"
+        )
 
         control_python_script = (
             worksheet.cell(13, 2).value
