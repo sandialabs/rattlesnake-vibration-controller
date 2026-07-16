@@ -1,6 +1,9 @@
 from rattlesnake.environment.environment_utilities import EnvironmentType
 
-UNIMPLEMENTED_ENVIRONMENT = [EnvironmentType.NONE]
+UNIMPLEMENTED_ENVIRONMENT = [
+    EnvironmentType.NONE,
+    EnvironmentType.SYSID_SKELETON,
+]
 
 ENVIRONMENT_COMMANDS = {}
 ENVIRONMENT_METADATA = {}
