@@ -1130,7 +1130,7 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         # Tone group
         tone_grp.strategy = self.tone_data.tone_strategy.value
         if self.tone_data.tone_data is not None:
-            tone_grp.createDimension("tone_data_size", self.tone_data.tone_data)
+            tone_grp.createDimension("tone_data_size", self.tone_data.tone_data.size)
             var = tone_grp.createVariable("tone_data", "f8", ("tone_data_size",))
             var[...] = self.tone_data.tone_data
         # Compensation pulse
@@ -1148,7 +1148,7 @@ class SDSMetadata(SysIdEnvironmentMetadata):
             decay_grp.decay_data = self.decay_data.decay_data[0]
         else:
             decay_grp.createDimension("num_decays", self.decay_data.decay_data.size)
-            var = decay_grp.createVariable("decay_data", "f8", ("num_decays"))
+            var = decay_grp.createVariable("decay_data", "f8", ("num_decays",))
             var[...] = self.decay_data.decay_data
         # SRS Group
         srs_grp.srs_type = self.srs_data.srs_type.value

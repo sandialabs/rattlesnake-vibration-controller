@@ -206,6 +206,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_widget.current_test_level_selector.valueChanged.connect(
             self.update_hits_at_selected_level_display
         )
+        self.run_widget.save_current_control_data_button.clicked.connect(self.save_control_data)
 
     # region UI Data Acquisition
 
@@ -1582,6 +1583,19 @@ class SDSUI(SysIdEnvironmentUI):
         for i in range(measured_response_srs.shape[1]):
             pen = {"color": colororder[i % len(colororder)], "width": 1}
             plot_item.plot(freqs, measured_response_srs[:, i], pen=pen)
+
+    def save_control_data(self):
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self.run_widget,
+            "Save Current Control Data",
+            filter="NetCDF File (*.nc4);;NumPy File (*.npz);;Matlab File (*.mat)",
+        )
+        if filename == "":
+            return
+
+        self.rattlesnake.send_environment_command(
+            self.environment_name, SDSCommands.SAVE_CONTROL_DATA, filename
+        )
 
     # region UI Update and Templates
 

@@ -33,6 +33,13 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="save_table_button">
+       <property name="text">
+        <string>Save Table</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="load_table_button">
        <property name="text">
         <string>Load Table</string>

@@ -24,6 +24,7 @@ class SDSCommands(EnvironmentCommands):
     SDS_RUN_TABLE_PREDICTION = 4
     CHECK_FOR_COMPLETE_SHUTDOWN = 5
     MONITOR_HIT = 6
+    SAVE_CONTROL_DATA = 7
 
     VALID_PROFILE_COMMANDS = set()
     VALID_DATA = {}

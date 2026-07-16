@@ -56,7 +56,7 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     sum_decayed_sines_reconstruction,
     srs as srs_function,
 )
-
+from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
 
 from rattlesnake.hardware.abstract_hardware import (
     HardwareMetadata,
@@ -161,6 +161,7 @@ class SDSEnvironment(SysIdEnvironment):
             self.update_interactive_control_parameters,
         )
         self.map_command(ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(SDSCommands.SAVE_CONTROL_DATA, self.save_control_data)
 
         # Persistent Data
         self.queue_container = queue_container
@@ -778,38 +779,41 @@ class SDSEnvironment(SysIdEnvironment):
         self.last_drive_amplitudes = self.run_sds_table["amplitude"].copy()
         self.last_drive_decays = self.run_sds_table["decay"].copy()
         self.last_drive_delays = self.run_sds_table["delay"].copy()
-        print("Running control based on last result.")
-        # Always call control law after each hit
-        if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
-            output_amplitudes, output_decays, output_delays = self.control_law(
-                environment_metadata=self.environment_metadata,
-                sysid_data=self.sysid_data,
-                last_response_srs=self.last_response_srs,
-                last_response_signals=self.last_response_signal,
-                last_drive_amplitudes=self.last_drive_amplitudes,
-                last_drive_decays=self.last_drive_decays,
-                last_drive_delays=self.last_drive_delays,
-                last_drive_signals=measured_drive_signal,
-                **self.environment_metadata.control_script_data.control_parameters,
-            )
-        elif self.environment_metadata.control_script_data.control_type in (
-            ControlLawType.CLASS,
-            ControlLawType.INTERACTIVE_CLASS,
-        ):
-            output_amplitudes, output_decays, output_delays = self.control_law.control(
-                last_response_srs=self.last_response_srs,
-                last_response_signals=self.last_response_signal,
-                last_drive_amplitudes=self.last_drive_amplitudes,
-                last_drive_decays=self.last_drive_decays,
-                last_drive_delays=self.last_drive_delays,
-                last_drive_signals=measured_drive_signal,
-            )
-        else:
-            raise ValueError("Unsupported SDS control law type")
 
-        # Only persist updated SDS table if automatic updates are enabled
         if self.allow_automatic_updates:
-            print("Updating SRS Table")
+            print("Running control based on last result.")
+
+            if (
+                self.environment_metadata.control_script_data.control_type
+                == ControlLawType.FUNCTION
+            ):
+                output_amplitudes, output_decays, output_delays = self.control_law(
+                    environment_metadata=self.environment_metadata,
+                    sysid_data=self.sysid_data,
+                    last_response_srs=self.last_response_srs,
+                    last_response_signals=self.last_response_signal,
+                    last_drive_amplitudes=self.last_drive_amplitudes,
+                    last_drive_decays=self.last_drive_decays,
+                    last_drive_delays=self.last_drive_delays,
+                    last_drive_signals=measured_drive_signal,
+                    **self.environment_metadata.control_script_data.control_parameters,
+                )
+            elif self.environment_metadata.control_script_data.control_type in (
+                ControlLawType.CLASS,
+                ControlLawType.INTERACTIVE_CLASS,
+            ):
+                output_amplitudes, output_decays, output_delays = self.control_law.control(
+                    last_response_srs=self.last_response_srs,
+                    last_response_signals=self.last_response_signal,
+                    last_drive_amplitudes=self.last_drive_amplitudes,
+                    last_drive_decays=self.last_drive_decays,
+                    last_drive_delays=self.last_drive_delays,
+                    last_drive_signals=measured_drive_signal,
+                )
+            else:
+                raise ValueError("Unsupported SDS control law type")
+
+            print("Updating SDS Table")
             self.run_sds_table["amplitude"] = output_amplitudes
             self.run_sds_table["decay"] = output_decays
             self.run_sds_table["delay"] = output_delays
@@ -1056,6 +1060,268 @@ class SDSEnvironment(SysIdEnvironment):
         self.pending_next_hit_time = None
         print("Starting Shutdown")
         self.shutdown()
+
+    def _prepare_hit_history_arrays(self):
+        if self.hit_history is None or len(self.hit_history) == 0:
+            return {
+                "hit_index": np.array([], dtype=int),
+                "timestamp": np.array([], dtype=str),
+                "test_level_db": np.array([], dtype=float),
+                "counted_at_target": np.array([], dtype=bool),
+                "total_hits": np.array([], dtype=int),
+                "hits_at_target": np.array([], dtype=int),
+                "target_hits_at_level": np.array([], dtype=int),
+            }
+
+        return {
+            "hit_index": np.array(
+                [entry.get("hit_index", -1) for entry in self.hit_history], dtype=int
+            ),
+            "timestamp": np.array(
+                [entry.get("timestamp", "") for entry in self.hit_history], dtype=str
+            ),
+            "test_level_db": np.array(
+                [entry.get("test_level_db", np.nan) for entry in self.hit_history], dtype=float
+            ),
+            "counted_at_target": np.array(
+                [entry.get("counted_at_target", False) for entry in self.hit_history], dtype=bool
+            ),
+            "total_hits": np.array(
+                [entry.get("total_hits", -1) for entry in self.hit_history], dtype=int
+            ),
+            "hits_at_target": np.array(
+                [entry.get("hits_at_target", -1) for entry in self.hit_history], dtype=int
+            ),
+            "target_hits_at_level": np.array(
+                [
+                    (
+                        -1
+                        if entry.get("target_hits_at_level", None) is None
+                        else entry.get("target_hits_at_level")
+                    )
+                    for entry in self.hit_history
+                ],
+                dtype=int,
+            ),
+        }
+
+    def save_control_data(self, filename):
+        _, extension = os.path.splitext(filename)
+        extension = extension.lower()
+
+        hit_history_arrays = self._prepare_hit_history_arrays()
+
+        if extension == ".nc4":
+            netcdf_dataset = nc4.Dataset(filename, "w", format="NETCDF4", clobber=True)
+
+            # Save global/hardware/environment metadata
+            save_rattlesnake_to_netcdf(
+                netcdf_dataset,
+                self.hardware_metadata,
+                {self.environment_name: self.environment_metadata},
+            )
+
+            group = netcdf_dataset.groups[self.environment_name]
+
+            # Save current run SDS table
+            if self.run_sds_table is not None:
+                group.createDimension("sds_frequencies", self.run_sds_table.shape[0])
+                group.createDimension(
+                    "sds_drive_channels", self.run_sds_table["amplitude"].shape[1]
+                )
+
+                var = group.createVariable("run_table_frequency", "f8", ("sds_frequencies",))
+                var[...] = self.run_sds_table["frequency"]
+
+                var = group.createVariable(
+                    "run_table_amplitude", "f8", ("sds_frequencies", "sds_drive_channels")
+                )
+                var[...] = self.run_sds_table["amplitude"]
+
+                var = group.createVariable(
+                    "run_table_delay", "f8", ("sds_frequencies", "sds_drive_channels")
+                )
+                var[...] = self.run_sds_table["delay"]
+
+                var = group.createVariable(
+                    "run_table_decay", "f8", ("sds_frequencies", "sds_drive_channels")
+                )
+                var[...] = self.run_sds_table["decay"]
+
+            # Save most recent measured drive/response time histories
+            if self.last_measured_drive_signal is not None:
+                group.createDimension(
+                    "measured_drive_channels", self.last_measured_drive_signal.shape[0]
+                )
+                group.createDimension(
+                    "measured_drive_samples", self.last_measured_drive_signal.shape[1]
+                )
+                var = group.createVariable(
+                    "measured_drive_time_history",
+                    "f8",
+                    ("measured_drive_channels", "measured_drive_samples"),
+                )
+                var[...] = self.last_measured_drive_signal
+
+            if self.last_response_signal is not None:
+                group.createDimension(
+                    "measured_response_channels", self.last_response_signal.shape[0]
+                )
+                group.createDimension(
+                    "measured_response_samples", self.last_response_signal.shape[1]
+                )
+                var = group.createVariable(
+                    "measured_response_time_history",
+                    "f8",
+                    ("measured_response_channels", "measured_response_samples"),
+                )
+                var[...] = self.last_response_signal
+
+            # Save most recent measured SRS
+            if self.last_response_srs is not None:
+                group.createDimension("measured_srs_frequencies", self.last_response_srs.shape[0])
+                group.createDimension("measured_srs_channels", self.last_response_srs.shape[1])
+                var = group.createVariable(
+                    "measured_response_srs",
+                    "f8",
+                    ("measured_srs_frequencies", "measured_srs_channels"),
+                )
+                var[...] = self.last_response_srs
+
+            # Save specification arrays explicitly for convenience
+            spec = self.environment_metadata.specification_data
+            group.createDimension("specification_frequencies", spec.frequencies.size)
+            group.createDimension("specification_channels", spec.srs_spec.shape[1])
+
+            var = group.createVariable(
+                "specification_frequencies_array", "f8", ("specification_frequencies",)
+            )
+            var[...] = spec.frequencies
+
+            var = group.createVariable(
+                "specification_srs",
+                "f8",
+                ("specification_frequencies", "specification_channels"),
+            )
+            var[...] = spec.srs_spec
+
+            var = group.createVariable(
+                "specification_lower_limit",
+                "f8",
+                ("specification_frequencies", "specification_channels"),
+            )
+            var[...] = spec.srs_lower_limit
+
+            var = group.createVariable(
+                "specification_upper_limit",
+                "f8",
+                ("specification_frequencies", "specification_channels"),
+            )
+            var[...] = spec.srs_upper_limit
+
+            group.current_test_level_db = self.current_test_level_db
+            group.current_test_level_scale = self.current_test_level_scale
+            group.total_hits = self.total_hits
+            group.hits_at_target = self.hits_at_target
+            group.allow_automatic_updates = int(self.allow_automatic_updates)
+
+            # Save hit history
+            n_hits = hit_history_arrays["hit_index"].size
+            group.createDimension("hit_history_length", n_hits)
+
+            for key, value in hit_history_arrays.items():
+                if value.dtype.kind in ("U", "S", "O"):
+                    var = group.createVariable(key, str, ("hit_history_length",))
+                    for i, entry in enumerate(value):
+                        var[i] = str(entry)
+                elif value.dtype.kind == "b":
+                    var = group.createVariable(key, "i1", ("hit_history_length",))
+                    var[...] = value.astype(np.int8)
+                else:
+                    var = group.createVariable(key, value.dtype.str, ("hit_history_length",))
+                    var[...] = value
+
+            netcdf_dataset.close()
+
+        elif extension == ".npz":
+            output_dict = {
+                "current_test_level_db": np.array(self.current_test_level_db),
+                "current_test_level_scale": np.array(self.current_test_level_scale),
+                "total_hits": np.array(self.total_hits),
+                "hits_at_target": np.array(self.hits_at_target),
+                "allow_automatic_updates": np.array(self.allow_automatic_updates),
+            }
+
+            if self.run_sds_table is not None:
+                output_dict["run_table_frequency"] = np.array(self.run_sds_table["frequency"])
+                output_dict["run_table_amplitude"] = np.array(self.run_sds_table["amplitude"])
+                output_dict["run_table_delay"] = np.array(self.run_sds_table["delay"])
+                output_dict["run_table_decay"] = np.array(self.run_sds_table["decay"])
+
+            if self.last_measured_drive_signal is not None:
+                output_dict["measured_drive_time_history"] = np.array(
+                    self.last_measured_drive_signal
+                )
+
+            if self.last_response_signal is not None:
+                output_dict["measured_response_time_history"] = np.array(self.last_response_signal)
+
+            if self.last_response_srs is not None:
+                output_dict["measured_response_srs"] = np.array(self.last_response_srs)
+
+            spec = self.environment_metadata.specification_data
+            output_dict["specification_frequencies"] = np.array(spec.frequencies)
+            output_dict["specification_srs"] = np.array(spec.srs_spec)
+            output_dict["specification_lower_limit"] = np.array(spec.srs_lower_limit)
+            output_dict["specification_upper_limit"] = np.array(spec.srs_upper_limit)
+            output_dict["specification_num_hits"] = np.array(spec.num_hits)
+
+            output_dict.update(hit_history_arrays)
+
+            np.savez(filename, **output_dict)
+
+        elif extension == ".mat":
+            from scipy.io import savemat
+
+            output_dict = {
+                "current_test_level_db": np.array(self.current_test_level_db),
+                "current_test_level_scale": np.array(self.current_test_level_scale),
+                "total_hits": np.array(self.total_hits),
+                "hits_at_target": np.array(self.hits_at_target),
+                "allow_automatic_updates": np.array(self.allow_automatic_updates),
+            }
+
+            if self.run_sds_table is not None:
+                output_dict["run_table_frequency"] = np.array(self.run_sds_table["frequency"])
+                output_dict["run_table_amplitude"] = np.array(self.run_sds_table["amplitude"])
+                output_dict["run_table_delay"] = np.array(self.run_sds_table["delay"])
+                output_dict["run_table_decay"] = np.array(self.run_sds_table["decay"])
+
+            if self.last_measured_drive_signal is not None:
+                output_dict["measured_drive_time_history"] = np.array(
+                    self.last_measured_drive_signal
+                )
+
+            if self.last_response_signal is not None:
+                output_dict["measured_response_time_history"] = np.array(self.last_response_signal)
+
+            if self.last_response_srs is not None:
+                output_dict["measured_response_srs"] = np.array(self.last_response_srs)
+
+            spec = self.environment_metadata.specification_data
+            output_dict["specification_frequencies"] = np.array(spec.frequencies)
+            output_dict["specification_srs"] = np.array(spec.srs_spec)
+            output_dict["specification_lower_limit"] = np.array(spec.srs_lower_limit)
+            output_dict["specification_upper_limit"] = np.array(spec.srs_upper_limit)
+            output_dict["specification_num_hits"] = np.array(spec.num_hits)
+
+            # MATLAB can store string arrays awkwardly, but this is still usable
+            output_dict.update(hit_history_arrays)
+
+            savemat(filename, output_dict)
+
+        else:
+            raise ValueError(f"Unsupported control data file type: {extension}")
 
 
 # region Process
