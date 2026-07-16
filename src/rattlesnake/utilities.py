@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This file contains a number of helper classes for the general controller.
 
@@ -25,22 +24,22 @@ import importlib.util
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
-import queue as thqueue
 import os
+import queue as thqueue
 import random
+import re
+import socket
 import string
+import subprocess
+import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Tuple
-import sys
-import socket
-import requests
-import re
-import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, Tuple
 
 import numpy as np
+import requests
 import scipy.signal as sig
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
@@ -62,7 +61,7 @@ def log_file_task(queue: mp.Queue, shutdown_event):
     queue : mp.queues.Queue
         The multiprocessing queue to collect logging messages from
     """
-    with open("Rattlesnake.log", "w") as f:
+    with open("Rattlesnake.log", "w", encoding="utf-8") as f:
         while not shutdown_event.is_set():
             output = queue.get()
             if output == GlobalCommands.QUIT:
@@ -76,10 +75,12 @@ def log_file_task(queue: mp.Queue, shutdown_event):
 
 
 class RattlesnakeError(Exception):
-    pass
+    """Generic exception raised for Rattlesnake-specific error conditions."""
 
 
 class GlobalCommands(Enum):
+    """Enumeration of command codes passed between controller subtasks."""
+
     QUIT = 0  # Stop individual processes
     INITIALIZE_HARDWARE = 1  # Store hardware metadata to processes
     RUN_HARDWARE = 2  # Start running acquisition/output process
@@ -146,13 +147,15 @@ class VerboseMessageQueue:
 
     @property
     def log_name(self):
+        """The name used to identify this queue in log messages"""
         if self.environment_name:
             env = self.environment_name.value
             return f"{self.base_name} | {env}" if env else self.base_name
-        else:
-            return self.base_name
+
+        return self.base_name
 
     def assign_environment(self, env_name: str):
+        """Associates this queue with a named environment for logging purposes"""
         self.environment_name.value = env_name
 
     def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
@@ -346,6 +349,10 @@ class QueueContainer:
 
 
 class EventContainer:
+    """A container class for the multiprocessing events that the controller
+    uses to coordinate readiness, shutdown, and activity state across
+    subtasks."""
+
     def __init__(
         self,
         controller_ready_event: mp.synchronize.Event,
@@ -493,13 +500,26 @@ def autofill_single_ip_address(ip_address):
         ip_address.get_ip_from_host_name()
 
     print(
-        f"host: {ip_address.host_name}, ipv4: {ip_address.ipv4_address}, ipv6: {ip_address.ipv6_address}"
+        f"host: {ip_address.host_name}, ipv4: {ip_address.ipv4_address}, "
+        f"ipv6: {ip_address.ipv6_address}"
     )
 
     return ip_address
 
 
 def search_for_lanxi_devices(timeout):
+    """Repeatedly polls the network for B&K LAN-XI devices until timeout
+
+    Parameters
+    ----------
+    timeout : float
+        The number of seconds to search for devices before returning
+
+    Returns
+    -------
+    list[IPAddress]
+        A list of unique IPAddress objects for the LAN-XI devices found
+    """
     unique_addresses = {}
     start_time = time.perf_counter()
     while True:
@@ -518,6 +538,17 @@ def search_for_lanxi_devices(timeout):
 
 
 def find_lanxi_devices():
+    """Scans the ARP table for candidate LAN-XI IP addresses and validates them
+
+    Candidate addresses are extracted from the local ARP table by matching the
+    169.254.x.x link-local address range used by LAN-XI devices, then each
+    candidate is queried concurrently to confirm it is a valid LAN-XI module.
+
+    Returns
+    -------
+    list[IPAddress]
+        A list of IPAddress objects for the LAN-XI devices found
+    """
     result = subprocess.run(["arp", "-a"], capture_output=True, text=True, check=False)
 
     addresses = set()
@@ -556,6 +587,26 @@ def find_lanxi_devices():
 
 
 def test_lanxi_candidate(ipv4_address):
+    """Queries a candidate IP address to check if it is a valid LAN-XI device
+
+    Parameters
+    ----------
+    ipv4_address : str
+        The candidate IPv4 address to query
+
+    Returns
+    -------
+    host_name : str or None
+        The device host name if valid, otherwise None
+    ipv4_address : str
+        The IPv4 address that was queried
+    info : dict or None
+        The module info JSON response if valid, otherwise None
+    sync : dict or None
+        The sync mode JSON response if valid, otherwise None
+    valid : bool
+        True if the candidate responded as a valid LAN-XI device
+    """
     host = f"http://{ipv4_address}"
     try:
         response = requests.get(
@@ -585,7 +636,13 @@ class IPAddress:
     """Container for information about IPAddress, mainly used to make
     sure each address has a values for relevant information"""
 
-    def __init__(self, host_name=None, ipv4_address=None, ipv6_address=None, valid_ip=False):
+    def __init__(
+        self,
+        host_name: str | None = None,
+        ipv4_address: str | None = None,
+        ipv6_address: str | None = None,
+        valid_ip: bool = False,
+    ):
         self.host_name = host_name
         self.ipv4_address = ipv4_address
         self.ipv6_address = ipv6_address
@@ -595,6 +652,7 @@ class IPAddress:
         self.validation_timeout = 5
 
     def get_ip_from_host_name(self):
+        """Resolves ipv4_address and ipv6_address from host_name via DNS lookup"""
         if not self.host_name:
             self.valid_ip = False
             return
@@ -618,6 +676,7 @@ class IPAddress:
             self.valid_ip = False
 
     def get_host_name_from_ip(self):
+        """Queries the device REST API to derive host_name from the IP address"""
         if self.ipv6_address:
             host = "http://" + self.ipv6_address
         elif self.ipv4_address:
@@ -637,12 +696,15 @@ class IPAddress:
                 timeout=self.validation_timeout,
             )
             self.sync_type = response.json()
-            self.host_name = f"BK{self.module_info['module']['type']['number']}-{self.module_info['module']['serial']}"
+            module_type = self.module_info["module"]["type"]["number"]
+            module_serial = self.module_info["module"]["serial"]
+            self.host_name = f"BK{module_type}-{module_serial}"
             self.valid_ip = True
         except Exception:
             self.valid_ip = False
 
     def validate(self):
+        """Queries the device REST API to confirm the address is reachable and valid"""
         if self.ipv6_address:
             host = "http://" + self.ipv6_address
         elif self.ipv4_address:
@@ -725,7 +787,7 @@ def load_time_history(signal_path, sample_rate):
             pass
     else:
         raise ValueError(
-            f"Could Not Determine the file type from the filename {signal_path}: {extension}"
+            f"Could Not Determine the file type from the filename " f"{signal_path}: {extension}"
         )
     if signal.shape[-1] % 2 == 1:
         signal = signal[..., :-1]
@@ -795,6 +857,28 @@ def load_python_module(module_path):
 
 
 def read_transformation_matrix_from_worksheet(worksheet, start_row, num_rows, start_col):
+    """Reads a numeric matrix from a block of cells in an Excel worksheet
+
+    Each row is read starting at start_col until the first blank, comment
+    (starting with '#'), or "none" cell is encountered.
+
+    Parameters
+    ----------
+    worksheet : openpyxl.worksheet.worksheet.Worksheet
+        The worksheet to read the matrix from
+    start_row : int
+        The 1-indexed row where the matrix begins
+    num_rows : int
+        The number of rows to read
+    start_col : int
+        The 1-indexed column where each row of the matrix begins
+
+    Returns
+    -------
+    np.ndarray or None
+        The matrix read from the worksheet, or None if the first cell is
+        blank or contains "none"
+    """
     first_cell = worksheet.cell(start_row, start_col).value
     if first_cell is None or (isinstance(first_cell, str) and first_cell.strip().lower() == "none"):
         return None
@@ -824,7 +908,7 @@ def read_transformation_matrix_from_worksheet(worksheet, start_row, num_rows, st
 
 
 # region Math Operations
-def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
+def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int, int] | None = None):
     """Compute coherence from a CPSD matrix
 
     Parameters
@@ -833,7 +917,7 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
         A 3D complex numpy array where the first index corresponds to the
         frequency line and the second and third indices correspond to the rows
         and columns of the matrix.
-    row_column : Tuple[int] :
+    row_column : Tuple[int, int] :
         Optional argument to compute the coherence at just a single (row,column)
         pair.  (Default value = Compute Entire Matrix)
 
@@ -848,12 +932,12 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     if row_column is None:
         diag = np.einsum("ijj->ij", cpsd_matrix)
         return np.real(np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :]))
-    else:
-        row, column = row_column
-        return np.real(
-            np.abs(cpsd_matrix[:, row, column]) ** 2
-            / (cpsd_matrix[:, row, row] * cpsd_matrix[:, column, column])
-        )
+
+    row, column = row_column
+    return np.real(
+        np.abs(cpsd_matrix[:, row, column]) ** 2
+        / (cpsd_matrix[:, row, row] * cpsd_matrix[:, column, column])
+    )
 
 
 def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
@@ -898,7 +982,8 @@ def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
     Xv = 1 / np.sqrt(df) * Lsvd @ W
     # Ensure that the signal is real by setting the nyquist and DC component to 0
     Xv[[0, -1], :, :] = 0
-    # Compute the IFFT, using the real version makes it so you don't need negative frequencies
+    # Compute the IFFT, using the real version makes it so you don't need
+    # negative frequencies
     zero_padding = np.zeros(
         [(output_oversample - 1) * (Xv.shape[0] - 1)] + list(Xv.shape[1:]),
         dtype=Xv.dtype,
@@ -1022,7 +1107,8 @@ def rms_time(signal, axis=None, keepdims=False):
     axis : int :
         The dimension over which the mean is performed (Default value = None)
     keepdims : bool :
-        Whether to keep the dimension over which mean is computed (Default value = False)
+        Whether to keep the dimension over which mean is computed
+        (Default value = False)
 
     Returns
     -------
@@ -1062,8 +1148,8 @@ def trac(th_1, th_2=None):
     th_1 : np.ndarray
         Signals to compute the trac on.
     th_2 : np.ndarray, optional
-        Signals to compute the trac against th_1 on.  If not specified, the trac of th_1 to itself
-        is computed
+        Signals to compute the trac against th_1 on.  If not specified, the
+        trac of th_1 to itself is computed
 
     Returns
     -------
@@ -1228,11 +1314,11 @@ def align_signals(
     correlation_threshold : float, optional
         Threshold for a "good" correlation, by default 0.9
     perform_subsample : bool, optional
-        If True, computes a time shift that could be between samples using the phase of the FFT of
-        the signals, by default True
+        If True, computes a time shift that could be between samples using
+        the phase of the FFT of the signals, by default True
     correlation_metric : function, optional
-        An optional function to use to change the matching criterion, by default A simple
-        correlation is used
+        An optional function to use to change the matching criterion, by
+        default A simple correlation is used
 
     Returns
     -------
@@ -1241,8 +1327,8 @@ def align_signals(
     delay : float
         The time difference between the measurement and specification
     mean_phase_slope : float
-        The slope of the phase computed in the FFT from the subsample alignment.  Will be None
-        if subsample matching is not used
+        The slope of the phase computed in the FFT from the subsample
+        alignment.  Will be None if subsample matching is not used
     found_correlation : float
         The value of the correlation metric used to find the match
     """

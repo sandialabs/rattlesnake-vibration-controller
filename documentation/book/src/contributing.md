@@ -37,6 +37,56 @@ Others should first **fork** the repository to their own GitHub account. Once fo
 A [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is **highly** recommended.
 This ensures project dependencies do not conflict with the system-wide Python installation.
 
+Two approaches are documented below: 
+
+* the traditional `venv` + `pip` workflow, and 
+* [`uv`](https://docs.astral.sh/uv/), a faster, modern alternative that every other command in this document (testing, linting, formatting) assumes is installed. New contributors are encouraged to use `uv` and we present that first.
+
+### Using `uv` (Recommended)
+
+[`uv`](https://docs.astral.sh/uv/) is a fast, modern Python package and project manager, written in Rust. It replaces `pip`, `venv`, and several other tools with a single command line interface, and it is what every other section of this document (testing, linting, formatting) assumes you are using.
+
+Compared to `pip` and `venv`, `uv`:
+
+- Is **significantly faster** at resolving and installing dependencies, thanks to a Rust-based resolver and aggressive caching.
+- **Manages the virtual environment for you.** Commands like `uv run` and `uv sync` create and use a `.venv` automatically, so there is no separate activate/deactivate step.
+- Uses a **lockfile** (`uv.lock`) to guarantee that everyone — and CI — installs the exact same dependency versions, which plain `pip` does not do without extra tooling.
+- Can **install and manage Python itself**, so a separate Python version manager is not required.
+
+#### Installing `uv`
+
+Follow the official [installation guide](https://docs.astral.sh/uv/getting-started/installation/) for your platform, or use one of the quick install commands:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+#### Setting Up the Environment
+
+From the repository root:
+
+```bash
+uv sync --all-extras --dev
+```
+
+This creates a `.venv` automatically (if one does not already exist), installs Rattlesnake in editable mode, installs all `[dev]` dependencies, and pins everything to the versions recorded in `uv.lock`.
+
+To run a command inside that environment without manually activating it, prefix it with `uv run`, e.g.:
+
+```bash
+uv run python -c "import rattlesnake; print(rattlesnake.__file__)"
+```
+
+This `uv run <command>` pattern is used throughout the rest of this document.
+
+### Using `venv` and `pip` (if `uv` is not an option)
+
 Create a new virtual environment folder within your project directory. It is conventional to name this folder `.venv`.
 
 ```bash
@@ -44,34 +94,23 @@ Create a new virtual environment folder within your project directory. It is con
 python3 -m venv .venv
 ```
 
-Activating the environment tells your shell to use the Python interpreter and pip packages located inside the `.venv` folder.
-
-#### macOS / Linux:
+Activate the environment to tell your shell to use the Python interpreter and pip packages located inside the `.venv` folder using the command appropriate to your system:
 
 ```bash
-source .venv/bin/activate
-```
-
-#### Windows (PowerShell):
-
-```sh
-.venv\Scripts\Activate.ps1
-```
-
-#### Windows (Command Prompt), DOS
-
-```sh
-.venv\Scripts\activate.bat
+source .venv/bin/activate  # macOS / Linux:
+.venv\Scripts\Activate.ps1 # Windows (PowerShell):
+.venv\Scripts\activate.bat # Windows (Command Prompt), DOS
 ```
 
 Once activated, your terminal prompt will typically show `(.venv)`. You can now install dependencies safely.
 
 ```bash
-# Install specific packages, for example, the "requests" package
-pip install requests
-
-# Or install the entire Rattlesnake development in editable mode
+# Install the entire Rattlesnake development in editable mode
 pip install -e .[dev]
+
+# Additional packages can be installed on an as-needed basis.  For example, to install
+# the "requests" package
+pip install requests
 ```
 
 Confirm that your shell is pointing to the correct Python binary.
@@ -94,35 +133,122 @@ deactivate
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
 
-## Documentation
+## Development
 
-The online documentation is made with [Jupyter Book](https://jupyterbook.org).  Below are instructions for setting up a local development environment, building the book locally, and publishing the updates to the repository.
+Before pushing changes, contributors should check code quality locally rather than relying solely on CI to catch problems. This means running the test suite (pytest), linting (pylint), format checking (ruff), code coverage, and confirming that the Jupyter Book documentation still builds — all on your own machine. Catching issues locally is faster than waiting on a CI run, and it keeps the CI pipeline green for everyone else.
 
-Install documentation dependencies either with `pip`
+### Test
 
-```sh
-pip install "jupyter-book>=2.0.0"
+Rattlesnake uses [pytest](https://docs.pytest.org/en/stable/) for its test suite. Tests are split into groups based on how long they take to run:
+
+```bash
+tests/
+tests/short/
+tests/long/
 ```
 
-or with [uv](https://docs.astral.sh/uv/)
+`tests/long` contains slower, heavier tests (e.g., full qualification runs), while `tests/short` and the top-level `tests/` files run quickly and are meant to give fast feedback during development.
 
-```sh
-uv add "jupyter-book"
+To run the **full test suite** locally with `uv`:
+
+```bash
+uv run pytest tests/
 ```
 
-### Local Build
+To run only the **fast tests**, matching CI's default scope:
 
-Within this `documentation` folder, the `myst.yml` file specifies how Jupyter Book should build the documentation.  Importantly, it links to Markdown files that contain the book's content.
+```bash
+uv run pytest tests/short
+```
+
+To run a **single test file**, e.g.,
+
+```bash
+uv run pytest tests/short/test_environment_manager.py
+```
+
+To also collect a **coverage report** for the entire repository while testing:
+
+```bash
+uv run pytest tests/ --cov=rattlesnake --cov-report=term-missing
+```
+
+To collect a coverage report for a **single test file**, e.g.,
+
+```bash
+uv run pytest tests/short/test_environment_manager.py --cov=rattlesnake.environment_manager --cov-report=term-missing
+```
+
+```{note}
+This mirrors the scope CI uses: pushes and pull requests targeting `main` or
+`dev` run the full suite (`tests`, including `tests/long`); everything else
+runs just `tests/short` by default, unless `[all tests]` appears in the
+commit message, which forces the full suite on any branch. For example:
+
+    (dev-cicd) > git commit -m 'test feature foo with [all tests]'
+```
+
+### Lint
+
+Rattlesnake uses **pylint** for static code analysis and **ruff** for code formatting. Both tools are configured to work together with `uv` to catch issues early and maintain consistent code quality.
+
+#### Pylint
+
+To lint the source code locally, use `uv` to run pylint:
+
+```bash
+# Lint a specific file, e.g.,
+uv run pylint src/rattlesnake/utilities.py
+
+# Lint the entire source directory
+uv run pylint src/rattlesnake
+
+# Lint and show only line-too-long warnings
+uv run pylint src/rattlesnake --disable=all --enable=line-too-long
+```
+
+#### Ruff Format
+
+```bash
+# Auto-format a specific file, e.g.,
+uv run ruff format src/rattlesnake/utilities.py
+
+# Auto-format the entire source directory
+uv run ruff format src/rattlesnake/
+```
+
+#### Checking Formatting Without Modifying Files
+
+Before pushing, you can check whether any files are out of compliance with the project's formatting rules without actually rewriting them by adding the `--check` flag:
+
+```bash
+uv run ruff format --check src/rattlesnake
+```
+
+This is the same command the `lint` job in `ci.yml` runs on every push. It is intentionally **non-blocking** in CI — a formatting drift surfaces as a warning annotation on the workflow run rather than failing the job, so it will not block a merge. If it reports files that need formatting, run `uv run ruff format src/rattlesnake` locally (as shown above) to fix them before committing.
+
+### Documentation
+
+The online documentation is made with [Jupyter Book](https://jupyterbook.org). Start from the
+
+```bash
+rattlesnake-vibration-controller/documentation
+```
+
+folder.
+
+#### Local Build
+
+Within the `documentation` folder, the `myst.yml` file specifies how Jupyter Book should build the documentation.  Importantly, it links to Markdown files that contain the book's content.
 
 ```sh
-cd rattlesnake-vibration-controller/documentation
 jupyter book build --html --strict
 ```
 
 This will build the Jupyter Book documentation.
 
 ```{warning}
-The foregoing command may not work behind a corporate firewall.
+The foregoing command may not work behind a corporate firewall, in which case, the simpler `jupyter book build` command should still work.
 ```
 
 The output will be similar to:
@@ -213,17 +339,22 @@ Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
   unnecessary work.
 2. **pytest_matrix**
    * Runs tests on all combinations of [macos, ubuntu, windows] × [3.11, 3.12] using `pip install .[dev]` (not `uv`) for PyQt wheel compatibility. Test scope is adaptive:
-     *  Default: `tests/*.py tests/short`
+     *  Default: `tests/short`
      * Full suite triggered by: commit message containing `[all tests]`, manual dispatch with `test_level=full`, or branch is `main` or `dev`
 3. **lint**
-   * Runs `pylint src/rattlesnake` via `uv`, captures output, then calls `report_lint.py` to generate an HTML lint report
-  artifact.
+   * Runs `uv run ruff format --check src/rattlesnake` first. This step is **non-blocking** — a
+  formatting drift surfaces as a `::warning::` annotation on the workflow run instead of failing
+  the job, so it never turns the workflow red.
+   * Then runs `pylint src/rattlesnake` via `uv`, captures output, then calls `report_lint.py` to
+  generate an HTML lint report artifact.
+   * Both checks share one job (checkout + `uv sync`) instead of running in separate jobs, saving
+  a redundant environment setup per workflow run.
 4. **coverage**
    * Runs `pytest --cov` via `uv` with the same adaptive test scope, then calls `report_coverage.py` to generate an HTML coverage report artifact.
 5. **docs_jupyter_book**
    * Updates `myst.yml` metadata via `report_jupyter_book.py,` then builds the Jupyter Book. Only runs when docs changed (or on `main`/`dev`).
 6. **deploy**
-   * Runs only on `main/dev`, assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, and deploys to GitHub Pages via peaceiris/actions-gh-pages.
+   * Runs only on `main/dev`, assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
 
 `release.yml` — Release Pipeline
 
@@ -335,42 +466,15 @@ The `pytest_matrix` job runs across combinations of operating systems and Python
 
 This means OS-specific or Python-version-specific bugs are caught on `main`/`dev` before a release, without slowing down every feature branch push.
 
-### Test
-
-Tests are grouped by the amount of time required to run the tests.  The current
-groups are
-
-```bash
-tests/
-tests/long/
-tests/short/
-```
-
-Whenever there is a push or pull request to `main` or `dev`, **all tests** will run (which includes **long** tests). For pushes to branches other than `main` or `dev`, only tests in `tests/` and `tests/short` are run.
-
-Developers can *force* a full test, which includes `tests/long` in addition to `tests/` and `tests/short`, by adding the string `[all tests]` to the commit message.  For example, on the `dev-cicd-docs` branch
-
-```bash
-(dev-cicd-docs) > git commit -m 'test feature foo with [all tests]'
-```
-
-will trigger all tests to be run.
-
 ### Preflight
 
 The `preflight` command is a local CI/CD readiness check. It mirrors the checks that GitHub Actions would run on a push, allowing developers to catch errors before they reach the pipeline.
 
-`preflight` is a command line entry point installed with the `rattlesnake-vibration-controller` package. The package must be installed in the active environment before the command is available:
-
-```sh
-uv pip install -e .[dev]
-```
-
-Once installed, run it from the repository root:
-
 ```sh
 uv run preflight
 ```
+
+largely automates the manual steps listed above in the [Development](#development) section.
 
 #### Modes and options
 
