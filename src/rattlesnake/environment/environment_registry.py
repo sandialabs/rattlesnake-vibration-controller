@@ -2,7 +2,6 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 
 UNIMPLEMENTED_ENVIRONMENT = [
     EnvironmentType.NONE,
-    EnvironmentType.SYSID_SKELETON,
 ]
 
 ENVIRONMENT_COMMANDS = {}
@@ -17,6 +16,37 @@ for environment_type in EnvironmentType:
         continue
 
     match environment_type:
+        case EnvironmentType.SKELETON:
+            from rattlesnake.environment.skeleton_environment import (
+                SkeletonCommands,
+                SkeletonMetadata,
+                SkeletonInstructions,
+                SkeletonEnvironment,
+                skeleton_process,
+            )
+
+            ENVIRONMENT_COMMANDS[EnvironmentType.SKELETON] = SkeletonCommands
+            ENVIRONMENT_METADATA[EnvironmentType.SKELETON] = SkeletonMetadata
+            ENVIRONMENT_INSTRUCTION[EnvironmentType.SKELETON] = SkeletonInstructions
+            ENVIRONMENT_CLASS[EnvironmentType.SKELETON] = SkeletonEnvironment
+            ENVIRONMENT_PROCESS[EnvironmentType.SKELETON] = skeleton_process
+        case EnvironmentType.SYSID_SKELETON:
+            from rattlesnake.environment.skeleton_sys_id_environment import (
+                SkeletonSysIdCommands,
+                SkeletonSysIdMetadata,
+                SkeletonSysIdInstructions,
+                SkeletonSysIdEnvironment,
+                skeleton_sysid_process,
+            )
+
+            ENVIRONMENT_COMMANDS[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdCommands
+            ENVIRONMENT_METADATA[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdMetadata
+            ENVIRONMENT_INSTRUCTION[EnvironmentType.SYSID_SKELETON] = (
+                SkeletonSysIdInstructions,
+            )
+            ENVIRONMENT_CLASS[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdEnvironment
+            ENVIRONMENT_PROCESS[EnvironmentType.SYSID_SKELETON] = skeleton_sysid_process
+            SYSID_ENVIRONMENTS.append(EnvironmentType.SYSID_SKELETON)
         case EnvironmentType.TIME:
             from rattlesnake.environment.time_environment import (
                 TimeCommands,
@@ -92,37 +122,3 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_CLASS[EnvironmentType.RANDOM] = RandomVibrationEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.RANDOM] = random_vibration_process
             SYSID_ENVIRONMENTS.append(EnvironmentType.RANDOM)
-
-        case EnvironmentType.SKELETON:
-            from rattlesnake.environment.skeleton_environment import (
-                SkeletonCommands,
-                SkeletonMetadata,
-                SkeletonInstructions,
-                SkeletonEnvironment,
-                skeleton_process,
-            )
-
-            ENVIRONMENT_COMMANDS[EnvironmentType.SKELETON] = SkeletonCommands
-            ENVIRONMENT_METADATA[EnvironmentType.SKELETON] = SkeletonMetadata
-            ENVIRONMENT_INSTRUCTION[EnvironmentType.SKELETON] = SkeletonInstructions
-            ENVIRONMENT_CLASS[EnvironmentType.SKELETON] = SkeletonEnvironment
-            ENVIRONMENT_PROCESS[EnvironmentType.SKELETON] = skeleton_process
-        case EnvironmentType.SYSID_SKELETON:
-            from rattlesnake.environment.skeleton_sys_id_environment import (
-                SkeletonCommands as SysIdSkeletonCommands,
-                SkeletonMetadata as SysIdSkeletonMetadata,
-                SkeletonEnvironment as SysIdSkeletonEnvironment,
-                skeleton_process as sysid_skeleton_process,
-            )
-            from rattlesnake.environment.skeleton_environment import (
-                SkeletonInstructions,
-            )
-
-            ENVIRONMENT_COMMANDS[EnvironmentType.SYSID_SKELETON] = SysIdSkeletonCommands
-            ENVIRONMENT_METADATA[EnvironmentType.SYSID_SKELETON] = SysIdSkeletonMetadata
-            ENVIRONMENT_INSTRUCTION[EnvironmentType.SYSID_SKELETON] = (
-                SkeletonInstructions
-            )
-            ENVIRONMENT_CLASS[EnvironmentType.SYSID_SKELETON] = SysIdSkeletonEnvironment
-            ENVIRONMENT_PROCESS[EnvironmentType.SYSID_SKELETON] = sysid_skeleton_process
-            SYSID_ENVIRONMENTS.append(EnvironmentType.SYSID_SKELETON)

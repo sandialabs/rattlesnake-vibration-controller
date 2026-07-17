@@ -21,9 +21,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import multiprocessing as mp
 import threading
 import traceback
+from enum import Enum
 from multiprocessing.queues import Queue
 from typing import List
 
@@ -32,7 +34,10 @@ import netCDF4 as nc4
 from rattlesnake.utilities import VerboseMessageQueue
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.environment.abstract_environment import EnvironmentCommands
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentCommands,
+    EnvironmentInstructions,
+)
 from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironment,
     SysIdEnvironmentMetadata,
@@ -51,7 +56,7 @@ ENVIRONMENT_TYPE = EnvironmentType.SYSID_SKELETON
 
 
 # region Commands
-class SkeletonCommands(EnvironmentCommands):
+class SkeletonSysIdCommands(EnvironmentCommands):
     """Enumeration of commands that the controller can send to the environment.
 
     This enum defines command values intended for use in profile events,
@@ -66,11 +71,16 @@ class SkeletonCommands(EnvironmentCommands):
     VALID_DATA = {EXAMPLE_SET_TEST_LEVEL: type(None)}
 
 
+class SkeletonSysIdUICommands(Enum):
+    EXAMPLE_UI_SHOW_DATA = 0
+    EXAMPLE_UI_SET_TEST_LEVEL = 1
+
+
 # endregion
 
 
 # region Metadata
-class SkeletonMetadata(SysIdEnvironmentMetadata):
+class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
     """Metadata required to define the system identification skeleton environment."""
 
     def __init__(
@@ -78,12 +88,13 @@ class SkeletonMetadata(SysIdEnvironmentMetadata):
         environment_name: str,
         channel_list_bools: List[bool],
         sample_rate: float,
-        sysid_metadata: SysIdMetadata = None,
+        example_window_size: float,
+        control_channel_indices: List[int],
+        output_channel_indices: List[int],
         response_transformation_matrix=None,
         reference_transformation_matrix=None,
+        sysid_metadata: SysIdMetadata = None,
     ):
-        self._response_transformation_matrix = response_transformation_matrix
-        self._reference_transformation_matrix = reference_transformation_matrix
 
         super().__init__(
             ENVIRONMENT_TYPE,
@@ -92,6 +103,11 @@ class SkeletonMetadata(SysIdEnvironmentMetadata):
             sample_rate,
             sysid_metadata=sysid_metadata,
         )
+        self.example_window_size = example_window_size
+        self.control_channel_indices = control_channel_indices
+        self.output_channel_indices = output_channel_indices
+        self.response_transformation_matrix = response_transformation_matrix
+        self.reference_transformation_matrix = reference_transformation_matrix
 
     @property
     def number_of_channels(self):
@@ -99,19 +115,27 @@ class SkeletonMetadata(SysIdEnvironmentMetadata):
 
     @property
     def response_channel_indices(self):
-        return [0]
+        return self.control_channel_indices
 
     @property
     def reference_channel_indices(self):
-        return [1]
+        return self.output_channel_indices
 
     @property
     def response_transformation_matrix(self):
         return self._response_transformation_matrix
 
+    @response_transformation_matrix.setter
+    def response_transformation_matrix(self, value):
+        self._response_transformation_matrix = value
+
     @property
     def reference_transformation_matrix(self):
         return self._reference_transformation_matrix
+
+    @reference_transformation_matrix.setter
+    def reference_transformation_matrix(self, value):
+        self._reference_transformation_matrix = value
 
     # region Validation
     def validate(self, hardware_metadata: HardwareMetadata):
@@ -176,10 +200,19 @@ class SkeletonMetadata(SysIdEnvironmentMetadata):
 
 
 # endregion
+class SkeletonSysIdInstructions(EnvironmentInstructions):
+
+    def __init__(self, environment_name: str, example_test_level: float):
+        super().__init__(ENVIRONMENT_TYPE, environment_name)
+
+        self.example_test_level = example_test_level
+
+    def validate(self):
+        return super().validate()
 
 
 # region Queues
-class SkeletonQueues:
+class SkeletonSysIdQueues:
     """A container class for the queues that this environment will manage."""
 
     def __init__(
@@ -223,7 +256,9 @@ class SkeletonQueues:
         self.environment_command_queue = environment_command_queue
         self.gui_update_queue = gui_update_queue
         self.data_analysis_command_queue = VerboseMessageQueue(
-            log_file_queue, mp.Queue(), environment_name + " Data Analysis Command Queue"
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Data Analysis Command Queue",
         )
         self.signal_generation_command_queue = VerboseMessageQueue(
             log_file_queue,
@@ -236,7 +271,9 @@ class SkeletonQueues:
             environment_name + " Spectral Computation Command Queue",
         )
         self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, mp.Queue(), environment_name + " Data Collector Command Queue"
+            log_file_queue,
+            mp.Queue(),
+            environment_name + " Data Collector Command Queue",
         )
         self.controller_communication_queue = controller_communication_queue
         self.data_in_queue = data_in_queue
@@ -251,13 +288,13 @@ class SkeletonQueues:
 
 
 # region Environment
-class SkeletonEnvironment(SysIdEnvironment):
+class SkeletonSysIdEnvironment(SysIdEnvironment):
 
     def __init__(
         self,
         environment_name: str,
         queue_name: str,
-        queue_container: SkeletonQueues,
+        queue_container: SkeletonSysIdQueues,
         acquisition_active_event: mp.synchronize.Event,
         output_active_event: mp.synchronize.Event,
         active_event: mp.synchronize.Event,
@@ -309,7 +346,9 @@ class SkeletonEnvironment(SysIdEnvironment):
             sysid_stored_event,
         )
 
-        self.map_command(SkeletonCommands.EXAMPLE_SET_TEST_LEVEL, self.set_test_level)
+        self.map_command(
+            SkeletonSysIdCommands.EXAMPLE_SET_TEST_LEVEL, self.set_test_level
+        )
 
         # Tell controller that initialization was successful
         self.set_ready()
@@ -321,7 +360,7 @@ class SkeletonEnvironment(SysIdEnvironment):
         super().initialize_hardware(hardware_metadata)
         self.set_ready()
 
-    def initialize_environment(self, environment_metadata: SkeletonMetadata):
+    def initialize_environment(self, environment_metadata: SkeletonSysIdMetadata):
         super().initialize_environment(environment_metadata)
         self.set_ready()
 
@@ -333,7 +372,7 @@ class SkeletonEnvironment(SysIdEnvironment):
 
     # region Commands
     def set_test_level(self, data):
-        """Example command handler mapped to SkeletonCommands.EXAMPLE_SET_TEST_LEVEL."""
+        """Example command handler mapped to SkeletonSysIdCommands.EXAMPLE_SET_TEST_LEVEL."""
 
     def stop_environment(self, data):
         """Stop the environment gracefully
@@ -353,7 +392,7 @@ class SkeletonEnvironment(SysIdEnvironment):
 
 
 # region Process
-def skeleton_process(
+def skeleton_sysid_process(
     environment_name: str,
     queue_name: str,
     input_queue: VerboseMessageQueue,
@@ -379,7 +418,7 @@ def skeleton_process(
         else:
             new_process = mp.Process
 
-        queue_container = SkeletonQueues(
+        queue_container = SkeletonSysIdQueues(
             environment_name,
             input_queue,
             gui_update_queue,
@@ -447,7 +486,7 @@ def skeleton_process(
         )
         collection_proc.start()
 
-        process_class = SkeletonEnvironment(
+        process_class = SkeletonSysIdEnvironment(
             environment_name,
             queue_name,
             queue_container,

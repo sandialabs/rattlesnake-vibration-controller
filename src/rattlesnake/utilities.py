@@ -64,7 +64,7 @@ def log_file_task(queue: mp.Queue, shutdown_event):
     with open("Rattlesnake.log", "w", encoding="utf-8") as f:
         while not shutdown_event.is_set():
             output = queue.get()
-            if "ERROR//" in str(output):
+            if " ERROR" in str(output):
                 print(output)
             if output == GlobalCommands.QUIT:
                 f.write("Program quitting, logging terminated.")

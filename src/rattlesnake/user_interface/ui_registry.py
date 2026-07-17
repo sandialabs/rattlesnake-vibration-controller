@@ -102,6 +102,13 @@ for environment_type in EnvironmentType:
 
             ENVIRONMENT_UIS[EnvironmentType.SKELETON] = SkeletonUI
             UI_ENVIRONMENT_OPTIONS["Skeleton Environment"] = EnvironmentType.SKELETON
+        case EnvironmentType.SYSID_SKELETON:
+            from rattlesnake.user_interface.skeleton_sys_id_ui import SkeletonSysIdUI
+
+            ENVIRONMENT_UIS[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdUI
+            UI_ENVIRONMENT_OPTIONS["Skeleton SysId Environment"] = (
+                EnvironmentType.SYSID_SKELETON
+            )
         case EnvironmentType.TIME:
             from rattlesnake.user_interface.time_ui import TimeUI
 

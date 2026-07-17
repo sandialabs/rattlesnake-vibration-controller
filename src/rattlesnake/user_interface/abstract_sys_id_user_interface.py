@@ -80,7 +80,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         )
         uic.loadUi(system_identification_ui_path, self.system_id_widget)
         self.connect_sysid_callbacks()
-        self.complete_ui()
+        self.complete_sysid_ui()
 
         self.sysid_data = SysIdDataPackage()
         self.last_time_response = None
@@ -135,7 +135,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
             self.load_sysid_matrix_file
         )
 
-    def complete_ui(self):
+    def complete_sysid_ui(self):
         self.time_response_plot = (
             self.system_id_widget.time_data_graphicslayout.addPlot(row=0, column=0)
         )

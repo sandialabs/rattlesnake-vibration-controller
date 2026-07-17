@@ -112,7 +112,7 @@ class SkeletonMetadata(EnvironmentMetadata):
         environment_name: str,
         channel_list_bools: List[bool],
         sample_rate: float,
-        example_window_size: str,
+        example_window_size: float,
     ):
         """
         Initialize the skeleton environment metadata.
@@ -126,7 +126,7 @@ class SkeletonMetadata(EnvironmentMetadata):
             enabled for this environment.
         sample_rate : float
             Hardware sample rate in samples per second.
-        example_window_size : str
+        example_window_size : float
             Example environment-specific parameter.
         """
         super().__init__(
