@@ -154,6 +154,15 @@ class EnvironmentManager:
 
         return sysid_active_list
 
+    @property
+    def environment_active_environments(self):
+        environment_active_list = []
+        for queue_name, environment_name in self.environment_names.items():
+            if self.environment_active_events[queue_name].is_set():
+                environment_active_list.append(environment_name)
+
+        return environment_active_list
+
     def clear_sysid_events(self):
         for queue_name in self.queue_names:
             self.environment_sysid_stored_events[queue_name].clear()

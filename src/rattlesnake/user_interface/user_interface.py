@@ -417,6 +417,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             timeout = self.timeout
 
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            # Disconnect before cancel(): the old watcher's queued signal can otherwise arrive after event_watcher is reassigned below and tear down the new watcher instead.
+            try:
+                self.event_watcher.ready.disconnect()
+                self.event_watcher.error.disconnect()
+            except TypeError:
+                pass
             self.event_watcher.cancel()
             self.cleanup_event_watcher()
         self.event_thread = QtCore.QThread()
@@ -440,6 +446,47 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.event_watcher.deleteLater()
             self.event_watcher = None
 
+    def recover_ui_after_crash(self):
+        self.cleanup_event_watcher()
+
+        self.initialize_hardware_button.setEnabled(True)
+        self.initialize_environments_button.setEnabled(True)
+        self.display_acquisition_ended()
+
+        if self.rattlesnake.state == RattlesnakeState.SYS_ID_ACTIVE:
+            self.recover_sysid_crash()
+
+        if self.rattlesnake.state == RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+
+        if self.rattlesnake.state == RattlesnakeState.ENVIRONMENT_ACTIVE:
+            self.recover_environment_crash()
+
+        self.start_profile_button.setEnabled(True)
+        self.stop_profile_button.setEnabled(False)
+
+    def recover_sysid_crash(self):
+        sysid_active_environments = (
+            self.rattlesnake.environment_manager.sysid_active_environments
+        )
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_ui.environment_type not in SYSID_ENVIRONMENTS:
+                continue
+            if environment_name in sysid_active_environments:
+                environment_ui.display_system_id_started()
+            else:
+                environment_ui.display_system_id_ended()
+
+    def recover_environment_crash(self):
+        environment_active_environments = (
+            self.rattlesnake.environment_manager.environment_active_environments
+        )
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_name in environment_active_environments:
+                environment_ui.display_environment_started()
+            else:
+                environment_ui.display_environment_ended()
+
     def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller
 
@@ -458,6 +505,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         match command:
             case UICommands.ERROR:
                 dialog_title, error_message = data
+                self.recover_ui_after_crash()
                 error_message_qt(dialog_title, error_message)
             case UICommands.HARDWARE_STARTED:
                 self.display_acquisition_started()
