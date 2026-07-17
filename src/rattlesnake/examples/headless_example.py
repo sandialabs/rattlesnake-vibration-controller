@@ -20,16 +20,16 @@ from rattlesnake.testing.mock_user_interface import (
 )
 
 """USER INPUTS"""
-THREADED = True
+THREADED = False
 TIMEOUT = 20
 IMPORT_METHOD = "netcdf"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.MODAL
+ENVIRONMENT_TYPE = EnvironmentType.SKELETON
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False
-START_HARDWARE = False
-START_ENVIRONMENT = False
+START_HARDWARE = True
+START_ENVIRONMENT = True
 RUN_PROFILE = False
 
 

@@ -54,7 +54,7 @@ class SkeletonCommands(EnvironmentCommands):
     VALID_PROFILE_COMMANDS = (EXAMPLE_SET_TEST_LEVEL, EXAMPLE_FLOAT_COMMAND)
 
     VALID_DATA = {
-        EXAMPLE_SET_TEST_LEVEL: type(None),
+        EXAMPLE_SET_TEST_LEVEL: float,
         EXAMPLE_FLOAT_COMMAND: float,
     }
 
@@ -461,6 +461,9 @@ class SkeletonEnvironment(Environment):
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
         self.command_map[SkeletonCommands.EXAMPLE_RUN_ENVIRONMENT] = self.run_control
         self.command_map[SkeletonCommands.EXAMPLE_SET_TEST_LEVEL] = self.set_test_level
+        self.command_map[SkeletonCommands.EXAMPLE_FLOAT_COMMAND] = (
+            self.set_float_command
+        )
 
         # Persistent data
         self.test_level = 0
@@ -562,6 +565,9 @@ class SkeletonEnvironment(Environment):
     def set_test_level(self, data):
         self.test_level = data
         print(f"Setting test level {self.test_level}")
+
+    def set_float_command(self, data):
+        print(f"Settting float value {data}")
 
 
 def skeleton_process(

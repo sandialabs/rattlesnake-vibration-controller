@@ -29,6 +29,9 @@ from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
     manual_skeleton_metadata,
     netcdf_skeleton_metadata,
     worksheet_skeleton_metadata,
+    skeleton_event_list,
+    worksheet_skeleton_event_list,
+    skeleton_instructions,
 )
 from rattlesnake.examples.environment.time.time_metadata import (
     manual_time_metadata,
@@ -207,6 +210,11 @@ BLANK_EVENT_DICT = {
     "netcdf": lambda: [],
     "manual": lambda: [],
 }
+SKELETON_EVENT_DICT = {
+    "manual": skeleton_event_list,
+    "netcdf": skeleton_event_list,
+    "worksheet": worksheet_skeleton_event_list,
+}
 TIME_EVENT_DICT = {
     "manual": time_event_list,
     "netcdf": time_event_list,
@@ -233,7 +241,7 @@ TRANSIENT_EVENT_DICT = {
     "worksheet": worksheet_transient_event_list,
 }
 EVENT_DICT[EnvironmentType.NONE] = BLANK_EVENT_DICT
-EVENT_DICT[EnvironmentType.SKELETON] = BLANK_EVENT_DICT
+EVENT_DICT[EnvironmentType.SKELETON] = SKELETON_EVENT_DICT
 EVENT_DICT[EnvironmentType.TIME] = TIME_EVENT_DICT
 EVENT_DICT[EnvironmentType.MODAL] = MODAL_EVENT_DICT
 EVENT_DICT[EnvironmentType.SINE] = SINE_EVENT_DICT
@@ -243,7 +251,7 @@ EVENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_EVENT_DICT
 # Instructions
 INSTRUCTIONS_DICT = {}
 INSTRUCTIONS_DICT[EnvironmentType.NONE] = lambda: None
-INSTRUCTIONS_DICT[EnvironmentType.SKELETON] = lambda: None
+INSTRUCTIONS_DICT[EnvironmentType.SKELETON] = skeleton_instructions
 INSTRUCTIONS_DICT[EnvironmentType.TIME] = time_instructions
 INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
 INSTRUCTIONS_DICT[EnvironmentType.SINE] = sine_instructions

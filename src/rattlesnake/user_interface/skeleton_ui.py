@@ -114,7 +114,7 @@ class SkeletonUI(EnvironmentUI):
         return SkeletonInstructions(self.environment_name, test_level)
 
     def set_environment_instructions(self, instructions: SkeletonInstructions):
-        self.run_widget.test_level_spinbox.setValue(instructions.test_level)
+        self.run_widget.test_level_spinbox.setValue(instructions.example_test_level)
 
     # endregion
 
@@ -168,6 +168,14 @@ class SkeletonUI(EnvironmentUI):
             return
         command, data = queue_data
         match command:
+            case SkeletonCommands.EXAMPLE_FLOAT_COMMAND:
+                pass
+            case SkeletonCommands.EXAMPLE_SET_TEST_LEVEL:
+                # The normal commands here are supposed to perform the action on the user_interface
+                # that would affect the instructions. These are here so the profile event list can simulate the state
+                # of the user_interface when collecting environment instructions before start_environment
+                # profile commands. These are only needed if the command will do something to the instructions.
+                self.set_test_level(data)
             case SkeletonUICommands.EXAMPLE_UI_SET_TEST_LEVEL:
                 self.set_test_level(data)
             case SkeletonUICommands.EXAMPLE_UI_SHOW_DATA:
