@@ -466,8 +466,8 @@ def diff_worksheets(original_worksheet, saved_worksheet):
     ``(row, col, original_value, saved_value)`` tuples for values that differ.
 
     Documentation/comment cells are ignored, as are rows whose label mentions
-    a "script", since those are always overwritten with an absolute path after
-    loading rather than sourced from the worksheet's saved value.
+    a "script" or "file", since those are always overwritten with an absolute
+    path after loading rather than sourced from the worksheet's saved value.
     """
     differences = []
     max_row = max(original_worksheet.max_row, saved_worksheet.max_row)
@@ -479,7 +479,7 @@ def diff_worksheets(original_worksheet, saved_worksheet):
             or saved_worksheet.cell(row, 1).value
             or ""
         ).lower()
-        if "script" in row_label:
+        if "script" in row_label or "file" in row_label:
             continue
         for col in range(1, max_col + 1):
             original_value = _normalize_cell_value(
