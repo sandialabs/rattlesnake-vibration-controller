@@ -709,6 +709,7 @@ def random_data_analysis_process(
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
     ping_alive_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event = None,
     process_name=None,
 ):
     """Process defining the random vibration control calculations and data analysis
@@ -745,4 +746,4 @@ def random_data_analysis_process(
         ping_alive_event,
     )
 
-    data_analysis_instance.run()
+    data_analysis_instance.run(shutdown_event)

@@ -1340,6 +1340,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
+                shutdown_event,
             ),
         )
         spectral_proc.start()
@@ -1354,6 +1355,7 @@ def transient_process(
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
                 ping_alive_event,
+                shutdown_event,
             ),
         )
         analysis_proc.start()
@@ -1367,6 +1369,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.log_file_queue,
                 queue_container.gui_update_queue,
+                shutdown_event,
             ),
         )
         siggen_proc.start()
@@ -1380,6 +1383,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.log_file_queue,
                 queue_container.gui_update_queue,
+                shutdown_event,
             ),
         )
         collection_proc.start()

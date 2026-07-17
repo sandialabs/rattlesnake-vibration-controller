@@ -738,6 +738,7 @@ def spectral_processing_process(
     environment_command_queue: VerboseMessageQueue,
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
+    shutdown_event: mp.synchronize.Event = None,
     process_name=None,
 ):
     """Function passed to multiprocessing as the FRF computation process
@@ -777,4 +778,4 @@ def spectral_processing_process(
         log_file_queue,
         environment_name,
     )
-    spectral_processing_instance.run()
+    spectral_processing_instance.run(shutdown_event)

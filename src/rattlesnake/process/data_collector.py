@@ -970,6 +970,7 @@ def data_collector_process(
     environment_command_queue: VerboseMessageQueue,
     log_file_queue: mp.queues.Queue,
     gui_update_queue: mp.queues.Queue,
+    shutdown_event: mp.synchronize.Event = None,
     process_name: str = None,
 ):
     """Random vibration data collector process function called by multiprocessing
@@ -995,4 +996,4 @@ def data_collector_process(
         environment_name,
     )
 
-    data_collector_instance.run()
+    data_collector_instance.run(shutdown_event)
