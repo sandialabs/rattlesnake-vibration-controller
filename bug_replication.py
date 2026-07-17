@@ -2,6 +2,7 @@ import time
 
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.main import launch_rattlesnake_ui
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.modal_environment import ModalInstructions
@@ -76,5 +77,24 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
+def sysid_environment_zero_divide():
+    """Figure out the zero devide in this to see if it is even a real issue"""
+    rattlesnake = build_rattlesnake_object(
+        threaded=True,
+        timeout=20,
+        import_method="manual",
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.SINE,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=True,
+        run_sysid=False,
+        start_hardware=False,
+        start_environment=False,
+        run_profile=False,
+    )
+    time.sleep(2)
+    rattlesnake.shutdown()
+
+
 if __name__ == "__main__":
-    profile_event_crash()
+    sysid_environment_zero_divide()
