@@ -96,24 +96,46 @@ def sysid_environment_zero_divide():
     rattlesnake.shutdown()
 
 
-def sysid_threaded_delayed_startup():
-    """System Identification takes much longer when running in threaded mode. It also throws"""
+def profile_event_button_disable():
+    """Start profile directly into stop acqusition causes the acqusition to time out and the start/stop profile button to both be
+    disabled. I think this happens because the profile timers are not fully started yet so the stop button runs stop_profile but
+    the timers are not started so it errs out. This really matters for the user interface button stuff more than the crash since
+    it is not common to want to start a profile and immediately exit out."""
     rattlesnake = build_rattlesnake_object(
-        threaded=True,
+        threaded=False,
         timeout=20,
         import_method="manual",
         hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.SINE,
+        environment_type=EnvironmentType.MODAL,
         stream_type=StreamType.NO_STREAM,
         load_sysid=False,
-        run_sysid=True,
-        start_hardware=False,
+        run_sysid=False,
+        start_hardware=True,
         start_environment=False,
         run_profile=False,
     )
-    time.sleep(20)
+
+    timestamp = 1
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = ModalInstructions("Modal 0")
+    start_environment_event = ProfileEvent(timestamp, "Modal 0", command, instructions)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, "Modal 0", command)
+
+    profile_event_list = [
+        start_environment_event,
+        stop_environment_event,
+    ]
+    print("Starting Profile")
+
+    rattlesnake.start_profile(profile_event_list)
+    print("Stopping Acqusition")
+    rattlesnake.stop_acquisition()
+
     rattlesnake.shutdown()
 
 
 if __name__ == "__main__":
-    sysid_threaded_delayed_startup()
+    profile_event_button_disable()
