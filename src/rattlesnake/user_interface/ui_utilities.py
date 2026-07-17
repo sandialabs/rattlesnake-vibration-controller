@@ -89,7 +89,6 @@ def error_message_qt(title, message):
         Error message that will be displayed.
 
     """
-    print(message)
     QtWidgets.QMessageBox.critical(None, title, message)
 
 
