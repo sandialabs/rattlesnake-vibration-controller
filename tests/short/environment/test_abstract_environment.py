@@ -262,15 +262,14 @@ def test_environment_metadata_validate_invalid_channel_list(
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_metadata_save_load_netcdf(
-    environment_type, tmp_path, hardware_metadata: SkeletonHardwareMetadata
-):
+def test_environment_metadata_save_load_netcdf(environment_type, tmp_path):
     """
     Saves a valid metadata subclass to a netcdf file and then loads
     it back into a metadata object. Verifies that the metadata object
     is valid and that the netcdf handle contains environment_name and
     environment_type.
     """
+    hardware_metadata = manual_sdynpy_system_metadata()
     metadata_class = ENVIRONMENT_METADATA[environment_type]
     metadata = ENVIRONMENT_DICT[environment_type]["manual"](hardware_metadata)
     metadata.environment_name = "Environment Name"
@@ -286,20 +285,18 @@ def test_environment_metadata_save_load_netcdf(
         loaded = metadata_class.load_metadata_from_netcdf(
             load_group,
             environment_name="Environment Name",
-            channel_list_bools=mock_channel_list_bools(),
+            channel_list_bools=[True] * len(hardware_metadata.channel_list),
             hardware_metadata=hardware_metadata,
         )
 
     assert loaded.environment_name == "Environment Name"
-    assert loaded.channel_list_bools == [True, True]
-    assert loaded.sample_rate == 1024
+    assert loaded.channel_list_bools == [True] * len(hardware_metadata.channel_list)
+    assert loaded.sample_rate == hardware_metadata.sample_rate
     loaded.validate(hardware_metadata)
 
 
 @pytest.mark.parametrize("environment_type", IMPLEMENTED_ENVIRONMENT)
-def test_environment_metadata_save_load_worksheet(
-    environment_type, hardware_metadata: SkeletonHardwareMetadata
-):
+def test_environment_metadata_save_load_worksheet(environment_type):
     """
     Saves a valid metadata subclass to an Excel worksheet and then loads
     it back into a metadata object. Verifies that the worksheet contains
@@ -307,6 +304,7 @@ def test_environment_metadata_save_load_worksheet(
     preserves the expected environment name, channel selection, and sample
     rate before passing validation.
     """
+    hardware_metadata = manual_sdynpy_system_metadata()
     metadata_class = ENVIRONMENT_METADATA[environment_type]
     metadata = ENVIRONMENT_DICT[environment_type]["manual"](hardware_metadata)
     metadata.environment_name = "Environment Name"
@@ -322,13 +320,13 @@ def test_environment_metadata_save_load_worksheet(
     loaded = metadata_class.load_metadata_from_worksheet(
         worksheet=worksheet,
         environment_name="Environment Name",
-        channel_list_bools=mock_channel_list_bools(),
+        channel_list_bools=[True] * len(hardware_metadata.channel_list),
         hardware_metadata=hardware_metadata,
     )
 
     assert loaded.environment_name == "Environment Name"
-    assert loaded.channel_list_bools == [True, True]
-    assert loaded.sample_rate == 1024
+    assert loaded.channel_list_bools == [True] * len(hardware_metadata.channel_list)
+    assert loaded.sample_rate == hardware_metadata.sample_rate
     loaded.validate(hardware_metadata)
 
 
@@ -345,21 +343,19 @@ def test_environment_metadata_load_save_netcdf(environment_type, tmp_path):
     metadata = ENVIRONMENT_DICT[environment_type]["netcdf"](hardware_metadata)
 
     path = tmp_path / "metadata.nc4"
-    with nc4.Dataset(path, "w", format="NETCDF4") as dataset:
-        group = dataset.createGroup(metadata.environment_name)
-        metadata.save_metadata_to_netcdf(group)
-        dataset.close()
+    dataset = nc4.Dataset(path, "w", format="NETCDF4")
+    group = dataset.createGroup(metadata.environment_name)
+    metadata.save_metadata_to_netcdf(group)
+    dataset.close()
 
-    with (
-        nc4.Dataset(EXAMPLE_NETCDF[environment_type], "r") as original_dataset,
-        nc4.Dataset(path, "r") as saved_dataset,
-    ):
-        original_group = original_dataset.groups[metadata.environment_name]
-        saved_group = saved_dataset.groups[metadata.environment_name]
-        differences = diff_netcdf_groups(original_group, saved_group)
+    original_dataset = nc4.Dataset(EXAMPLE_NETCDF[environment_type], "r")
+    saved_dataset = nc4.Dataset(path, "r")
+    original_group = original_dataset.groups[metadata.environment_name]
+    saved_group = saved_dataset.groups[metadata.environment_name]
+    differences = diff_netcdf_groups(original_group, saved_group)
 
-        original_dataset.close()
-        saved_dataset.close()
+    original_dataset.close()
+    saved_dataset.close()
 
     assert differences == []
 

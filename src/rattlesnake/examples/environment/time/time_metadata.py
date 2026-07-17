@@ -43,6 +43,7 @@ def worksheet_time_metadata(hardware_metadata):
 
     signal = create_time_signal(hardware_metadata)
     metadata.output_signal = signal
+    metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
     return metadata
 
 
@@ -55,6 +56,7 @@ def netcdf_time_metadata(hardware_metadata):
     metadata = TimeMetadata.load_metadata_from_netcdf(
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
+    metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
 
     return metadata
 
@@ -73,6 +75,7 @@ def manual_time_metadata(hardware_metadata):
         output_signal=signal,
         cancel_rampdown_time=cancel_rampdown_time,
     )
+    metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
 
     return metadata
 
