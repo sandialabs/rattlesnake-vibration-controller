@@ -46,7 +46,7 @@ def build_rattlesnake_object(
     start_environment=START_ENVIRONMENT,
     run_profile=RUN_PROFILE,
 ):
-    rattlesnake = RattlesnakeController(threaded=threaded)
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=timeout)
 
     # Initialize hardware
     if hardware_type is HardwareType.NONE:

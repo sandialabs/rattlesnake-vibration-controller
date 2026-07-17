@@ -96,5 +96,24 @@ def sysid_environment_zero_divide():
     rattlesnake.shutdown()
 
 
+def sysid_threaded_delayed_startup():
+    """System Identification takes much longer when running in threaded mode. It also throws"""
+    rattlesnake = build_rattlesnake_object(
+        threaded=True,
+        timeout=20,
+        import_method="manual",
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.SINE,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=False,
+        run_sysid=True,
+        start_hardware=False,
+        start_environment=False,
+        run_profile=False,
+    )
+    time.sleep(20)
+    rattlesnake.shutdown()
+
+
 if __name__ == "__main__":
-    sysid_environment_zero_divide()
+    sysid_threaded_delayed_startup()
