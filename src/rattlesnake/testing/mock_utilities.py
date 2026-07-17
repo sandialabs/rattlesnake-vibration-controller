@@ -17,9 +17,9 @@ from rattlesnake.environment.skeleton_environment import (
     SkeletonQueues,
 )
 from rattlesnake.environment.skeleton_sys_id_environment import (
-    SkeletonEnvironment as SysIdSkeletonEnvironment,
-    SkeletonMetadata as SysIdSkeletonMetadata,
-    SkeletonQueues as SysIdSkeletonQueues,
+    SkeletonSysIdEnvironment,
+    SkeletonSysIdMetadata,
+    SkeletonSysIdQueues,
 )
 from rattlesnake.environment.environment_registry import UNIMPLEMENTED_ENVIRONMENT
 from rattlesnake.process.abstract_sysid_data_analysis import (
@@ -342,7 +342,7 @@ def skeleton_sysid_environment_metadata(**overrides):
         sample_rate=1024,
     )
     kwargs.update(overrides)
-    return SysIdSkeletonMetadata(**kwargs)
+    return SkeletonSysIdMetadata(**kwargs)
 
 
 def skeleton_sysid_queues(**overrides):
@@ -362,7 +362,7 @@ def skeleton_sysid_queues(**overrides):
         log_file_queue=log_file_queue,
     )
     kwargs.update(overrides)
-    return SysIdSkeletonQueues(**kwargs)
+    return SkeletonSysIdQueues(**kwargs)
 
 
 def skeleton_sysid_environment(**overrides):
@@ -379,7 +379,7 @@ def skeleton_sysid_environment(**overrides):
         sysid_stored_event=mp.Event(),
     )
     kwargs.update(overrides)
-    return SysIdSkeletonEnvironment(**kwargs)
+    return SkeletonSysIdEnvironment(**kwargs)
 
 
 # endregion
