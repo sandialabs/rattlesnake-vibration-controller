@@ -33,6 +33,7 @@ import openpyxl
 import netCDF4 as nc4
 import numpy as np
 
+from rattlesnake.utilities import save_rattlesnake_to_netcdf
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.environment.abstract_environment import (
     EnvironmentCommands,
@@ -55,7 +56,7 @@ from rattlesnake.utilities import (
     flush_queue,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from ..process.data_collector import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.process.data_collector import (  # noqa # pylint: disable=wrong-import-position
     Acceptance,
     AcquisitionType,
     CollectorMetadata,
@@ -64,12 +65,12 @@ from ..process.data_collector import (  # noqa # pylint: disable=wrong-import-po
     Window,
     data_collector_process,
 )
-from ..process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,
@@ -88,17 +89,20 @@ class ModalCommands(EnvironmentCommands):
     ACCEPT_FRAME = 2
     RUN_CONTROL = 3
     CHECK_FOR_COMPLETE_SHUTDOWN = 4
+    CHANGE_SAVEFILE = 5
 
-    VALID_PROFILE_COMMANDS = ()
+    VALID_PROFILE_COMMANDS = (CHANGE_SAVEFILE,)
     VALID_DATA = {
         ACCEPT_FRAME: int,
         RUN_CONTROL: type(None),
         CHECK_FOR_COMPLETE_SHUTDOWN: type(None),
+        CHANGE_SAVEFILE: str,
     }
 
 
 class ModalUICommands(Enum):
     SPECTRAL_UPDATE = 1
+    CHANGE_SAVEFILE = 2
 
 
 # endregion
@@ -937,8 +941,15 @@ class ModalMetadata(EnvironmentMetadata):
 
 # region Instructions
 class ModalInstructions(EnvironmentInstructions):
-    def __init__(self, environment_name):
+    def __init__(
+        self,
+        environment_name,
+        save_filename: str = None,
+        override_table: dict = {},
+    ):
         super().__init__(CONTROL_TYPE, environment_name)
+        self.save_filename = save_filename
+        self.override_table = override_table
 
     def validate(self):
         return super().validate()
@@ -1041,6 +1052,9 @@ class ModalEnvironment(Environment):
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
+        self.netcdf_dataset = None
+        self.save_filename = None
+        self.override_table = {}
 
         # Map commands
         self.map_command(ModalCommands.ACCEPT_FRAME, self.accept_frame)
@@ -1049,6 +1063,8 @@ class ModalEnvironment(Environment):
         self.map_command(
             ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown
         )
+        self.map_command(ModalCommands.CHANGE_SAVEFILE, self.change_savefile)
+        self.map_command(DataCollectorCommands.TIME_FRAME, self.write_time_frame)
         self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
@@ -1196,6 +1212,7 @@ class ModalEnvironment(Environment):
             response_transformation_matrix=None,
             reference_transformation_matrix=None,
             window_parameter_2=window_parameter,
+            write_time_data=True,
         )
 
     def get_spectral_processing_metadata(self) -> SpectralProcessingMetadata:
@@ -1259,20 +1276,129 @@ class ModalEnvironment(Environment):
 
     # endregion
 
+    # region Data Saving
+    def create_file(self):
+        """Creates a netCDF file to save the modal test's spectral data to
+
+        Parameters
+        ----------
+        filename : str
+            Path to the netCDF file that will be created
+        """
+        if not self.save_filename:
+            self.netcdf_dataset = None
+            return
+        self.netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
+            self.save_filename, "w", format="NETCDF4", clobber=True
+        )
+        save_rattlesnake_to_netcdf(
+            self.netcdf_dataset,
+            self.hardware_metadata,
+            {self.environment_name: self.environment_metadata},
+        )
+
+        channel_group = self.netcdf_dataset["channels"]
+        node_number_var = channel_group["node_number"]
+        node_direction_var = channel_group["node_direction"]
+        num_channels = self.netcdf_dataset.dimensions["response_channels"].size
+
+        for row_num, override_values in self.override_table.items():
+            new_node_number, new_node_direction = override_values
+
+            if row_num < 0 or row_num >= num_channels:
+                raise IndexError(
+                    f"Override row {row_num} is outside valid channel range "
+                    f"0 to {num_channels - 1}"
+                )
+
+            node_number_var[row_num] = (
+                "" if new_node_number is None else str(new_node_number)
+            )
+            node_direction_var[row_num] = (
+                "" if new_node_direction is None else str(new_node_direction)
+            )
+
+        group_handle = self.netcdf_dataset.groups[self.environment_name]
+        group_handle.createDimension("fft_lines", self.environment_metadata.fft_lines)
+        group_handle.createVariable(
+            "frf_data_real",
+            "f8",
+            ("fft_lines", "response_channels", "reference_channels"),
+        )
+        group_handle.createVariable(
+            "frf_data_imag",
+            "f8",
+            ("fft_lines", "response_channels", "reference_channels"),
+        )
+        group_handle.createVariable(
+            "coherence", "f8", ("fft_lines", "response_channels")
+        )
+        self.log(f"Saving spectral data to {self.save_filename}")
+
+    def close_data_file(self):
+        """Closes the netCDF file used to save spectral data, if one is open"""
+        if self.netcdf_dataset is not None:
+            self.netcdf_dataset.close()
+            self.netcdf_dataset = None
+        self.save_filename = None
+
+    def write_time_frame(self, data):
+        """Writes an accepted measurement frame's time data to the netCDF file
+
+        Parameters
+        ----------
+        data : tuple
+            A ``(frame, accepted)`` tuple as sent by the data collector,
+            where ``frame`` is the raw measurement frame and ``accepted``
+            indicates whether the frame was accepted into the average.
+        """
+        frame, accepted = data
+        if self.netcdf_dataset is not None and accepted:
+            num_timesteps = self.netcdf_dataset.dimensions["time_samples"].size
+            current_frame = num_timesteps // self.environment_metadata.samples_per_frame
+            if current_frame < self.environment_metadata.num_averages:
+                timesteps = slice(num_timesteps, None, None)
+                self.netcdf_dataset.variables["time_data"][:, timesteps] = frame
+
+    def change_savefile(self, data):
+        """
+        Changes the file that spectral data is saved to
+
+        Parameters
+        ----------
+        data : str
+            The new filename to save spectral data to. If empty, the
+            environment will stop saving spectral data.
+        """
+        filename = data
+        self.gui_update_queue.put(
+            (self.environment_name, (ModalUICommands.CHANGE_SAVEFILE, data))
+        )
+        self.close_data_file()
+        if filename:
+            self.create_file()
+
+    # endregion
+
     # region Commands
-    def start_environment(self, data):  # pylint: disable=unused-argument
+    def start_environment(self, data):
         """Starts the environment
 
         Parameters
         ----------
-        data : NoneType
-            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
-            this method
+        data : ModalInstructions or NoneType
+            Instructions for this run of the environment. If a
+            ``data_filename`` is provided, the environment will save its
+            spectral data to that file as it runs.
         """
         self.log("Starting Modal")
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
+
+        self.save_filename = data.save_filename
+        self.override_table = data.override_table
+        self.create_file()
 
         # Set up the collector
         self.queue_container.collector_command_queue.put(
@@ -1369,6 +1495,7 @@ class ModalEnvironment(Environment):
         spectral_data = flush_queue(
             self.queue_container.updated_spectral_quantities_queue, timeout=WAIT_TIME
         )
+        stopping = False
         if len(spectral_data) > 0:
             self.log("Received Data")
             (
@@ -1398,11 +1525,20 @@ class ModalEnvironment(Environment):
                     ),
                 )
             )
+            if self.netcdf_dataset is not None:
+                group_handle = self.netcdf_dataset.groups[self.environment_name]
+                group_handle.variables["frf_data_real"][:] = np.real(frf)
+                group_handle.variables["frf_data_imag"][:] = np.imag(frf)
+                group_handle.variables["coherence"][:] = coherence
+                if frames >= self.environment_metadata.num_averages:
+                    self.stop_environment(None)
+                    stopping = True
         else:
             time.sleep(WAIT_TIME)
-        self.queue_container.environment_command_queue.put(
-            self.environment_name, (ModalCommands.RUN_CONTROL, None)
-        )
+        if not stopping:
+            self.queue_container.environment_command_queue.put(
+                self.environment_name, (ModalCommands.RUN_CONTROL, None)
+            )
 
     # endregion
 
@@ -1503,6 +1639,7 @@ class ModalEnvironment(Environment):
         self.queue_container.environment_command_queue.put(
             self.environment_name, (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
         )
+        self.close_data_file()
 
     def quit(self, data):
         """Returns True to stop the ``run`` while loop and exit the process
@@ -1521,6 +1658,7 @@ class ModalEnvironment(Environment):
             that it is time to close down the environment.
 
         """
+        self.close_data_file()
         for queue in [
             self.queue_container.spectral_command_queue,
             self.queue_container.signal_generation_command_queue,

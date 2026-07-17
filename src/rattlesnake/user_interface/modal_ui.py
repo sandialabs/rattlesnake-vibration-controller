@@ -4,12 +4,10 @@ from glob import glob
 
 import numpy as np
 import scipy.signal as sig
-import netCDF4 as nc4
 from qtpy import QtWidgets, uic, QtCore
 
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.utilities import DIRECTORY, load_python_module
-from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
@@ -145,7 +143,6 @@ class ModalUI(EnvironmentUI):
         self.last_reference_cpsd = None
         self.last_condition = None
         self.acquiring = False
-        self.netcdf_handle = None
         self.override_table = {}
         self.reciprocal_responses = []
 
@@ -823,9 +820,12 @@ class ModalUI(EnvironmentUI):
                 widget.setChecked(False)
 
     def get_environment_instructions(self):
-        return ModalInstructions(self.environment_name)
+        filename = self.increment_savefile() if self.acquiring else None
+        return ModalInstructions(self.environment_name, filename, self.override_table)
 
     def set_environment_instructions(self, instructions):
+        self.acquiring = bool(instructions.save_filename)
+        self.run_widget.data_file_selector.setText(instructions.save_filename or "")
         super().set_environment_instructions(instructions)
 
     # endregion
@@ -1281,29 +1281,6 @@ class ModalUI(EnvironmentUI):
         # print(corresponding_drive_responses)
         return corresponding_drive_responses
 
-    def create_netcdf4_file(self, filename):
-        self.netcdf_handle = nc4.Dataset(filename, "w", format="NETCDF4", clobber=True)
-        save_rattlesnake_to_netcdf(
-            self.netcdf_handle,
-            self.rattlesnake.hardware_metadata,
-            self.rattlesnake.environment_metadata,
-        )  # This is scuffed but is an edge case
-        group_handle = self.netcdf_handle.groups[self.environment_name]
-        group_handle.createDimension("fft_lines", self.environment_metadata.fft_lines)
-        group_handle.createVariable(
-            "frf_data_real",
-            "f8",
-            ("fft_lines", "response_channels", "reference_channels"),
-        )
-        group_handle.createVariable(
-            "frf_data_imag",
-            "f8",
-            ("fft_lines", "response_channels", "reference_channels"),
-        )
-        group_handle.createVariable(
-            "coherence", "f8", ("fft_lines", "response_channels")
-        )
-
     def update_channel_names(self):
         """Updates channel names based on the override channel table"""
         self.channel_names = []
@@ -1328,31 +1305,49 @@ class ModalUI(EnvironmentUI):
             )
         self.run_widget.channel_display_area.channel_names = self.channel_names
 
-    def preview_acquisition(self):
-        self.netcdf_handle = None
-        self.start_environment()
+    def increment_savefile(self):
+        """
+        Resolves the filename that spectral data should be saved to
 
-    def start_control(self):
-        """Tells the environment process to start in acquisition mode"""
-        self.acquiring = True
-        # Create the output file
+        Reads the file path out of the run tab's file selector, applying
+        the autoincrement scheme if the autoincrement checkbox is checked.
+
+        Returns
+        -------
+        str
+            The resolved filename, or "" if no filename has been selected.
+        """
         filename = self.run_widget.data_file_selector.text()
         if filename == "":
-            error_message_qt(
-                "Invalid File", "Please select a file in which to store modal data"
-            )
-            return
+            return ""
         if self.run_widget.autoincrement_checkbox.isChecked():
             # Add the file increment
             path, ext = os.path.splitext(filename)
             index = len(glob(path + "*" + ext))
             filename = path + f"_{index:04d}" + ext
-        self.create_netcdf4_file(filename)
+        return filename
+
+    def preview_acquisition(self):
+        self.acquiring = False
+        self.start_environment()
+
+    def start_control(self):
+        """Tells the environment process to start in acquisition mode"""
+        if self.run_widget.data_file_selector.text() == "":
+            error_message_qt(
+                "Invalid File", "Please select a file in which to store modal data"
+            )
+            return
+        self.acquiring = True
         self.start_environment()
 
     # endregion
 
     # region Commands
+    def change_savefile(self, filename):
+        filename = str(filename) if filename is not None else ""
+        self.run_widget.data_file_selector.setText(filename)
+
     def display_environment_ended(self):
         self.run_widget.stop_test_button.setEnabled(False)
         self.run_widget.preview_test_button.setEnabled(True)
@@ -1394,8 +1389,6 @@ class ModalUI(EnvironmentUI):
         return super().stop_environment_error(error)
 
     def stop_environment_ready(self):
-        if self.netcdf_handle:
-            self.netcdf_handle.close()  # Close out of file
         return super().stop_environment_ready()
 
     def update_gui(self, queue_data: tuple):
@@ -1419,6 +1412,10 @@ class ModalUI(EnvironmentUI):
             return
         command, data = queue_data
         match command:
+            case ModalCommands.CHANGE_SAVEFILE:
+                self.change_savefile(data)
+            case ModalUICommands.CHANGE_SAVEFILE:
+                self.change_savefile(data)
             case ModalUICommands.SPECTRAL_UPDATE:
                 (
                     frames,
@@ -1464,13 +1461,7 @@ class ModalUI(EnvironmentUI):
                     widget = window.widget()
                     if widget.signal_selector.currentIndex() in [3, 4, 5, 6, 7]:
                         widget.update_data()
-                if self.acquiring and self.netcdf_handle is not None:
-                    group = self.netcdf_handle.groups[self.environment_name]
-                    group.variables["frf_data_real"][:] = np.real(self.last_frf)
-                    group.variables["frf_data_imag"][:] = np.imag(self.last_frf)
-                    group.variables["coherence"][:] = self.last_coherence
                 if self.acquiring and frames >= self.environment_metadata.num_averages:
-                    self.stop_environment()
                     self.acquiring = False
             case DataCollectorUICommands.TIME_FRAME:
                 frame, accepted = data
@@ -1482,15 +1473,6 @@ class ModalUI(EnvironmentUI):
                     widget = window.widget()
                     if widget.signal_selector.currentIndex() not in [3, 4, 5, 6, 7]:
                         widget.update_data()
-                if self.netcdf_handle is not None and accepted:
-                    # Get current timestep
-                    num_timesteps = self.netcdf_handle.dimensions["time_samples"].size
-                    current_frame = (
-                        num_timesteps // self.environment_metadata.samples_per_frame
-                    )
-                    if current_frame < self.environment_metadata.num_averages:
-                        timesteps = slice(num_timesteps, None, None)
-                        self.netcdf_handle.variables["time_data"][:, timesteps] = frame
                 if self.environment_metadata.accept_type == "Manual" and not accepted:
                     self.run_widget.accept_average_button.setEnabled(True)
                     self.run_widget.reject_average_button.setEnabled(True)

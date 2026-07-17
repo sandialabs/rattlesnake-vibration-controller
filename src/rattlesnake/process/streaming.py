@@ -32,7 +32,7 @@ import netCDF4 as nc
 import numpy as np
 
 from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
-from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
+from rattlesnake.utilities import save_rattlesnake_to_netcdf
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess

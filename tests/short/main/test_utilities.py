@@ -10,6 +10,7 @@ import numpy as np
 import openpyxl
 import pytest
 from scipy.io import savemat
+import netCDF4 as nc4
 
 from rattlesnake.testing.mock_utilities import (
     clear_log_queue,
@@ -45,6 +46,7 @@ from rattlesnake.utilities import (
     norm_ratio,
     power2db,
     read_transformation_matrix_from_worksheet,
+    save_rattlesnake_to_netcdf,
     reduce_array_by_coordinate,
     rms_csd,
     rms_time,
@@ -901,6 +903,43 @@ def test_read_transformation_matrix_from_worksheet_stops_at_comment():
     )
 
     np.testing.assert_array_equal(matrix, np.array([[1.0]]))
+
+
+def test_save_rattlesnake_to_netcdf(
+    mock_hardware_metadata,
+    mock_environment_metadata,
+):
+    """
+    Verifies that hardware metadata, environment names, environment types,
+    active channel masks, and environment groups are written to netCDF.
+    """
+    dataset = nc4.Dataset("metadata.nc", mode="w", diskless=True, persist=False)
+    environment_metadata_dict = {"Environment 0": mock_environment_metadata}
+
+    try:
+        save_rattlesnake_to_netcdf(
+            dataset,
+            hardware_metadata=mock_hardware_metadata,
+            environment_metadata_dict=environment_metadata_dict,
+        )
+
+        assert "response_channels" in dataset.dimensions
+        assert "num_environments" in dataset.dimensions
+        assert "environment_names" in dataset.variables
+        assert "environment_types" in dataset.variables
+        assert "environment_active_channels" in dataset.variables
+        assert "Skeleton Environment" in dataset.groups
+
+        assert dataset.variables["environment_names"][0] == "Skeleton Environment"
+        assert dataset.variables["environment_types"][0] == (
+            mock_environment_metadata.environment_type.value
+        )
+        np.testing.assert_array_equal(
+            dataset.variables["environment_active_channels"][...],
+            np.array([[1], [0]], dtype="int8"),
+        )
+    finally:
+        dataset.close()
 
 
 # endregion

@@ -399,6 +399,7 @@ class DataCollectorCommands(Enum):
     ACCEPTED = 7
     SHUTDOWN_ACHIEVED = 8
     CLEAR_KURTOSIS_BUFFER = 9
+    TIME_FRAME = 10
 
 
 class DataCollectorUICommands(Enum):
@@ -469,6 +470,7 @@ class CollectorMetadata:
         kurtosis_buffer_length=None,
         response_transformation_matrix=None,
         reference_transformation_matrix=None,
+        write_time_data=False,
     ):
         """Initializes data collector metadata
 
@@ -520,6 +522,10 @@ class CollectorMetadata:
             A transformation applied to the response channels, by default None
         reference_transformation_matrix : np.ndarray, optional
             A transformation applied to the reference channels, by default None
+        write_time_data : bool, optional
+            If True, accepted measurement frames will also be sent to the
+            owning environment (via the environment command queue) so it can
+            write the raw time data to its netCDF file, by default False
         """
         self.num_channels = num_channels
         self.response_channel_indices = response_channel_indices
@@ -543,6 +549,7 @@ class CollectorMetadata:
         self.reference_transformation_matrix = reference_transformation_matrix
         self.wait_samples = wait_samples
         self.kurtosis_buffer_length = kurtosis_buffer_length
+        self.write_time_data = write_time_data
 
     def __eq__(self, other):
         try:
@@ -740,6 +747,30 @@ class DataCollectorProcess(AbstractMessageProcess):
                 pickle.dump(self.frame_buffer, f)
             self.received_data_index = 0
 
+    def send_time_frame(self, frame, accepted):
+        """Sends a measurement frame to the GUI for display and, if the
+        collector is configured to do so, to the owning environment so it
+        can be written to a netCDF file.
+
+        Parameters
+        ----------
+        frame : np.ndarray
+            The measurement frame to send
+        accepted : bool
+            Whether the frame was accepted into the average
+        """
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                (DataCollectorUICommands.TIME_FRAME, (frame, accepted)),
+            )
+        )
+        if self.collector_metadata.write_time_data:
+            self.environment_command_queue.put(
+                self.process_name,
+                (DataCollectorCommands.TIME_FRAME, (frame, accepted)),
+            )
+
     def acquire(self, data):  # pylint: disable=unused-argument
         """Acquires data from the data_in_queue and sends to the environment
 
@@ -821,12 +852,7 @@ class DataCollectorProcess(AbstractMessageProcess):
                 response_frame *= self.response_window / self.test_level
                 reference_frame *= self.reference_window / self.test_level
                 if accepted and not self.frame_buffer.manual_accept:
-                    self.gui_update_queue.put(
-                        (
-                            self.environment_name,
-                            (DataCollectorUICommands.TIME_FRAME, (frame, True)),
-                        )
-                    )
+                    self.send_time_frame(frame, True)
                     self.log("Sending data")
                     if self.collector_metadata.kurtosis_buffer_length is not None:
                         self.kurtosis_buffer.add_data(frame)
@@ -851,19 +877,9 @@ class DataCollectorProcess(AbstractMessageProcess):
                     self.log("Sent Data")
                 elif self.frame_buffer.manual_accept:
                     self.last_frame = frame
-                    self.gui_update_queue.put(
-                        (
-                            self.environment_name,
-                            (DataCollectorUICommands.TIME_FRAME, (frame, False)),
-                        )
-                    )
+                    self.send_time_frame(frame, False)
                 else:
-                    self.gui_update_queue.put(
-                        (
-                            self.environment_name,
-                            (DataCollectorUICommands.TIME_FRAME, (frame, False)),
-                        )
-                    )
+                    self.send_time_frame(frame, False)
         # Keep running until stopped
         if not last_data:
             self.command_queue.put(
@@ -884,12 +900,7 @@ class DataCollectorProcess(AbstractMessageProcess):
         self.frame_buffer.accept()
         if keep_frame:
             self.log("Sending data manually")
-            self.gui_update_queue.put(
-                (
-                    self.environment_name,
-                    (DataCollectorUICommands.TIME_FRAME, (self.last_frame, True)),
-                )
-            )
+            self.send_time_frame(self.last_frame, True)
             frame_fft = rfft(self.last_frame, axis=-1) * self.window_correction
             # Separate into response and reference
             reference_fft = frame_fft[self.collector_metadata.reference_channel_indices]

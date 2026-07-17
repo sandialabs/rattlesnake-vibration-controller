@@ -124,15 +124,31 @@ def modal_event_list():
         timestamp, ENVIRONMENT_NAME, command, instructions
     )
 
-    timestamp = 10
+    timestamp = 5
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
-    timestamp = 10
+    timestamp = 6
+    command = ModalCommands.CHANGE_SAVEFILE
+    data = defaults.DIRECTORY + "/environment/modal/modal_profile_example.nc4"
+    change_savefile_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+
+    timestamp = 8
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = modal_instructions()
+    start_environment_event_2 = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 15
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event_2 = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    timestamp = 15
     command = GlobalCommands.STOP_STREAMING
     stop_stream_event = ProfileEvent(timestamp, "Global", command)
 
-    timestamp = 10
+    timestamp = 15
     command = GlobalCommands.STOP_HARDWARE
     stop_hardware_event = ProfileEvent(timestamp, "Global", command)
 
@@ -140,6 +156,9 @@ def modal_event_list():
         start_stream_event,
         start_environment_event,
         stop_environment_event,
+        change_savefile_event,
+        start_environment_event_2,
+        stop_environment_event_2,
         stop_stream_event,
         stop_hardware_event,
     ]

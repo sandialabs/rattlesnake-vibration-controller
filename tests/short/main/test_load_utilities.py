@@ -15,12 +15,14 @@ from rattlesnake.load_utilities import (
     load_metadata_from_workbook,
     load_profile_from_workbook,
     save_profile_to_workbook,
-    save_rattlesnake_to_netcdf,
     save_rattlesnake_to_workbook,
 )
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.hardware.skeleton_hardware import SkeletonHardwareMetadata
-from rattlesnake.environment.skeleton_environment import SkeletonMetadata, SkeletonCommands
+from rattlesnake.environment.skeleton_environment import (
+    SkeletonMetadata,
+    SkeletonCommands,
+)
 from rattlesnake.testing.mock_utilities import (
     skeleton_hardware_metadata,
     skeleton_environment_metadata,
@@ -185,43 +187,6 @@ def test_discover_environment_type_in_old_netcdf_invalid():
 
     with pytest.raises(RattlesnakeError):
         discover_environment_type_in_old_netcdf(group)
-
-
-def test_save_rattlesnake_to_netcdf(
-    mock_hardware_metadata,
-    mock_environment_metadata,
-):
-    """
-    Verifies that hardware metadata, environment names, environment types,
-    active channel masks, and environment groups are written to netCDF.
-    """
-    dataset = nc4.Dataset("metadata.nc", mode="w", diskless=True, persist=False)
-    environment_metadata_dict = {"Environment 0": mock_environment_metadata}
-
-    try:
-        save_rattlesnake_to_netcdf(
-            dataset,
-            hardware_metadata=mock_hardware_metadata,
-            environment_metadata_dict=environment_metadata_dict,
-        )
-
-        assert "response_channels" in dataset.dimensions
-        assert "num_environments" in dataset.dimensions
-        assert "environment_names" in dataset.variables
-        assert "environment_types" in dataset.variables
-        assert "environment_active_channels" in dataset.variables
-        assert "Skeleton Environment" in dataset.groups
-
-        assert dataset.variables["environment_names"][0] == "Skeleton Environment"
-        assert dataset.variables["environment_types"][0] == (
-            mock_environment_metadata.environment_type.value
-        )
-        np.testing.assert_array_equal(
-            dataset.variables["environment_active_channels"][...],
-            np.array([[1], [0]], dtype="int8"),
-        )
-    finally:
-        dataset.close()
 
 
 # endregion
