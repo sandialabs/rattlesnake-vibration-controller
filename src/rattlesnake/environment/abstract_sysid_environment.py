@@ -874,7 +874,7 @@ class SysIdEnvironment(Environment):
 
         # This seems counterintuitive but lots of environments overwrite the
         # system_id_complete function so it is easier to do it this way
-        self.queue_container.environment_command_queue.put(
+        self.environment_command_queue.put(
             self.environment_name,
             (
                 SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,

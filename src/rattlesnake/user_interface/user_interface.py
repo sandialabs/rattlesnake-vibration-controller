@@ -452,15 +452,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_hardware_button.setEnabled(True)
         self.initialize_environments_button.setEnabled(True)
         self.display_acquisition_ended()
-
-        if self.rattlesnake.state == RattlesnakeState.SYS_ID_ACTIVE:
-            self.recover_sysid_crash()
-
         if self.rattlesnake.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.display_acquisition_started()
 
-        if self.rattlesnake.state == RattlesnakeState.ENVIRONMENT_ACTIVE:
-            self.recover_environment_crash()
+        self.recover_sysid_crash()
+        self.recover_environment_crash()
 
         self.start_profile_button.setEnabled(True)
         self.stop_profile_button.setEnabled(False)

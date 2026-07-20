@@ -33,6 +33,12 @@ from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
     worksheet_skeleton_event_list,
     skeleton_instructions,
 )
+from rattlesnake.examples.environment.skeleton_sysid.skeleton_sysid_metadata import (
+    manual_skeleton_sysid_metadata,
+    netcdf_skeleton_sysid_metadata,
+    worksheet_skeleton_sysid_metadata,
+    skeleton_sysid_instructions,
+)
 from rattlesnake.examples.environment.time.time_metadata import (
     manual_time_metadata,
     netcdf_time_metadata,
@@ -132,6 +138,11 @@ SKELETON_DICT = {
     "netcdf": netcdf_skeleton_metadata,
     "manual": manual_skeleton_metadata,
 }
+SKELETON_SYSID_DICT = {
+    "worksheet": worksheet_skeleton_sysid_metadata,
+    "netcdf": netcdf_skeleton_sysid_metadata,
+    "manual": manual_skeleton_sysid_metadata,
+}
 TIME_DICT = {
     "worksheet": worksheet_time_metadata,
     "netcdf": netcdf_time_metadata,
@@ -159,6 +170,7 @@ TRANSIENT_DICT = {
 }
 ENVIRONMENT_DICT[EnvironmentType.NONE] = BLANK_ENVIRONMENT_DICT
 ENVIRONMENT_DICT[EnvironmentType.SKELETON] = SKELETON_DICT
+ENVIRONMENT_DICT[EnvironmentType.SYSID_SKELETON] = SKELETON_SYSID_DICT
 ENVIRONMENT_DICT[EnvironmentType.TIME] = TIME_DICT
 ENVIRONMENT_DICT[EnvironmentType.MODAL] = MODAL_DICT
 ENVIRONMENT_DICT[EnvironmentType.SINE] = SINE_DICT
@@ -169,6 +181,8 @@ ENVIRONMENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_DICT
 EXAMPLE_NETCDF = {
     EnvironmentType.SKELETON: defaults.DIRECTORY
     + "/environment/skeleton/skeleton_v4.nc4",
+    EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
+    + "/environment/skeleton_sysid/skeleton_sysid_v4.nc4",
     EnvironmentType.TIME: defaults.DIRECTORY + "/environment/time/time_v4.nc4",
     EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/modal/modal_v4.nc4",
     EnvironmentType.SINE: defaults.DIRECTORY + "/environment/sine/sine_v4.nc4",
@@ -179,6 +193,8 @@ EXAMPLE_NETCDF = {
 EXAMPLE_WORKSHEET = {
     EnvironmentType.SKELETON: defaults.DIRECTORY
     + "/environment/skeleton/skeleton_v4.xlsx",
+    EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
+    + "/environment/skeleton_sysid/skeleton_sysid_v4.xlsx",
     EnvironmentType.TIME: defaults.DIRECTORY + "/environment/time/time_v4.xlsx",
     EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/modal/modal_v4.xlsx",
     EnvironmentType.SINE: defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx",
@@ -215,6 +231,11 @@ SKELETON_EVENT_DICT = {
     "netcdf": skeleton_event_list,
     "worksheet": worksheet_skeleton_event_list,
 }
+SKELETON_SYSID_EVENT_DICT = {
+    "worksheet": lambda: [],
+    "netcdf": lambda: [],
+    "manual": lambda: [],
+}
 TIME_EVENT_DICT = {
     "manual": time_event_list,
     "netcdf": time_event_list,
@@ -242,6 +263,7 @@ TRANSIENT_EVENT_DICT = {
 }
 EVENT_DICT[EnvironmentType.NONE] = BLANK_EVENT_DICT
 EVENT_DICT[EnvironmentType.SKELETON] = SKELETON_EVENT_DICT
+EVENT_DICT[EnvironmentType.SYSID_SKELETON] = SKELETON_SYSID_EVENT_DICT
 EVENT_DICT[EnvironmentType.TIME] = TIME_EVENT_DICT
 EVENT_DICT[EnvironmentType.MODAL] = MODAL_EVENT_DICT
 EVENT_DICT[EnvironmentType.SINE] = SINE_EVENT_DICT
@@ -252,6 +274,7 @@ EVENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_EVENT_DICT
 INSTRUCTIONS_DICT = {}
 INSTRUCTIONS_DICT[EnvironmentType.NONE] = lambda: None
 INSTRUCTIONS_DICT[EnvironmentType.SKELETON] = skeleton_instructions
+INSTRUCTIONS_DICT[EnvironmentType.SYSID_SKELETON] = skeleton_sysid_instructions
 INSTRUCTIONS_DICT[EnvironmentType.TIME] = time_instructions
 INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
 INSTRUCTIONS_DICT[EnvironmentType.SINE] = sine_instructions
