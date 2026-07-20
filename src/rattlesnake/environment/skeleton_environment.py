@@ -458,12 +458,10 @@ class SkeletonEnvironment(Environment):
         )
 
         # Define command map
-        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
-        self.command_map[SkeletonCommands.EXAMPLE_RUN_ENVIRONMENT] = self.run_control
-        self.command_map[SkeletonCommands.EXAMPLE_SET_TEST_LEVEL] = self.set_test_level
-        self.command_map[SkeletonCommands.EXAMPLE_FLOAT_COMMAND] = (
-            self.set_float_command
-        )
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
+        self.map_command(SkeletonCommands.EXAMPLE_RUN_ENVIRONMENT, self.run_control)
+        self.map_command(SkeletonCommands.EXAMPLE_SET_TEST_LEVEL, self.set_test_level)
+        self.map_command(SkeletonCommands.EXAMPLE_FLOAT_COMMAND, self.set_float_command)
 
         # Persistent data
         self.test_level = 0

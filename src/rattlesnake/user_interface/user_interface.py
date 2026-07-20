@@ -452,7 +452,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_hardware_button.setEnabled(True)
         self.initialize_environments_button.setEnabled(True)
         self.display_acquisition_ended()
-        if self.rattlesnake.state == RattlesnakeState.HARDWARE_ACTIVE:
+        if self.rattlesnake.state in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+        ):
             self.display_acquisition_started()
 
         self.recover_sysid_crash()

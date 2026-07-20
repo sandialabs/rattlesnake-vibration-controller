@@ -22,16 +22,21 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import copy
 import multiprocessing as mp
 import threading
 import traceback
 from enum import Enum
-from multiprocessing.queues import Queue
 from typing import List
+import multiprocessing as mp
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 
 import netCDF4 as nc4
+import openpyxl
+import numpy as np
 
-from rattlesnake.utilities import VerboseMessageQueue
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import (
@@ -49,6 +54,7 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
 from rattlesnake.process.data_collector import data_collector_process
 from rattlesnake.process.signal_generation_process import signal_generation_process
 from rattlesnake.process.spectral_processing import spectral_processing_process
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 # Update this line to define the environment type, and add to the EnvironmentType
 # enumeration in environment/environment_utilities.py
@@ -64,11 +70,14 @@ class SkeletonSysIdCommands(EnvironmentCommands):
     designated times.
     """
 
-    EXAMPLE_SET_TEST_LEVEL = 0
+    EXAMPLE_RUN_ENVIRONMENT = 0
+    EXAMPLE_SET_TEST_LEVEL = 1
 
     VALID_PROFILE_COMMANDS = (EXAMPLE_SET_TEST_LEVEL,)
 
-    VALID_DATA = {EXAMPLE_SET_TEST_LEVEL: type(None)}
+    VALID_DATA = {
+        EXAMPLE_SET_TEST_LEVEL: float,
+    }
 
 
 class SkeletonSysIdUICommands(Enum):
@@ -219,10 +228,10 @@ class SkeletonSysIdQueues:
         self,
         environment_name: str,
         environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: Queue,
+        gui_update_queue: mp.Queue,
         controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: Queue,
-        data_out_queue: Queue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
         log_file_queue: VerboseMessageQueue,
     ):
         """A container class for the queues that the skeleton environment will manage.
@@ -346,9 +355,20 @@ class SkeletonSysIdEnvironment(SysIdEnvironment):
             sysid_stored_event,
         )
 
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
+        self.map_command(
+            SkeletonSysIdCommands.EXAMPLE_RUN_ENVIRONMENT, self.run_control
+        )
         self.map_command(
             SkeletonSysIdCommands.EXAMPLE_SET_TEST_LEVEL, self.set_test_level
         )
+
+        # Persistent data
+        self.test_level = 0
+        self.shutdown_flag = True
+        self.last_acqusition = False
+        self.control_channels = []
+        self.output_signal = []
 
         # Tell controller that initialization was successful
         self.set_ready()
@@ -358,6 +378,15 @@ class SkeletonSysIdEnvironment(SysIdEnvironment):
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         super().initialize_hardware(hardware_metadata)
+
+        self.control_channels = [
+            index
+            for index, channel in enumerate(hardware_metadata.channel_list)
+            if channel.feedback_device is not None
+        ]
+        self.output_signal = np.zeros(
+            (len(self.control_channels), self.hardware_metadata.samples_per_write)
+        )
         self.set_ready()
 
     def initialize_environment(self, environment_metadata: SkeletonSysIdMetadata):
@@ -371,19 +400,75 @@ class SkeletonSysIdEnvironment(SysIdEnvironment):
     # endregion
 
     # region Commands
-    def set_test_level(self, data):
-        """Example command handler mapped to SkeletonSysIdCommands.EXAMPLE_SET_TEST_LEVEL."""
+    def start_environment(self, data: SkeletonSysIdInstructions):
+        if not self.active:
+            # Store instructions
+            if data is not None:
+                test_level = data.example_test_level
+                self.test_level = test_level
+                self.gui_update_queue.put(
+                    (
+                        self.environment_name,
+                        (SkeletonSysIdUICommands.EXAMPLE_UI_SET_TEST_LEVEL, test_level),
+                    )
+                )
+
+            # Set startup flags
+            self.set_active()
+            self.shutdown_flag = False
+            self.last_acqusition = False
+            self.gui_update_queue.put(
+                (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
+            )
+
+            # Start Run Environment loop
+            self.environment_command_queue.put(
+                self.environment_name,
+                (SkeletonSysIdCommands.EXAMPLE_RUN_ENVIRONMENT, None),
+            )
+
+    def run_control(self, data: None):
+        # Get data from data in queue and send it to user interface
+        try:
+            acqusition_data, self.last_acqusition = self.data_in_queue.get_nowait()
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (SkeletonSysIdUICommands.EXAMPLE_UI_SHOW_DATA, acqusition_data),
+                ),
+            )
+        except (thqueue.Empty, mpqueue.Empty):
+            pass
+
+        # If required, put data to data out queue
+        if self.data_out_queue.empty():
+            self.data_out_queue.put(
+                (copy.deepcopy(self.output_signal), self.shutdown_flag)
+            )
+            if self.shutdown_flag:
+                self.shutdown_flag = False
+
+        # If environment is shutting down, flush queue and update UI
+        if self.last_acqusition:
+            self.environment_command_queue.flush(self.environment_name)
+            self.gui_update_queue.put(
+                (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
+            )
+            self.clear_active()
+        # Run control if environment is not shutting down
+        else:
+            self.environment_command_queue.put(
+                self.environment_name,
+                (SkeletonSysIdCommands.EXAMPLE_RUN_ENVIRONMENT, None),
+            )
 
     def stop_environment(self, data):
-        """Stop the environment gracefully
+        # Set shutdown flag so the run_control knows to stop control loop
+        self.shutdown_flag = True
 
-        This function defines the operations to shut down the environment
-        gracefully so there is no hard stop that might damage test equipment
-        or parts.
-        """
-        self.clear_active()
-        if self.sysid_active:
-            self.stop_system_id(True)
+    def set_test_level(self, data):
+        self.test_level = data
+        print(f"Setting test level {self.test_level}")
 
     # endregion
 
