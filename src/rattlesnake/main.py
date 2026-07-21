@@ -30,7 +30,10 @@ from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.user_interface import RattlesnakeUI
 
 
-def build_rattlesnake_app(rattlesnake: RattlesnakeController):
+def build_rattlesnake_app(
+    rattlesnake: RattlesnakeController,
+    set_font_size: bool = True,
+):
     # Configure High DPI for UI scaling
     if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
@@ -44,13 +47,14 @@ def build_rattlesnake_app(rattlesnake: RattlesnakeController):
     app = QtWidgets.QApplication(sys.argv)
 
     # Set font size. This can be commented out if it is extremely small
-    font_size = 10  # pt size
-    screen = app.primaryScreen()
-    dpi = screen.logicalDotsPerInch()
-    scale_factor = dpi / 96  # 96 DPI
-    font = app.font()
-    font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
-    app.setFont(font)
+    if set_font_size:
+        font_size = 10  # pt size
+        screen = app.primaryScreen()
+        dpi = screen.logicalDotsPerInch()
+        scale_factor = dpi / 96  # 96 DPI
+        font = app.font()
+        font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
+        app.setFont(font)
 
     app.rattlesnake_controller = rattlesnake
     app.rattlesnake_ui = RattlesnakeUI(rattlesnake)
