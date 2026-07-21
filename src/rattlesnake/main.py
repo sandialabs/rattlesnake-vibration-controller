@@ -30,18 +30,8 @@ from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.user_interface import RattlesnakeUI
 
 
-def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
-    """
-    Function for launching rattlesnake ui with the default formatting
-    that scales correcctly.
-
-    Parameters
-    ----------
-    rattlesnake : RattlesnakeController
-        The rattlesnake controller object that the UI is going to represent.
-    """
-    # Fix to scale font for different size monitors
-    font_size = 10  # pt size
+def build_rattlesnake_app(rattlesnake: RattlesnakeController):
+    # Configure High DPI for UI scaling
     if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
@@ -53,7 +43,8 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     # Build app
     app = QtWidgets.QApplication(sys.argv)
 
-    # Scale app to current monitor
+    # Set font size. This can be commented out if it is extremely small
+    font_size = 10  # pt size
     screen = app.primaryScreen()
     dpi = screen.logicalDotsPerInch()
     scale_factor = dpi / 96  # 96 DPI
@@ -61,9 +52,25 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
     app.setFont(font)
 
-    # Execute UI object
-    _ = RattlesnakeUI(rattlesnake)
+    app.rattlesnake_controller = rattlesnake
+    app.rattlesnake_ui = RattlesnakeUI(rattlesnake)
+
+    return app
+
+
+def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
+    """
+    Function for launching rattlesnake ui with the default formatting
+    that scales correcctly.
+
+    Parameters
+    ----------
+    rattlesnake : RattlesnakeController
+        The rattlesnake controller object that the UI is going to represent.
+    """
+    app = build_rattlesnake_app()
     app.exec_()
+    rattlesnake.shutdown()
 
 
 def main():
@@ -73,9 +80,6 @@ def main():
     rattlesnake = RattlesnakeController()
 
     launch_rattlesnake_ui(rattlesnake)
-
-    # Shutdown processes
-    rattlesnake.shutdown()
 
 
 if __name__ == "__main__":
