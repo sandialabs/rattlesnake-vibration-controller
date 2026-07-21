@@ -441,6 +441,7 @@ class LanXIMetadata(HardwareMetadata):
 
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(6, 2, self.maximum_acquisition_processes)
+        hardware_worksheet.cell(7, 2, self.output_oversample)
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
