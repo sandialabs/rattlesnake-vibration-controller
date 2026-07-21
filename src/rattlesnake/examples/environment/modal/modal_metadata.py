@@ -174,4 +174,6 @@ def worksheet_modal_event_list():
         ENVIRONMENT_NAME: EnvironmentType.MODAL,
     }
     event_list = load_profile_from_workbook(workbook, environment_types)
+    save_event = event_list[3]
+    save_event.data = defaults.DIRECTORY + "/environment/modal/example_save_file.nc4"
     return event_list

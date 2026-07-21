@@ -3,9 +3,6 @@
     [ ] Finish making standard structure for unittests
     [ ] Go through and comment/verify unit tests
 
-[ ] Set the default environment control laws for random and transient environment
-    [ ] Just do this in the user interface
-
 [ ] Change event list in the example modal worksheet to follow new format with change_filename
 
 [ ] Write guide for building out new environments
