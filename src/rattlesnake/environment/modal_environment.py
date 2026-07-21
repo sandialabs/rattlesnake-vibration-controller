@@ -879,7 +879,8 @@ class ModalMetadata(EnvironmentMetadata):
             column_index += 1
         max_row = len(channel_list_bools)
         for i in range(max_row):
-            response_channel_indices.append(int(i))
+            if i not in reference_channel_indices:
+                response_channel_indices.append(int(i))
         column_index = 2
         while True:
             value = worksheet.cell(27, column_index).value
@@ -1591,6 +1592,7 @@ class ModalEnvironment(Environment):
             and self.spectral_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
+            self.close_data_file()
             self.clear_active()
             self.queue_container.gui_update_queue.put(
                 (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
@@ -1625,7 +1627,15 @@ class ModalEnvironment(Environment):
 
         """
         self.log("Stopping Control")
-        flush_queue(self.queue_container.environment_command_queue)
+        # This only discards the Run control commands so that the environment
+        # can keep writing to the stream file.
+        pending_commands = flush_queue(self.queue_container.environment_command_queue)
+        for message, message_data in pending_commands:
+            if message is ModalCommands.RUN_CONTROL:
+                continue
+            self.queue_container.environment_command_queue.put(
+                self.environment_name, (message, message_data)
+            )
         self.queue_container.collector_command_queue.put(
             self.environment_name, (DataCollectorCommands.SET_TEST_LEVEL, (1000, 1))
         )
@@ -1639,7 +1649,6 @@ class ModalEnvironment(Environment):
         self.queue_container.environment_command_queue.put(
             self.environment_name, (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
         )
-        self.close_data_file()
 
     def quit(self, data):
         """Returns True to stop the ``run`` while loop and exit the process

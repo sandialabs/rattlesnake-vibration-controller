@@ -1208,7 +1208,10 @@ class RattlesnakeController:
             RattlesnakeState.ENVIRONMENT_ACTIVE,
             RattlesnakeState.SYS_ID_ACTIVE,
         ):
-            self.stop_acquisition()
+            try:
+                self.stop_acquisition()
+            except:
+                print("Failed Acquisition Shutdown")
         # Close out of acquisition, output, streaming process
         self.queue_container.log_file_queue.put(
             f"{datetime.now()}: Joining Controller Process\n"
