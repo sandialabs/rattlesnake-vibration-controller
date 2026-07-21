@@ -1376,6 +1376,7 @@ class ModalEnvironment(Environment):
             (self.environment_name, (ModalUICommands.CHANGE_SAVEFILE, data))
         )
         self.close_data_file()
+        self.save_filename = filename
         if filename:
             self.create_file()
 
