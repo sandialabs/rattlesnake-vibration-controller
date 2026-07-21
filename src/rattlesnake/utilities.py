@@ -917,9 +917,7 @@ def read_transformation_matrix_from_worksheet(
         blank or contains "none"
     """
     first_cell = worksheet.cell(start_row, start_col).value
-    if first_cell is None or (
-        isinstance(first_cell, str) and first_cell.strip().lower() == "none"
-    ):
+    if first_cell is None or (str(first_cell).strip().lower() == "none"):
         return None
 
     matrix = []

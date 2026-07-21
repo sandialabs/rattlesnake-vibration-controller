@@ -506,13 +506,13 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         for i, channel in enumerate(channel_data):
             if self.output_channels[i]:
                 continue
-            if channel.channel_type.lower() in ["disp", "displacement"]:
+            if str(channel.channel_type).lower() in ["disp", "displacement"]:
                 C_response.append(C_disp[response_index])
                 D_response.append(D_disp[response_index])
-            elif channel.channel_type.lower() in ["vel", "velocity"]:
+            elif str(channel.channel_type).lower() in ["vel", "velocity"]:
                 C_response.append(C_vel[response_index])
                 D_response.append(D_vel[response_index])
-            elif channel.channel_type.lower() in ["accel", "acceleration", "acc"]:
+            elif str(channel.channel_type).lower() in ["accel", "acceleration", "acc"]:
                 C_response.append(C_accel[response_index])
                 D_response.append(D_accel[response_index])
             else:

@@ -634,7 +634,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         self.create_event_watcher(
             ready_event_list, active_event_list, active_event_check=True
         )
-        if type.lower() == "noise":
+        if str(type).lower() == "noise":
             self.event_watcher.ready.connect(self.run_system_id_noise)
         else:
             self.event_watcher.ready.connect(self.run_system_id_transfer)

@@ -913,10 +913,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
         response_channels = self.definition_widget.control_channels_display.value()
         output_channels = self.definition_widget.output_channels_display.value()
         output_transform_row = 35
-        if (
-            isinstance(worksheet.cell(34, 2).value, str)
-            and worksheet.cell(34, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(34, 2).value).lower() == "none":
             self.response_transformation_matrix = None
         else:
             while True:
@@ -935,10 +932,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
                         float(worksheet.cell(34 + i, 2 + j).value)
                     )
             self.response_transformation_matrix = np.array(response_transformation)
-        if (
-            isinstance(worksheet.cell(output_transform_row, 2).value, str)
-            and worksheet.cell(output_transform_row, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(output_transform_row, 2).value).lower() == "none":
             self.reference_transformation_matrix = None
         else:
             output_transformation = []

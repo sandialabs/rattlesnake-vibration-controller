@@ -599,10 +599,7 @@ class TransientUI(SysIdEnvironmentUI):
         response_channels = self.definition_widget.control_channels_display.value()
         output_channels = self.definition_widget.output_channels_display.value()
         output_transform_row = 23
-        if (
-            isinstance(worksheet.cell(22, 2).value, str)
-            and worksheet.cell(22, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(22, 2).value).lower() == "none":
             self.response_transformation_matrix = None
         else:
             while True:
@@ -621,10 +618,7 @@ class TransientUI(SysIdEnvironmentUI):
                         float(worksheet.cell(22 + i, 2 + j).value)
                     )
             self.response_transformation_matrix = np.array(response_transformation)
-        if (
-            isinstance(worksheet.cell(output_transform_row, 2).value, str)
-            and worksheet.cell(output_transform_row, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(output_transform_row, 2).value).lower() == "none":
             self.output_transformation_matrix = None
         else:
             output_transformation = []

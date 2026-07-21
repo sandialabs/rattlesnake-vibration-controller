@@ -481,17 +481,17 @@ class ExodusAcquisition(HardwareAcquisition):
         """
         node_number = int(channel.node_number)
         node_index = np.where(node_numbers == node_number)[0][0]
-        if channel.node_direction.lower().replace(" ", "") in ["x+", "+x"]:
+        if str(channel.node_direction).lower().replace(" ", "") in ["x+", "+x"]:
             direction = np.array([1, 0, 0])
-        elif channel.node_direction.lower().replace(" ", "") in ["x-", "-x"]:
+        elif str(channel.node_direction).lower().replace(" ", "") in ["x-", "-x"]:
             direction = np.array([-1, 0, 0])
-        elif channel.node_direction.lower().replace(" ", "") in ["y+", "+y"]:
+        elif str(channel.node_direction).lower().replace(" ", "") in ["y+", "+y"]:
             direction = np.array([0, 1, 0])
-        elif channel.node_direction.lower().replace(" ", "") in ["y-", "-y"]:
+        elif str(channel.node_direction).lower().replace(" ", "") in ["y-", "-y"]:
             direction = np.array([0, -1, 0])
-        elif channel.node_direction.lower().replace(" ", "") in ["z+", "+z"]:
+        elif str(channel.node_direction).lower().replace(" ", "") in ["z+", "+z"]:
             direction = np.array([0, 0, 1])
-        elif channel.node_direction.lower().replace(" ", "") in ["z-", "-z"]:
+        elif str(channel.node_direction).lower().replace(" ", "") in ["z-", "-z"]:
             direction = np.array([0, 0, -1])
         else:
             direction = np.array(

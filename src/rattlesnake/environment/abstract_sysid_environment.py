@@ -356,15 +356,12 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
     def load_sysid_matrix_from_worksheet(cls, worksheet, start_row):
         start_response_row = start_row
         num_response_row = 1
-        if (
-            isinstance(worksheet.cell(start_response_row, 2).value, str)
-            and worksheet.cell(start_response_row, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(start_response_row, 2).value).lower() == "none":
             response_transformation_matrix = None
-        elif isinstance(
-            worksheet.cell(start_response_row, 2).value, str
-        ) and worksheet.cell(start_response_row, 2).value.lower().startswith(
-            "# transformation matrix"
+        elif (
+            str(worksheet.cell(start_response_row, 2).value)
+            .lower()
+            .startswith("# transformation matrix")
         ):
             response_transformation_matrix = None
         else:
@@ -398,15 +395,12 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         # Output transformation matrix
         start_output_row = start_response_row + num_response_row
         num_output_row = 1
-        if (
-            isinstance(worksheet.cell(start_output_row, 2).value, str)
-            and worksheet.cell(start_output_row, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(start_output_row, 2).value).lower() == "none":
             output_transformation_matrix = None
-        elif isinstance(
-            worksheet.cell(start_output_row, 2).value, str
-        ) and worksheet.cell(start_output_row, 2).value.lower().startswith(
-            "# transformation matrix"
+        elif (
+            str(worksheet.cell(start_output_row, 2).value)
+            .lower()
+            .startswith("# transformation matrix")
         ):
             output_transformation_matrix = None
         else:

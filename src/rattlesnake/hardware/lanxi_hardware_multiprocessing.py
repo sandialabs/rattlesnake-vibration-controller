@@ -279,7 +279,7 @@ class LanXIMetadata(HardwareMetadata):
         return [*ipv4_list, *bknum_list, *ipv6_list]
 
     def valid_sensitivity(self, channel_type: str = ""):
-        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
+        if str(channel_type).lower() == "voltage":
             valid_sensitivity = [0, 1000]
         else:
             valid_sensitivity = [-1000000, 1000000]

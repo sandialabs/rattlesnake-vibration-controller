@@ -192,7 +192,7 @@ class NIDAQmxMetadata(HardwareMetadata):
         return valid_coupling
 
     def valid_sensitivity(self, channel_type: str = ""):
-        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
+        if str(channel_type).lower() == "voltage":
             valid_sensitivity = [0, 1000]
         else:
             valid_sensitivity = [-1000000, 1000000]
@@ -658,21 +658,21 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 f"{channel_data.maximum_value} not a valid maximum value"
             ) from e
         # Channel Type and Units
-        if channel_data.channel_type.lower() in [
+        if str(channel_data.channel_type).lower() in [
             "accelerometer",
             "acceleration",
             "accel",
         ]:
             channel_type = nic.UsageTypeAI.ACCELERATION_ACCELEROMETER_CURRENT_INPUT
-            if channel_data.unit.lower() in ["g", "gs"]:
+            if str(channel_data.unit).lower() in ["g", "gs"]:
                 unit = nic.AccelUnits.G
             else:
                 raise ValueError(
                     f"Accelerometer units must be in G, not {channel_data.unit}"
                 )
-        elif channel_data.channel_type.lower() == "force":
+        elif str(channel_data.channel_type).lower() == "force":
             channel_type = nic.UsageTypeAI.FORCE_IEPE_SENSOR
-            if channel_data.unit.lower() in [
+            if str(channel_data.unit).lower() in [
                 "lb",
                 "pound",
                 "pounds",
@@ -681,11 +681,11 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 "lbfs",
             ]:
                 unit = nic.ForceUnits.POUNDS
-            elif channel_data.unit.lower() in ["n", "newton", "newtons", "ns"]:
+            elif str(channel_data.unit).lower() in ["n", "newton", "newtons", "ns"]:
                 unit = nic.ForceUnits.NEWTONS
             else:
                 raise ValueError(f"Unrecognized Force Unit {channel_data.unit}")
-        elif channel_data.channel_type.lower() in ["voltage", "volt"]:
+        elif str(channel_data.channel_type).lower() in ["voltage", "volt"]:
             channel_type = nic.UsageTypeAI.VOLTAGE
             unit = None
         else:
@@ -694,7 +694,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 'Must be one of ["acceleration","accelerometer","accel","force","voltage","volt"]'
             )
         # Excitation Source
-        if channel_data.excitation_source.lower() == "internal":
+        if str(channel_data.excitation_source).lower() == "internal":
             excitation_source = nic.ExcitationSource.INTERNAL
             try:
                 excitation = float(channel_data.excitation)
@@ -702,7 +702,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 raise ValueError(
                     f"{channel_data.excitation} not a valid excitation"
                 ) from e
-        elif channel_data.excitation_source.lower() == "none":
+        elif str(channel_data.excitation_source).lower() == "none":
             excitation_source = nic.ExcitationSource.NONE
             excitation = 0
         else:

@@ -308,23 +308,31 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
                 input_ranges.append(float(channel.maximum_value))
                 input_sensitivities.append(float(channel.sensitivity))
                 # Set the values in the arrays appropriately given the channel index
-                if channel.coupling.lower() in ["ac differential", "ac diff", "ac"]:
+                if str(channel.coupling).lower() in [
+                    "ac differential",
+                    "ac diff",
+                    "ac",
+                ]:
                     input_couplings.append(self.DP900Coupling.AC_DIFFERENTIAL)
-                elif channel.coupling.lower() in ["dc differential", "dc diff", "dc"]:
+                elif str(channel.coupling).lower() in [
+                    "dc differential",
+                    "dc diff",
+                    "dc",
+                ]:
                     input_couplings.append(self.DP900Coupling.DC_DIFFERENTIAL)
-                elif channel.coupling.lower() in [
+                elif str(channel.coupling).lower() in [
                     "ac single ended",
                     "ac single-ended",
                     "ac single",
                 ]:
                     input_couplings.append(self.DP900Coupling.AC_SINGLE_ENDED)
-                elif channel.coupling.lower() in [
+                elif str(channel.coupling).lower() in [
                     "dc single ended",
                     "dc single-ended",
                     "dc single",
                 ]:
                     input_couplings.append(self.DP900Coupling.DC_SINGLE_ENDED)
-                elif channel.coupling.lower() in ["iepe", "icp", "ac icp", "ccld"]:
+                elif str(channel.coupling).lower() in ["iepe", "icp", "ac icp", "ccld"]:
                     input_couplings.append(self.DP900Coupling.AC_COUPLED_IEPE)
 
         self.dp900.set_system_list(systems)
