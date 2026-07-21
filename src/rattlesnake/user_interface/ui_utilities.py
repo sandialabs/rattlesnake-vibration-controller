@@ -34,7 +34,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt
 from scipy.io import loadmat
-from enum import Enum
+from enum import Enum, IntEnum
 import openpyxl
 
 from rattlesnake.utilities import (
@@ -78,7 +78,7 @@ class UICommands(Enum):
         return self.name.replace("_", " ").title()
 
 
-class TabIndices(Enum):
+class TabIndices(IntEnum):
     HARDWARE = 0
     ENVIRONMENT = 1
     SYSTEM_ID = 2
