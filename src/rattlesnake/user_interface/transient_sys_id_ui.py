@@ -286,6 +286,12 @@ class TransientUI(SysIdEnvironmentUI):
         )
         self.definition_widget.control_channels_display.setValue(0)
 
+        if not self.definition_widget.control_script_file_path_input.text():
+            control_law_path = os.path.join(
+                DIRECTORY, "examples", "control_laws", "transient_control_laws.py"
+            )
+            self.select_python_module(clicked=False, filename=control_law_path)
+
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
         # Make sure everything is defined

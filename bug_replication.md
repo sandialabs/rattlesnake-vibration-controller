@@ -20,8 +20,6 @@
 
 [ ] Finish implementation of Read Environment
 
-[ ] Migrate metadata objects to rattlesnake.headless.__init__.py
-
 [ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average
 
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface

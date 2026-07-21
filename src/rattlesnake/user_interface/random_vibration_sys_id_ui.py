@@ -455,6 +455,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.define_transformation_matrices(None, False)
+        # Set the default control law if needed
+        if not self.definition_widget.control_script_file_path_input.text():
+            control_law_path = os.path.join(
+                DIRECTORY, "examples", "control_laws", "control_laws.py"
+            )
+            self.select_python_module(clicked=False, filename=control_law_path)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
