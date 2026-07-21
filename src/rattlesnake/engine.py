@@ -1209,6 +1209,7 @@ class RattlesnakeController:
             RattlesnakeState.SYS_ID_ACTIVE,
         ):
             try:
+                self.set_blocking()
                 self.stop_acquisition()
             except:
                 print("Failed Acquisition Shutdown")
