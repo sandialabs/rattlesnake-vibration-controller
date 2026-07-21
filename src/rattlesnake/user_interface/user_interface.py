@@ -2650,7 +2650,19 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region Shutdown
+    # region PyQt Overrides
+    def show(self):
+        """
+        Refresh the UI from the current Rattlesnake controller state whenever
+        the window is shown.
+        """
+        try:
+            self.load_ui_from_rattlesnake()
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
+
+        super().show()
+
     def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
         """
         Event triggered when closing the software to gracefully shut down.
