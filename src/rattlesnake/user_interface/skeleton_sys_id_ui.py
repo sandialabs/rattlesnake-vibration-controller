@@ -106,6 +106,8 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+        super().initialize_hardware(hardware_metadata)
+
         self.run_widget.response_signal_plot.getPlotItem().clear()
 
         plot_names = [
@@ -135,7 +137,6 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
             other_pen_options={"width": 1},
             names=plot_names,
         )
-        return super().initialize_hardware(hardware_metadata)
 
     def initialize_environment(self, environment_metadata: SkeletonSysIdMetadata):
         num_samples = int(

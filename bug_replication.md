@@ -58,6 +58,3 @@
 [ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
 
 [ ] Editable spinboxes tab out when inputting data
-
-## Bugs I believe I have already fixed (cope)
-[ ] If you change the samples per frame in the modal template, it shifts the trigger wait for signal over?

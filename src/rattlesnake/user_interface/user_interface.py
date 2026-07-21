@@ -60,6 +60,7 @@ from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
+    TabIndices,
     EventWatcherError,
     EventWatcher,
     Updater,
@@ -159,8 +160,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Disable all tabs except the first
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.PREDICTION.value, False)
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -513,8 +514,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case UICommands.COMPLETED_SYSTEM_ID:
                 environment, _ = data
                 print(f"System Id Completed for {environment}")
-                self.rattlesnake_tabs.setTabEnabled(3, True)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
             case UICommands.MONITOR:
                 if self.channel_monitor_window is not None:
                     if not self.channel_monitor_window.isVisible():
@@ -586,8 +587,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Reset UI
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.PREDICTION.value, False)
 
         environment_names = list(self.environment_uis.keys())
         for environment_name in environment_names:
@@ -610,11 +611,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     # There is an edge case that helps us here: If the engine has had a system id loaded to it,
                     # the abstract sys id data process will put the system id completed command to the ui gui
                     # queue which is processed in order when the UI launches, therefore enabling the next tabs
-                    self.rattlesnake_tabs.setTabEnabled(2, True)
-                    self.rattlesnake_tabs.setCurrentIndex(2)
+                    self.rattlesnake_tabs.setTabEnabled(
+                        TabIndices.SYSTEM_ID.value, True
+                    )
+                    self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
                 else:
-                    self.rattlesnake_tabs.setTabEnabled(4, True)
-                    self.rattlesnake_tabs.setCurrentIndex(4)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+                    self.rattlesnake_tabs.setCurrentIndex(TabIndices.PROFILE.value)
                 if has_profile:
                     self.load_ui_from_profile()
                     if not self.has_system_id:
@@ -625,8 +628,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 # Enable sys id tab
-                self.rattlesnake_tabs.setTabEnabled(2, True)
-                self.rattlesnake_tabs.setCurrentIndex(2)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
+                self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
                 if has_profile:
                     self.load_ui_from_profile()
                 if has_streamed:
@@ -635,30 +638,38 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 if self.has_system_id:
-                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                    self.rattlesnake_tabs.setTabEnabled(
+                        TabIndices.SYSTEM_ID.value, True
+                    )
                 if self.has_test_pred:
-                    self.rattlesnake_tabs.setTabEnabled(3, True)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
+                    self.rattlesnake_tabs.setTabEnabled(
+                        TabIndices.PREDICTION.value, True
+                    )
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
                 if has_profile:
                     self.load_ui_from_profile()
                 self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
-                self.rattlesnake_tabs.setCurrentIndex(5)
+                self.rattlesnake_tabs.setCurrentIndex(TabIndices.RUN.value)
             case RattlesnakeState.ENVIRONMENT_ACTIVE:
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 if self.has_system_id:
-                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                    self.rattlesnake_tabs.setTabEnabled(
+                        TabIndices.SYSTEM_ID.value, True
+                    )
                 if self.has_test_pred:
-                    self.rattlesnake_tabs.setTabEnabled(3, True)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
+                    self.rattlesnake_tabs.setTabEnabled(
+                        TabIndices.PREDICTION.value, True
+                    )
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
                 if has_profile:
                     self.load_ui_from_profile()
                 self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
-                self.rattlesnake_tabs.setCurrentIndex(5)
+                self.rattlesnake_tabs.setCurrentIndex(TabIndices.RUN.value)
                 # Display environment started for each active environment
                 for (
                     queue_name,
@@ -831,7 +842,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         streaming_environment_items = [""] + list(self.environment_uis.keys())
         self.streaming_environment_select_combobox.clear()
         self.streaming_environment_select_combobox.addItems(streaming_environment_items)
-        self.rattlesnake_tabs.setTabEnabled(1, True)
+        self.rattlesnake_tabs.setTabEnabled(TabIndices.ENVIRONMENT.value, True)
 
     def load_ui_from_profile(self):
         """
@@ -1573,10 +1584,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.update_environment_tabs()
         num_environments = len(self.environment_uis)
         if num_environments == 0:
-            self.rattlesnake_tabs.setTabEnabled(1, False)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.ENVIRONMENT.value, False)
         else:
-            self.rattlesnake_tabs.setTabEnabled(1, True)
-            self.rattlesnake_tabs.setCurrentIndex(1)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.ENVIRONMENT.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.ENVIRONMENT.value)
 
     def initialize_hardware_error(self, error_message):
         # Clear QThread
@@ -1770,7 +1781,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 )
 
         # System Identification tab
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.SYSTEM_ID.value, False)
         self.system_id_environment_tabs.setCurrentIndex(-1)
         self.system_id_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
@@ -1779,10 +1790,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.system_id_environment_tabs.addTab(
                     system_id_widget, environment_name
                 )
-                self.rattlesnake_tabs.tabBar().setTabVisible(2, True)
+                self.rattlesnake_tabs.tabBar().setTabVisible(
+                    TabIndices.SYSTEM_ID.value, True
+                )
 
         # Prediction tab
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.PREDICTION.value, False)
         self.test_prediction_environment_tabs.setCurrentIndex(-1)
         self.test_prediction_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
@@ -1791,7 +1804,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.test_prediction_environment_tabs.addTab(
                     prediction_widget, environment_name
                 )
-                self.rattlesnake_tabs.tabBar().setTabVisible(3, True)
+                self.rattlesnake_tabs.tabBar().setTabVisible(
+                    TabIndices.PREDICTION.value, True
+                )
 
         # Run tab
         self.run_environment_tabs.setCurrentIndex(-1)
@@ -1979,14 +1994,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_environments_button.setEnabled(True)
 
         if self.has_system_id:
-            self.rattlesnake_tabs.setTabEnabled(2, True)
-            self.rattlesnake_tabs.setCurrentIndex(2)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
         elif self.has_test_pred:
-            self.rattlesnake_tabs.setTabEnabled(3, True)
-            self.rattlesnake_tabs.setCurrentIndex(3)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.PREDICTION.value)
         else:
-            self.rattlesnake_tabs.setTabEnabled(4, True)
-            self.rattlesnake_tabs.setCurrentIndex(4)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.PROFILE.value)
 
     def initialize_environments_error(self, error_message):
         # Clear QThread
@@ -2497,8 +2512,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.run_profile_widget.hide()
         else:
             self.run_profile_widget.show()
-        self.rattlesnake_tabs.setTabEnabled(5, True)
-        self.rattlesnake_tabs.setCurrentIndex(5)
+        self.rattlesnake_tabs.setTabEnabled(TabIndices.RUN.value, True)
+        self.rattlesnake_tabs.setCurrentIndex(TabIndices.RUN.value)
 
     def start_profile(self):
         """

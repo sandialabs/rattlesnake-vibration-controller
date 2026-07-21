@@ -78,6 +78,16 @@ class UICommands(Enum):
         return self.name.replace("_", " ").title()
 
 
+class TabIndices(Enum):
+    HARDWARE = 0
+    ENVIRONMENT = 1
+    SYSTEM_ID = 2
+    PREDICTION = 3
+    PROFILE = 4
+    RUN = 5
+    INFO = 6
+
+
 def error_message_qt(title, message):
     """Helper class to create an error dialog.
 
