@@ -454,6 +454,10 @@ class RattlesnakeController:
         self.clear_blocking()
         self.has_gui = True
 
+    def close_gui(self):
+        self.set_blocking()
+        self.has_gui = False
+
     def load_rattlesnake_from_template(self, filepath: str):
         """
         Loads data from worksheet or netcdf4 file to the rattlesnake controller.

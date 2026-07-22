@@ -57,9 +57,10 @@ def build_rattlesnake_app(
         app.setFont(font)
 
     app.rattlesnake_controller = rattlesnake
-    app.rattlesnake_ui = RattlesnakeUI(rattlesnake)
+    rattlesnake_ui = RattlesnakeUI(rattlesnake)
+    app.rattlesnake_ui = rattlesnake_ui
 
-    return app
+    return app, rattlesnake_ui
 
 
 def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
@@ -72,8 +73,10 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     rattlesnake : RattlesnakeController
         The rattlesnake controller object that the UI is going to represent.
     """
-    app = build_rattlesnake_app(rattlesnake)
+    app, rattlesnake_ui = build_rattlesnake_app(rattlesnake)
+    rattlesnake_ui.show()
     app.exec_()
+    rattlesnake_ui.shutdown()
     rattlesnake.shutdown()
 
 
