@@ -724,7 +724,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.specification_warning_matrix = metadata.specification_warning_matrix
         self.specification_abort_matrix = metadata.specification_abort_matrix
 
-        if np.all(np.isnan(self.specification_abort_matrix)):
+        if self.specification_abort_matrix is None or np.all(
+            np.isnan(self.specification_abort_matrix)
+        ):
             self.definition_widget.auto_abort_checkbox.setChecked(False)
             self.definition_widget.auto_abort_checkbox.setEnabled(False)
         else:
