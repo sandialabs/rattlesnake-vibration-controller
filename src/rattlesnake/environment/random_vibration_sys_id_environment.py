@@ -771,9 +771,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             elif inspect.isclass(function) and issubclass(
                 function, AbstractControlLawComputation
             ):
-                control_python_function_type = 2
-            elif inspect.isclass(function):
                 control_python_function_type = 3
+            elif inspect.isclass(function):
+                control_python_function_type = 2
             else:
                 control_python_function_type = 0
         else:
