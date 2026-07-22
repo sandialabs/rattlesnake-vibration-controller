@@ -72,7 +72,7 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     rattlesnake : RattlesnakeController
         The rattlesnake controller object that the UI is going to represent.
     """
-    app = build_rattlesnake_app()
+    app = build_rattlesnake_app(rattlesnake)
     app.exec_()
     rattlesnake.shutdown()
 

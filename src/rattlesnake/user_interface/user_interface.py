@@ -919,7 +919,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         Saves an excel template from the current rattlesnake object state. Inputs
         current saved values into the template.
-        TODO implement blank environment template loading~
         """
         filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
@@ -937,6 +936,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             hardware_metadata.channel_list = channel_list
 
             # Environments
+            environment_channel_list = self.get_environment_channel_list()
             environment_metadata_dict = {}
             for environment_ui in self.environment_uis.values():
                 if environment_ui.hardware_metadata is None:
@@ -945,6 +945,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         environment_ui.environment_type
                     )
                 else:
+                    # Resync the channel list from the environment channel table
+                    environment_ui.hardware_metadata.channel_list = (
+                        environment_channel_list[environment_ui.environment_name]
+                    )
                     metadata = environment_ui.get_environment_metadata(channel_list)
                     environment_metadata_dict[environment_ui.environment_name] = (
                         metadata
