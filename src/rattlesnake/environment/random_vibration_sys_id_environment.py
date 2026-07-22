@@ -786,12 +786,12 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             control_coordinate = np.array(
                 [
                     (
-                        hardware_metadata.channel_list[i].node_number,
+                        environment_channel_list[i].node_number,
                         _direction_map[
-                            hardware_metadata.channel_list[i].node_direction
+                            environment_channel_list[i].node_direction
                         ],
                     )
-                    for i in output_channel_indices
+                    for i in control_channel_indices
                 ],
                 dtype=coord_dtype,
             )
