@@ -163,11 +163,11 @@ def modal_data_not_writing():
         run_profile=False,
     )
     hardware_metadata = manual_sdynpy_system_metadata()
-    hardware_metadata.sample_rate = 450000
+    hardware_metadata.sample_rate = 50000
     rattlesnake.initialize_hardware(hardware_metadata)
 
     modal_metadata = manual_modal_metadata(rattlesnake.hardware_metadata)
-    modal_metadata.samples_per_frame = 900000
+    modal_metadata.samples_per_frame = 150000
 
     stream_metadata = headless.StreamMetadata()
 
@@ -182,7 +182,7 @@ def modal_data_not_writing():
         time.sleep(100)
 
         rattlesnake.stop_acquisition()
-        time.sleep(60)
+        time.sleep(120)
 
     rattlesnake.shutdown()
 
