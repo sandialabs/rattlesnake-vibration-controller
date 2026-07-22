@@ -69,8 +69,12 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
 
     @property
     def physical_control_indices(self):
-        """Indices corresponding to the physical channels that are used as outputs"""
-        return [0]
+        """Indices corresponding to the physical channels that are used as responses (not outputs)"""
+        return [
+            i
+            for i, channel in enumerate(self.hardware_metadata.channel_list)
+            if not channel.feedback_device
+        ]
 
     @property
     def physical_control_names(self):
@@ -167,7 +171,11 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
             if channel_bool
         ]
 
-        control_channel_indices = [1]
+        control_channel_indices = [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is None
+        ]
 
         output_channel_indices = [
             index
