@@ -160,8 +160,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Disable all tabs except the first
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.SYSTEM_ID.value, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.PREDICTION.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, False)
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -587,8 +587,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Reset UI
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.SYSTEM_ID.value, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.PREDICTION.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, False)
 
         environment_names = list(self.environment_uis.keys())
         for environment_name in environment_names:
@@ -1785,7 +1785,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 )
 
         # System Identification tab
-        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, False)
         self.system_id_environment_tabs.setCurrentIndex(-1)
         self.system_id_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
@@ -1794,12 +1794,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.system_id_environment_tabs.addTab(
                     system_id_widget, environment_name
                 )
-                self.rattlesnake_tabs.tabBar().setTabVisible(
-                    TabIndices.SYSTEM_ID.value, True
-                )
+                self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, True)
 
         # Prediction tab
-        self.rattlesnake_tabs.tabBar().setTabVisible(TabIndices.PREDICTION.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, False)
         self.test_prediction_environment_tabs.setCurrentIndex(-1)
         self.test_prediction_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
@@ -1808,9 +1806,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.test_prediction_environment_tabs.addTab(
                     prediction_widget, environment_name
                 )
-                self.rattlesnake_tabs.tabBar().setTabVisible(
-                    TabIndices.PREDICTION.value, True
-                )
+                self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, True)
 
         # Run tab
         self.run_environment_tabs.setCurrentIndex(-1)
