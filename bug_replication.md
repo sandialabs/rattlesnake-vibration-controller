@@ -3,9 +3,10 @@
     [ ] Finish making standard structure for unittests
     [ ] Go through and comment/verify unit tests
 
-[ ] Change event list in the example modal worksheet to follow new format with change_filename
-
 [ ] Write guide for building out new environments
+
+[ ] Its probably a good idea to add the metadata builders to the mock suite
+    [ ] Change the arguments to be like the mock_utilities where you can target singular attributes
 
 [ ] Add a load environment button to user interface
 
@@ -13,14 +14,12 @@
 
 [ ] Allow for SysID data packages to be sent to other environments that share the same control/channel_table
 
-[ ] Build out skeleton sysid environment so that it has a working user interface
-
 [ ] Finish implementation of Read Environment
 
-[ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average
+[ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
 
-[ ] Remove Set Environment Instructions from the list of options in the profile event list user interface
-    [ ] This is an internal event done to sync the environment user interface before performing the list
+[ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
+    [ ] This is an internal event done to sync the environment user interface before performing the list.
 
 [ ] Change RattlesnakeController so that it can be used as with RattlesnakeController as rattlesnake:
     [ ] call rattlesnake.shutdown() on exit
@@ -46,10 +45,8 @@
 [ ] Start Profile > Stop Acqusition disables both start and stop profile button
     [ ] Timers also keep moving in the user interface
 
-[ ] If the process crashes during system identification, the hardware_acquisiton never shuts down and you get stuck
-    [ ] Repeatable by running system id with 0 frame size
-    
-[ ] For some reason, skeleton sysid never enables sysid_tab
+[ ] Modal environment throws a zero division error when there are no references selected
+    [ ] Dont enable FRF/spectral stuff with no references
 
 ## Bugs I need to Investigate (I have little hope of fixing)
 [ ] LanXI IP Manager
@@ -59,5 +56,6 @@
 [ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
 
 [ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
+    [ ] Stop Acqusition should be able to stop the input/output sync loop
 
 [ ] Editable spinboxes tab out when inputting data
