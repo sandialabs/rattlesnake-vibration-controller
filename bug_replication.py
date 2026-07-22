@@ -3,6 +3,7 @@ import time
 import netCDF4 as nc4
 
 import rattlesnake.headless as headless
+import rattlesnake.examples.example_registry as registry
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.main import launch_rattlesnake_ui
@@ -140,42 +141,5 @@ def profile_event_button_disable():
     rattlesnake.shutdown()
 
 
-from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
-    manual_sdynpy_system_metadata,
-)
-from rattlesnake.examples.environment.modal.modal_metadata import manual_modal_metadata
-
-
-def modal_environment_slow_writing():
-    rattlesnake = headless.RattlesnakeController()
-
-    hardware_metadata = manual_sdynpy_system_metadata()
-    hardware_metadata.sample_rate = 15000
-    rattlesnake.initialize_hardware(hardware_metadata)
-
-    environment_metadata = manual_modal_metadata(hardware_metadata)
-    environment_metadata.samples_per_frame = 30000
-    rattlesnake.initialize_environments([environment_metadata])
-
-    rattlesnake.start_acquisition(headless.StreamMetadata())
-    time.sleep(1)
-
-    modal_instructions = ModalInstructions("Modal 0", "test_file.nc4")
-    rattlesnake.start_environment(modal_instructions)
-    time.sleep(80)
-
-    rattlesnake.stop_acquisition()
-
-    time.sleep(5)
-
-    rattlesnake.shutdown()
-
-    dataset = nc4.Dataset("test_file.nc4", mode="r+")
-    print(f"{dataset.variables["time_data"].shape}")
-
-
 if __name__ == "__main__":
-
-    dataset = nc4.Dataset("test_file.nc4", mode="r+")
-    dataset.close()
-    modal_environment_slow_writing()
+    pass

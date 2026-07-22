@@ -22,6 +22,9 @@
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface
     [ ] This is an internal event done to sync the environment user interface before performing the list
 
+[ ] Change RattlesnakeController so that it can be used as with RattlesnakeController as rattlesnake:
+    [ ] call rattlesnake.shutdown() on exit
+
 ## Code I need to Change but not Bugs
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff

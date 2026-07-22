@@ -1286,8 +1286,10 @@ class ModalEnvironment(Environment):
         filename : str
             Path to the netCDF file that will be created
         """
-        if not self.save_filename:
+        if self.netcdf_dataset is not None:
+            self.netcdf_dataset.close()
             self.netcdf_dataset = None
+        if not self.save_filename:
             return
         self.netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
             self.save_filename, "w", format="NETCDF4", clobber=True
