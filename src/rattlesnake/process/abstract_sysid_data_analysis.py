@@ -911,6 +911,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                     ),
                 )
             )
+            self.ping_alive()
         if auto_shutdown and self.parameters.sysid_noise_averages == self.frames:
             self.environment_command_queue.put(
                 self.process_name,
@@ -925,7 +926,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.command_queue.put(
                 self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown)
             )
-            self.ping_alive()
 
     def run_sysid_transfer_function(self, auto_shutdown):
         """Starts and runs the system identification
@@ -964,6 +964,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                     ),
                 )
             )
+            self.ping_alive()
         if (
             auto_shutdown
             and self.parameters.sysid_averages == self.sysid_data.sysid_frames
@@ -985,7 +986,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 self.process_name,
                 (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
             )
-            self.ping_alive()
 
     def stop_sysid(self, data):  # pylint: disable=unused-argument
         """Stops the currently running system identification phase
