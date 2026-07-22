@@ -1286,9 +1286,7 @@ class ModalEnvironment(Environment):
         filename : str
             Path to the netCDF file that will be created
         """
-        if self.netcdf_dataset is not None:
-            self.netcdf_dataset.close()
-            self.netcdf_dataset = None
+        self.close_data_file()
         if not self.save_filename:
             return
         self.netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
@@ -1343,7 +1341,6 @@ class ModalEnvironment(Environment):
         if self.netcdf_dataset is not None:
             self.netcdf_dataset.close()
             self.netcdf_dataset = None
-        self.save_filename = None
 
     def write_time_frame(self, data):
         """Writes an accepted measurement frame's time data to the netCDF file
@@ -1596,6 +1593,7 @@ class ModalEnvironment(Environment):
         ):
             self.log("Shutdown Achieved")
             self.close_data_file()
+            self.save_filename = None
             self.clear_active()
             self.queue_container.gui_update_queue.put(
                 (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))

@@ -141,5 +141,51 @@ def profile_event_button_disable():
     rattlesnake.shutdown()
 
 
+from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
+    manual_sdynpy_system_metadata,
+)
+from rattlesnake.examples.environment.modal.modal_metadata import manual_modal_metadata
+from rattlesnake.examples.defaults import DIRECTORY
+
+
+def modal_data_not_writing():
+    rattlesnake = build_rattlesnake_object(
+        threaded=False,
+        timeout=20,
+        import_method="manual",
+        hardware_type=HardwareType.NONE,
+        environment_type=EnvironmentType.NONE,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=False,
+        run_sysid=False,
+        start_hardware=False,
+        start_environment=False,
+        run_profile=False,
+    )
+    hardware_metadata = manual_sdynpy_system_metadata()
+    hardware_metadata.sample_rate = 450000
+    rattlesnake.initialize_hardware(hardware_metadata)
+
+    modal_metadata = manual_modal_metadata(rattlesnake.hardware_metadata)
+    modal_metadata.samples_per_frame = 900000
+
+    stream_metadata = headless.StreamMetadata()
+
+    for ind in range(14):
+        rattlesnake.initialize_environments([modal_metadata])
+        rattlesnake.start_acquisition(stream_metadata)
+
+        filename = DIRECTORY + f"/test{ind}.nc4"
+        instructions = headless.ModalInstructions("Modal 0", filename)
+        rattlesnake.start_environment(instructions)
+
+        time.sleep(100)
+
+        rattlesnake.stop_acquisition()
+        time.sleep(60)
+
+    rattlesnake.shutdown()
+
+
 if __name__ == "__main__":
-    pass
+    modal_data_not_writing()
