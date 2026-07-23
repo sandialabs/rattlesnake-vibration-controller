@@ -21,8 +21,8 @@
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
     [ ] This is an internal event done to sync the environment user interface before performing the list.
 
-[ ] Change RattlesnakeController so that it can be used as with RattlesnakeController as rattlesnake:
-    [ ] call rattlesnake.shutdown() on exit
+[x] Change RattlesnakeController so that it can be used as with RattlesnakeController as rattlesnake:
+    [x] call rattlesnake.shutdown() on exit
 
 ## Code I need to Change but not Bugs
 [ ] Renaming Environments
@@ -39,6 +39,8 @@
 [ ] It is probably good to add a 1 second delay to the spectral process before sending the shutdown flag
     [ ] This is to prevent this pipeline send data -> shutdown flag -> environment checks shutdown flag and closes -> data yet to be received
 
+[ ] Add KeyboardInterrupt behavior to environments/processes that calls quit()
+
 ## Bugs I can make scripts to recreate (easy fixes)
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
     [ ] Should probably just stop profile events from firing if this happens
@@ -50,6 +52,8 @@
 
 [ ] Modal environment throws a zero division error when there are no references selected
     [ ] Dont enable FRF/spectral stuff with no references
+
+[x] Modal environment throws a pipe error when still writing when environment stops.
 
 ## Bugs I need to Investigate (I have little hope of fixing)
 [ ] LanXI IP Manager

@@ -313,6 +313,13 @@ class RattlesnakeController:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.shutdown()
+        return False
+
     @property
     def state(self) -> RattlesnakeState:
         hardware_store = self.hardware_metadata is not None
