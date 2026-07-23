@@ -2638,6 +2638,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.stop_profile_error(e)
             return
 
+        # This does not use an event watcher as the stop_acquisition
+        # function calls this which would overwrite it anyways.
+        if self.event_watcher is not None:
+            try:
+                self.event_watcher.ready.disconnect()
+                self.event_watcher.error.disconnect()
+            except TypeError:
+                pass
+            self.event_watcher.cancel()
+        self.profile_closed_out()
+
     def stop_profile_error(self, error):
         # Show error
         self.display_error(error)

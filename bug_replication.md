@@ -47,8 +47,8 @@
 
 [ ] Transient example problem results in zero division at the end which sends TRAC values to 0
 
-[ ] Start Profile > Stop Acqusition disables both start and stop profile button
-    [ ] Timers also keep moving in the user interface
+[x] Start Profile > Stop Acqusition disables both start and stop profile button
+    [x] Timers also keep moving in the user interface
 
 [ ] Modal environment throws a zero division error when there are no references selected
     [ ] Dont enable FRF/spectral stuff with no references
