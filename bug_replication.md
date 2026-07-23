@@ -63,6 +63,6 @@
 [ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
 
 [ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
-    [ ] Stop Acqusition should be able to stop the input/output sync loop
+    [ ] Stop Acqusition should be able to stop the input/output sync loop.
 
-[ ] Editable spinboxes tab out when inputting data
+[ ] Editable spinboxes tab out when inputting data.
