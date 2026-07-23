@@ -27,6 +27,8 @@
 [ ] Write guide for building out new environments
 
 ## Medium (Possible but needs a lot of verification)
+[ ] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
+
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
     [ ] Spin up/shut down environments based off name, not type
