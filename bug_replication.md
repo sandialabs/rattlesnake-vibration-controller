@@ -1,68 +1,58 @@
-## Stuff I need to Create
+# Ranking bugs based on time/ease of fix
+
+## Easy
+[ ] Rattlesnake object and user interface need methods for when they are overwritten
+    [ ] Currently just crashes
+
+[ ] Add a load environment button to user interface
+
+[ ] Modal environment throws a zero division error when there are no references selected
+    [ ] Dont enable FRF/spectral stuff with no references/do a try/catch
+
+[ ] Transient example problem results in zero division at the end which sends TRAC values to 0
+    [ ] Look into behavior of having a 0 in the transient and random spec
+
+[ ] LanXI IP Manager
+    [ ] This appends every channel to the ip address list instead of just the unique ones.
+        [ ] I kinda want to just add a __eq__ to ip addresses and have it as a set
+
 [ ] Unittests
     [ ] Finish making standard structure for unittests
     [ ] Go through and comment/verify unit tests
 
+[ ] Finish implementation of Read Environment
+
 [ ] Write guide for building out new environments
 
-[x] Its probably a good idea to add the metadata builders to the mock suite
-    [x] Change the arguments to be like the mock_utilities where you can target singular attributes
-
-[ ] Add a load environment button to user interface
-
+## Medium (Possible but needs a lot of verification)
 [ ] Add a save spec to sine environment
-
-[ ] Allow for SysID data packages to be sent to other environments that share the same control/channel_table
-
-[ ] Finish implementation of Read Environment
 
 [ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
 
-[ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
-    [ ] This is an internal event done to sync the environment user interface before performing the list.
-
-[x] Change RattlesnakeController so that it can be used as with RattlesnakeController as rattlesnake:
-    [x] call rattlesnake.shutdown() on exit
-
-## Code I need to Change but not Bugs
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
     [ ] Spin up/shut down environments based off name, not type
 
+[ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
+    [ ] Should probably just stop profile events from firing if this happens
+
+[ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
+    [ ] Stop Acqusition should be able to stop the input/output sync loop.
+
+## Hard (Major issues are going to happen)
+[ ] Editable spinboxes tab out when inputting data.
+
+[ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
+    [ ] This is an internal event done to sync the environment user interface before performing the list.
+
 [ ] Threaded Environments
     [ ] I need to swap queues within environments to threaded queues. This has caused major lag issues which need investigation
+
+[ ] Allow for SysID data packages to be sent to other environments that share the same control/channel_table
 
 [ ] Memory Leak
     [ ] Headless mode needs to clear the gui_update_queue at a certain size
         [ ] This has had major issues with the sine environment example for some reason
 
-[ ] It is probably good to add a 1 second delay to the spectral process before sending the shutdown flag
-    [ ] This is to prevent this pipeline send data -> shutdown flag -> environment checks shutdown flag and closes -> data yet to be received
-
-[x] Add KeyboardInterrupt behavior to environments/processes that calls quit()
-
-## Bugs I can make scripts to recreate (easy fixes)
-[ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
-    [ ] Should probably just stop profile events from firing if this happens
-
-[ ] Transient example problem results in zero division at the end which sends TRAC values to 0
-
-[x] Start Profile > Stop Acqusition disables both start and stop profile button
-    [x] Timers also keep moving in the user interface
-
-[ ] Modal environment throws a zero division error when there are no references selected
-    [ ] Dont enable FRF/spectral stuff with no references
-
-[x] Modal environment throws a pipe error when still writing when environment stops.
-
-## Bugs I need to Investigate (I have little hope of fixing)
-[ ] LanXI IP Manager
-    [ ] This appends every channel to the ip address list instead of just the unique ones.
-        [ ] I kinda want to just add a __eq__ to ip addresses and have it as a set
-
+## Impossible
 [ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
-
-[ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
-    [ ] Stop Acqusition should be able to stop the input/output sync loop.
-
-[ ] Editable spinboxes tab out when inputting data.
