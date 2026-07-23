@@ -163,7 +163,7 @@ def modal_data_not_writing():
         run_profile=False,
     )
     hardware_metadata = manual_sdynpy_system_metadata()
-    hardware_metadata.sample_rate = 50000
+    hardware_metadata.sample_rate = 300000
     rattlesnake.initialize_hardware(hardware_metadata)
 
     modal_metadata = manual_modal_metadata(rattlesnake.hardware_metadata)
@@ -171,18 +171,16 @@ def modal_data_not_writing():
 
     stream_metadata = headless.StreamMetadata()
 
-    for ind in range(14):
+    for ind in range(3):
         rattlesnake.initialize_environments([modal_metadata])
         rattlesnake.start_acquisition(stream_metadata)
 
         filename = DIRECTORY + f"/test{ind}.nc4"
         instructions = headless.ModalInstructions("Modal 0", filename)
         rattlesnake.start_environment(instructions)
-
-        time.sleep(100)
+        time.sleep(30)
 
         rattlesnake.stop_acquisition()
-        time.sleep(120)
 
     rattlesnake.shutdown()
 

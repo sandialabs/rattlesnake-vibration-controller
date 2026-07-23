@@ -1055,6 +1055,7 @@ class ModalEnvironment(Environment):
         self.spectral_shutdown_achieved = False
         self.netcdf_dataset = None
         self.save_filename = None
+        self.shutdown_recheck_timer = None
         self.override_table = {}
 
         # Map commands
@@ -1601,10 +1602,22 @@ class ModalEnvironment(Environment):
             # self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
         else:
             # Recheck some time later
-            time.sleep(1)
-            self.environment_command_queue.put(
-                self.environment_name, (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
+            self.shutdown_recheck_timer = threading.Timer(
+                1.0, self.requeue_shutdown_check
             )
+            self.shutdown_recheck_timer.daemon = True # Scary Daemons
+            self.shutdown_recheck_timer.start()
+
+    def requeue_shutdown_check(self):
+        """Timer callback that re-enqueues the shutdown check.
+
+        Runs on a background timer thread so it does not block the main
+        command loop from continuing to drain ``environment_command_queue``
+        while a shutdown is pending.
+        """
+        self.environment_command_queue.put(
+            self.environment_name, (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
+        )
 
     def accept_frame(self, data):
         """Accepts or rejects the previous measurement frame"""
@@ -1668,6 +1681,9 @@ class ModalEnvironment(Environment):
             that it is time to close down the environment.
 
         """
+        if self.shutdown_recheck_timer is not None:
+            self.shutdown_recheck_timer.cancel()
+                
         self.close_data_file()
         for queue in [
             self.queue_container.spectral_command_queue,
