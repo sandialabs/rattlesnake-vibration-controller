@@ -319,6 +319,12 @@ class RattlesnakeController:
     def __exit__(self, exc_type, exc_value, traceback):
         self.shutdown()
         return False
+    
+    def __del__(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
 
     @property
     def state(self) -> RattlesnakeState:

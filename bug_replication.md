@@ -20,21 +20,23 @@
     [ ] Finish making standard structure for unittests
     [ ] Go through and comment/verify unit tests
 
+[ ] Build out notebook example
+
 [ ] Finish implementation of Read Environment
 
 [ ] Write guide for building out new environments
 
 ## Medium (Possible but needs a lot of verification)
-[ ] Add a save spec to sine environment
-
-[ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
-
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
     [ ] Spin up/shut down environments based off name, not type
 
+[ ] Add a save spec to sine environment
+
+[ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
+
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
-    [ ] Should probably just stop profile events from firing if this happens
+    [ ] Should probably just stop profile events from firing if this happens.
 
 [ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
     [ ] Stop Acqusition should be able to stop the input/output sync loop.

@@ -32,6 +32,7 @@ from rattlesnake.user_interface.user_interface import RattlesnakeUI
 
 def build_rattlesnake_app(
     rattlesnake: RattlesnakeController,
+    *,
     set_font_size: bool = True,
 ):
     # Configure High DPI for UI scaling

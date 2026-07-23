@@ -145,6 +145,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Store any presets within Rattlesnake to UI
         self.load_ui_from_rattlesnake()
 
+    def __del__(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
 
     def complete_ui(self):
         """
@@ -530,10 +535,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.rattlesnake_tabs.setCurrentIndex(data)
             case UICommands.DISABLE_TAB:
                 self.rattlesnake_tabs.setTabEnabled(data, False)
-            case UICommands.GUI_OPENED:
-                self.rattlesnake.setup_gui()
-            case UICommands.GUI_CLOSED:
-                self.rattlesnake.close_gui()
             case _:
                 widget = getattr(self, command)
                 if isinstance(widget, QtWidgets.QDoubleSpinBox):
@@ -2666,7 +2667,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         try:
             self.load_ui_from_rattlesnake()
-            self.gui_update_queue.put((UICommands.GUI_OPENED, None))
+            self.rattlesnake.setup_gui()
         except Exception as e:  # pylint: disable=broad-exception-caught
             self.display_error(e)
 
@@ -2685,6 +2686,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         event : QtGui.QCloseEvent
             The close event, which is accepted.
         """
+        self.rattlesnake.close_gui()
         event.accept()
 
     # endregion
