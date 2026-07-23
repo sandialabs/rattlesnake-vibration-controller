@@ -39,7 +39,9 @@ def worksheet_sysid_metadata(hardware_metadata):
     return metadata
 
 
-def manual_sysid_metadata(hardware_metadata):
+def manual_sysid_metadata(hardware_metadata, **overrides):
+    """Builds a SysIdMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. sysid_averages=40)."""
     sample_rate = hardware_metadata.sample_rate
     sysid_frame_size = hardware_metadata.sample_rate
     sysid_averaging_type = "Linear"
@@ -59,7 +61,7 @@ def manual_sysid_metadata(hardware_metadata):
     sysid_high_frequency_cutoff = int(sample_rate / 2)
     stream_file = None
     auto_shutdown = False
-    return SysIdMetadata(
+    kwargs = dict(
         sample_rate=sample_rate,
         sysid_frame_size=sysid_frame_size,
         sysid_averaging_type=sysid_averaging_type,
@@ -80,3 +82,5 @@ def manual_sysid_metadata(hardware_metadata):
         stream_file=stream_file,
         auto_shutdown=auto_shutdown,
     )
+    kwargs.update(overrides)
+    return SysIdMetadata(**kwargs)

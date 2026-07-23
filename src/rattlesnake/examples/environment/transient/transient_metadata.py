@@ -52,7 +52,9 @@ def netcdf_transient_metadata(hardware_metadata):
     return metadata
 
 
-def manual_transient_metadata(hardware_metadata):
+def manual_transient_metadata(hardware_metadata, **overrides):
+    """Builds a TransientMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. ramp_time=1.0)."""
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     sample_rate = hardware_metadata.sample_rate
     number_of_channels = 21
@@ -69,7 +71,7 @@ def manual_transient_metadata(hardware_metadata):
     response_transformation_matrix = None
     output_transformation_matrix = None
 
-    metadata = TransientMetadata(
+    kwargs = dict(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
         sample_rate=sample_rate,
@@ -85,8 +87,8 @@ def manual_transient_metadata(hardware_metadata):
         response_transformation_matrix=response_transformation_matrix,
         output_transformation_matrix=output_transformation_matrix,
     )
-
-    return metadata
+    kwargs.update(overrides)
+    return TransientMetadata(**kwargs)
 
 
 def create_control_signal():

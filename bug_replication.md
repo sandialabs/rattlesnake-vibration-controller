@@ -5,8 +5,8 @@
 
 [ ] Write guide for building out new environments
 
-[ ] Its probably a good idea to add the metadata builders to the mock suite
-    [ ] Change the arguments to be like the mock_utilities where you can target singular attributes
+[x] Its probably a good idea to add the metadata builders to the mock suite
+    [x] Change the arguments to be like the mock_utilities where you can target singular attributes
 
 [ ] Add a load environment button to user interface
 
@@ -35,6 +35,9 @@
 [ ] Memory Leak
     [ ] Headless mode needs to clear the gui_update_queue at a certain size
         [ ] This has had major issues with the sine environment example for some reason
+
+[ ] It is probably good to add a 1 second delay to the spectral process before sending the shutdown flag
+    [ ] This is to prevent this pipeline send data -> shutdown flag -> environment checks shutdown flag and closes -> data yet to be received
 
 ## Bugs I can make scripts to recreate (easy fixes)
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)

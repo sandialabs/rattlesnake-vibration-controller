@@ -45,14 +45,15 @@ def netcdf_skeleton_sysid_metadata(hardware_metadata):
     return metadata
 
 
-def manual_skeleton_sysid_metadata(hardware_metadata):
-    # Create signal array
+def manual_skeleton_sysid_metadata(hardware_metadata, **overrides):
+    """Builds a SkeletonSysIdMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. example_window_size=10)."""
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     example_window_size = 5
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
 
-    metadata = SkeletonSysIdMetadata(
+    kwargs = dict(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
         sample_rate=hardware_metadata.sample_rate,
@@ -60,8 +61,8 @@ def manual_skeleton_sysid_metadata(hardware_metadata):
         control_channel_indices=control_channel_indices,
         output_channel_indices=output_channel_indices,
     )
-
-    return metadata
+    kwargs.update(overrides)
+    return SkeletonSysIdMetadata(**kwargs)
 
 
 def skeleton_sysid_instructions():

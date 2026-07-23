@@ -41,19 +41,20 @@ def netcdf_skeleton_metadata(hardware_metadata):
     return metadata
 
 
-def manual_skeleton_metadata(hardware_metadata):
-    # Create signal array
+def manual_skeleton_metadata(hardware_metadata, **overrides):
+    """Builds a SkeletonMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. example_window_size=10)."""
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     example_window_size = 5
 
-    metadata = SkeletonMetadata(
+    kwargs = dict(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
         sample_rate=hardware_metadata.sample_rate,
         example_window_size=example_window_size,
     )
-
-    return metadata
+    kwargs.update(overrides)
+    return SkeletonMetadata(**kwargs)
 
 
 def skeleton_instructions():

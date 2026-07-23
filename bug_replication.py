@@ -141,10 +141,7 @@ def profile_event_button_disable():
     rattlesnake.shutdown()
 
 
-from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
-    manual_sdynpy_system_metadata,
-)
-from rattlesnake.examples.environment.modal.modal_metadata import manual_modal_metadata
+from rattlesnake.examples import manual_sdynpy_system_metadata, manual_modal_metadata
 from rattlesnake.examples.defaults import DIRECTORY
 
 
@@ -162,12 +159,12 @@ def modal_data_not_writing():
         start_environment=False,
         run_profile=False,
     )
-    hardware_metadata = manual_sdynpy_system_metadata()
-    hardware_metadata.sample_rate = 300000
+    hardware_metadata = manual_sdynpy_system_metadata(sample_rate=300000)
     rattlesnake.initialize_hardware(hardware_metadata)
 
-    modal_metadata = manual_modal_metadata(rattlesnake.hardware_metadata)
-    modal_metadata.samples_per_frame = 150000
+    modal_metadata = manual_modal_metadata(
+        rattlesnake.hardware_metadata, samples_per_frame=150000
+    )
 
     stream_metadata = headless.StreamMetadata()
 

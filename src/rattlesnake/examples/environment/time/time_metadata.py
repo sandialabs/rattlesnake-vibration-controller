@@ -61,13 +61,15 @@ def netcdf_time_metadata(hardware_metadata):
     return metadata
 
 
-def manual_time_metadata(hardware_metadata):
+def manual_time_metadata(hardware_metadata, **overrides):
+    """Builds a TimeMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. cancel_rampdown_time=1.0)."""
     # Create signal array
     signal = create_time_signal(hardware_metadata)
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     cancel_rampdown_time = 0.5
 
-    metadata = TimeMetadata(
+    kwargs = dict(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
         sample_rate=hardware_metadata.sample_rate,
@@ -75,6 +77,8 @@ def manual_time_metadata(hardware_metadata):
         output_signal=signal,
         cancel_rampdown_time=cancel_rampdown_time,
     )
+    kwargs.update(overrides)
+    metadata = TimeMetadata(**kwargs)
     metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
 
     return metadata

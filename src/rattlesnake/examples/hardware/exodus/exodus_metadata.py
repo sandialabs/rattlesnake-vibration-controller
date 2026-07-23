@@ -29,7 +29,9 @@ def netcdf_exodus_metadata():
     return metadata
 
 
-def manual_exodus_metadata():
+def manual_exodus_metadata(**overrides):
+    """Builds an ExodusMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. sample_rate=300000)."""
     directions = ["X+", "Y+", "Z+"]
     force_nodes = [13, 131, 135]
     excitation_nodes = [1004, 1020, 1065, 1049]
@@ -57,7 +59,7 @@ def manual_exodus_metadata():
                 feedback_device="Input",
             )
             channel_list.append(channel)
-    metadata = ExodusMetadata(
+    kwargs = dict(
         channel_list=channel_list,
         sample_rate=defaults.SAMPLE_RATE,
         time_per_read=defaults.BUFFER_SIZE,
@@ -66,4 +68,5 @@ def manual_exodus_metadata():
         hardware_file=HARDWARE_FILE,
         damping_ratio=defaults.DAMPING_RATIO,
     )
-    return metadata
+    kwargs.update(overrides)
+    return ExodusMetadata(**kwargs)

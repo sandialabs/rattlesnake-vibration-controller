@@ -42,7 +42,9 @@ def netcdf_modal_metadata(hardware_metadata):
     return metadata
 
 
-def manual_modal_metadata(hardware_metadata):
+def manual_modal_metadata(hardware_metadata, **overrides):
+    """Builds a ModalMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. samples_per_frame=150000)."""
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     sample_rate = hardware_metadata.sample_rate
     samples_per_frame = 1000
@@ -73,38 +75,40 @@ def manual_modal_metadata(hardware_metadata):
     output_oversample = hardware_metadata.output_oversample
     exponential_window_value_at_frame_end = 0.25
 
-    return ModalMetadata(
-        ENVIRONMENT_NAME,
-        channel_list_bools,
-        sample_rate,
-        samples_per_frame,
-        averaging_type,
-        num_averages,
-        averaging_coefficient,
-        frf_technique,
-        frf_window,
-        overlap_percent,
-        trigger_type,
-        accept_type,
-        wait_for_steady_state,
-        trigger_channel,
-        pretrigger_percent,
-        trigger_slope_positive,
-        trigger_level_percent,
-        hysteresis_level_percent,
-        hysteresis_frame_percent,
-        signal_generator_type,
-        signal_generator_level,
-        signal_generator_min_frequency,
-        signal_generator_max_frequency,
-        signal_generator_on_percent,
-        acceptance_function,
-        reference_channel_indices,
-        response_channel_indices,
-        output_channel_indices,
-        output_oversample,
-        exponential_window_value_at_frame_end,
+    kwargs = dict(
+        environment_name=ENVIRONMENT_NAME,
+        channel_list_bools=channel_list_bools,
+        sample_rate=sample_rate,
+        samples_per_frame=samples_per_frame,
+        averaging_type=averaging_type,
+        num_averages=num_averages,
+        averaging_coefficient=averaging_coefficient,
+        frf_technique=frf_technique,
+        frf_window=frf_window,
+        overlap_percent=overlap_percent,
+        trigger_type=trigger_type,
+        accept_type=accept_type,
+        wait_for_steady_state=wait_for_steady_state,
+        trigger_channel=trigger_channel,
+        pretrigger_percent=pretrigger_percent,
+        trigger_slope_positive=trigger_slope_positive,
+        trigger_level_percent=trigger_level_percent,
+        hysteresis_level_percent=hysteresis_level_percent,
+        hysteresis_frame_percent=hysteresis_frame_percent,
+        signal_generator_type=signal_generator_type,
+        signal_generator_level=signal_generator_level,
+        signal_generator_min_frequency=signal_generator_min_frequency,
+        signal_generator_max_frequency=signal_generator_max_frequency,
+        signal_generator_on_percent=signal_generator_on_percent,
+        acceptance_function=acceptance_function,
+        reference_channel_indices=reference_channel_indices,
+        response_channel_indices=response_channel_indices,
+        output_channel_indices=output_channel_indices,
+        output_oversample=output_oversample,
+        exponential_window_value_at_frame_end=exponential_window_value_at_frame_end,
     )
+    kwargs.update(overrides)
+    return ModalMetadata(**kwargs)
 
 
 def modal_instructions():
