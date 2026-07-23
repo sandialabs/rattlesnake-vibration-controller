@@ -39,7 +39,7 @@
 [ ] It is probably good to add a 1 second delay to the spectral process before sending the shutdown flag
     [ ] This is to prevent this pipeline send data -> shutdown flag -> environment checks shutdown flag and closes -> data yet to be received
 
-[ ] Add KeyboardInterrupt behavior to environments/processes that calls quit()
+[x] Add KeyboardInterrupt behavior to environments/processes that calls quit()
 
 ## Bugs I can make scripts to recreate (easy fixes)
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)

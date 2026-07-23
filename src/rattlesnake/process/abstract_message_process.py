@@ -204,6 +204,10 @@ class AbstractMessageProcess(ABC):
                 )  # non-blocking-ish
             except (thqueue.Empty, mpqueue.Empty):
                 continue
+            except KeyboardInterrupt:
+                self.log("KeyboardInterrupt received")
+                self.quit(None)
+                break
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]
@@ -214,6 +218,10 @@ class AbstractMessageProcess(ABC):
                 continue
             try:
                 halt_flag = function(data)
+            except KeyboardInterrupt:
+                self.log("KeyboardInterrupt received")
+                self.quit(None)
+                break
             except Exception:  # pylint: disable=broad-exception-caught
                 tb = traceback.format_exc()
                 self.log(f"ERROR\n\n {tb}")
