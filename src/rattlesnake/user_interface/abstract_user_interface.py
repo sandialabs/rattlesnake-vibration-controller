@@ -44,6 +44,11 @@ class EnvironmentUI(ABC):
     # region State Sync
     @property
     def environment_command_queue(self):
+        """
+        This is so that interactive control laws can receive this data. The desired logic
+        around the environment_command_queue is to use rattlesnake.send_environment_command
+        so that there is some way to validate commands instead of putting directly.
+        """
         queue_name = self.rattlesnake.environment_manager.queue_names_dict[
             self.environment_name
         ]
