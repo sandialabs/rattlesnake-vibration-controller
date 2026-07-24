@@ -22,6 +22,8 @@
 
 [ ] Build out notebook example
 
+[ ] Figure out validation for each metadata object.
+
 [ ] Finish implementation of Read Environment
 
 [ ] Write guide for building out new environments
@@ -30,7 +32,7 @@
 
 ## Medium (Possible but needs a lot of verification)
 [x] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
-
+s
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
     [ ] Spin up/shut down environments based off name, not type
@@ -42,12 +44,10 @@
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
     [ ] Should probably just stop profile events from firing if this happens.
 
-[ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
-    [ ] Stop Acqusition should be able to stop the input/output sync loop.
+[x] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
+    [x] Stop Acqusition should be able to stop the input/output sync loop.
 
 [ ] Figure out issue with changing font size in jupyter notebooks.
-
-[ ] System Id environment can softlock if initialize_environment is clicked when system id is currently active
 
 [x] Figure out how to keep the current light mode theme but change the dark theme to have
     dark plots
