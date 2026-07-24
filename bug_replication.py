@@ -75,23 +75,13 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
-def sysid_environment_zero_divide():
-    """Figure out the zero devide in this to see if it is even a real issue"""
-    rattlesnake = build_rattlesnake_object(
-        threaded=True,
-        timeout=20,
-        import_method="manual",
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.SINE,
-        stream_type=StreamType.NO_STREAM,
-        load_sysid=True,
-        run_sysid=False,
-        start_hardware=False,
-        start_environment=False,
-        run_profile=False,
-    )
-    time.sleep(2)
-    rattlesnake.shutdown()
+def multiple_environments():
+    with mock_rattlesnake_object(hardware_type = HardwareType.SDYNPY_SYSTEM) as rattlesnake:
+        modal_environment = manual_modal_metadata(rattlesnake.hardware_metadata)
+        random_environment = manual_random_metadata(rattlesnake.hardware_metadata)
+        rattlesnake.initialize_environments([modal_environment, random_environment])
+
+        launch_rattlesnake_ui(rattlesnake)
 
 if __name__ == "__main__":
-    pass
+    multiple_environments()

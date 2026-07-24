@@ -49,6 +49,8 @@ from rattlesnake.load_utilities import (
     save_rattlesnake_to_workbook,
     save_profile_to_workbook,
     load_profile_from_workbook,
+    load_metadata_from_netcdf,
+    load_metadata_from_workbook,
 )
 from rattlesnake.profile_manager import VALID_COMMANDS, ProfileEvent
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
@@ -317,6 +319,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_environments_button.clicked.connect(
             self.initialize_environments
         )
+        self.load_environment_button.clicked.connect(self.load_environment_from_file)
 
         # Acquisition
         self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
@@ -1976,6 +1979,87 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 ordered_dict[environment_name] = environment_ui
         self.environment_uis = ordered_dict
         header_item.setText(new_name)
+
+    def load_environment_from_file(self):
+        """
+        Loads environment metadata from a worksheet or netCDF file into the
+        currently selected tab on the Environment Definition tab.
+        """
+        current_index = self.environment_definition_environment_tabs.currentIndex()
+        if current_index < 0:
+            self.display_error(
+                "Please select an environment tab to load a file into"
+            )
+            return
+
+        environment_name = self.environment_definition_environment_tabs.tabText(
+            current_index
+        )
+        environment_ui = self.environment_uis[environment_name]
+
+        filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Load Environment",
+            filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+        )
+        if filepath == "":
+            return
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        _, filetype = os.path.splitext(filepath)
+
+        try:
+            match filetype:
+                case ".nc4":
+                    dataset = netCDF4.Dataset(filepath)
+                    _, environment_metadata_list = load_metadata_from_netcdf(dataset)
+                case ".xlsx":
+                    workbook = openpyxl.load_workbook(filepath, read_only=True)
+                    _, environment_metadata_list, _ = load_metadata_from_workbook(
+                        workbook
+                    )
+                case _:
+                    self.display_error(f"Unsupported file type: {filetype}")
+                    return
+
+            matching_metadata = [
+                metadata
+                for metadata in environment_metadata_list
+                if metadata.environment_type == environment_ui.environment_type
+            ]
+
+            if not matching_metadata:
+                self.display_error(
+                    f"No {environment_ui.environment_type.name} environments "
+                    f"were found in {filepath}"
+                )
+                return
+            elif len(matching_metadata) == 1:
+                environment_metadata = matching_metadata[0]
+            else:
+                names = [metadata.environment_name for metadata in matching_metadata]
+                name, ok_chosen = QtWidgets.QInputDialog.getItem(
+                    self,
+                    "Select Environment",
+                    "Multiple matching environments were found in the file. "
+                    "Select the one to load:",
+                    names,
+                    editable=False,
+                )
+                if not ok_chosen:
+                    return
+                environment_metadata = matching_metadata[names.index(name)]
+
+            # Rename the loaded metadata so it applies to the currently open tab
+            environment_metadata.environment_name = environment_name
+
+            environment_ui.set_environment_metadata(environment_metadata)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
+            return
 
     def initialize_environments(self):
         self.log("Initializing Environment")

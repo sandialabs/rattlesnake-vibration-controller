@@ -1,7 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Add a load environment button to user interface
 [ ] Have modal environment display current frf/timehistory/etc. before accepting frame
 [ ] Add a save spec to the sine environment
 [ ] Change the way that environments are renamed, just close the environment process if it does not have the same
@@ -24,7 +23,7 @@ Stuff for the future
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
-[ ] Add a load environment button to user interface
+[x] Add a load environment button to user interface
 
 [x] Modal environment throws a zero division error when there are no references selected
     [x] Dont enable FRF/spectral stuff with no references/do a try/catch
@@ -59,6 +58,8 @@ Stuff for the future
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
     [ ] Spin up/shut down environments based off name, not type
+
+[ ] Sysid environments need to write spec file to worksheet if it exists.
 
 [ ] Add a save spec to sine environment
 
