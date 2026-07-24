@@ -468,6 +468,23 @@ def flush_queue(queue, timeout=None):
             return data
 
 
+def gui_queue_cleanup(
+    gui_update_queue,
+    shutdown_event,
+    gui_active_check,
+    max_queue_size=500,
+    poll_interval=0.25,
+):
+    while not shutdown_event.wait(poll_interval):
+        if gui_active_check():
+            continue
+        try:
+            while gui_update_queue.qsize() > max_queue_size:
+                gui_update_queue.get_nowait()
+        except (thqueue.Empty, mpqueue.Empty):
+            continue
+
+
 _direction_map = {
     "X+": 1,
     "X": 1,

@@ -1,9 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Change Branch
-    [ ] Swap environment queues to threaded queues
-    [ ] Figure out how to deal with memory leak from gui_update_queue
 [ ] Add a load environment button to user interface
 [ ] Have modal environment display current frf/timehistory/etc. before accepting frame
 [ ] Add a save spec to the sine environment
@@ -74,20 +71,21 @@ Stuff for the future
 
 [x] Figure out how to keep the current light mode theme but change the dark theme to have
     dark plots
+
+[ ] The first plot data command from the sine environment when starting from headless mode causes an error.
+
+[ ] Every now and then, the sine environment does not show the spec on the run tab when launching form headless mode
+
 ## Hard (Major issues are going to happen)
 [x] Editable spinboxes tab out when inputting data.
 
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
     [ ] This is an internal event done to sync the environment user interface before performing the list.
 
-[ ] Threaded Environments
-    [ ] I need to swap queues within environments to threaded queues. This has caused major lag issues which need investigation
-
 [ ] Allow for SysID data packages to be sent to other environments that share the same control/channel_table
 
-[ ] Memory Leak
-    [ ] Headless mode needs to clear the gui_update_queue at a certain size
-        [ ] This has had major issues with the sine environment example for some reason
+[x] Memory Leak
+    [x] Headless mode needs to clear the gui_update_queue at a certain size
 
 ## Impossible
 [ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
@@ -98,3 +96,7 @@ control laws
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
     [ ] Should probably just stop profile events from firing if this happens.
     [ ] Need to figure out what the desired logic is here. Should the profile manager check for startup/shutdown environments
+
+[ ] Threaded Environments
+    [ ] I need to swap queues within environments to threaded queues. This has caused major lag issues which need investigation
+    [ ] This basically crashes the system identification process

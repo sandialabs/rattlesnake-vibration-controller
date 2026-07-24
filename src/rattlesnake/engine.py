@@ -13,6 +13,7 @@ import netCDF4 as nc4
 from rattlesnake.utilities import (
     log_file_task,
     flush_queue,
+    gui_queue_cleanup,
     EventContainer,
     GlobalCommands,
     QueueContainer,
@@ -46,7 +47,9 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
-THREADING = False
+THREADING = False # Decides whether to spin up multiple processes or threads
+GUI_QUEUE_MAX_SIZE = 500  # Max size of gui_update_queue before it is trimmed in headless mode
+GUI_QUEUE_POLL_INTERVAL = 0.25  # Seconds between gui_update_queue size checks
 
 
 # region State
@@ -193,6 +196,21 @@ class RattlesnakeController:
 
         # Set up output queue
         gui_update_queue = new_queue()
+
+        # Bound the size of gui_update_queue while no GUI is attached
+        self.gui_queue_cleanup_close_event = threading.Event()
+        self.gui_queue_cleanup_thread = threading.Thread(
+            target=gui_queue_cleanup,
+            args=(
+                gui_update_queue,
+                self.gui_queue_cleanup_close_event,
+                lambda: self.has_gui,
+                GUI_QUEUE_MAX_SIZE,
+                GUI_QUEUE_POLL_INTERVAL
+            ),
+            daemon=True,
+        )
+        self.gui_queue_cleanup_thread.start()
 
         # Event for telling engine to restart timeout
         ping_alive_event = new_event()
@@ -1235,6 +1253,8 @@ class RattlesnakeController:
         self.queue_container.log_file_queue.put(
             f"{datetime.now()}: Joining Controller Process\n"
         )
+        self.gui_queue_cleanup_close_event.set()
+        self.gui_queue_cleanup_thread.join(timeout=CLOSE_TIMEOUT)
         flush_queue(self.queue_container.gui_update_queue, timeout=CLOSE_TIMEOUT)
         self.queue_container.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.QUIT, None)
