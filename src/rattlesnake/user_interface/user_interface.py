@@ -2728,6 +2728,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         event : QtGui.QCloseEvent
             The close event, which is accepted.
         """
+        # Close event dialogs
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if widget is not self and isinstance(widget, QtWidgets.QDialog) and widget.isVisible():
+                widget.close()
+
         self.rattlesnake.close_gui()
         event.accept()
 

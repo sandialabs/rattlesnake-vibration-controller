@@ -1,6 +1,7 @@
 import time
 
 import netCDF4 as nc4
+from qtpy import QtCore
 
 from rattlesnake.headless import *
 from rattlesnake.examples import *

@@ -669,6 +669,16 @@ class SysIdEnvironmentUI(EnvironmentUI):
         """This is used to refresh streaming when the sys_id_data_analysis process
         tells the UI to start up transfer function after noise has automatically
         shutdown"""
+        if self.rattlesnake.state not in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+            RattlesnakeState.SYS_ID_ACTIVE,
+        ):
+            # This is to prevent this from running in the case that the sysid was
+            # run headlessly.
+            self.display_system_id_ended()
+            return
+
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[
                 self.environment_name
@@ -695,6 +705,16 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     def run_system_id_transfer(self):
         self.clean_up_event_watcher()
+
+        if self.rattlesnake.state not in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+            RattlesnakeState.SYS_ID_ACTIVE,
+        ):
+            # Prevent from running in the case that the sysid was completed
+            # in headless mode
+            self.display_system_id_ended()
+            return
 
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[
