@@ -83,8 +83,12 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 # region Defaults
 # pyqtgraph.setConfigOption('leftButtonPan',False)
-pyqtgraph.setConfigOption("background", "w")
-pyqtgraph.setConfigOption("foreground", "k")
+PLOT_THEME_COLORS = {
+    "Light": ((255, 255, 255), (0, 0, 0)),
+    "Dark": ((32, 33, 36), (228, 231, 235)),
+}
+pyqtgraph.setConfigOption("background", PLOT_THEME_COLORS["Light"][0])
+pyqtgraph.setConfigOption("foreground", PLOT_THEME_COLORS["Light"][1])
 QtCore.QDir.addSearchPath(
     "images", os.path.join(DIRECTORY, "user_interface", "themes", "images")
 )
@@ -334,6 +338,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def change_color_theme(self, text: str):
         """Updates the color scheme of the UI"""
+        self.theme = text
+
+        background, foreground = PLOT_THEME_COLORS.get(
+            text, PLOT_THEME_COLORS["Light"]
+        )
+        self.apply_plot_theme(background, foreground)
+        self.update_profile_plot()
+
         if text == "Light":
             self.setStyleSheet("")
         elif text == "Dark":
@@ -348,6 +360,36 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             print(f"Images Path: {images_path}")
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
+
+    def apply_plot_theme(self, background, foreground):
+        """
+        This is very scuffed. Basically searches for plots and manually,
+        sets their color scheme based on the theme. This is done because
+        we use pyqtgraph.setConfigOption which overrides the default way
+        that pyqt deals with color themes.
+        """
+        pyqtgraph.setConfigOption("background", background)
+        pyqtgraph.setConfigOption("foreground", foreground)
+        for widget in QtWidgets.QApplication.instance().allWidgets():
+            if isinstance(widget, pyqtgraph.PlotWidget):
+                plot_items = [widget.getPlotItem()]
+            elif isinstance(widget, pyqtgraph.GraphicsLayoutWidget):
+                plot_items = [
+                    item
+                    for item in widget.ci.items
+                    if isinstance(item, pyqtgraph.PlotItem)
+                ]
+            else:
+                continue
+            widget.setBackground(background)
+            for plot_item in plot_items:
+                for axis_name in ("left", "right", "top", "bottom"):
+                    axis = plot_item.getAxis(axis_name)
+                    if axis is not None:
+                        axis.setPen(foreground)
+                        axis.setTextPen(foreground)
+                if plot_item.legend is not None:
+                    plot_item.legend.setLabelTextColor(foreground)
 
     # endregion
 

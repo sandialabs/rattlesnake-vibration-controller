@@ -1,6 +1,9 @@
 # Ranking bugs based on time/ease of fix
 
 ## Easy
+[ ] Make git repo clear all jupyter notebook outputs when pushing to repo
+    [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
+
 [ ] Rattlesnake object and user interface need methods for when they are overwritten
     [ ] Currently just crashes
 
@@ -45,9 +48,9 @@
 [ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
     [ ] Stop Acqusition should be able to stop the input/output sync loop.
 
-[ ] Figure out issue with changing font size.
+[ ] Figure out issue with changing font size in jupyter notebooks.
 
-[ ] Figure out how to keep the current light mode theme but change the dark theme to have
+[x] Figure out how to keep the current light mode theme but change the dark theme to have
     dark plots
 
 [ ] Allow Rattlesnake and RattlesnakeUI objects to be overwritten
