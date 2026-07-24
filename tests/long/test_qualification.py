@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from rattlesnake.testing.mock_user_interface import (
+from rattlesnake.testing.mock_helpers import (
     launch_temporary_rattlesnake_ui_environment,
     launch_temporary_rattlesnake_ui_profile,
 )

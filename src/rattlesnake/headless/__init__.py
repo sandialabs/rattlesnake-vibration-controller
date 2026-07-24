@@ -62,7 +62,7 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
 
 # region User Interface
 from rattlesnake.main import build_rattlesnake_app, launch_rattlesnake_ui
-from rattlesnake.testing.mock_user_interface import (
+from rattlesnake.testing.mock_helpers import (
     launch_temporary_rattlesnake_ui_environment,
     launch_temporary_rattlesnake_ui_profile,
 )
