@@ -1,7 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Have Profile Event List cancel if error is encountered during it
 [ ] Change Branch
     [ ] Swap environment queues to threaded queues
     [ ] Figure out how to deal with memory leak from gui_update_queue
@@ -65,9 +64,6 @@ Stuff for the future
 
 [ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
 
-[ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
-    [ ] Should probably just stop profile events from firing if this happens.
-
 [x] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
     [x] Stop Acqusition should be able to stop the input/output sync loop.
 
@@ -95,3 +91,7 @@ Stuff for the future
 
 [ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to
 control laws
+
+[ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
+    [ ] Should probably just stop profile events from firing if this happens.
+    [ ] Need to figure out what the desired logic is here. Should the profile manager check for startup/shutdown environments
