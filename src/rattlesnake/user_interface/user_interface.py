@@ -1418,7 +1418,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                             spinbox = EditableSpinBox(
                                 valid_values[0], valid_values[1], attr_value
                             )
-                            spinbox.stringValueChanged.connect(
+                            spinbox.editingFinishedText.connect(
                                 lambda text, row=row, col=col: self.assist_channel_table_update(
                                     text, row, col
                                 )
@@ -1444,7 +1444,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                             self.channel_table.setCellWidget(row, col, combobox)
                         case HardwareAssistModules.SPINBOX:
                             spinbox = EditableSpinBox(valid_values[0], valid_values[1])
-                            spinbox.stringValueChanged.connect(
+                            spinbox.editingFinishedText.connect(
                                 lambda text, row=row, col=col: self.assist_channel_table_update(
                                     text, row, col
                                 )
@@ -1478,7 +1478,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     spinbox = EditableSpinBox(
                         valid_values[0], valid_values[1], attr_value
                     )
-                    spinbox.stringValueChanged.connect(
+                    spinbox.editingFinishedText.connect(
                         lambda text, row=row, col=col: self.assist_channel_table_update(
                             text, row, col
                         )

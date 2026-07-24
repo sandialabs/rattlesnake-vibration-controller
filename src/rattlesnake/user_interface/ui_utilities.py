@@ -1870,8 +1870,9 @@ class EditableCombobox(QtWidgets.QComboBox):
 
 
 class EditableSpinBox(QtWidgets.QAbstractSpinBox):
-    stringValueChanged = QtCore.Signal(str)
-    intValueChanged = QtCore.Signal(object)  # int or None
+    stringValueChanged = QtCore.Signal(str)  # emitted on every keystroke
+    intValueChanged = QtCore.Signal(object)  # emitted on every keystroke, int or None
+    editingFinishedText = QtCore.Signal(str)  # emitted once editing completes
 
     def __init__(self, min_range=-1000000, max_range=1000000, text="", parent=None):
         super().__init__(parent)
@@ -1947,6 +1948,7 @@ class EditableSpinBox(QtWidgets.QAbstractSpinBox):
         self._text = self.lineEdit().text()
         self._recompute_value()
         self._emit_if_changed()
+        self.editingFinishedText.emit(self._text)
 
     def _recompute_value(self):
         try:

@@ -4,9 +4,6 @@
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
-[ ] Rattlesnake object and user interface need methods for when they are overwritten
-    [ ] Currently just crashes
-
 [ ] Add a load environment button to user interface
 
 [ ] Modal environment throws a zero division error when there are no references selected
@@ -32,7 +29,7 @@
 [x] Prevent the log file task from writing to the same log file if two Controllers are open simultaneously
 
 ## Medium (Possible but needs a lot of verification)
-[ ] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
+[x] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
 
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
@@ -50,12 +47,12 @@
 
 [ ] Figure out issue with changing font size in jupyter notebooks.
 
+[ ] System Id environment can softlock if initialize_environment is clicked when system id is currently active
+
 [x] Figure out how to keep the current light mode theme but change the dark theme to have
     dark plots
-
-[ ] Allow Rattlesnake and RattlesnakeUI objects to be overwritten
 ## Hard (Major issues are going to happen)
-[ ] Editable spinboxes tab out when inputting data.
+[x] Editable spinboxes tab out when inputting data.
 
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
     [ ] This is an internal event done to sync the environment user interface before performing the list.
