@@ -2,16 +2,9 @@ import time
 
 import netCDF4 as nc4
 
-import rattlesnake.headless as headless
-import rattlesnake.examples.example_registry as registry
-from rattlesnake.utilities import GlobalCommands
-from rattlesnake.profile_manager import ProfileEvent
-from rattlesnake.main import launch_rattlesnake_ui
-from rattlesnake.hardware.hardware_utilities import HardwareType
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.environment.modal_environment import ModalInstructions
-from rattlesnake.process.streaming import StreamType
-from rattlesnake.examples.headless_example import build_rattlesnake_object
+from rattlesnake.headless import *
+from rattlesnake.examples import *
+
 
 
 def transient_zero_trac():
@@ -98,7 +91,6 @@ def sysid_environment_zero_divide():
     )
     time.sleep(2)
     rattlesnake.shutdown()
-
 
 if __name__ == "__main__":
     pass

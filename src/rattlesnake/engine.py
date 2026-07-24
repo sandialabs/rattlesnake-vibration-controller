@@ -1305,7 +1305,10 @@ class RattlesnakeController:
             "{:}: Joining Log File Process\n".format(datetime.now())
         )
         self.queue_container.log_file_queue.put(GlobalCommands.QUIT)
-        self.log_file_process.join()
+        self.log_file_process.join(timeout=CLOSE_TIMEOUT)
+        if self.log_file_process.is_alive():
+            self.log_file_process.terminate()
+            self.log_file_process.join()
 
     def log(self, string):
         """Pass a message to the log_file_queue along with date/time and task name

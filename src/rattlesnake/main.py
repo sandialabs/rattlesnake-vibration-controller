@@ -44,10 +44,12 @@ def build_rattlesnake_app(
         QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
 
-    # Build app
-    app = QtWidgets.QApplication(sys.argv)
+    # Reuse an existing QApplication if one is already running
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(sys.argv)
 
-    # Set font size. This can be commented out if it is extremely small
+    # Set font size.
     if set_font_size:
         font_size = 10  # pt size
         screen = app.primaryScreen()
@@ -57,9 +59,7 @@ def build_rattlesnake_app(
         font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
         app.setFont(font)
 
-    app.rattlesnake_controller = rattlesnake
     rattlesnake_ui = RattlesnakeUI(rattlesnake)
-    app.rattlesnake_ui = rattlesnake_ui
 
     return app, rattlesnake_ui
 

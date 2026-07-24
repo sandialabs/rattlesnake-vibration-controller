@@ -26,6 +26,8 @@
 
 [ ] Write guide for building out new environments
 
+[x] Prevent the log file task from writing to the same log file if two Controllers are open simultaneously
+
 ## Medium (Possible but needs a lot of verification)
 [ ] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
 
@@ -43,6 +45,12 @@
 [ ] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
     [ ] Stop Acqusition should be able to stop the input/output sync loop.
 
+[ ] Figure out issue with changing font size.
+
+[ ] Figure out how to keep the current light mode theme but change the dark theme to have
+    dark plots
+
+[ ] Allow Rattlesnake and RattlesnakeUI objects to be overwritten
 ## Hard (Major issues are going to happen)
 [ ] Editable spinboxes tab out when inputting data.
 

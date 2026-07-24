@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import importlib.util
+import msvcrt
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
@@ -53,7 +54,28 @@ else:
     DIRECTORY = this_path
 
 
-def log_file_task(queue: mp.Queue, shutdown_event):
+def open_and_lock_file(log_filename: str, encoding: str = "utf-8"):
+    """
+    Returns a new file if the filename is not a locked file. Returns None
+    if the file is in use by another program
+    """
+    if not os.path.exists(log_filename):
+        open(log_filename, "a", encoding=encoding).close()
+    f = open(log_filename, "r+", encoding=encoding)
+    try:
+        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError:
+        f.close()
+        return None
+    f.seek(0)
+    f.truncate(0)
+    return f
+
+
+def log_file_task(
+    queue: mp.Queue,
+    shutdown_event,
+):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters
@@ -61,7 +83,13 @@ def log_file_task(queue: mp.Queue, shutdown_event):
     queue : mp.queues.Queue
         The multiprocessing queue to collect logging messages from
     """
-    with open("Rattlesnake.log", "w", encoding="utf-8") as f:
+    f = open_and_lock_file("Rattlesnake.log")
+    ind = 0
+    while f is None:
+        filename = f"Rattlesnake_{ind}.log"
+        f = open_and_lock_file(filename)
+        ind = ind+1
+    with f:
         while not shutdown_event.is_set():
             output = queue.get()
             if " ERROR" in str(output):
