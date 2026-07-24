@@ -15,7 +15,7 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 from rattlesnake.process.streaming import StreamType
 
-from rattlesnake.testing.mock_user_interface import (
+from rattlesnake.testing.mock_helpers import (
     launch_temporary_rattlesnake_ui_environment,
 )
 

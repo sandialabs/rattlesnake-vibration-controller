@@ -1,13 +1,37 @@
 # Ranking bugs based on time/ease of fix
 
+Stuff to do in order
+[ ] Have Profile Event List cancel if error is encountered during it
+[ ] Change Branch
+    [ ] Swap environment queues to threaded queues
+    [ ] Figure out how to deal with memory leak from gui_update_queue
+[ ] Add a load environment button to user interface
+[ ] Have modal environment display current frf/timehistory/etc. before accepting frame
+[ ] Add a save spec to the sine environment
+[ ] Change the way that environments are renamed, just close the environment process if it does not have the same
+    name, dont try to hijack a new one
+[ ] Have some equality/function that checks if SysIdDataPackages can go with a certain environment
+    [ ] When one sysid has completed, have the user interface ask if it wants to be stored to other environments
+        [ ] Maybe have a dialog box to select other environments with a table and checkboxes for their names
+    [ ] Make load_sys_id not require the environment to have the same name as the one that generated it
+[ ] Add validation to environment/hardware metadata objects
+
+Stuff for the future
+[ ] Clear jupyter notebooks automatically on push
+[ ] Make Unittests/documentation
+[ ] Build out notebook example
+[ ] Build out read environment
+[ ] Write guide for building new environments
+[ ] Deal with font size changing issues
+
 ## Easy
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
 [ ] Add a load environment button to user interface
 
-[ ] Modal environment throws a zero division error when there are no references selected
-    [ ] Dont enable FRF/spectral stuff with no references/do a try/catch
+[x] Modal environment throws a zero division error when there are no references selected
+    [x] Dont enable FRF/spectral stuff with no references/do a try/catch
 
 [ ] Transient example problem results in zero division at the end which sends TRAC values to 0
     [ ] Look into behavior of having a 0 in the transient and random spec
@@ -32,7 +56,7 @@
 
 ## Medium (Possible but needs a lot of verification)
 [x] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
-s
+
 [ ] Renaming Environments
     [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
     [ ] Spin up/shut down environments based off name, not type
@@ -68,3 +92,6 @@ s
 
 ## Impossible
 [ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
+
+[ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to
+control laws

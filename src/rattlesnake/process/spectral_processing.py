@@ -601,7 +601,7 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                 raise ValueError(f"Invalid frf_estimator {Estimator.H1}")
             self.log(f"Computed FRF in {time.time() - frf_time:0.2f} seconds")
             cond_time = time.time()
-            frf_condition = np.linalg.cond(frf)
+            frf_condition = np.linalg.cond(frf) if frf.size else None
             self.log(f"Computed FRF Condition Number in {time.time() - cond_time:0.2f} seconds")
         else:
             frf = None
