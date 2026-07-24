@@ -991,8 +991,8 @@ class TransientUI(SysIdEnvironmentUI):
 
     def recompute_predictions(self):
         """Recomputes the control predictions"""
-        self.environment_command_queue.put(
-            self.log_name, (TransientCommands.PERFORM_CONTROL_PREDICTION, False)
+        self.rattlesnake.send_environment_command(
+            self.environment_name, (TransientCommands.PERFORM_CONTROL_PREDICTION, False)
         )
 
     # endregion
@@ -1286,28 +1286,6 @@ class TransientUI(SysIdEnvironmentUI):
             widget.setEnabled(False)
         for widget in [self.run_widget.stop_test_button]:
             widget.setEnabled(True)
-
-    def start_control(self):
-        """Starts the chain of events to start the environment"""
-        self.controller_communication_queue.put(
-            self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
-        )
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                TransientCommands.START_CONTROL,
-                (
-                    db2scale(self.run_widget.test_level_selector.value()),
-                    self.run_widget.repeat_signal_checkbox.isChecked(),
-                ),
-            ),
-        )
-
-    def stop_control(self):
-        """Starts the sequence of events to stop the controller prematurely"""
-        self.environment_command_queue.put(
-            self.log_name, (TransientCommands.STOP_CONTROL, None)
-        )
 
     def start_environment(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""

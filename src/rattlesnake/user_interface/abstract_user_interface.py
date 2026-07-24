@@ -43,6 +43,14 @@ class EnvironmentUI(ABC):
 
     # region State Sync
     @property
+    def environment_command_queue(self):
+        queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+            self.environment_name
+        ]
+
+        return self.rattlesnake.queue_container.environment_command_queues[queue_name]
+    
+    @property
     def active(self):
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[
