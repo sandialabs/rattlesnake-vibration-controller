@@ -530,7 +530,8 @@ class RattlesnakeController:
                                 environment_metadata.sysid_metadata,
                                 environment_metadata.environment_name,
                             )
-                    self.initialize_profile_event_list(profile_event_list)
+                    if profile_event_list:
+                        self.initialize_profile_event_list(profile_event_list)
                     self.last_stream_metadata = None
         finally:
             if not initial_blocking:
