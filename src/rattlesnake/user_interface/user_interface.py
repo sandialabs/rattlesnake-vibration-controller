@@ -577,6 +577,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.rattlesnake_tabs.setCurrentIndex(data)
             case UICommands.DISABLE_TAB:
                 self.rattlesnake_tabs.setTabEnabled(data, False)
+            case UICommands.GUI_OPENED:
+                self.rattlesnake.setup_gui()
+            case UICommands.GUI_CLOSED:
+                self.rattlesnake.close_gui()
             case _:
                 widget = getattr(self, command)
                 if isinstance(widget, QtWidgets.QDoubleSpinBox):
@@ -2709,7 +2713,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         try:
             self.load_ui_from_rattlesnake()
-            self.rattlesnake.setup_gui()
+            # setup_gui has to happen after sysid commands are read so this has to go
+            # to the end of the queue
+            self.gui_update_queue.put((UICommands.GUI_OPENED, None))
         except Exception as e:  # pylint: disable=broad-exception-caught
             self.display_error(e)
 
@@ -2733,7 +2739,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             if widget is not self and isinstance(widget, QtWidgets.QDialog) and widget.isVisible():
                 widget.close()
 
-        self.rattlesnake.close_gui()
+        self.gui_update_queue.put((UICommands.GUI_CLOSED, None))
         event.accept()
 
     # endregion
