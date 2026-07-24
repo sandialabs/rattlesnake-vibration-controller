@@ -358,18 +358,20 @@ Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
 
 `release.yml` — Release Pipeline
 
-Triggered only on `v*` tags. Five sequential jobs:
+Triggered only on `v*` tags. Six sequential jobs:
 
 1. **validate_tag**
    * Verifies the tag was created on the `main` or `dev` branch, that it conforms to PEP 440, and that it is strictly newer than all existing tags.
+   * Also computes an `is_prerelease` job output using `packaging.version.Version(...).is_prerelease` (true for `a`/`b`/`rc`/`.dev` segments, false for stable and `.post` releases). This is the **single source of truth** consumed by every downstream job that needs to distinguish a prerelease from a production release — nothing downstream re-derives it with its own tag matching.
 2. **test**
    * Calls `ci.yml` as a reusable workflow (workflow_call).
 3. **build**
    * Runs `uv build` and generates a Supply chain Levels for Software Artifacts (SLSA, aka "salsa") provenance attestation for the dist artifacts.
 4. **github-release**
-   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files.
-5. **publish**
-   * Publishes to PyPI or TestPyPI via Trusted Publishing. Tags containing `rc` or `dev` go to TestPyPI; all others go to production PyPI.
+   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files. `prerelease:` is set directly from `validate_tag`'s `is_prerelease` output.
+5. **publish_testpypi** / **publish_pypi**
+   * Two separate jobs, mutually exclusive via `if: needs.validate_tag.outputs.is_prerelease == 'true'` / `'false'`. Each has a hardcoded `environment:` (`testpypi` / `pypi`) and hardcoded publish target — no ternary expression to read or evaluate. In the Actions UI this shows as one job succeeding and the other skipped, so which registry a run published to is visible at a glance from the job list alone, and each job's last step also writes an explicit one-line status (e.g. "📦 Published `v1.2.3` to **production PyPI**") to the run's Summary tab.
+   * Splitting into two jobs (rather than two steps in one job) is required because GitHub Actions environments — including the `pypi` environment's required-reviewers approval gate — are configured per-job, not per-step.
 
 ### Details
 
@@ -520,10 +522,16 @@ To configure Trusted Publishing, you tell PyPI, "Trust any code from this specif
 
 Steps:
 
-* In `release.yml`, the environment must be set to either `pypi` or `testpypi` depending on the version string.  Hence the logic in `release.yml`:
+* In `release.yml`, `publish_testpypi` and `publish_pypi` are two separate jobs, each hardcoded to its own environment (`testpypi` / `pypi` respectively). Which one actually runs is decided once, upstream, in `validate_tag`'s `is_prerelease` output:
 
-```bash
-environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains 'rc' or 'dev', use the 'testpypi' environment, otherwise use 'pypi'
+```yaml
+  publish_testpypi:
+    environment: testpypi
+    if: needs.validate_tag.outputs.is_prerelease == 'true'
+
+  publish_pypi:
+    environment: pypi
+    if: needs.validate_tag.outputs.is_prerelease == 'false'
 ```
 
 The GitHub repository itself must have both a `pypi` and a `testpypi` environment:
@@ -647,7 +655,7 @@ git push origin v1.0.0
 
 ### Manual Approval Gate
 
-By default, a tag push triggers the full release pipeline automatically — including the final publish to PyPI — with no human checkpoint. The **manual approval gate** pauses the `publish` job and requires a named reviewer to explicitly approve before the package is uploaded to PyPI.
+By default, a tag push triggers the full release pipeline automatically — including the final publish to PyPI — with no human checkpoint. The **manual approval gate** pauses the `publish_pypi` job and requires a named reviewer to explicitly approve before the package is uploaded to PyPI.
 
 This is an industry-standard safeguard for production releases. It gives a release manager a final opportunity to confirm that the correct tag is being published, the changelog looks right, and no last-minute issues have been flagged.
 
@@ -655,7 +663,7 @@ The approval gate applies only to the production `pypi` environment. The `testpy
 
 #### Setup (GitHub Settings UI)
 
-No changes to `release.yml` are required. The `publish` job dynamically selects `environment: pypi` for stable releases or `environment: testpypi` for prereleases — GitHub uses this environment name as the hook to enforce the approval rule.
+No changes to `release.yml` are required. `publish_pypi` is hardcoded to `environment: pypi` and `publish_testpypi` is hardcoded to `environment: testpypi` — GitHub uses whichever environment name the running job declares as the hook to enforce the approval rule, so it only ever applies to `publish_pypi`.
 
 1. Navigate to the repository on GitHub.
 2. Click the **Settings** tab.
@@ -665,6 +673,6 @@ No changes to `release.yml` are required. The `publish` job dynamically selects 
 6. In the text field that appears, type the GitHub username(s) or team name(s) who are authorized to approve a PyPI release. Add up to 6 reviewers.
 7. Click **Save protection rules**.
 
-When a release tag is pushed, the pipeline will run `validate_tag`, `test`, `build`, and `github-release` automatically. The `publish` job will then pause with status **Waiting**. The designated reviewer(s) will receive a GitHub notification and must click **Review deployments → Approve and deploy** before the package is uploaded to PyPI.
+When a release tag is pushed, the pipeline will run `validate_tag`, `test`, `build`, and `github-release` automatically. For a stable/`.post` tag, the `publish_pypi` job will then pause with status **Waiting** (`publish_testpypi` is skipped, since `is_prerelease` is false). The designated reviewer(s) will receive a GitHub notification and must click **Review deployments → Approve and deploy** before the package is uploaded to PyPI.
 
 If no reviewer approves within 30 days, the deployment times out and must be re-triggered.
