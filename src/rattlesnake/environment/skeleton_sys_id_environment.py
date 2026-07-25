@@ -36,7 +36,7 @@ import netCDF4 as nc4
 import openpyxl
 import numpy as np
 
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import (
@@ -148,7 +148,11 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
 
     # region Validation
     def validate(self, hardware_metadata: HardwareMetadata):
-        return super().validate(hardware_metadata)
+        super().validate(hardware_metadata)
+
+        if self.example_window_size <= 0:
+            raise RattlesnakeError("{self.environment_name} must have a window size greater than 0")
+        
 
     # endregion
 

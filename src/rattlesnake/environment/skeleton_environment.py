@@ -164,6 +164,9 @@ class SkeletonMetadata(EnvironmentMetadata):
         """
         super().validate(hardware_metadata)
 
+        if self.example_window_size <= 0:
+            raise RattlesnakeError("{self.environment_name} must have a window size greater than 0")
+
     # endregion
 
     # region Loading

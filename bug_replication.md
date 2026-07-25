@@ -44,7 +44,7 @@ Stuff for the future
     [x] SDynPyFRF
     [x] StateSpace
     [x] Time
-    [ ] Modal
+    [x] Modal
     [ ] Sine
     [ ] Random
     [ ] Transient
