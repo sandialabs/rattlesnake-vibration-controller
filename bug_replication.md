@@ -43,8 +43,8 @@ Stuff for the future
     [ ] StateSpace
 
 [ ] Figure out validation for each metadata object.
-    [ ] NI
-    [ ] LanXI
+    [x] NI
+    [x] LanXI
     [ ] Exodus
     [ ] SDynPyFRF
     [ ] StateSpace

@@ -34,7 +34,7 @@ import openpyxl
 import numpy as np
 import requests
 
-from rattlesnake.utilities import IPAddress, autofill_single_ip_address
+from rattlesnake.utilities import IPAddress, autofill_single_ip_address, RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareOutput,
@@ -174,7 +174,90 @@ class LanXIMetadata(HardwareMetadata):
 
     # region Validation
     def validate(self):
-        return super().validate()
+        super().validate()
+        for row, channel in enumerate(self.channel_list):
+            if channel.physical_device not in self.valid_physical_devices:
+                raise RattlesnakeError(
+                    f"Invalid physical device in channel table row {row+1}"
+                )
+            try:
+                physical_channel = int(channel.physical_channel)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid physical channel in channel table row {row+1}"
+                )
+            if str(physical_channel) not in self.valid_physical_channels(
+                channel.physical_device
+            ):
+                raise RattlesnakeError(
+                    f"Invalid physical channel in channel table row {row+1}"
+                )
+
+            try:
+                sensitivity = float(channel.sensitivity)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid sensitivity in channel table row {row+1}"
+                )
+            sensitivity_min, sensitivity_max = self.valid_sensitivity(
+                channel.channel_type
+            )
+            if not (sensitivity_min <= sensitivity <= sensitivity_max):
+                raise RattlesnakeError(
+                    f"Sensitivity out of range in channel table row {row+1}. Must "
+                    f"be between {sensitivity_min} and {sensitivity_max}"
+                )
+
+            valid_max_voltage = self.valid_max_voltage(
+                channel.physical_device, channel.feedback_device
+            )
+            if channel.maximum_value not in valid_max_voltage:
+                raise RattlesnakeError(
+                    f"Invalid maximum value in channel table row {row+1}. Valid "
+                    f"values include {valid_max_voltage}"
+                )
+
+            valid_coupling = self.valid_coupling(
+                channel.physical_device, channel.feedback_device
+            )
+            if channel.coupling is not None and channel.coupling not in valid_coupling:
+                raise RattlesnakeError(
+                    f"Invalid coupling in channel table row {row+1}. Valid "
+                    f"coupling options include {valid_coupling}"
+                )
+
+            excitation_source = (
+                ""
+                if channel.excitation_source is None
+                else str(channel.excitation_source).strip().lower()
+            )
+            if excitation_source not in ("", "ccld"):
+                raise RattlesnakeError(
+                    f"Invalid excitation source in channel table row {row+1}. "
+                    "Valid excitation sources include 'ccld' or blank"
+                )
+
+            feedback_device = channel.feedback_device
+            has_feedback = (
+                feedback_device is not None and str(feedback_device).strip() != ""
+            )
+            if has_feedback:
+                if feedback_device not in self.valid_feedback_devices:
+                    raise RattlesnakeError(
+                        f"Invalid feedback device in channel table row {row+1}"
+                    )
+                try:
+                    feedback_channel = int(channel.feedback_channel)
+                except (TypeError, ValueError):
+                    raise RattlesnakeError(
+                        f"Invalid feedback channel in channel table row {row+1}"
+                    )
+                if str(feedback_channel) not in self.valid_feedback_channels(
+                    feedback_device
+                ):
+                    raise RattlesnakeError(
+                        f"Invalid feedback channel in channel table row {row+1}"
+                    )
 
     @property
     def assist_mode_modules(self):
