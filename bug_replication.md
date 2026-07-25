@@ -46,7 +46,7 @@ Stuff for the future
     [x] NI
     [x] LanXI
     [x] Exodus
-    [ ] SDynPyFRF
+    [x] SDynPyFRF
     [x] StateSpace
     [ ] Time
     [ ] Modal
