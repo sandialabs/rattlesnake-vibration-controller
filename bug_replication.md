@@ -37,18 +37,13 @@ Stuff for the future
 
 [ ] Build out notebook example
 
-[ ] Add assist mode to virtual hardware
-    [ ] Exodus
-    [ ] SDynPyFRF
-    [ ] StateSpace
-
 [ ] Figure out validation for each metadata object.
     [x] NI
     [x] LanXI
     [x] Exodus
     [x] SDynPyFRF
     [x] StateSpace
-    [ ] Time
+    [x] Time
     [ ] Modal
     [ ] Sine
     [ ] Random
@@ -112,3 +107,7 @@ Stuff for the future
 [x] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
     [x] Stop Acqusition should be able to stop the input/output sync loop.
 [x] Prevent the log file task from writing to the same log file if two Controllers are open simultaneously
+[x] Add assist mode to virtual hardware
+    [x] Exodus
+    [x] SDynPyFRF
+    [x] StateSpace

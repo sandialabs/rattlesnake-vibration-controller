@@ -108,6 +108,14 @@ class HardwareMetadata:
         if len(self.channel_list) != len(set(self.channel_list)):
             raise RattlesnakeError("Duplicate channels found in channel_list")
 
+        if (
+            not isinstance(self.output_oversample, (int, float))
+            or self.output_oversample <= 0
+        ):
+            raise RattlesnakeError(
+                f"output_oversample must be a number greater than 0"
+            )
+
     @abstractmethod
     def valid_channel_dict(self, channel: Channel):
         valid_dict = {}
