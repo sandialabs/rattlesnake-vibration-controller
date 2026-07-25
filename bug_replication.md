@@ -45,9 +45,9 @@ Stuff for the future
 [ ] Figure out validation for each metadata object.
     [x] NI
     [x] LanXI
-    [ ] Exodus
+    [x] Exodus
     [ ] SDynPyFRF
-    [ ] StateSpace
+    [x] StateSpace
     [ ] Time
     [ ] Modal
     [ ] Sine
