@@ -255,6 +255,14 @@ class SineMetadata(SysIdEnvironmentMetadata):
         self.output_channel_indices = output_channel_indices
         self.response_transformation_matrix = response_transformation_matrix
         self.reference_transformation_matrix = output_transformation_matrix
+        self._specification_files = None  # This is only used for saving purposes
+
+    @property
+    def specification_files(self):
+        return self._specification_files
+
+    def set_files(self, filepaths):
+        self._specification_files = filepaths
 
     @property
     def sample_rate(self):
@@ -752,6 +760,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
                 col_idx = idx + 2
                 worksheet.cell(18, col_idx, channel_ind + 1)
         self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=19)
+        if self.specification_files:
+            for idx, filename in enumerate(self.specification_files):
+                worksheet.cell(35, 2 + idx, str(filename))
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
@@ -877,7 +888,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             )
             specifications.append(spec)
 
-        return cls(
+        metadata = cls(
             environment_name=environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=sample_rate,
@@ -906,6 +917,10 @@ class SineMetadata(SysIdEnvironmentMetadata):
             output_transformation_matrix=output_transformation_matrix,
             sysid_metadata=sysid_metadata,
         )
+        if specification_files:
+            metadata.set_files(specification_files)
+
+        return metadata
 
     def set_parameters_from_template(self, worksheet):
 

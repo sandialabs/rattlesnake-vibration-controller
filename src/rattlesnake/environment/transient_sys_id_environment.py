@@ -164,6 +164,14 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         self.output_channel_indices = output_channel_indices
         self.response_transformation_matrix = response_transformation_matrix
         self.reference_transformation_matrix = output_transformation_matrix
+        self._spec_filename = None  # This is only used for saving purposes
+
+    @property
+    def spec_filename(self):
+        return self._spec_filename
+
+    def set_file(self, filepath):
+        self._spec_filename = filepath
 
     @property
     def ramp_samples(self):
@@ -430,6 +438,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
     ):
         super().save_metadata_to_worksheet(worksheet)
+        if self.spec_filename:
+            worksheet.cell(2, 2, str(self.spec_filename))
         if self.test_level_ramp_time is not None:
             worksheet.cell(3, 2, self.test_level_ramp_time)
         if self.control_python_script is not None:
@@ -548,6 +558,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             metadata.control_signal = load_time_history(
                 spec_filename, hardware_metadata.sample_rate
             )
+            metadata.set_file(spec_filename)
 
         return metadata
 

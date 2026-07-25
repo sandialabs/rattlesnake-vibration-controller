@@ -197,6 +197,14 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         self.specification_abort_matrix = specification_abort_matrix
         self.percent_lines_out = percent_lines_out
         self.allow_automatic_aborts = allow_automatic_aborts
+        self._specification_file = None  # This is only used for saving purposes
+
+    @property
+    def specification_file(self):
+        return self._specification_file
+
+    def set_file(self, filepath):
+        self._specification_file = filepath
 
     @property
     def sample_rate(self):
@@ -675,6 +683,8 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         if self.sigma_clip is not None:
             worksheet.cell(17, 2, self.sigma_clip)
         self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=18)
+        if self.specification_file:
+            worksheet.cell(34, 2, str(self.specification_file))
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
@@ -842,6 +852,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 metadata.frequency_spacing,
                 control_coordinate,
             )
+            metadata.set_file(specification_file)
 
         return metadata
 

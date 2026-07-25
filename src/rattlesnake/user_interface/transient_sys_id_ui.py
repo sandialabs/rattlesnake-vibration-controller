@@ -435,7 +435,7 @@ class TransientUI(SysIdEnvironmentUI):
             control_function_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
-        return TransientMetadata(
+        metadata = TransientMetadata(
             environment_name=self.environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=self.definition_widget.sample_rate_display.value(),
@@ -451,6 +451,12 @@ class TransientUI(SysIdEnvironmentUI):
             response_transformation_matrix=self.response_transformation_matrix,
             output_transformation_matrix=self.output_transformation_matrix,
         )
+
+        signal_file = self.definition_widget.signal_file_name_display.text()
+        if signal_file:
+            metadata.set_file(signal_file)
+
+        return metadata
 
     def set_environment_metadata(self, metadata):
         """Sets the UI widgets and internal state from a metadata object."""
@@ -501,6 +507,9 @@ class TransientUI(SysIdEnvironmentUI):
                 item.setCheckState(Qt.Checked)
 
         self.specification_signal = metadata.control_signal
+        self.definition_widget.signal_file_name_display.setText(
+            metadata.spec_filename or ""
+        )
         self.setup_specification_table()
         self.show_signal()
 

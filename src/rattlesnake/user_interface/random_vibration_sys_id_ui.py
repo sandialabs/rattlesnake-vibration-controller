@@ -619,7 +619,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             control_function_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
-        return RandomVibrationMetadata(
+        metadata = RandomVibrationMetadata(
             environment_name=self.environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=self.definition_widget.sample_rate_display.value(),
@@ -654,6 +654,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             percent_lines_out=self.definition_widget.frequency_lines_out_spinbox.value(),
             allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
         )
+
+        specification_file = self.definition_widget.specification_file_name_display.text()
+        if specification_file:
+            metadata.set_file(specification_file)
+
+        return metadata
 
     def set_environment_metadata(self, metadata: RandomVibrationMetadata):
         self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
@@ -723,6 +729,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.specification_cpsd_matrix = metadata.specification_cpsd_matrix
         self.specification_warning_matrix = metadata.specification_warning_matrix
         self.specification_abort_matrix = metadata.specification_abort_matrix
+        self.definition_widget.specification_file_name_display.setText(
+            metadata.specification_file or ""
+        )
 
         if self.specification_abort_matrix is None or np.all(
             np.isnan(self.specification_abort_matrix)

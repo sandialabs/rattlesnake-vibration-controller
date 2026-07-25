@@ -1,8 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Change the way that environments are renamed, just close the environment process if it does not have the same
-    name, dont try to hijack a new one
 [ ] Have modal environment display current frf/timehistory/etc. before accepting frame
 [ ] Add a save spec to the sine environment
 [ ] Have some equality/function that checks if SysIdDataPackages can go with a certain environment
@@ -55,10 +53,10 @@ Stuff for the future
 [x] System identification throws a streaming error since it is trying to start up after finishing a sysid run
     in headless mode
 
-[ ] Renaming Environments
-    [ ] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
-    [ ] Spin up/shut down environments based off name, not type
-    [ ] Unique names need to be capitalization invariant as "Modal" and "MODAL" cannot be in the same workbook
+[x] Renaming Environments
+    [x] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
+    [x] Spin up/shut down environments based off name, not type
+    [x] Unique names need to be capitalization invariant as "Modal" and "MODAL" cannot be in the same workbook
 
 [ ] Sysid environments need to write spec filenames to worksheet if they exists.
 
