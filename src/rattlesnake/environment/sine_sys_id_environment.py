@@ -874,17 +874,27 @@ class SineMetadata(SysIdEnvironmentMetadata):
                 start_time,
                 name,
             ) = load_specification(filename)
+            # The specification file stores amplitude/phase as (control, freq)
+            # and warning/abort as (2, 2, control, freq), with phase in degrees.
+            # SineSpecification stores the transpose of these (freq-major, with
+            # phase in radians), so convert before constructing it.
             spec = SineSpecification(
                 name=name,
                 start_time=start_time,
                 num_control=len(control_channel_indices),
                 frequency_breakpoints=frequencies,
-                amplitude_breakpoints=amplitudes,
-                phase_breakpoints=phases,
+                amplitude_breakpoints=amplitudes.T,
+                phase_breakpoints=(
+                    None if phases is None else np.deg2rad(phases.T)
+                ),
                 sweep_type_breakpoints=sweep_types,
                 sweep_rate_breakpoints=sweep_rates,
-                warning_breakpoints=warnings,
-                abort_breakpoints=aborts,
+                warning_breakpoints=(
+                    None if warnings is None else np.transpose(warnings, (3, 0, 1, 2))
+                ),
+                abort_breakpoints=(
+                    None if aborts is None else np.transpose(aborts, (3, 0, 1, 2))
+                ),
             )
             specifications.append(spec)
 

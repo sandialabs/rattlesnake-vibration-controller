@@ -1,7 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Add a save spec to the sine environment
 [ ] Have some equality/function that checks if SysIdDataPackages can go with a certain environment
     [ ] When one sysid has completed, have the user interface ask if it wants to be stored to other environments
         [ ] Maybe have a dialog box to select other environments with a table and checkboxes for their names
@@ -61,7 +60,7 @@ Stuff for the future
 
 [x] Sysid environments need to write spec filenames to worksheet if they exists.
 
-[ ] Add a save spec to sine environment
+[x] Add a save spec to sine environment
 
 [x] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
 

@@ -9,6 +9,7 @@ from rattlesnake.utilities import DIRECTORY, wrap
 from rattlesnake.environment.sine_sys_id_utilities import (
     SineSpecification,
     load_specification,
+    save_specification,
     digital_tracking_filter_generator,
     vold_kalman_filter_generator,
 )
@@ -620,6 +621,7 @@ class SineSweepTable:
         self.remove_function = remove_function
         self.control_names = control_names
         self.data_acquisition_parameters = data_acquisition_parameters
+        self.specification_filename = None
         self.widget = QtWidgets.QWidget()
         sine_sweep_table_ui_path = os.path.join(
             DIRECTORY, "user_interface", "ui_files", "sine_sweep_table.ui"
@@ -637,6 +639,7 @@ class SineSweepTable:
         self.widget.add_breakpoint_button.clicked.connect(self.add_breakpoint)
         self.widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
         self.widget.load_breakpoints_button.clicked.connect(self.load_specification)
+        self.widget.save_breakpoints_button.clicked.connect(self.save_specification)
         self.widget.name_editor.editingFinished.connect(self.update_name)
         self.widget.start_time_selector.valueChanged.connect(
             self.update_specification_function
@@ -862,7 +865,26 @@ class SineSweepTable:
             start_time,
             name,
         )
+        self.specification_filename = filename
         self.update_specification_function()
+
+    def save_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
+        """
+        Saves the current breakpoint table using a dialog or the specified filename
+        """
+        if filename is None:
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self.widget,
+                "Select Specification File",
+                filter="Numpy (*.npz);;Mat (*.mat)",
+            )
+            if filename == "":
+                return
+        spec = self.get_specification()
+        save_specification(filename, spec)
+        self.specification_filename = filename
 
     def clear_and_update_specification_table(
         self,

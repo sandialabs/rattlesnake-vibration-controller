@@ -636,7 +636,7 @@ class SineUI(SysIdEnvironmentUI):
             control_class_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
-        return SineMetadata(
+        metadata = SineMetadata(
             environment_name=self.environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=self.definition_widget.sample_rate_display.value(),
@@ -666,6 +666,14 @@ class SineUI(SysIdEnvironmentUI):
             response_transformation_matrix=self.response_transformation_matrix,
             output_transformation_matrix=self.output_transformation_matrix,
         )
+        specification_filenames = [
+            sine_table.specification_filename
+            for sine_table in self.sine_tables
+            if sine_table.specification_filename is not None
+        ]
+        if specification_filenames:
+            metadata.set_files(specification_filenames)
+        return metadata
 
     def set_environment_metadata(self, metadata: SineMetadata):
         self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
@@ -729,11 +737,15 @@ class SineUI(SysIdEnvironmentUI):
         for idx in reversed(range(len(self.sine_tables) - 1)):
             self.remove_sine_table_entry(idx + 1)
 
+        specification_filenames = metadata.specification_files or []
         for idx, spec in enumerate(metadata.specifications):
             if idx > 0:
                 self.add_sine_table_tab()
             sine_table = self.sine_tables[idx]
             sine_table.set_specification(spec)
+            sine_table.specification_filename = (
+                specification_filenames[idx] if idx < len(specification_filenames) else None
+            )
         # self.update_specification()
 
         self.response_transformation_matrix = metadata.response_transformation_matrix
