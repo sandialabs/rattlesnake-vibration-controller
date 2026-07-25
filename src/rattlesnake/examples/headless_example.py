@@ -23,8 +23,8 @@ from rattlesnake.testing.mock_helpers import (
 THREADED = True
 TIMEOUT = 20
 IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.SINE
+HARDWARE_TYPE = HardwareType.EXODUS
+ENVIRONMENT_TYPE = EnvironmentType.NONE
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False

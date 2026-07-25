@@ -36,9 +36,10 @@ from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareOutput,
 )
-from rattlesnake.utilities import flush_queue
+from rattlesnake.utilities import flush_queue, RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
 DEBUG = False
 
@@ -85,10 +86,145 @@ class ExodusMetadata(HardwareMetadata):
         )
         self.hardware_file = hardware_file
         self.damping_ratio = damping_ratio
+        self._node_dict = None  # Dont set this
 
     # region Validation
     def validate(self):
-        return super().validate()
+        super().validate()
+        # Validate node number
+        self.detect_devices()
+        has_physical = False
+        for row, channel in enumerate(self.channel_list):
+            if str(channel.node_number) not in self.valid_node_numbers:
+                raise RattlesnakeError(
+                    f"Invalid node number in channel table row {row+1}"
+                )
+            num_dimensions = len(self.valid_node_directions(channel.node_number)) // 2
+            if not self._is_valid_node_direction(channel.node_direction, num_dimensions):
+                raise RattlesnakeError(
+                    f"Invalid node direction in channel table row {row+1}. Must be "
+                    "one of 'X+', 'X-', 'Y+', 'Y-', 'Z+', 'Z-' or a comma-separated "
+                    "direction vector, e.g. '0.707,0.707,0'"
+                )
+            if channel.physical_device not in self.valid_physical_device:
+                raise RattlesnakeError(
+                    f"Physical device should be 'Virtual' in channel table row {row+1}"
+                )
+            if (
+                str(channel.channel_type).lower()
+                not in self.accepted_channel_type_strings
+            ):
+                raise RattlesnakeError(
+                    f"Invalid channel type in channel table row {row+1}. Valid "
+                    "channel types include 'Acceleration', 'Force'"
+                )
+            if (
+                str(channel.channel_type).lower() == "force"
+                and channel.feedback_device not in self.valid_feedback_device
+            ):
+                raise RattlesnakeError(
+                    "Force channel types require an 'Input' feedback device in "
+                    f"channel table row {row+1}"
+                )
+            if channel.feedback_device is None or channel.feedback_device == "":
+                has_physical = True
+
+        if not has_physical:
+            raise RattlesnakeError(
+                "Exodus channel table requires atleast 1 response channel without "
+                "an assigned feedback device"
+            )
+
+    @staticmethod
+    def _is_valid_node_direction(node_direction, num_dimensions):
+        normalized_direction = str(node_direction).strip().lower().replace(" ", "")
+        if normalized_direction in (
+            "x+",
+            "+x",
+            "x-",
+            "-x",
+            "y+",
+            "+y",
+            "y-",
+            "-y",
+            "z+",
+            "+z",
+            "z-",
+            "-z",
+        ):
+            return True
+        try:
+            vector = [float(val) for val in str(node_direction).split(",")]
+        except (TypeError, ValueError):
+            return False
+        return len(vector) == num_dimensions and any(vector)
+
+    @property
+    def accepted_channel_type_strings(self):
+        return ["accel", "acceleration", "acc", "force"]
+
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+        assist_mode_modules["node_number"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["node_direction"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["channel_type"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        if not self.node_dict:
+            self.detect_devices()
+
+        valid_dict["node_number"] = self.valid_node_numbers
+        valid_dict["node_direction"] = self.valid_node_directions(channel.node_number)
+        valid_dict["physical_device"] = self.valid_physical_device
+        valid_dict["channel_type"] = self.valid_channel_types
+        valid_dict["feedback_device"] = self.valid_feedback_device
+
+        return valid_dict
+
+    def detect_devices(self):
+        try:
+            exo = Exodus(self.hardware_file)
+            node_numbers = exo.get_node_num_map()
+            num_dimensions = exo.num_dimensions
+            exo.close()
+        except:
+            raise RattlesnakeError("Invalid Exodus file")
+
+        directions = ["X+", "X-", "Y+", "Y-", "Z+", "Z-"][: 2 * num_dimensions]
+        self._node_dict = {str(int(node)): directions for node in node_numbers}
+
+    @property
+    def node_dict(self):
+        return self._node_dict
+
+    @property
+    def valid_node_numbers(self):
+        node_numbers = list(self.node_dict.keys())
+        node_numbers.sort(key=int)
+        return node_numbers
+
+    def valid_node_directions(self, node_number: str = ""):
+        if str(node_number) in self.node_dict:
+            return list(self.node_dict[str(node_number)])
+        return []
+
+    @property
+    def valid_channel_types(self):
+        return ["Acceleration", "Force"]
+
+    @property
+    def valid_physical_device(self):
+        return ["Virtual"]
+
+    @property
+    def valid_feedback_device(self):
+        return ["Input"]
 
     # endregion
 
