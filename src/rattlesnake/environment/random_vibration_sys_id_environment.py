@@ -38,6 +38,7 @@ from typing import List
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
+import scipy.signal as sig
 
 from rattlesnake.environment.random_vibration_sys_id_utilities import (
     load_specification,
@@ -60,6 +61,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.utilities import (
     GlobalCommands,
+    RattlesnakeError,
     VerboseMessageQueue,
     db2scale,
     load_python_module,
@@ -296,7 +298,181 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
 
     # region Validation
     def validate(self, hardware_metadata):
-        return super().validate(hardware_metadata)
+        super().validate(hardware_metadata)
+        self.sysid_metadata.validate(hardware_metadata)
+
+        if self.samples_per_frame <= 0:
+            raise RattlesnakeError("samples_per_frame must be greater than 0")
+
+        if not (0 <= self.cpsd_overlap < 1):
+            raise RattlesnakeError(
+                "CPSD overlap must be a percentage from 0 up to but not "
+                "including 100"
+            )
+
+        if not (0 <= self.cola_overlap < 1):
+            raise RattlesnakeError(
+                "COLA overlap must be a percentage from 0 up to but not "
+                "including 100"
+            )
+
+        if self.cola_window_exponent < 0:
+            raise RattlesnakeError(
+                "COLA window exponent must be greater than or equal to 0"
+            )
+
+        try:
+            sig.get_window(str(self.cola_window).lower(), 2)
+        except ValueError as e:
+            raise RattlesnakeError(f"Invalid COLA window {self.cola_window}: {e}") from e
+
+        if self.sigma_clip <= 0:
+            raise RattlesnakeError("Sigma clipping must be greater than 0")
+
+        if self.test_level_ramp_time < 0:
+            raise RattlesnakeError(
+                "Test level ramp time must be greater than or equal to 0"
+            )
+
+        if len(self.control_channel_indices) == 0:
+            raise RattlesnakeError(
+                "control_channel_indices must contain at least one channel"
+            )
+        for index in self.control_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"control_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if len(self.output_channel_indices) == 0:
+            raise RattlesnakeError(
+                "output_channel_indices must contain at least one channel"
+            )
+        for index in self.output_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"output_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if self.response_transformation_matrix is not None and (
+            self.response_transformation_matrix.ndim != 2
+            or self.response_transformation_matrix.shape[1]
+            != len(self.control_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "response_transformation_matrix must be 2D with a number of "
+                "columns matching the number of control channels "
+                f"({len(self.control_channel_indices)}), got shape "
+                f"{self.response_transformation_matrix.shape}"
+            )
+
+        if self.reference_transformation_matrix is not None and (
+            self.reference_transformation_matrix.ndim != 2
+            or self.reference_transformation_matrix.shape[1]
+            != len(self.output_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "reference_transformation_matrix must be 2D with a number of "
+                "columns matching the number of output channels "
+                f"({len(self.output_channel_indices)}), got shape "
+                f"{self.reference_transformation_matrix.shape}"
+            )
+
+        self._validate_specification()
+        self._validate_control_law()
+
+    def _validate_specification(self):
+        if (
+            self.specification_cpsd_matrix is None
+            or self.specification_warning_matrix is None
+            or self.specification_abort_matrix is None
+            or self.specification_frequency_lines is None
+        ):
+            raise RattlesnakeError(
+                f"{self.environment_name} has no specification loaded"
+            )
+
+        num_response_channels = self.num_response_channels
+        expected_cpsd_shape = (
+            self.fft_lines,
+            num_response_channels,
+            num_response_channels,
+        )
+        if self.specification_cpsd_matrix.shape != expected_cpsd_shape:
+            raise RattlesnakeError(
+                f"{self.environment_name} specification CPSD matrix has "
+                f"shape {self.specification_cpsd_matrix.shape}, expected "
+                f"{expected_cpsd_shape} for the current samples per frame "
+                "and control channels; reload the specification"
+            )
+
+        expected_limit_shape = (2, self.fft_lines, num_response_channels)
+        if self.specification_warning_matrix.shape != expected_limit_shape:
+            raise RattlesnakeError(
+                f"{self.environment_name} specification warning matrix has "
+                f"shape {self.specification_warning_matrix.shape}, expected "
+                f"{expected_limit_shape} for the current samples per frame "
+                "and control channels; reload the specification"
+            )
+        if self.specification_abort_matrix.shape != expected_limit_shape:
+            raise RattlesnakeError(
+                f"{self.environment_name} specification abort matrix has "
+                f"shape {self.specification_abort_matrix.shape}, expected "
+                f"{expected_limit_shape} for the current samples per frame "
+                "and control channels; reload the specification"
+            )
+
+    def _validate_control_law(self):
+        if not self.control_python_script:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_script set"
+            )
+        if not self.control_python_function:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_function set"
+            )
+
+        try:
+            module = load_python_module(self.control_python_script)
+        except Exception as e:
+            raise RattlesnakeError(
+                f"{self.environment_name} could not load control script "
+                f"{self.control_python_script}: {e}"
+            ) from e
+
+        function = getattr(module, self.control_python_function, None)
+        if function is None:
+            raise RattlesnakeError(
+                f"{self.environment_name} control script "
+                f"{self.control_python_script} has no function or class "
+                f"named {self.control_python_function}"
+            )
+
+        if inspect.isgeneratorfunction(function):
+            actual_type = 1
+        elif inspect.isclass(function) and issubclass(
+            function, AbstractControlLawComputation
+        ):
+            actual_type = 3
+        elif inspect.isclass(function):
+            actual_type = 2
+        else:
+            if not callable(function):
+                raise RattlesnakeError(
+                    f"{self.environment_name} control function "
+                    f"{self.control_python_function} is not callable"
+                )
+            actual_type = 0
+
+        if actual_type != self.control_python_function_type:
+            raise RattlesnakeError(
+                f"{self.environment_name} control_python_function_type "
+                f"({self.control_python_function_type}) does not match what "
+                f"{self.control_python_function} actually is (detected type "
+                f"{actual_type}); reload the control script"
+            )
 
     # endregion
 
