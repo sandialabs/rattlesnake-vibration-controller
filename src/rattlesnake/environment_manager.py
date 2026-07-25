@@ -198,21 +198,25 @@ class EnvironmentManager:
         extra_metadata = []
         environment_metadata_dict = {}
 
-        # Check if there is an existing process that maps to this environment type
-        # If there is, hijack it and give it new metadata
+        # Check if there is an existing process with the same name
+        # If there is, give it the new metadata
+        existing_name_to_queue = {
+            name.casefold(): queue_name
+            for queue_name, name in self.environment_names.items()
+        }
 
         for metadata in metadata_list:
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
 
-            queue_name = next(
-                (
-                    name
-                    for name, env_type in self.environment_types.items()
-                    if env_type == environment_type and name not in mapped_queue_names
-                ),
-                None,
-            )
+            queue_name = existing_name_to_queue.get(environment_name.casefold())
+
+            # Shut down the environment if the name matches but the type does not
+            if (
+                queue_name is not None
+                and self.environment_types.get(queue_name) != environment_type
+            ):
+                queue_name = None
 
             if queue_name is None:
                 extra_metadata.append(metadata)
@@ -283,11 +287,14 @@ class EnvironmentManager:
                     "Rattlesnake.set_environment was given an object that "
                     "is not an EnvironmentMetadata class"
                 )
-            # Check for unique name
+            # Check for unique name (case-insensitive)
             environment_name = metadata.environment_name
-            if environment_name in environment_name_set:
-                raise RattlesnakeError("Environment names must be unique")
-            environment_name_set.add(environment_name)
+            normalized_name = environment_name.casefold()
+            if normalized_name in environment_name_set:
+                raise RattlesnakeError(
+                    "Environment names must be unique (case-insensitive)"
+                )
+            environment_name_set.add(normalized_name)
             # Validate metadata
             metadata.validate(hardware_metadata)
 

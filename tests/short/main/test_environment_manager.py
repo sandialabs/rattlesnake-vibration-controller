@@ -386,15 +386,17 @@ def test_environment_manager_initialize_system_id(environment_manager):
 
 # region Environment Initialization
 @pytest.mark.parametrize(
-    "existing_metadata, existing_types, queue_names, expected",
+    "existing_metadata, existing_names, existing_types, queue_names, expected",
     [
         (
             {"Environment 0": skeleton_environment_metadata()},
+            {"Environment 0": "New Environment"},
             {"Environment 0": EnvironmentType.SKELETON},
             ["Environment 0"],
             "reuse",
         ),
         (
+            {},
             {},
             {},
             [],
@@ -405,6 +407,7 @@ def test_environment_manager_initialize_system_id(environment_manager):
                 "Environment 0": skeleton_environment_metadata(),
                 "Environment 1": skeleton_environment_metadata(),
             },
+            {"Environment 0": "Old A", "Environment 1": "Old B"},
             {
                 "Environment 0": EnvironmentType.SKELETON,
                 "Environment 1": EnvironmentType.SKELETON,
@@ -412,10 +415,18 @@ def test_environment_manager_initialize_system_id(environment_manager):
             ["Environment 0", "Environment 1"],
             "remove",
         ),
+        (
+            {"Environment 0": skeleton_environment_metadata()},
+            {"Environment 0": "New Environment"},
+            {"Environment 0": EnvironmentType.NONE},
+            ["Environment 0"],
+            "type_mismatch",
+        ),
     ],
 )
 def test_environment_manager_initialize_environments(
     existing_metadata,
+    existing_names,
     existing_types,
     queue_names,
     expected,
@@ -423,14 +434,15 @@ def test_environment_manager_initialize_environments(
     hardware_metadata,
 ):
     """
-    Verifies that matching existing environments receive initialization
-    commands, new environments are added, and unmapped environments are
-    removed.
+    Verifies that environments are matched to existing processes by name
+    (case-insensitively, and only when the type also matches), new
+    environments are added, and unmatched environments are removed.
     """
     metadata = skeleton_environment_metadata(environment_name="New Environment")
     metadata_list = [metadata]
 
     environment_manager.queue_names = list(queue_names)
+    environment_manager.environment_names = dict(existing_names)
     environment_manager.environment_types = dict(existing_types)
     environment_manager.environment_metadata = dict(existing_metadata)
 
@@ -476,8 +488,26 @@ def test_environment_manager_initialize_environments(
         assert returned_metadata == {"Environment 2": metadata}
 
     elif expected == "remove":
-        assert returned_metadata == {"Environment 0": metadata}
-        environment_manager.remove_environment.assert_called_once_with("Environment 1")
+        assert returned_metadata == {"Environment 2": metadata}
+        environment_manager.remove_environment.assert_has_calls(
+            [mock.call("Environment 0"), mock.call("Environment 1")],
+            any_order=True,
+        )
+        assert environment_manager.remove_environment.call_count == 2
+        environment_manager.add_environment.assert_called_once_with(
+            metadata,
+            hardware_metadata,
+        )
+
+    elif expected == "type_mismatch":
+        # Same name but a different existing type is not reusable: the old
+        # process is removed and a new one is spun up instead.
+        assert returned_metadata == {"Environment 2": metadata}
+        environment_manager.remove_environment.assert_called_once_with("Environment 0")
+        environment_manager.add_environment.assert_called_once_with(
+            metadata,
+            hardware_metadata,
+        )
 
 
 def test_environment_manager_initialize_environments_clears_sysid_events(
@@ -489,6 +519,7 @@ def test_environment_manager_initialize_environments_clears_sysid_events(
     stored events.
     """
     environment_manager.queue_names = ["Environment 0"]
+    environment_manager.environment_names = {"Environment 0": "Skeleton Environment"}
     environment_manager.environment_types = {"Environment 0": EnvironmentType.SKELETON}
     environment_manager.environment_sysid_stored_events["Environment 0"].set()
 
@@ -525,6 +556,11 @@ def test_environment_manager_initialize_environments_clears_sysid_events(
         ),
         (
             ["Environment 0", "Environment 0"],
+            [EnvironmentMetadata, EnvironmentMetadata],
+            RattlesnakeError,
+        ),
+        (
+            ["Modal", "modal"],
             [EnvironmentMetadata, EnvironmentMetadata],
             RattlesnakeError,
         ),

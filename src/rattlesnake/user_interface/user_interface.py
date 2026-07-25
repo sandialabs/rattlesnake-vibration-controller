@@ -313,9 +313,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
         self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
         self.remove_environment_button.clicked.connect(self.remove_environment)
-        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
-            self.rename_environment
-        )
         self.initialize_environments_button.clicked.connect(
             self.initialize_environments
         )
@@ -855,18 +852,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         hardware_metadata = self.rattlesnake.hardware_metadata
         environment_metadata_dict = self.rattlesnake.environment_metadata
 
-        for environment_idx, environment_metadata in enumerate(
-            environment_metadata_dict.values()
-        ):
+        for environment_metadata in environment_metadata_dict.values():
             # Add environments
             environment_type = environment_metadata.environment_type
-            self.add_environment(environment_type)
-
             environment_name = environment_metadata.environment_name
-            if (
-                environment_name not in self.environment_uis.keys()
-            ):  # Dont rename if they were already using default name
-                self.rename_environment(environment_idx, environment_name)
+            self.add_environment(environment_type, environment_name)
 
             self.environment_uis[environment_name].initialize_hardware(
                 hardware_metadata
@@ -1867,7 +1857,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(False)
 
-    def add_environment(self, environment_type: str | EnvironmentType):
+    def add_environment(
+        self,
+        environment_type: str | EnvironmentType,
+        environment_name: str = None,
+    ):
         """Function used to add an environment"""
         # If comming from UI, environment_type will be text in combobox
         if isinstance(environment_type, str):
@@ -1876,11 +1870,47 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if environment_type is None:
             return
 
-        idx = 0
-        environment_name = f"{environment_type.name} {idx}"
-        while environment_name in self.environment_uis.keys():
-            idx += 1
-            environment_name = f"{environment_type.name} {idx}"
+        # This has to be this way because excel is casefold stuff
+        existing_names_casefold = {
+            name.casefold() for name in self.environment_uis.keys()
+        }
+
+        if environment_name is None:
+            idx = 0
+            suggested_name = f"{environment_type.name} {idx}"
+            while suggested_name.casefold() in existing_names_casefold:
+                idx += 1
+                suggested_name = f"{environment_type.name} {idx}"
+
+            while True:
+                environment_name, ok_chosen = QtWidgets.QInputDialog.getText(
+                    self,
+                    "Add Environment",
+                    "Enter environment name:",
+                    text=suggested_name,
+                )
+                if not ok_chosen:
+                    self.add_environment_combobox.blockSignals(True)
+                    self.add_environment_combobox.setCurrentIndex(0)
+                    self.add_environment_combobox.blockSignals(False)
+                    return
+
+                environment_name = environment_name.strip()
+                if not environment_name:
+                    self.display_error("Environment name cannot be empty")
+                    continue
+                if environment_name.casefold() in existing_names_casefold:
+                    self.display_error(
+                        f"An environment named '{environment_name}' already "
+                        "exists (names are case-insensitive)."
+                    )
+                    continue
+                break
+        elif environment_name.casefold() in existing_names_casefold:
+            raise RattlesnakeError(
+                f"An environment named '{environment_name}' already exists "
+                "(names are case-insensitive)"
+            )
 
         environment_ui_class = ENVIRONMENT_UIS[environment_type]
         environment_ui = environment_ui_class(environment_name, self.rattlesnake)
@@ -1935,50 +1965,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # If all environments are removed, hide environment channel table
         if len(self.environment_uis) == 0:
             self.environment_channel_table.hide()
-
-    def rename_environment(self, col_idx: int, new_name: str = None):
-        """Function to rename an environment
-
-        Parameters
-        ----------
-        index : int :
-            The index of the environment to rename
-        """
-
-        # Pull header text from environment_channel_table
-        header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
-        current_name = header_item.text()
-
-        # If name not given, ask user for a name
-        if not new_name:
-            # Create dialog box to get a new name
-            new_name, ok_chosen = QtWidgets.QInputDialog.getText(
-                self, "Rename Tab", "Enter new tab name:", text=current_name
-            )
-            if not ok_chosen:
-                return
-            new_name = new_name.strip()
-            if not new_name:
-                return
-
-        # Make sure name does not already exist
-        if new_name in self.environment_uis:
-            self.display_error(
-                "The new name already exists. Please choose a different name."
-            )
-            return
-
-        # Replace old name in dict with new name while keeping order
-        # This is scuffed but is very specific to this case
-        ordered_dict = {}
-        for environment_name, environment_ui in self.environment_uis.items():
-            if environment_name == current_name:
-                environment_ui.environment_name = new_name
-                ordered_dict[new_name] = environment_ui
-            else:
-                ordered_dict[environment_name] = environment_ui
-        self.environment_uis = ordered_dict
-        header_item.setText(new_name)
 
     def load_environment_from_file(self):
         """
