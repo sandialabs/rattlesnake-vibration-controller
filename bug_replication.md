@@ -1,13 +1,11 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Add validation to environment/hardware metadata objects.
+[ ] Investigate viability of adding benchmarking to the program.
 
 Stuff to check
 [ ] Figure out how to do sharing sysid data packages
 [ ] Figure out notebooks on git repo
-[ ] 
-
 
 Stuff for the future
 [ ] Clear jupyter notebooks automatically on push
@@ -36,18 +34,6 @@ Stuff for the future
     [ ] Go through and comment/verify unit tests
 
 [ ] Build out notebook example
-
-[ ] Figure out validation for each metadata object.
-    [x] NI
-    [x] LanXI
-    [x] Exodus
-    [x] SDynPyFRF
-    [x] StateSpace
-    [x] Time
-    [x] Modal
-    [ ] Sine
-    [ ] Random
-    [ ] Transient
 
 [ ] Finish implementation of Read Environment.
 
@@ -111,3 +97,14 @@ Stuff for the future
     [x] Exodus
     [x] SDynPyFRF
     [x] StateSpace
+[x] Figure out validation for each metadata object.
+    [x] NI
+    [x] LanXI
+    [x] Exodus
+    [x] SDynPyFRF
+    [x] StateSpace
+    [x] Time
+    [x] Modal
+    [x] Sine
+    [x] Random
+    [x] Transient
