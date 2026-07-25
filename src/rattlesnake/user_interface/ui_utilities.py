@@ -2305,7 +2305,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
                 self.secondary_plotdataitem.setData(
                     self.parent.frequency_abscissa, np.imag(data)
                 )
-            if current_index == 6:
+            if current_index == 6 and self.parent.last_coh is not None:
                 data = self.parent.last_coh[
                     self.response_coordinate_selector.currentIndex()
                 ]

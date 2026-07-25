@@ -406,6 +406,7 @@ class DataCollectorUICommands(Enum):
 
     TIME_FRAME = 0
     KURTOSIS = 1
+    PENDING_FRAME_SPECTRA = 2
 
 
 class AcquisitionType(Enum):
@@ -624,6 +625,7 @@ class DataCollectorProcess(AbstractMessageProcess):
         self.data_in_queue = data_in_queue
         self.data_out_queues = data_out_queues
         self.last_frame = None
+        self.pending_frame_ffts = None
         self.window_correction = None
         if DEBUG:
             self.received_data_index = 0
@@ -878,6 +880,24 @@ class DataCollectorProcess(AbstractMessageProcess):
                 elif self.frame_buffer.manual_accept:
                     self.last_frame = frame
                     self.send_time_frame(frame, False)
+                    # Send the pending frame FRF to the GUI so it can display
+                    # before the user accepts it.
+                    response_fft = (
+                        rfft(response_frame, axis=-1) * self.window_correction
+                    )
+                    reference_fft = (
+                        rfft(reference_frame, axis=-1) * self.window_correction
+                    )
+                    self.pending_frame_ffts = (response_fft, reference_fft)
+                    self.gui_update_queue.put(
+                        (
+                            self.environment_name,
+                            (
+                                DataCollectorUICommands.PENDING_FRAME_SPECTRA,
+                                (response_fft, reference_fft),
+                            ),
+                        )
+                    )
                 else:
                     self.send_time_frame(frame, False)
         # Keep running until stopped
@@ -901,14 +921,14 @@ class DataCollectorProcess(AbstractMessageProcess):
         if keep_frame:
             self.log("Sending data manually")
             self.send_time_frame(self.last_frame, True)
-            frame_fft = rfft(self.last_frame, axis=-1) * self.window_correction
-            # Separate into response and reference
-            reference_fft = frame_fft[self.collector_metadata.reference_channel_indices]
-            response_fft = frame_fft[self.collector_metadata.response_channel_indices]
+            # Reuse the FFTs computed for the pending-frame preview rather than
+            # recomputing from self.last_frame, which is unwindowed raw data.
+            response_fft, reference_fft = self.pending_frame_ffts
             for queue in self.data_out_queues:
                 queue.put(copy.deepcopy((response_fft, reference_fft)))
             self.log("Sent Data")
         self.last_frame = None
+        self.pending_frame_ffts = None
         self.environment_command_queue.put(
             self.process_name, (DataCollectorCommands.ACCEPTED, keep_frame)
         )

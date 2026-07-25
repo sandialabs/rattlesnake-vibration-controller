@@ -910,6 +910,26 @@ def test_data_collector_process_acquire_manual_accept(data_collector):
 
     data_out_queue.put.assert_not_called()
 
+    # A preview of the pending frame's FFTs should also be cached and sent to
+    # the GUI so it can display the FRF for this individual frame before it is
+    # accepted or rejected.
+    preview_call = None
+    for call in data_collector.gui_update_queue.put.call_args_list:
+        queued_environment_name, queued_payload = call.args[0]
+        queued_command, queued_data = queued_payload
+
+        if queued_command == DataCollectorUICommands.PENDING_FRAME_SPECTRA:
+            preview_call = call
+            break
+
+    assert preview_call is not None
+    _, (_, (preview_response_fft, preview_reference_fft)) = preview_call.args[0]
+    np.testing.assert_allclose(preview_response_fft[0, 0], 8.0 + 0j)
+    np.testing.assert_allclose(preview_reference_fft[0, 0], 8.0 + 0j)
+    cached_response_fft, cached_reference_fft = data_collector.pending_frame_ffts
+    np.testing.assert_array_equal(cached_response_fft, preview_response_fft)
+    np.testing.assert_array_equal(cached_reference_fft, preview_reference_fft)
+
 
 def test_data_collector_process_acquire_rejected_frame(data_collector):
     """
@@ -1031,7 +1051,16 @@ def test_data_collector_process_accept_true(mock_log, data_collector):
     metadata = mock.MagicMock()
     metadata.reference_channel_indices = [0]
     metadata.response_channel_indices = [1]
+    metadata.write_time_data = False
     data_collector.collector_metadata = metadata
+
+    # accept() now reuses the FFTs cached by acquire() while the frame was
+    # pending a decision, rather than recomputing them from self.last_frame.
+    frame_fft = np.fft.rfft(frame, axis=-1) * data_collector.window_correction
+    data_collector.pending_frame_ffts = (
+        frame_fft[metadata.response_channel_indices],
+        frame_fft[metadata.reference_channel_indices],
+    )
 
     data_collector._gui_update_queue = mock.MagicMock()
     data_out_queue = mock.MagicMock()
@@ -1063,6 +1092,7 @@ def test_data_collector_process_accept_true(mock_log, data_collector):
         (DataCollectorCommands.ACCEPTED, True),
     )
     assert data_collector.last_frame is None
+    assert data_collector.pending_frame_ffts is None
     mock_log.assert_has_calls(
         [
             mock.call("Received Accept Signal True"),

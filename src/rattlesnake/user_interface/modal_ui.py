@@ -1049,6 +1049,7 @@ class ModalUI(EnvironmentUI):
         )
         self.run_widget.accept_average_button.setEnabled(False)
         self.run_widget.reject_average_button.setEnabled(False)
+        self.restore_average_frf_display()
 
     def reject_frame(self):
         """Sends a signal to the environment process to reject the current measurement frame"""
@@ -1057,6 +1058,17 @@ class ModalUI(EnvironmentUI):
         )
         self.run_widget.accept_average_button.setEnabled(False)
         self.run_widget.reject_average_button.setEnabled(False)
+        self.restore_average_frf_display()
+
+    def restore_average_frf_display(self):
+        """
+        Reverts FRF-style plots back to the running average
+        """
+        self.run_widget.channel_display_area.last_frf = self.last_frf
+        for window in self.run_widget.channel_display_area.subWindowList():
+            widget = window.widget()
+            if widget.signal_selector.currentIndex() in [4, 6, 7]:
+                widget.update_data()
 
     def new_window(self):
         """Creates a new window to display modal data"""
@@ -1476,6 +1488,24 @@ class ModalUI(EnvironmentUI):
                 if self.environment_metadata.accept_type == "Manual" and not accepted:
                     self.run_widget.accept_average_button.setEnabled(True)
                     self.run_widget.reject_average_button.setEnabled(True)
+            case DataCollectorUICommands.PENDING_FRAME_SPECTRA:
+                response_fft, reference_fft = data
+                cross_spectrum = np.einsum(
+                    "if,jf->fij", response_fft, np.conj(reference_fft)
+                )
+                auto_spectrum = np.einsum(
+                    "if,jf->fij", reference_fft, np.conj(reference_fft)
+                )
+                auto_spectrum_pinv = np.linalg.pinv(
+                    auto_spectrum, rcond=1e-12, hermitian=True
+                )
+                self.run_widget.channel_display_area.last_frf = (
+                    cross_spectrum @ auto_spectrum_pinv
+                )
+                for window in self.run_widget.channel_display_area.subWindowList():
+                    widget = window.widget()
+                    if widget.signal_selector.currentIndex() in [4, 6, 7]:
+                        widget.update_data()
             case _:
                 print(f"Unknown Modal UI Command {command}")
 

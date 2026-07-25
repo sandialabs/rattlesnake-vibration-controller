@@ -1,7 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Have modal environment display current frf/timehistory/etc. before accepting frame
 [ ] Add a save spec to the sine environment
 [ ] Have some equality/function that checks if SysIdDataPackages can go with a certain environment
     [ ] When one sysid has completed, have the user interface ask if it wants to be stored to other environments
@@ -47,6 +46,8 @@ Stuff for the future
 
 [x] Prevent the log file task from writing to the same log file if two Controllers are open simultaneously
 
+[ ] Add units to each of the plots
+
 ## Medium (Possible but needs a lot of verification)
 [x] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
 
@@ -58,11 +59,11 @@ Stuff for the future
     [x] Spin up/shut down environments based off name, not type
     [x] Unique names need to be capitalization invariant as "Modal" and "MODAL" cannot be in the same workbook
 
-[ ] Sysid environments need to write spec filenames to worksheet if they exists.
+[x] Sysid environments need to write spec filenames to worksheet if they exists.
 
 [ ] Add a save spec to sine environment
 
-[ ] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
+[x] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
 
 [x] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
     [x] Stop Acqusition should be able to stop the input/output sync loop.
@@ -74,7 +75,7 @@ Stuff for the future
 
 [ ] The first plot data command from the sine environment when starting from headless mode causes an error.
 
-[ ] Every now and then, the sine environment does not show the spec on the run tab when launching form headless mode
+[ ] Every now and then, the sine environment does not show the spec on the run tab when launching form headless mode.
 
 ## Hard (Major issues are going to happen)
 [x] Editable spinboxes tab out when inputting data.
