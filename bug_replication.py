@@ -75,13 +75,5 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
-def multiple_environments():
-    with mock_rattlesnake_object(hardware_type = HardwareType.SDYNPY_SYSTEM) as rattlesnake:
-        modal_environment = manual_modal_metadata(rattlesnake.hardware_metadata)
-        random_environment = manual_random_metadata(rattlesnake.hardware_metadata)
-        rattlesnake.initialize_environments([modal_environment, random_environment])
-
-        launch_rattlesnake_ui(rattlesnake)
-
 if __name__ == "__main__":
-    multiple_environments()
+    pass
