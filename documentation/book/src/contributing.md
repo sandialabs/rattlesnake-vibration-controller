@@ -480,17 +480,13 @@ largely automates the manual steps listed above in the [Development](#developmen
 
 #### Modes and options
 
-By default, `preflight` matches CI's scope on non-`main`/`dev` branches: ruff format check and full pylint on `src/rattlesnake/`. When pytest is re-enabled, the default scope will also run `tests/ --ignore=tests/long`; use `--all-tests` to include `tests/long/` (matching CI on `main`/`dev`).
-
-```{note}
-pytest steps are currently skipped pending resolution of a test hang in `test_acquisition.py` (see TODO in `src/rattlesnake/preflight.py`). Only ruff format check and pylint run until that issue is resolved with Dan.
-```
+By default, `preflight` matches CI's scope on non-`main`/`dev` branches: ruff format check and full pylint on `src/rattlesnake/`, and pytest on `tests/ --ignore=tests/long`; use `--all-tests` to include `tests/long/` (matching CI on `main`/`dev`).
 
 option | description
 --- | ---
-*(none)* | Default scope: ruff format check + pylint (+ pytest `tests/ --ignore=tests/long` when re-enabled)
+*(none)* | Default scope: ruff format check + pylint + pytest `tests/ --ignore=tests/long`
 `--all-tests` | Full suite including `tests/long/`; matches CI on `main`/`dev`
-`--coverage` | Adds `--cov=rattlesnake --cov-report=term-missing` to the pytest run (no effect while pytest is disabled)
+`--coverage` | Adds `--cov=rattlesnake --cov-report=term-missing` to the pytest run
 `--tag TAG` | Validates `TAG` before pushing a release: checks current branch is `main` or `dev`, that the tag conforms to PEP 440, and that it is strictly newer than all existing tags. Runs before lint and tests.
 `--docs` | Builds the Jupyter Book with `--strict`; matches the `docs_jupyter_book` CI job. Requires network access to `api.mystmd.org`.
 `--no-sync` | Skips `uv sync` (useful when offline or behind a firewall)

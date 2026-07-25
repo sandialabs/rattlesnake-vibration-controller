@@ -8,7 +8,6 @@ from rattlesnake.load_utilities import load_profile_from_workbook
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.modal_environment import (
-    ModalCommands,
     ModalMetadata,
     ModalInstructions,
 )

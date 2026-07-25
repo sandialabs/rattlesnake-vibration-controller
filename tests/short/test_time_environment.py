@@ -3,6 +3,7 @@ from unittest import mock
 
 import netCDF4 as nc4
 import numpy as np
+import openpyxl
 import pytest
 
 from rattlesnake.testing.mock_hardware import MockHardwareMetadata
@@ -135,6 +136,30 @@ def test_environment_metadata_store_to_netcdf(time_metadata):
     time_metadata.save_metadata_to_netcdf(netcdf_group)
 
     assert True
+
+
+def test_time_metadata_worksheet_bad_signal_file_warns():
+    # An unloadable signal file falls back to a zero output signal, but the
+    # failure must be surfaced rather than silently running with zeros
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.cell(1, 1, "Control Type")
+    worksheet.cell(1, 2, "Time")
+    worksheet.cell(2, 1, "Signal File")
+    worksheet.cell(2, 2, "/nonexistent/signal_file.npz")
+    worksheet.cell(3, 1, "Cancel Rampdown Time")
+    worksheet.cell(3, 2, "0.5")
+
+    hardware_metadata = MockHardwareMetadata()
+    with pytest.warns(UserWarning, match="Could not load signal file"):
+        loaded_metadata = TimeMetadata.load_metadata_from_worksheet(
+            worksheet,
+            "Time Environment",
+            mock_channel_list_bools(),
+            hardware_metadata,
+        )
+
+    np.testing.assert_array_equal(loaded_metadata.output_signal, np.zeros((1, 1)))
 
 
 # region Instructions

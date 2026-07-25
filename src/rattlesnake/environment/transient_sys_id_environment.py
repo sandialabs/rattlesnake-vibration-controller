@@ -249,8 +249,11 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         netcdf_group_handle.test_level_ramp_time = self.test_level_ramp_time
         netcdf_group_handle.control_python_script = self.control_python_script
         netcdf_group_handle.control_python_function = self.control_python_function
+        # netCDF attributes cannot be None; -1 marks "no control script"
         netcdf_group_handle.control_python_function_type = (
-            self.control_python_function_type
+            -1
+            if self.control_python_function_type is None
+            else self.control_python_function_type
         )
         netcdf_group_handle.control_python_function_parameters = (
             self.control_python_function_parameters
@@ -321,6 +324,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         control_python_script = netcdf_group_handle.control_python_script
         control_python_function = netcdf_group_handle.control_python_function
         control_python_function_type = netcdf_group_handle.control_python_function_type
+        if control_python_function_type == -1:
+            control_python_function_type = None
         control_python_function_parameters = (
             netcdf_group_handle.control_python_function_parameters
         )
@@ -490,7 +495,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
                 break
             try:
                 control_channel_indices.append(int(channel_ind) - 1)
-            except:
+            except (TypeError, ValueError):
                 break
             column_index += 1
         output_channel_indices = [

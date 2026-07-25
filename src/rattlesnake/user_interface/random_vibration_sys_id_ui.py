@@ -2,11 +2,8 @@ import datetime
 import inspect
 import time
 import os
-from multiprocessing.queues import Queue
 
-import netCDF4 as nc4
 import numpy as np
-import openpyxl
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor
@@ -23,8 +20,6 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationUICommands,
     RandomVibrationInstructions,
 )
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.random_vibration_sys_id_data_analysis import (
     RandomVibrationDataAnalysisUICommands,
 )

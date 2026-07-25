@@ -27,7 +27,12 @@ import numpy as np
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.process.signal_generation import SignalGenerator
-from rattlesnake.utilities import VerboseMessageQueue, flush_queue, rms_time
+from rattlesnake.utilities import (
+    VerboseMessageQueue,
+    flush_queue,
+    metadata_fields_equal,
+    rms_time,
+)
 from rattlesnake.user_interface.ui_utilities import UICommands
 
 TEST_LEVEL_THRESHOLD = 1.01
@@ -75,12 +80,7 @@ class SignalGenerationMetadata:
         self.disabled_signals = [] if disabled_signals is None else disabled_signals
 
     def __eq__(self, other):
-        try:
-            return np.all(
-                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
-            )
-        except (AttributeError, KeyError):
-            return False
+        return metadata_fields_equal(self, other)
 
 
 class SignalGenerationProcess(AbstractMessageProcess):

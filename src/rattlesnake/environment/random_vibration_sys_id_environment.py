@@ -32,7 +32,6 @@ import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import time
 from enum import Enum
-from multiprocessing.queues import Queue
 from typing import List
 
 import netCDF4 as nc4
@@ -358,8 +357,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         netcdf_group_handle.cpsd_window = self.cpsd_window
         netcdf_group_handle.control_python_script = self.control_python_script
         netcdf_group_handle.control_python_function = self.control_python_function
+        # netCDF attributes cannot be None; -1 marks "no control script"
         netcdf_group_handle.control_python_function_type = (
-            self.control_python_function_type
+            -1
+            if self.control_python_function_type is None
+            else self.control_python_function_type
         )
         netcdf_group_handle.control_python_function_parameters = (
             self.control_python_function_parameters
@@ -484,6 +486,8 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         control_python_script = netcdf_group_handle.control_python_script
         control_python_function = netcdf_group_handle.control_python_function
         control_python_function_type = netcdf_group_handle.control_python_function_type
+        if control_python_function_type == -1:
+            control_python_function_type = None
         control_python_function_parameters = (
             netcdf_group_handle.control_python_function_parameters
         )
@@ -739,7 +743,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 break
             try:
                 control_channel_indices.append(int(channel_ind) - 1)
-            except:
+            except (TypeError, ValueError):
                 break
             column_index += 1
         sigma_clip = float(worksheet.cell(17, 2).value)
@@ -774,15 +778,15 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         if response_transformation_matrix is not None:
             control_coordinate = None
         else:
+            # The specification is reduced onto the control channels of the
+            # environment channel list, matching load_specification above
             control_coordinate = np.array(
                 [
                     (
-                        hardware_metadata.channel_list[i].node_number,
-                        _direction_map[
-                            hardware_metadata.channel_list[i].node_direction
-                        ],
+                        environment_channel_list[i].node_number,
+                        _direction_map[environment_channel_list[i].node_direction],
                     )
-                    for i in output_channel_indices
+                    for i in control_channel_indices
                 ],
                 dtype=coord_dtype,
             )

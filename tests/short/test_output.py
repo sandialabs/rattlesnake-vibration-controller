@@ -10,6 +10,7 @@ from rattlesnake.testing.mock_hardware import (
 )
 from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
 from rattlesnake.testing.mock_utilities import (
+    flush_queue_container,
     mock_queue_container,
     mock_event_container,
 )
@@ -31,7 +32,8 @@ def output(request):
         event_container.output_ready_event,
         event_container.ping_alive_event,
     )
-    return output
+    yield output
+    flush_queue_container(queue_container)
 
 
 # region: OutputProcess

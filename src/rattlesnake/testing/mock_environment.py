@@ -5,14 +5,11 @@ from rattlesnake.environment.abstract_environment import (
 )
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import (
-    UNIMPLEMENTED_ENVIRONMENT,
     ENVIRONMENT_CLASS,
     ENVIRONMENT_METADATA,
     SYSID_ENVIRONMENTS,
 )
-from rattlesnake.environment.time_environment import TimeEnvironment, TimeMetadata
 from .mock_utilities import mock_channel_list_bools
-from unittest import mock
 from enum import Enum
 
 # IMPLEMENTED_ENVIRONMENT = [

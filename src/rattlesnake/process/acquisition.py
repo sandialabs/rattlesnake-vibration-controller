@@ -32,7 +32,6 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_ACQUISITION
-from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import (
@@ -386,14 +385,12 @@ class AcquisitionProcess(AbstractMessageProcess):
                     warning_numbers = [
                         i + 1 for i in range(len(warn_channels)) if warn_channels[i]
                     ]
-                    print(f"Channels {warning_numbers} Reached Warning Limit")
                     self.log(f"Channels {warning_numbers} Reached Warning Limit")
                 abort_channels = max_vals > self.abort_limits
                 if np.any(abort_channels):
                     abort_numbers = [
                         i + 1 for i in range(len(abort_channels)) if abort_channels[i]
                     ]
-                    print(f"Channels {abort_numbers} Reached Abort Limit")
                     self.log(f"Channels {abort_numbers} Reached Abort Limit")
                     # Don't stop because we're already shutting down.
             self.hardware.stop()
@@ -426,14 +423,12 @@ class AcquisitionProcess(AbstractMessageProcess):
                     warning_numbers = [
                         i + 1 for i in range(len(warn_channels)) if warn_channels[i]
                     ]
-                    print(f"Channels {warning_numbers} Reached Warning Limit")
                     self.log(f"Channels {warning_numbers} Reached Warning Limit")
                 abort_channels = max_vals > self.abort_limits
                 if np.any(abort_channels):
                     abort_numbers = [
                         i + 1 for i in range(len(abort_channels)) if abort_channels[i]
                     ]
-                    print(f"Channels {abort_numbers} Reached Abort Limit")
                     self.log(f"Channels {abort_numbers} Reached Abort Limit")
                     self.gui_update_queue.put((UICommands.STOP, None))
 

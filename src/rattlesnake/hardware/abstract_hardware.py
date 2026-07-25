@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import netCDF4 as nc4

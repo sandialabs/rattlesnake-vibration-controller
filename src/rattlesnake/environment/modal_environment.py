@@ -27,7 +27,6 @@ import threading
 import time
 from typing import List
 from enum import Enum
-from glob import glob
 
 import openpyxl
 import netCDF4 as nc4

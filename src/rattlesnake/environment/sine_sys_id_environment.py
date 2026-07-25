@@ -117,7 +117,7 @@ class SineCommands(EnvironmentCommands):
 
 class SineUICommands(Enum):
     REQUEST_PREDICTION_PLOT_CHOICES = 0
-    EXCITATION_PRECDICTION = 1
+    EXCITATION_PREDICTION = 1
     RESPONSE_PREDICTION = 2
     RESPONSE_ERROR_MATRIX = 3
     EXCITATION_VOLTAGE_LIST = 4
@@ -817,7 +817,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
                 break
             try:
                 control_channel_indices.append(int(channel_ind) - 1)
-            except:
+            except (TypeError, ValueError):
                 break  # This is incase it cant be converted to int
             column_index += 1
         sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
@@ -1744,7 +1744,7 @@ class SineEnvironment(SysIdEnvironment):
         self.gui_update_queue.put(
             (
                 self.environment_name,
-                (SineUICommands.EXCITATION_PRECDICTION, (abscissa, ordinate)),
+                (SineUICommands.EXCITATION_PREDICTION, (abscissa, ordinate)),
             )
         )
 
@@ -2609,7 +2609,7 @@ class SineEnvironment(SysIdEnvironment):
 
     def set_test_level(self, data):
         if self.active:
-            print("Cannot set test level during sine environment")
+            self.log("Cannot set test level while the sine environment is running")
         else:
             self.gui_update_queue.put(
                 (self.environment_name, (SineCommands.SET_TEST_LEVEL, data))

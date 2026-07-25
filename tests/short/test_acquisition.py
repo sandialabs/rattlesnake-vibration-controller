@@ -11,6 +11,7 @@ from rattlesnake.testing.mock_hardware import (
     acquisition_dict,
 )
 from rattlesnake.testing.mock_utilities import (
+    flush_queue_container,
     mock_event_container,
     mock_queue_container,
 )
@@ -35,7 +36,8 @@ def acquisition(request):
         event_container.acquisition_ready_event,
         event_container.ping_alive_event,
     )
-    return acquisition
+    yield acquisition
+    flush_queue_container(queue_container)
 
 
 # region: AcquisitionProcess
