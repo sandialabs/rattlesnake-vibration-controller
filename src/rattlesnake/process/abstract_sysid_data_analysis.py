@@ -31,7 +31,12 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
+from rattlesnake.utilities import (
+    GlobalCommands,
+    RattlesnakeError,
+    VerboseMessageQueue,
+    flush_queue,
+)
 
 
 # region Commands
@@ -144,8 +149,107 @@ class SysIdMetadata:
     # endregion
 
     # region Validation
-    def validate(self):
-        return
+    def validate(self, hardware_metadata):
+        if self.sysid_frame_size <= 0:
+            raise RattlesnakeError(
+                "System ID samples per frame must be greater than 0"
+            )
+
+        if not (0 <= self.sysid_overlap < 1):
+            raise RattlesnakeError(
+                "System ID overlap must be a percentage from 0 up to but not "
+                "including 100"
+            )
+
+        if not (0 <= self.sysid_pretrigger < 1):
+            raise RattlesnakeError(
+                "System ID burst pretrigger must be a percentage from 0 up "
+                "to but not including 100"
+            )
+
+        if self.sysid_burst_ramp_fraction > 0.5:
+            raise RattlesnakeError(
+                "System ID ramp fraction must be no more than 50 percent for burst signal"
+            )
+
+        if self.sysid_signal_type == "Burst Random" and not (
+            0 < self.sysid_burst_on <= 1
+        ):
+            raise RattlesnakeError(
+                "System ID burst on percent must be greater than 0 and up "
+                "to 100"
+            )
+
+        if self.sysid_averaging_type not in ("Linear", "Exponential"):
+            raise RattlesnakeError(
+                f"Invalid System ID Averaging Type: {self.sysid_averaging_type}"
+            )
+
+        if self.sysid_estimator not in ("H1", "H2", "H3", "Hv"):
+            raise RattlesnakeError(
+                f"Invalid System ID Estimator: {self.sysid_estimator}"
+            )
+
+        if self.sysid_signal_type not in (
+            "Random",
+            "Pseudorandom",
+            "Burst Random",
+            "Chirp",
+        ):
+            raise RattlesnakeError(
+                f"Invalid System ID Signal Type: {self.sysid_signal_type}"
+            )
+
+        if self.sysid_noise_averages <= 0:
+            raise RattlesnakeError("System ID noise averages must be greater than 0")
+
+        if self.sysid_averages <= 0:
+            raise RattlesnakeError("System ID averages must be greater than 0")
+
+        if not (0 < self.sysid_exponential_averaging_coefficient <= 1):
+            raise RattlesnakeError(
+                "System ID exponential averaging coefficient must be greater "
+                "than 0 and up to 1"
+            )
+
+        if self.sysid_level_ramp_time < 0:
+            raise RattlesnakeError(
+                "System ID ramp time must be greater than or equal to 0"
+            )
+
+        if self.sysid_level < 0:
+            raise RattlesnakeError(
+                "System ID level must be greater than or equal to 0"
+            )
+
+        nyquist_frequency = self.sample_rate / 2
+        if not (
+            0
+            <= self.sysid_low_frequency_cutoff
+            < self.sysid_high_frequency_cutoff
+            <= nyquist_frequency
+        ):
+            raise RattlesnakeError(
+                "System ID frequencies must satisfy 0 <= low bandwidth < "
+                f"high bandwidth <= nyquist frequency ({nyquist_frequency})"
+            )
+
+        if self.sysid_signal_type != "Chirp":
+            freq = np.fft.rfftfreq(
+                self.sysid_frame_size * hardware_metadata.output_oversample,
+                1 / (self.sample_rate * hardware_metadata.output_oversample),
+            )
+            if not np.any(
+                (freq >= self.sysid_low_frequency_cutoff)
+                & (freq <= self.sysid_high_frequency_cutoff)
+            ):
+                raise RattlesnakeError(
+                    "System ID frequency range "
+                    f"[{self.sysid_low_frequency_cutoff}, "
+                    f"{self.sysid_high_frequency_cutoff}] does not contain "
+                    "any frequency line at this sample rate and samples per "
+                    "frame"
+                )
 
     def __eq__(self, other):
         try:
