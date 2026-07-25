@@ -152,7 +152,7 @@ class EnvironmentMetadata(ABC):
 
     # region Validation
     @abstractmethod
-    def validate(self, hardware_metadata):
+    def validate(self, hardware_metadata: HardwareMetadata):
         """
         Validate whether the metadata will work for that environment.
 

@@ -52,8 +52,10 @@ from rattlesnake.process.signal_generation import (
 )
 from rattlesnake.utilities import (
     GlobalCommands,
+    RattlesnakeError,
     VerboseMessageQueue,
     flush_queue,
+    load_python_module,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.data_collector import (  # noqa # pylint: disable=wrong-import-position
@@ -382,25 +384,204 @@ class ModalMetadata(EnvironmentMetadata):
             return self.signal_generator.generate_frame()[0]
 
     # region Validation
-    def validate(self, hardware_metadata):
-        if self.signal_generator is None:
-            raise ValueError(f"Invalid Signal Type {self.signal_generator_type}")
+    def validate(self, hardware_metadata: HardwareMetadata):
+        super().validate(hardware_metadata)
 
-        if self.trigger_type not in ("Free Run", "First Frame", "Every Frame"):
-            raise ValueError(f"Invalid Acquisition Type: {self.trigger_type}")
-
-        if self.accept_type not in ("Accept All", "Manual", "Autoreject..."):
-            raise ValueError(f"Invalid Acceptance Type: {self.accept_type}")
-
-        if self.frf_window not in ("hann", "rectangle", "exponential"):
-            raise ValueError(f"Invalid Window Type: {self.frf_window}")
-
-        if self.frf_technique not in ("H1", "H2", "H3", "Hv"):
-            raise ValueError(
-                f"Invalid FRF Estimator {self.frf_technique}. " "How did you get here?"
+        if self.sample_rate <= 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} sample_rate must be greater than 0"
             )
 
-        return super().validate(hardware_metadata)
+        if self.samples_per_frame <= 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} samples_per_frame must be greater than 0"
+            )
+
+        if self.output_oversample <= 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} output_oversample must be greater than 0"
+            )
+
+        if not (0 <= self.overlap < 1):
+            raise RattlesnakeError(
+                f"{self.environment_name} FRF overlap must be a percentage from 0 "
+                "up to but not including 100"
+            )
+
+        if not (0 <= self.pretrigger < 1):
+            raise RattlesnakeError(
+                f"{self.environment_name} pretrigger must be a percentage from 0 "
+                "up to but not including 100"
+            )
+
+        if not (0 < self.exponential_window_value_at_frame_end < 1):
+            raise RattlesnakeError(
+                f"{self.environment_name} exponential window end value must be "
+                "greater than 0 and less than 1"
+            )
+
+        if self.num_averages <= 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} num_averages must be greater than 0"
+            )
+
+        if not (0 < self.averaging_coefficient <= 1):
+            raise RattlesnakeError(
+                f"{self.environment_name} averaging_coefficient must be greater "
+                "than 0 and up to 1"
+            )
+
+        if self.wait_for_steady_state < 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} wait_for_steady_state must be greater "
+                "than or equal to 0"
+            )
+
+        if self.averaging_type not in ("Linear", "Exponential"):
+            raise RattlesnakeError(f"Invalid Averaging Type: {self.averaging_type}")
+
+        if self.trigger_type not in ("Free Run", "First Frame", "Every Frame"):
+            raise RattlesnakeError(f"Invalid Acquisition Type: {self.trigger_type}")
+
+        if self.accept_type not in ("Accept All", "Manual", "Autoreject..."):
+            raise RattlesnakeError(f"Invalid Acceptance Type: {self.accept_type}")
+
+        if self.frf_window not in ("hann", "rectangle", "exponential"):
+            raise RattlesnakeError(f"Invalid Window Type: {self.frf_window}")
+
+        if self.frf_technique not in ("H1", "H2", "H3", "Hv"):
+            raise RattlesnakeError(f"Invalid FRF Estimator {self.frf_technique}")
+
+        if self.signal_generator is None:
+            raise RattlesnakeError(f"Invalid Signal Type {self.signal_generator_type}")
+
+        num_hardware_channels = len(hardware_metadata.channel_list)
+        if not (0 <= self.trigger_channel < num_hardware_channels):
+            raise RattlesnakeError(
+                f"{self.environment_name} trigger_channel {self.trigger_channel} "
+                f"is not a valid channel (must be between 0 and "
+                f"{num_hardware_channels - 1})"
+            )
+
+        self._validate_channel_indices(
+            "reference_channel_indices",
+            self.reference_channel_indices,
+            num_hardware_channels,
+            require_nonempty=True,
+        )
+        self._validate_channel_indices(
+            "response_channel_indices",
+            self.response_channel_indices,
+            num_hardware_channels,
+            require_nonempty=True,
+        )
+        self._validate_channel_indices(
+            "output_channel_indices",
+            self.output_channel_indices,
+            num_hardware_channels,
+            require_nonempty=False,
+        )
+
+        self._validate_signal_generator_parameters()
+
+        if self.accept_type == "Autoreject...":
+            self._validate_acceptance_function()
+
+    def _validate_channel_indices(
+        self, field_name, indices, num_hardware_channels, require_nonempty
+    ):
+        """Checks that every index in a channel-index field is a valid,
+        in-range index into hardware_metadata.channel_list. These are used
+        directly to index the raw acquisition frame in the data collector
+        subprocess (e.g. ``frame[response_channel_indices]``), so an
+        out-of-range value raises an IndexError there.
+        """
+        if require_nonempty and len(indices) == 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} {field_name} must contain at least "
+                "one channel"
+            )
+        for index in indices:
+            if not (0 <= index < num_hardware_channels):
+                raise RattlesnakeError(
+                    f"{self.environment_name} {field_name} contains invalid "
+                    f"channel index {index} (must be between 0 and "
+                    f"{num_hardware_channels - 1})"
+                )
+
+    def _validate_signal_generator_parameters(self):
+        """
+        Checks the signal generator fields against the specific generator
+        class that ``get_signal_generator()`` will construct for the current
+        ``signal_generator_type``.
+        """
+        band_types = ("none", "random", "pseudorandom", "burst", "chirp")
+        single_frequency_types = ("square", "sine")
+
+        if self.signal_generator_type != "none" and self.signal_generator_level < 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} signal_generator_level must be "
+                "greater than or equal to 0"
+            )
+
+        if self.signal_generator_type in ("burst", "square") and not (
+            0 < self.signal_generator_on_fraction <= 1
+        ):
+            raise RattlesnakeError(
+                f"{self.environment_name} signal generator on percent must be "
+                "greater than 0 and up to 100"
+            )
+
+        if self.signal_generator_type in band_types:
+            min_frequency = self.signal_generator_min_frequency
+            max_frequency = self.signal_generator_max_frequency
+            if not (0 <= min_frequency < max_frequency <= self.nyquist_frequency):
+                raise RattlesnakeError(
+                    f"{self.environment_name} signal generator frequencies must "
+                    f"satisfy 0 <= minimum < maximum <= nyquist frequency "
+                    f"({self.nyquist_frequency})"
+                )
+            if self.signal_generator_type != "chirp":
+                freq = np.fft.rfftfreq(
+                    self.samples_per_frame * self.output_oversample,
+                    1 / (self.sample_rate * self.output_oversample),
+                )
+                if not np.any((freq >= min_frequency) & (freq <= max_frequency)):
+                    raise RattlesnakeError(
+                        f"{self.environment_name} signal generator frequency "
+                        f"range [{min_frequency}, {max_frequency}] does not "
+                        "contain any frequency line at this sample rate and "
+                        "samples per frame"
+                    )
+        elif self.signal_generator_type in single_frequency_types:
+            if not (
+                0 < self.signal_generator_min_frequency <= self.nyquist_frequency
+            ):
+                raise RattlesnakeError(
+                    f"{self.environment_name} signal generator frequency must be "
+                    f"greater than 0 and up to the nyquist frequency "
+                    f"({self.nyquist_frequency})"
+                )
+
+    def _validate_acceptance_function(self):
+        """
+        When accept_type is "Autoreject...", acceptance_function must be a
+        (script path, function name) pair that the data collector subprocess
+        can actually load.
+        """
+        script_path, function_name = self.acceptance_function
+        try:
+            module = load_python_module(script_path)
+        except Exception as e:
+            raise RattlesnakeError(
+                f"{self.environment_name} could not load autoacceptance script "
+                f"{script_path}: {e}"
+            ) from e
+        if not callable(getattr(module, function_name, None)):
+            raise RattlesnakeError(
+                f"{self.environment_name} autoacceptance script {script_path} "
+                f"has no callable function named {function_name}"
+            )
 
     # endregion
 
