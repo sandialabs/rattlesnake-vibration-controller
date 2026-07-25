@@ -39,7 +39,9 @@ import scipy.signal as sig
 from rattlesnake.utilities import (
     VerboseMessageQueue,
     GlobalCommands,
+    RattlesnakeError,
     flush_queue,
+    load_python_module,
     scale2db,
     wrap,
     db2scale,
@@ -323,7 +325,175 @@ class SineMetadata(SysIdEnvironmentMetadata):
 
     # region Validation
     def validate(self, hardware_metadata):
-        return super().validate(hardware_metadata)
+        """Validates the metadata, raising ``RattlesnakeError`` for anything
+        that would otherwise crash ``initialize_environment``/``start_control``
+        (or the data collector/signal generation/spectral processing/data
+        analysis subprocesses they hand metadata off to) rather than
+        surfacing later as an unhandled exception -- potentially mid-test,
+        after control has already started driving real hardware.
+
+        This intentionally does not guard against wrong *types* -- those
+        aren't things a user can produce through normal input, so it's more
+        useful to let them raise naturally and be traced back as a real bug
+        than to mask them here.
+        """
+        super().validate(hardware_metadata)
+        self.sysid_metadata.validate(hardware_metadata)
+
+        if self.number_of_channels != sum(self.channel_list_bools):
+            raise RattlesnakeError(
+                f"{self.environment_name} number_of_channels "
+                f"({self.number_of_channels}) does not match the number of "
+                f"channels enabled for this environment "
+                f"({sum(self.channel_list_bools)})"
+            )
+
+        if self.ramp_time < 0:
+            raise RattlesnakeError("ramp_time must be greater than or equal to 0")
+
+        if not (0 < self.control_convergence <= 1):
+            raise RattlesnakeError(
+                "control_convergence must be greater than 0 and up to 1"
+            )
+
+        if self.buffer_blocks < 1:
+            raise RattlesnakeError("buffer_blocks must be an integer greater than 0")
+
+        if self.tracking_filter_cutoff <= 0:
+            raise RattlesnakeError(
+                "tracking_filter_cutoff must be greater than 0"
+            )
+        if self.tracking_filter_order < 0:
+            raise RattlesnakeError(
+                "tracking_filter_order must be greater than or equal to 0"
+            )
+
+        if self.vk_filter_order not in (1, 2, 3):
+            raise RattlesnakeError("vk_filter_order must be 1, 2, or 3")
+        if self.vk_filter_bandwidth <= 0:
+            raise RattlesnakeError("vk_filter_bandwidth must be greater than 0")
+        if self.vk_filter_blocksize <= 0:
+            raise RattlesnakeError(
+                "vk_filter_blocksize must be an integer greater than 0"
+            )
+        if not (0 <= self.vk_filter_overlap <= 0.5):
+            raise RattlesnakeError(
+                "vk_filter_overlap must be between 0 and 0.5"
+            )
+
+        if len(self.control_channel_indices) == 0:
+            raise RattlesnakeError(
+                "control_channel_indices must contain at least one channel"
+            )
+        for index in self.control_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"control_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if len(self.output_channel_indices) == 0:
+            raise RattlesnakeError(
+                "output_channel_indices must contain at least one channel"
+            )
+        for index in self.output_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"output_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if self.response_transformation_matrix is not None and (
+            self.response_transformation_matrix.ndim != 2
+            or self.response_transformation_matrix.shape[1]
+            != len(self.control_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "response_transformation_matrix must be 2D with a number of "
+                "columns matching the number of control channels "
+                f"({len(self.control_channel_indices)}), got shape "
+                f"{self.response_transformation_matrix.shape}"
+            )
+
+        if self.reference_transformation_matrix is not None and (
+            self.reference_transformation_matrix.ndim != 2
+            or self.reference_transformation_matrix.shape[1]
+            != len(self.output_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "reference_transformation_matrix must be 2D with a number of "
+                "columns matching the number of output channels "
+                f"({len(self.output_channel_indices)}), got shape "
+                f"{self.reference_transformation_matrix.shape}"
+            )
+
+        self._validate_specifications()
+        self._validate_control_law()
+
+    def _validate_specifications(self):
+        if len(self.specifications) == 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no specifications loaded"
+            )
+
+        n_control_channels = (
+            len(self.control_channel_indices)
+            if self.response_transformation_matrix is None
+            else self.response_transformation_matrix.shape[0]
+        )
+        for specification in self.specifications:
+            num_control = specification.breakpoint_table["amplitude"].shape[-1]
+            if num_control != n_control_channels:
+                raise RattlesnakeError(
+                    f"{self.environment_name} specification "
+                    f"{specification.name} has {num_control} channels, "
+                    f"expected {n_control_channels} for the current control "
+                    "channels; reload the specification"
+                )
+
+            frequencies = specification.breakpoint_table["frequency"]
+            if np.any(frequencies <= 0):
+                raise RattlesnakeError(
+                    f"{self.environment_name} specification "
+                    f"{specification.name} has a frequency breakpoint that "
+                    "is not greater than 0"
+                )
+
+            # The last breakpoint has no following segment to sweep to, so
+            # its sweep_rate isn't used to define a sweep.
+            sweep_rates = specification.breakpoint_table["sweep_rate"][:-1]
+            if np.any(sweep_rates == 0):
+                raise RattlesnakeError(
+                    f"{self.environment_name} specification "
+                    f"{specification.name} has a sweep rate of 0 between "
+                    "breakpoints; use a nonzero rate (or a single breakpoint "
+                    "for a pure dwell)"
+                )
+
+    def _validate_control_law(self):
+        if not self.control_python_script:
+            return
+
+        try:
+            module = load_python_module(self.control_python_script)
+        except Exception as e:
+            raise RattlesnakeError(
+                f"{self.environment_name} could not load control script "
+                f"{self.control_python_script}: {e}"
+            ) from e
+
+        control_class = getattr(module, self.control_python_class, None)
+        if control_class is None:
+            raise RattlesnakeError(
+                f"{self.environment_name} control script "
+                f"{self.control_python_script} has no function or class "
+                f"named {self.control_python_class}"
+            )
+        if not callable(control_class):
+            raise RattlesnakeError(
+                f"{self.environment_name} control class "
+                f"{self.control_python_class} is not callable"
+            )
 
     # endregion
 
