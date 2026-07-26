@@ -1,3 +1,15 @@
+# Adaptive Buffer Stuff
+The goal for the adaptive buffer size is to get the Rattlesnake software to a point where we can
+benchmark it and make meaningful changes to optimize the program. The goals for this refactor are:
+[ ] Clean up control loops to allow for easier human readability
+[ ] Add in adaptive buffer sizes/read sizes so that the program runs as fast as possible
+[ ] Add in buffers to the user interface so that it does not crash when updating a lot
+[ ] Build out a benchmarking tool that gets runtime statistics for each read/write loop
+    [ ] I want this to ONLY do statistics when the environment is active so I can see exactly
+        where bottlenecks are arrising.
+    [ ] A Gaant chart like plot would be nice that shows the 95% CI of each process within each
+        read/write cycle so it would only be like 0.25 seconds long but average each thing
+
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order

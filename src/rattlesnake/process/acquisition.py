@@ -326,45 +326,70 @@ class AcquisitionProcess(AbstractMessageProcess):
 
         """
         if self.startup:
-            self.any_environments_started = False
-            self.log("Waiting for Output to Start")
-            start_wait_time = time()
-            while True:
-                # Try to get data from the measurement if we can
-                try:
-                    environment, data = (
-                        self.queue_container.input_output_sync_queue.get_nowait()
-                    )
-                except (thqueue.Empty, mpqueue.Empty):
-                    if time() - start_wait_time > 30:
-                        self.queue_container.gui_update_queue.put(
-                            (
-                                UICommands.ERROR,
-                                (
-                                    "Acquisition Error",
-                                    "Acquisition timed out waiting for output to start.  "
-                                    "Check output task for errors!",
-                                ),
-                            )
-                        )
-                        break
-                    sleep(0.1)
-                    continue
-                if environment is None:
-                    self.log("Detected Output Started")
-                    break
-                else:
-                    self.log(f"Listening for first data for environment {environment}")
-                    self.environment_first_data[environment] = data
-                    self.any_environments_started = True
-            self.log("Starting Hardware Acquisition")
-            self.hardware.start()
-            self.startup = False
-            self.set_active()
-            self.gui_update_queue.put((UICommands.HARDWARE_STARTED, None))
-            # print('started acquisition')
+            self.start_hardware_acquisition()
         self.get_first_output_data()
-        if (
+        if self.ready_to_shut_down_hardware():
+            self.drain_and_stop_hardware()
+        else:
+            self.read_and_distribute_data()
+
+    def start_hardware_acquisition(self):
+        """Waits for the output process to start, then starts the hardware.
+
+        Blocks (polling the input/output sync queue) until the output
+        process signals that it has started running by putting ``(None,
+        True)`` onto the queue, or until a 30 second timeout elapses.  Along
+        the way, any ``(environment, data)`` pairs found on the queue are the
+        first-output-data packages used later to sync each environment's
+        acquired data to what was actually written out.
+        """
+        self.any_environments_started = False
+        self.log("Waiting for Output to Start")
+        start_wait_time = time()
+        while True:
+            # Try to get data from the measurement if we can
+            try:
+                environment, data = (
+                    self.queue_container.input_output_sync_queue.get_nowait()
+                )
+            except (thqueue.Empty, mpqueue.Empty):
+                if time() - start_wait_time > 30:
+                    self.queue_container.gui_update_queue.put(
+                        (
+                            UICommands.ERROR,
+                            (
+                                "Acquisition Error",
+                                "Acquisition timed out waiting for output to start.  "
+                                "Check output task for errors!",
+                            ),
+                        )
+                    )
+                    break
+                sleep(0.1)
+                continue
+            if environment is None:
+                self.log("Detected Output Started")
+                break
+            else:
+                self.log(f"Listening for first data for environment {environment}")
+                self.environment_first_data[environment] = data
+                self.any_environments_started = True
+        self.log("Starting Hardware Acquisition")
+        self.hardware.start()
+        self.startup = False
+        self.set_active()
+        self.gui_update_queue.put((UICommands.HARDWARE_STARTED, None))
+        # print('started acquisition')
+
+    def ready_to_shut_down_hardware(self):
+        """Returns True if a shutdown has been requested and it is safe to
+        perform it.
+
+        Safe means every environment is inactive, none are still searching
+        for their input/output sync point, and none are waiting on their
+        last frame of data.
+        """
+        return (
             self.shutdown_flag  # We're shutting down
             and all(
                 [
@@ -381,177 +406,203 @@ class AcquisitionProcess(AbstractMessageProcess):
             and all(
                 [not flag for environment, flag in self.environment_last_data.items()]
             )  # None of the environments are expecting their last data
-        ):
-            self.log("Acquiring Remaining Data")
-            read_data = self.hardware.read_remaining()
-            self.add_data_to_buffer(read_data)
-            if read_data.shape[-1] != 0:
-                max_vals = np.max(np.abs(read_data), axis=-1)
-                self.gui_update_queue.put((UICommands.MONITOR, max_vals))
-                warn_channels = max_vals > self.warning_limits
-                if np.any(warn_channels):
-                    warning_numbers = [
-                        i + 1 for i in range(len(warn_channels)) if warn_channels[i]
-                    ]
-                    print(f"Channels {warning_numbers} Reached Warning Limit")
-                    self.log(f"Channels {warning_numbers} Reached Warning Limit")
-                abort_channels = max_vals > self.abort_limits
-                if np.any(abort_channels):
-                    abort_numbers = [
-                        i + 1 for i in range(len(abort_channels)) if abort_channels[i]
-                    ]
-                    print(f"Channels {abort_numbers} Reached Abort Limit")
-                    self.log(f"Channels {abort_numbers} Reached Abort Limit")
-                    # Don't stop because we're already shutting down.
-            self.hardware.stop()
-            self.shutdown_flag = False
-            self.startup = True
-            # print('{:} {:}'.format(self.streaming,self.any_environments_started))
-            if self.streaming and self.any_environments_started:
-                self.queue_container.streaming_command_queue.put(
-                    self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy())
-                )
-                self.clear_streaming()
-            if self.has_streamed and self.any_environments_started:
-                # self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
-                self.has_streamed = False
-            self.clear_active()
-            self.gui_update_queue.put((UICommands.HARDWARE_ENDED, None))
-            self.log("Acquisition Shut Down")
-        else:
-            aquiring_environments = [
-                name for name, flag in self.environment_active_flags.items() if flag
-            ]
-            self.log(f"Acquiring Data for {aquiring_environments} environments")
-            read_data = self.hardware.read()
-            self.add_data_to_buffer(read_data)
-            if read_data.shape[-1] != 0:
-                max_vals = np.max(np.abs(read_data), axis=-1)
-                self.gui_update_queue.put((UICommands.MONITOR, max_vals))
-                warn_channels = max_vals > self.warning_limits
-                if np.any(warn_channels):
-                    warning_numbers = [
-                        i + 1 for i in range(len(warn_channels)) if warn_channels[i]
-                    ]
-                    print(f"Channels {warning_numbers} Reached Warning Limit")
-                    self.log(f"Channels {warning_numbers} Reached Warning Limit")
-                abort_channels = max_vals > self.abort_limits
-                if np.any(abort_channels):
-                    abort_numbers = [
-                        i + 1 for i in range(len(abort_channels)) if abort_channels[i]
-                    ]
-                    print(f"Channels {abort_numbers} Reached Abort Limit")
-                    self.log(f"Channels {abort_numbers} Reached Abort Limit")
-                    self.gui_update_queue.put((UICommands.STOP, None))
+        )
 
-            # Send the data to the different channels
-            for environment in self.environment_list:
-                # Check to see if we're waiting for the first data for this environment
-                if self.environment_first_data[environment] is not None:
-                    if self.shutdown_flag and self.environment_last_data[environment]:
-                        # Shut down the environment in the case that the input/output never synced
-                        self.log(
-                            f"Abandoning input/output sync search for {environment} "
-                            "because acquisition is shutting down"
-                        )
-                        self.environment_first_data[environment] = None
-                        continue
-                    if np.all(np.abs(self.environment_first_data[environment]) < 1e-10):
-                        delay = -self.read_size
-                    else:
-                        correlation_start_time = time()
-                        if DEBUG:
-                            num_files = len(glob(FILE_OUTPUT.format("*")))
-                            np.savez(
-                                FILE_OUTPUT.format(num_files),
-                                read_data_buffer=self.read_data,
-                                read_data=read_data,
-                                output_indices=self.output_indices,
-                                first_data=self.environment_first_data[environment],
-                            )
-                        _, delay, _, _ = align_signals(
-                            self.read_data[self.output_indices],
-                            self.environment_first_data[environment],
-                            perform_subsample=False,
-                            correlation_threshold=0.5,
-                            correlation_metric=correlation_norm_signal_spec_ratio,
-                        )
-                        correlation_end_time = time()
-                        corr_time = correlation_end_time - correlation_start_time
-                        self.log(
-                            f"Correlation check for environment {environment} took "
-                            f"{corr_time:0.2f} seconds"
-                        )
-                        # Adding a criteria that the delay must be in the first half
-                        # of the buffer, otherwise we could still be increasing
-                        # in correlation as more data is acquired.  If it's in
-                        # the first half, it means that we have acquired more
-                        # data and the best match did not improve
-                        if delay is None or delay > self.read_data.shape[-1] // 2:
-                            continue
-                    self.log(f"Found First Data for Environment {environment}")
-                    environment_data = self.read_data[
-                        self.environment_acquisition_channels[environment], delay:
-                    ]
-                    if DEBUG:
-                        np.savez(
-                            f"debug_data/environment_first_data_{environment}.npz",
-                            found_data=environment_data,
-                            expected_data=self.environment_first_data[environment],
-                        )
-                    self.environment_first_data[environment] = None
-                    if not self.environment_last_data[environment]:
-                        self.environment_active_flags[environment] = True
-                    else:
-                        self.log(
-                            f"Already received environment {environment} "
-                            "shutdown signal, not starting"
-                        )
-                # Check to see if the environment is active
-                elif (
-                    self.environment_active_flags[environment]
-                    or self.environment_last_data[environment]
-                ):
-                    environment_data = read_data[
-                        self.environment_acquisition_channels[environment]
-                    ].copy()
-                # Otherwise the environment isn't active
-                else:
-                    continue
-                if self.environment_last_data[environment]:
-                    self.environment_samples_remaining_to_read[
-                        environment
-                    ] -= self.read_size
-                    self.log(
-                        f"Reading last data for {environment}, "
-                        f"{self.environment_samples_remaining_to_read[environment]} samples "
-                        f"remaining"
-                    )
-                environment_finished = (
-                    self.environment_last_data[environment]
-                    and self.environment_samples_remaining_to_read[environment] <= 0
-                )
-                self.log(
-                    f"Sending {environment_data.shape} data to {environment} environment"
-                )
-                self.queue_container.environment_data_in_queues[environment].put(
-                    (environment_data, environment_finished)
-                )
-                if environment_finished:
-                    self.environment_last_data[environment] = False
-                    self.log(f"Delivered last data to {environment}")
-            #  np.savez('test_data/acquisition_data_check.npz',
-            #           read_data = self.read_data,
-            #           environment_data = environment_data,
-            #           environment_channels = self.environment_acquisition_channels[environment])
-            self.queue_container.acquisition_command_queue.put(
-                self.process_name, (GlobalCommands.RUN_HARDWARE, None)
+    def check_channel_limits(self, read_data, notify_stop_on_abort):
+        """Checks the peak level of each channel in ``read_data`` against the
+        configured warning and abort limits, logging and updating the GUI as
+        appropriate.
+
+        Parameters
+        ----------
+        read_data : np.ndarray
+            The most recently acquired data, with shape num_channels x
+            num_samples.
+        notify_stop_on_abort : bool
+            If True, an abort-limit violation will also ask the GUI to stop
+            the test.  This should be False during the final drain read,
+            since acquisition is already shutting down at that point.
+        """
+        max_vals = np.max(np.abs(read_data), axis=-1)
+        self.gui_update_queue.put((UICommands.MONITOR, max_vals))
+        warn_channels = max_vals > self.warning_limits
+        if np.any(warn_channels):
+            warning_numbers = [
+                i + 1 for i in range(len(warn_channels)) if warn_channels[i]
+            ]
+            print(f"Channels {warning_numbers} Reached Warning Limit")
+            self.log(f"Channels {warning_numbers} Reached Warning Limit")
+        abort_channels = max_vals > self.abort_limits
+        if np.any(abort_channels):
+            abort_numbers = [
+                i + 1 for i in range(len(abort_channels)) if abort_channels[i]
+            ]
+            print(f"Channels {abort_numbers} Reached Abort Limit")
+            self.log(f"Channels {abort_numbers} Reached Abort Limit")
+            if notify_stop_on_abort:
+                self.gui_update_queue.put((UICommands.STOP, None))
+            # otherwise don't stop because we're already shutting down.
+
+    def drain_and_stop_hardware(self):
+        """Reads any data still buffered by the hardware, then stops it and
+        reports the hardware as shut down."""
+        self.log("Acquiring Remaining Data")
+        read_data = self.hardware.read_remaining()
+        self.add_data_to_buffer(read_data)
+        if read_data.shape[-1] != 0:
+            self.check_channel_limits(read_data, notify_stop_on_abort=False)
+        self.hardware.stop()
+        self.shutdown_flag = False
+        self.startup = True
+        # print('{:} {:}'.format(self.streaming,self.any_environments_started))
+        if self.streaming and self.any_environments_started:
+            self.queue_container.streaming_command_queue.put(
+                self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy())
             )
-            # print('{:} {:}'.format(self.streaming,self.any_environments_started))
-            if self.streaming and self.any_environments_started:
-                self.queue_container.streaming_command_queue.put(
-                    self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy())
+            self.clear_streaming()
+        if self.has_streamed and self.any_environments_started:
+            # self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
+            self.has_streamed = False
+        self.clear_active()
+        self.gui_update_queue.put((UICommands.HARDWARE_ENDED, None))
+        self.log("Acquisition Shut Down")
+
+    def read_and_distribute_data(self):
+        """Reads one frame of data from the hardware, distributes it to each
+        environment that should receive it, and re-queues the acquisition
+        loop to run again."""
+        aquiring_environments = [
+            name for name, flag in self.environment_active_flags.items() if flag
+        ]
+        self.log(f"Acquiring Data for {aquiring_environments} environments")
+        read_data = self.hardware.read()
+        self.add_data_to_buffer(read_data)
+        if read_data.shape[-1] != 0:
+            self.check_channel_limits(read_data, notify_stop_on_abort=True)
+
+        # Send the data to the different channels
+        for environment in self.environment_list:
+            self.distribute_data_to_environment(environment, read_data)
+        #  np.savez('test_data/acquisition_data_check.npz',
+        #           read_data = self.read_data,
+        #           environment_data = environment_data,
+        #           environment_channels = self.environment_acquisition_channels[environment])
+        self.queue_container.acquisition_command_queue.put(
+            self.process_name, (GlobalCommands.RUN_HARDWARE, None)
+        )
+        # print('{:} {:}'.format(self.streaming,self.any_environments_started))
+        if self.streaming and self.any_environments_started:
+            self.queue_container.streaming_command_queue.put(
+                self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy())
+            )
+
+    def distribute_data_to_environment(self, environment, read_data):
+        """Sends this frame's data to ``environment`` if it should receive
+        one, either by searching for its input/output sync point or by
+        forwarding already-synced data.
+
+        Parameters
+        ----------
+        environment : str
+            The environment queue name to check and potentially send data to.
+        read_data : np.ndarray
+            The frame of data just read from the hardware, with shape
+            num_channels x num_samples.
+        """
+        # Check to see if we're waiting for the first data for this environment
+        if self.environment_first_data[environment] is not None:
+            if self.shutdown_flag and self.environment_last_data[environment]:
+                # Shut down the environment in the case that the input/output never synced
+                self.log(
+                    f"Abandoning input/output sync search for {environment} "
+                    "because acquisition is shutting down"
                 )
+                self.environment_first_data[environment] = None
+                return
+            if np.all(np.abs(self.environment_first_data[environment]) < 1e-10):
+                delay = -self.read_size
+            else:
+                correlation_start_time = time()
+                if DEBUG:
+                    num_files = len(glob(FILE_OUTPUT.format("*")))
+                    np.savez(
+                        FILE_OUTPUT.format(num_files),
+                        read_data_buffer=self.read_data,
+                        read_data=read_data,
+                        output_indices=self.output_indices,
+                        first_data=self.environment_first_data[environment],
+                    )
+                _, delay, _, _ = align_signals(
+                    self.read_data[self.output_indices],
+                    self.environment_first_data[environment],
+                    perform_subsample=False,
+                    correlation_threshold=0.5,
+                    correlation_metric=correlation_norm_signal_spec_ratio,
+                )
+                correlation_end_time = time()
+                corr_time = correlation_end_time - correlation_start_time
+                self.log(
+                    f"Correlation check for environment {environment} took "
+                    f"{corr_time:0.2f} seconds"
+                )
+                # Adding a criteria that the delay must be in the first half
+                # of the buffer, otherwise we could still be increasing
+                # in correlation as more data is acquired.  If it's in
+                # the first half, it means that we have acquired more
+                # data and the best match did not improve
+                if delay is None or delay > self.read_data.shape[-1] // 2:
+                    return
+            self.log(f"Found First Data for Environment {environment}")
+            environment_data = self.read_data[
+                self.environment_acquisition_channels[environment], delay:
+            ]
+            if DEBUG:
+                np.savez(
+                    f"debug_data/environment_first_data_{environment}.npz",
+                    found_data=environment_data,
+                    expected_data=self.environment_first_data[environment],
+                )
+            self.environment_first_data[environment] = None
+            if not self.environment_last_data[environment]:
+                self.environment_active_flags[environment] = True
+            else:
+                self.log(
+                    f"Already received environment {environment} "
+                    "shutdown signal, not starting"
+                )
+        # Check to see if the environment is active
+        elif (
+            self.environment_active_flags[environment]
+            or self.environment_last_data[environment]
+        ):
+            environment_data = read_data[
+                self.environment_acquisition_channels[environment]
+            ].copy()
+        # Otherwise the environment isn't active
+        else:
+            return
+        if self.environment_last_data[environment]:
+            self.environment_samples_remaining_to_read[
+                environment
+            ] -= self.read_size
+            self.log(
+                f"Reading last data for {environment}, "
+                f"{self.environment_samples_remaining_to_read[environment]} samples "
+                f"remaining"
+            )
+        environment_finished = (
+            self.environment_last_data[environment]
+            and self.environment_samples_remaining_to_read[environment] <= 0
+        )
+        self.log(
+            f"Sending {environment_data.shape} data to {environment} environment"
+        )
+        self.queue_container.environment_data_in_queues[environment].put(
+            (environment_data, environment_finished)
+        )
+        if environment_finished:
+            self.environment_last_data[environment] = False
+            self.log(f"Delivered last data to {environment}")
 
     def add_data_to_buffer(self, data):
         """Adds data to the end of the buffer and shifts existing in the buffer forward

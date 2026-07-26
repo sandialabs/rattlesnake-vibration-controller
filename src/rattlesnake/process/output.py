@@ -245,6 +245,33 @@ class OutputProcess(AbstractMessageProcess):
         # Skip hardware operations if there are no channels
         skip_hardware = self.num_outputs == 0
         # Go through each environment and collect data no matter what.
+        ready_to_write = self.gather_environment_data()
+        # If we got through that previous loop still ready to write, we can
+        # output the next signal if the hardware is ready
+        if ready_to_write and (
+            self.startup or skip_hardware or self.hardware.ready_for_new_output()
+        ):
+            self.write_to_hardware(skip_hardware)
+        # Now check if we need to shut down.
+        if self.shutdown_complete():
+            self.stop_hardware(skip_hardware)
+        else:
+            # Otherwise keep going
+            self.queue_container.output_command_queue.put(
+                self.process_name, (GlobalCommands.RUN_HARDWARE, None)
+            )
+
+    def gather_environment_data(self):
+        """Pulls newly generated data from each active environment's output
+        queue into its remainder buffer.
+
+        Returns
+        -------
+        bool
+            True if every active (non-starting-up) environment currently has
+            at least ``write_size`` samples buffered, meaning a full frame is
+            ready to be assembled and written to hardware this pass.
+        """
         # Start with ready to write and set to false if any environments are not
         ready_to_write = True
         for environment in self.environment_list:
@@ -299,104 +326,116 @@ class OutputProcess(AbstractMessageProcess):
                         f"Received First Complete Data Write for {environment} Environment"
                     )
                     self.environment_first_data[environment] = True
+        return ready_to_write
 
-        # If we got through that previous loop still ready to write, we can
-        # output the next signal if the hardware is ready
-        if ready_to_write and (
-            self.startup or skip_hardware or self.hardware.ready_for_new_output()
-        ):
-            remainder_log = [
-                (environment, remainder.shape[-1])
-                for environment, remainder in self.environment_data_out_remainders.items()
-                if self.environment_active_flags[environment]
-            ]
-            self.log(f"Ready to Write: Environment Remainders {remainder_log}")
-            write_data = np.zeros((self.num_outputs, self.write_size))
-            for environment in self.environment_list:
-                # If the task is shutting down and all the data has been drained from it,
-                # make it inactive and just skip it.
-                if (
-                    self.environment_shutting_down_flags[environment]
-                    and self.environment_data_out_remainders[environment].shape[-1] == 0
-                ):
-                    self.environment_active_flags[environment] = False
-                    self.environment_starting_up_flags[environment] = False
-                    self.queue_container.acquisition_command_queue.put(
-                        self.process_name,
-                        (GlobalCommands.STOP_ENVIRONMENT, environment),
-                    )
-                    self.environment_shutting_down_flags[environment] = False
-                    continue
-                # If the task is inactive, also just skip it
-                elif not self.environment_active_flags[environment]:
-                    continue
-                # Get the indices corresponding to the output channels
-                output_indices = self.environment_output_channels[environment]
-                # Determine how many time steps are available to write
-                output_timesteps = min(
-                    self.environment_data_out_remainders[environment].shape[-1],
-                    self.write_size,
+    def write_to_hardware(self, skip_hardware):
+        """Assembles the next frame of output data from each active
+        environment's remainder buffer and writes it to the hardware,
+        starting the hardware first if this is the first write of the test.
+
+        Parameters
+        ----------
+        skip_hardware : bool
+            True if there are no output channels configured, in which case
+            the hardware write itself is skipped but environments are still
+            drained and synced.
+        """
+        remainder_log = [
+            (environment, remainder.shape[-1])
+            for environment, remainder in self.environment_data_out_remainders.items()
+            if self.environment_active_flags[environment]
+        ]
+        self.log(f"Ready to Write: Environment Remainders {remainder_log}")
+        write_data = np.zeros((self.num_outputs, self.write_size))
+        for environment in self.environment_list:
+            # If the task is shutting down and all the data has been drained from it,
+            # make it inactive and just skip it.
+            if (
+                self.environment_shutting_down_flags[environment]
+                and self.environment_data_out_remainders[environment].shape[-1] == 0
+            ):
+                self.environment_active_flags[environment] = False
+                self.environment_starting_up_flags[environment] = False
+                self.queue_container.acquisition_command_queue.put(
+                    self.process_name,
+                    (GlobalCommands.STOP_ENVIRONMENT, environment),
                 )
-                # Write one portion of the environment output to write_data
-                write_data[
-                    output_indices, :output_timesteps
-                ] += self.environment_data_out_remainders[environment][
-                    :, :output_timesteps
-                ]
-                self.environment_data_out_remainders[environment] = (
-                    self.environment_data_out_remainders[environment][
-                        :, output_timesteps:
-                    ]
-                )
-            # Now that we have each environment accounted for in the output we
-            # can write to the hardware
-            self.log(
-                f"Writing {' x '.join(f'{shape}' for shape in write_data.shape)} data to hardware"
+                self.environment_shutting_down_flags[environment] = False
+                continue
+            # If the task is inactive, also just skip it
+            elif not self.environment_active_flags[environment]:
+                continue
+            # Get the indices corresponding to the output channels
+            output_indices = self.environment_output_channels[environment]
+            # Determine how many time steps are available to write
+            output_timesteps = min(
+                self.environment_data_out_remainders[environment].shape[-1],
+                self.write_size,
             )
-            if not skip_hardware:
-                self.log(
-                    f"Output Writing Data to Hardware RMS: \n  {rms_time(write_data, axis=-1)}"
-                )
-                for environment in self.environment_first_data:
-                    if self.environment_first_data[environment]:
-                        self.log(
-                            f"Sending first data for environment {environment} to Acquisition "
-                            "for syncing"
-                        )
-                        self.queue_container.input_output_sync_queue.put(
-                            (
-                                environment,
-                                write_data[..., :: self.output_oversample].copy(),
-                            )
-                        )
-                        self.environment_first_data[environment] = False
-                        if DEBUG:
-                            np.savez(
-                                ENV_OUTPUT.format(environment), write_data=write_data
-                            )
-                if DEBUG:
-                    num_files = len(glob(FILE_OUTPUT.format("*")))
-                    np.savez(FILE_OUTPUT.format(num_files), write_data=write_data)
-                self.hardware.write(write_data.copy())
-            else:
+            # Write one portion of the environment output to write_data
+            write_data[
+                output_indices, :output_timesteps
+            ] += self.environment_data_out_remainders[environment][
+                :, :output_timesteps
+            ]
+            self.environment_data_out_remainders[environment] = (
+                self.environment_data_out_remainders[environment][
+                    :, output_timesteps:
+                ]
+            )
+        # Now that we have each environment accounted for in the output we
+        # can write to the hardware
+        self.log(
+            f"Writing {' x '.join(f'{shape}' for shape in write_data.shape)} data to hardware"
+        )
+        if not skip_hardware:
+            self.log(
+                f"Output Writing Data to Hardware RMS: \n  {rms_time(write_data, axis=-1)}"
+            )
+            for environment in self.environment_first_data:
                 if self.environment_first_data[environment]:
-                    self.queue_container.input_output_sync_queue.put((environment, 0))
+                    self.log(
+                        f"Sending first data for environment {environment} to Acquisition "
+                        "for syncing"
+                    )
+                    self.queue_container.input_output_sync_queue.put(
+                        (
+                            environment,
+                            write_data[..., :: self.output_oversample].copy(),
+                        )
+                    )
                     self.environment_first_data[environment] = False
-            #            np.savez('test_data/output_data_check.npz',output_data = write_data)
-            # Now check and see if we are starting up and start the hardare if so
-            if self.startup:
-                self.log("Starting Hardware Output")
-                if not skip_hardware:
-                    self.hardware.start()
-                # Send something to the sync queue to tell acquisition to start now
-                # We will send None because it is unique and we won't have an
-                # environment with that name
-                self.queue_container.input_output_sync_queue.put((None, True))
-                self.startup = False
-                self.set_active()
-                # print('started output')
-        # Now check if we need to shut down.
-        if (
+                    if DEBUG:
+                        np.savez(
+                            ENV_OUTPUT.format(environment), write_data=write_data
+                        )
+            if DEBUG:
+                num_files = len(glob(FILE_OUTPUT.format("*")))
+                np.savez(FILE_OUTPUT.format(num_files), write_data=write_data)
+            self.hardware.write(write_data.copy())
+        else:
+            if self.environment_first_data[environment]:
+                self.queue_container.input_output_sync_queue.put((environment, 0))
+                self.environment_first_data[environment] = False
+        #            np.savez('test_data/output_data_check.npz',output_data = write_data)
+        # Now check and see if we are starting up and start the hardare if so
+        if self.startup:
+            self.log("Starting Hardware Output")
+            if not skip_hardware:
+                self.hardware.start()
+            # Send something to the sync queue to tell acquisition to start now
+            # We will send None because it is unique and we won't have an
+            # environment with that name
+            self.queue_container.input_output_sync_queue.put((None, True))
+            self.startup = False
+            self.set_active()
+            # print('started output')
+
+    def shutdown_complete(self):
+        """Returns True once a shutdown has been requested and every
+        environment has gone inactive, finished starting up, and drained its
+        remainder buffer."""
+        return (
             self.shutdown_flag  # Time to shut down
             and all(
                 [
@@ -416,19 +455,25 @@ class OutputProcess(AbstractMessageProcess):
                     for environment, remainder in self.environment_data_out_remainders.items()
                 ]
             )  # Check that all data is written
-        ):
-            self.log("Stopping Hardware")
-            if not skip_hardware:
-                self.hardware.stop()
-            self.startup = True
-            self.shutdown_flag = False
-            flush_queue(self.queue_container.input_output_sync_queue)
-            self.clear_active()
-        else:
-            # Otherwise keep going
-            self.queue_container.output_command_queue.put(
-                self.process_name, (GlobalCommands.RUN_HARDWARE, None)
-            )
+        )
+
+    def stop_hardware(self, skip_hardware):
+        """Stops the hardware output and resets state so the next test can
+        start cleanly.
+
+        Parameters
+        ----------
+        skip_hardware : bool
+            True if there are no output channels configured, in which case
+            the hardware itself has nothing to stop.
+        """
+        self.log("Stopping Hardware")
+        if not skip_hardware:
+            self.hardware.stop()
+        self.startup = True
+        self.shutdown_flag = False
+        flush_queue(self.queue_container.input_output_sync_queue)
+        self.clear_active()
 
     def stop_output(self, data):  # pylint: disable=unused-argument
         """Sets a flag telling the output that it should start shutting down
