@@ -767,7 +767,7 @@ def test_data_collector_process_acquire(
     data_collector.frame_buffer.add_data_get_frame.return_value = frames
 
     data_collector.data_in_queue = mock.MagicMock()
-    data_collector.data_in_queue.get.return_value = (frame, last_data)
+    data_collector.data_in_queue.get.return_value = (frame, last_data, 0.0)
 
     data_out_queue = mock.MagicMock()
     data_collector.data_out_queues = [data_out_queue]
@@ -851,7 +851,7 @@ def test_data_collector_process_acquire_skips_frames(
     data_collector.skip_frames = 1
 
     data_collector.data_in_queue = mock.MagicMock()
-    data_collector.data_in_queue.get.return_value = (frame, False)
+    data_collector.data_in_queue.get.return_value = (frame, False, 0.0)
 
     data_out_queue = mock.MagicMock()
     data_collector.data_out_queues = [data_out_queue]
@@ -876,7 +876,7 @@ def test_data_collector_process_acquire_manual_accept(data_collector):
     data_collector.frame_buffer.manual_accept = True
 
     data_collector.data_in_queue = mock.MagicMock()
-    data_collector.data_in_queue.get.return_value = (frame, False)
+    data_collector.data_in_queue.get.return_value = (frame, False, 0.0)
 
     data_out_queue = mock.MagicMock()
     data_collector.data_out_queues = [data_out_queue]
@@ -943,7 +943,7 @@ def test_data_collector_process_acquire_rejected_frame(data_collector):
     data_collector.frame_buffer.add_data_get_frame.return_value = frame[np.newaxis, ...]
 
     data_collector.data_in_queue = mock.MagicMock()
-    data_collector.data_in_queue.get.return_value = (frame, False)
+    data_collector.data_in_queue.get.return_value = (frame, False, 0.0)
 
     data_out_queue = mock.MagicMock()
     data_collector.data_out_queues = [data_out_queue]
@@ -993,7 +993,7 @@ def test_data_collector_process_acquire_with_transformations(data_collector):
     metadata.reference_transformation_matrix = np.array([[3.0]])
 
     data_collector.data_in_queue = mock.MagicMock()
-    data_collector.data_in_queue.get.return_value = (frame, True)
+    data_collector.data_in_queue.get.return_value = (frame, True, 0.0)
 
     data_out_queue = mock.MagicMock()
     data_collector.data_out_queues = [data_out_queue]
@@ -1021,7 +1021,7 @@ def test_data_collector_process_acquire_with_kurtosis_buffer(data_collector):
     data_collector.kurtosis_buffer = KurtosisBuffer(2, averages=2)
 
     data_collector.data_in_queue = mock.MagicMock()
-    data_collector.data_in_queue.get.return_value = (frame, False)
+    data_collector.data_in_queue.get.return_value = (frame, False, 0.0)
     data_collector.data_out_queues = [mock.MagicMock()]
 
     data_collector.acquire(None)

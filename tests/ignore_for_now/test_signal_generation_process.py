@@ -582,7 +582,7 @@ def test_signal_generation_process_output_ramp_and_disabled_signals(
         ]
     )
 
-    queued_data, last_signal = mock_data_out_queue.put.call_args.args[0]
+    queued_data, last_signal, _ = mock_data_out_queue.put.call_args.args[0]
     np.testing.assert_array_almost_equal(queued_data, expected_data)
     assert last_signal is False
     assert signal_generation_process_obj.current_test_level == 0.0
@@ -609,7 +609,7 @@ def test_signal_generation_process_output_constant_level(
 
     signal_generation_process_obj.output(write_data, last_signal=True)
 
-    queued_data, last_signal = mock_data_out_queue.put.call_args.args[0]
+    queued_data, last_signal, _ = mock_data_out_queue.put.call_args.args[0]
 
     np.testing.assert_array_equal(queued_data, 0.5 * np.ones((2, 10)))
     assert last_signal is True
@@ -636,7 +636,7 @@ def test_signal_generation_process_output_with_transformation(
 
     signal_generation_process_obj.output(write_data)
 
-    queued_data, _ = mock_data_out_queue.put.call_args.args[0]
+    queued_data, _, _ = mock_data_out_queue.put.call_args.args[0]
     np.testing.assert_array_equal(queued_data, 3 * np.ones((1, 4)))
     mock_log.assert_any_call("Applying Transformation")
 

@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import copy
 import multiprocessing as mp
 import threading
+import time
 import traceback
 from enum import Enum
 from typing import List
@@ -434,7 +435,10 @@ class SkeletonSysIdEnvironment(SysIdEnvironment):
     def run_control(self, data: None):
         # Get data from data in queue and send it to user interface
         try:
-            acqusition_data, self.last_acqusition = self.data_in_queue.get_nowait()
+            acqusition_data, self.last_acqusition, produced_at = (
+                self.data_in_queue.get_nowait()
+            )
+            self.benchmark.record("AcquisitionQueueLag", duration=time.time() - produced_at)
             self.gui_update_queue.put(
                 (
                     self.environment_name,
@@ -447,7 +451,7 @@ class SkeletonSysIdEnvironment(SysIdEnvironment):
         # If required, put data to data out queue
         if self.data_out_queue.empty():
             self.data_out_queue.put(
-                (copy.deepcopy(self.output_signal), self.shutdown_flag)
+                (copy.deepcopy(self.output_signal), self.shutdown_flag, time.time())
             )
             if self.shutdown_flag:
                 self.shutdown_flag = False

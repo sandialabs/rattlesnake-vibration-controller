@@ -29,6 +29,7 @@ from enum import Enum
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import queue as thqueue
+from time import time
 from typing import List
 
 import netCDF4 as nc4
@@ -575,9 +576,10 @@ class TimeEnvironment(Environment):
             )
         # See if any data has come in
         try:
-            acquisition_data, last_acquisition = (
+            acquisition_data, last_acquisition, produced_at = (
                 self.queue_container.data_in_queue.get_nowait()
             )
+            self.benchmark.record("AcquisitionQueueLag", duration=time() - produced_at)
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
             self.queue_container.gui_update_queue.put(
@@ -618,8 +620,11 @@ class TimeEnvironment(Environment):
                 # Wait until we get the last signal from the acquisition
                 while not last_acquisition:
                     self.log("Waiting for Last Acquisition")
-                    acquisition_data, last_acquisition = (
+                    acquisition_data, last_acquisition, produced_at = (
                         self.queue_container.data_in_queue.get()
+                    )
+                    self.benchmark.record(
+                        "AcquisitionQueueLag", duration=time() - produced_at
                     )
                     measurement_data = acquisition_data[self.measurement_channels]
                     output_data = acquisition_data[self.output_channels]
@@ -683,7 +688,7 @@ class TimeEnvironment(Environment):
         # Write the test level-scaled data to the task
         self.log("Sending data to data_out queue")
         self.queue_container.data_out_queue.put(
-            (copy.deepcopy(write_data * test_level), last_signal)
+            (copy.deepcopy(write_data * test_level), last_signal, time())
         )
 
     def set_test_level(self, data):

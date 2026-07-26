@@ -27,6 +27,7 @@ import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
 import threading
+import time
 import traceback
 import inspect
 from enum import Enum
@@ -1272,8 +1273,11 @@ class TransientEnvironment(SysIdEnvironment):
             )
         # See if any data has come in
         try:
-            acquisition_data, last_acquisition = (
+            acquisition_data, last_acquisition, produced_at = (
                 self.queue_container.data_in_queue.get_nowait()
+            )
+            self.benchmark.record(
+                "AcquisitionQueueLag", duration=time.time() - produced_at
             )
             if self.last_signal_found is not None:
                 self.last_signal_found -= self.hardware_metadata.samples_per_read

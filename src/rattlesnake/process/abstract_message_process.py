@@ -53,7 +53,9 @@ import multiprocessing.synchronize  # pylint: disable=unused-import
 import os
 import queue as thqueue
 import traceback
+from time import perf_counter
 
+from rattlesnake.benchmarking import BenchmarkRecorder
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
@@ -101,6 +103,7 @@ class AbstractMessageProcess(ABC):
             self._ready_event = ready_event
             self.set_ready()
         self._command_map = {GlobalCommands.QUIT: self.quit}
+        self.benchmark = BenchmarkRecorder(process_name)
 
     def log(self, message):
         """Write a message to the log file
@@ -192,53 +195,62 @@ class AbstractMessageProcess(ABC):
 
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while True:
-            # Check shutdown event
-            if shutdown_event is not None and shutdown_event.is_set():
-                break
+        try:
+            while True:
+                # Check shutdown event
+                if shutdown_event is not None and shutdown_event.is_set():
+                    break
 
-            # Get the message from the queue
-            try:
-                message, data = self.command_queue.get(
-                    self.process_name, timeout=0.1
-                )  # non-blocking-ish
-            except (thqueue.Empty, mpqueue.Empty):
-                continue
-            except KeyboardInterrupt:
-                self.log("KeyboardInterrupt received")
-                self.quit(None)
-                break
-            # Call the function corresponding to that message with the data as argument
-            try:
-                function = self.command_map[message]
-            except KeyError:
-                self.log(
-                    f"Undefined Message {message}, acceptable messages are {list(self.command_map)}"
-                )
-                continue
-            try:
-                halt_flag = function(data)
-            except KeyboardInterrupt:
-                self.log("KeyboardInterrupt received")
-                self.quit(None)
-                break
-            except Exception:  # pylint: disable=broad-exception-caught
-                tb = traceback.format_exc()
-                self.log(f"ERROR\n\n {tb}")
-                self.gui_update_queue.put(
-                    (
-                        UICommands.ERROR,
-                        (
-                            f"{self.process_name} Error",
-                            f"ERROR:\n\n{tb}",
-                        ),
+                # Get the message from the queue
+                wait_start = perf_counter()
+                try:
+                    message, data = self.command_queue.get(
+                        self.process_name, timeout=0.1
+                    )  # non-blocking-ish
+                except (thqueue.Empty, mpqueue.Empty):
+                    continue
+                except KeyboardInterrupt:
+                    self.log("KeyboardInterrupt received")
+                    self.quit(None)
+                    break
+                wait_time = perf_counter() - wait_start
+                # Call the function corresponding to that message with the data as argument
+                try:
+                    function = self.command_map[message]
+                except KeyError:
+                    self.log(
+                        f"Undefined Message {message}, acceptable messages are {list(self.command_map)}"
                     )
+                    continue
+                compute_start = perf_counter()
+                try:
+                    halt_flag = function(data)
+                except KeyboardInterrupt:
+                    self.log("KeyboardInterrupt received")
+                    self.quit(None)
+                    break
+                except Exception:  # pylint: disable=broad-exception-caught
+                    tb = traceback.format_exc()
+                    self.log(f"ERROR\n\n {tb}")
+                    self.gui_update_queue.put(
+                        (
+                            UICommands.ERROR,
+                            (
+                                f"{self.process_name} Error",
+                                f"ERROR:\n\n{tb}",
+                            ),
+                        )
+                    )
+                    halt_flag = False
+                self.benchmark.record(
+                    message, wait=wait_time, duration=perf_counter() - compute_start
                 )
-                halt_flag = False
-            # If we get a true value, stop.
-            if halt_flag:
-                self.log("Stopping Process")
-                break
+                # If we get a true value, stop.
+                if halt_flag:
+                    self.log("Stopping Process")
+                    break
+        finally:
+            self.benchmark.close()
 
     def quit(self, data):  # pylint: disable=unused-argument
         """Returns True to stop the ``run`` while loop and exit the process

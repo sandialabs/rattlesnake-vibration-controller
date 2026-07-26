@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import copy
 import multiprocessing as mp
 from enum import Enum
-from time import sleep
+from time import sleep, time
 from typing import List
 
 import numpy as np
@@ -790,7 +790,8 @@ class DataCollectorProcess(AbstractMessageProcess):
             accepting any data passed along with the instruction.
         """
         try:
-            acquisition_data, last_data = self.data_in_queue.get(timeout=10)
+            acquisition_data, last_data, produced_at = self.data_in_queue.get(timeout=10)
+            self.benchmark.record("AcquisitionQueueLag", duration=time() - produced_at)
             self.log(
                 f"Acquired Data with shape {acquisition_data.shape} and Last Data {last_data}"
             )
@@ -804,7 +805,8 @@ class DataCollectorProcess(AbstractMessageProcess):
             return
         # Add data to buffer
         self.log("Putting Data to Buffer")
-        output_frames = self.frame_buffer.add_data_get_frame(acquisition_data)
+        with self.benchmark.timer("FrameBuffering"):
+            output_frames = self.frame_buffer.add_data_get_frame(acquisition_data)
         if DEBUG:
             np.save(
                 f"debug_data/acquisition_data_{self.received_data_index:05d}.npy",
@@ -851,8 +853,9 @@ class DataCollectorProcess(AbstractMessageProcess):
                     f"{rms_time(reference_frame, axis=-1)}"
                 )
                 # Apply window functions
-                response_frame *= self.response_window / self.test_level
-                reference_frame *= self.reference_window / self.test_level
+                with self.benchmark.timer("Windowing"):
+                    response_frame *= self.response_window / self.test_level
+                    reference_frame *= self.reference_window / self.test_level
                 if accepted and not self.frame_buffer.manual_accept:
                     self.send_time_frame(frame, True)
                     self.log("Sending data")
@@ -868,26 +871,29 @@ class DataCollectorProcess(AbstractMessageProcess):
                             )
                         )
                     # Separate into response and reference
-                    response_fft = (
-                        rfft(response_frame, axis=-1) * self.window_correction
-                    )
-                    reference_fft = (
-                        rfft(reference_frame, axis=-1) * self.window_correction
-                    )
-                    for queue in self.data_out_queues:
-                        queue.put(copy.deepcopy((response_fft, reference_fft)))
+                    with self.benchmark.timer("FFTCompute"):
+                        response_fft = (
+                            rfft(response_frame, axis=-1) * self.window_correction
+                        )
+                        reference_fft = (
+                            rfft(reference_frame, axis=-1) * self.window_correction
+                        )
+                    with self.benchmark.timer("QueuePutFFT"):
+                        for queue in self.data_out_queues:
+                            queue.put(copy.deepcopy((response_fft, reference_fft)))
                     self.log("Sent Data")
                 elif self.frame_buffer.manual_accept:
                     self.last_frame = frame
                     self.send_time_frame(frame, False)
                     # Send the pending frame FRF to the GUI so it can display
                     # before the user accepts it.
-                    response_fft = (
-                        rfft(response_frame, axis=-1) * self.window_correction
-                    )
-                    reference_fft = (
-                        rfft(reference_frame, axis=-1) * self.window_correction
-                    )
+                    with self.benchmark.timer("FFTCompute"):
+                        response_fft = (
+                            rfft(response_frame, axis=-1) * self.window_correction
+                        )
+                        reference_fft = (
+                            rfft(reference_frame, axis=-1) * self.window_correction
+                        )
                     self.pending_frame_ffts = (response_fft, reference_fft)
                     self.gui_update_queue.put(
                         (

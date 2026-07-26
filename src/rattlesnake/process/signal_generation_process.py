@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import copy
 import multiprocessing as mp
 from enum import Enum
+from time import time
 
 import numpy as np
 
@@ -328,7 +329,9 @@ class SignalGenerationProcess(AbstractMessageProcess):
                 write_data=write_data * test_level,
                 last_signal=last_signal,
             )
-        self.data_out_queue.put((copy.deepcopy(write_data * test_level), last_signal))
+        self.data_out_queue.put(
+            (copy.deepcopy(write_data * test_level), last_signal, time())
+        )
 
     def mute(self, data):  # pylint: disable=unused-argument
         """Immediately mute the signal generation task

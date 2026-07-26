@@ -22,10 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import datetime
 import multiprocessing as mp
 import sys
+import time
 
 from qtpy import QtWidgets, QtCore
 
 # from rattlesnake.process.streaming import streaming_process
+from rattlesnake.benchmarking import generate_benchmark_report
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.user_interface import RattlesnakeUI
 
@@ -85,9 +87,17 @@ def main():
     """Main Rattlesnake Application Entry Point"""
     print("Loading Rattlesnake...")
 
+    run_start_time = time.time()
     rattlesnake = RattlesnakeController()
 
     launch_rattlesnake_ui(rattlesnake)
+
+    # Post-processing step: by the time launch_rattlesnake_ui returns, every
+    # process has been joined (or force-terminated) by rattlesnake.shutdown(),
+    # so any BenchmarkRecorder data for this run has already been flushed to
+    # disk. This is a no-op unless RATTLESNAKE_BENCHMARK was set before this
+    # process started. See rattlesnake.benchmarking for details.
+    generate_benchmark_report(since=run_start_time)
 
 
 if __name__ == "__main__":

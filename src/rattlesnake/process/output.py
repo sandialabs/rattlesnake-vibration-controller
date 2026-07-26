@@ -26,6 +26,7 @@ import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
+from time import time
 from typing import Dict
 
 import numpy as np
@@ -264,7 +265,7 @@ class OutputProcess(AbstractMessageProcess):
                     ready_to_write = False
                 try:
                     # Try to grab data from the queue and add it to the remainders.
-                    environment_data, last_run = (
+                    environment_data, last_run, produced_at = (
                         self.queue_container.environment_data_out_queues[
                             environment
                         ].get_nowait()
@@ -273,6 +274,9 @@ class OutputProcess(AbstractMessageProcess):
                     # If data is not ready yet, simply continue to the next environment and we'll
                     # try on the next time around.
                     continue
+                self.benchmark.record(
+                    f"EnvironmentQueueLag:{environment}", duration=time() - produced_at
+                )
                 self.log(
                     f"Got {' x '.join([f'{shape}' for shape in environment_data.shape])} "
                     f"data from {environment} Environment"
@@ -377,7 +381,8 @@ class OutputProcess(AbstractMessageProcess):
                 if DEBUG:
                     num_files = len(glob(FILE_OUTPUT.format("*")))
                     np.savez(FILE_OUTPUT.format(num_files), write_data=write_data)
-                self.hardware.write(write_data.copy())
+                with self.benchmark.timer("hardware_write"):
+                    self.hardware.write(write_data.copy())
             else:
                 if self.environment_first_data[environment]:
                     self.queue_container.input_output_sync_queue.put((environment, 0))

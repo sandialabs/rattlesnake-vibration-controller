@@ -423,7 +423,8 @@ class AcquisitionProcess(AbstractMessageProcess):
                 name for name, flag in self.environment_active_flags.items() if flag
             ]
             self.log(f"Acquiring Data for {aquiring_environments} environments")
-            read_data = self.hardware.read()
+            with self.benchmark.timer("hardware_read"):
+                read_data = self.hardware.read()
             self.add_data_to_buffer(read_data)
             if read_data.shape[-1] != 0:
                 max_vals = np.max(np.abs(read_data), axis=-1)
@@ -535,7 +536,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                     f"Sending {environment_data.shape} data to {environment} environment"
                 )
                 self.queue_container.environment_data_in_queues[environment].put(
-                    (environment_data, environment_finished)
+                    (environment_data, environment_finished, time())
                 )
                 if environment_finished:
                     self.environment_last_data[environment] = False

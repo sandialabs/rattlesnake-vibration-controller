@@ -28,6 +28,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from multiprocessing import queues
+from time import perf_counter
 from typing import List
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
@@ -36,6 +37,7 @@ import queue as thqueue
 import openpyxl
 import netCDF4 as nc4
 
+from rattlesnake.benchmarking import BenchmarkRecorder
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.user_interface.ui_utilities import UICommands
@@ -451,6 +453,7 @@ class Environment(ABC):
         self._output_active_event = output_active_event
         self.hardware_metadata = None
         self.environment_metadata = None
+        self.benchmark = BenchmarkRecorder(environment_name)
         # self.set_ready() # Call this at the end of your function
 
     # region Commands
@@ -616,62 +619,71 @@ class Environment(ABC):
         that it is time to stop the loop and exit.
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while not shutdown_event.is_set():
-            # Get the message from the queue
-            try:
-                message, data = self.environment_command_queue.get(
-                    self.environment_name
-                )
-            except (thqueue.Empty, mpqueue.Empty):
-                continue
-            except KeyboardInterrupt:
-                self.log("KeyboardInterrupt received")
-                self.quit(None)
-                break
-            # Call the function corresponding to that message with the data as argument
-            try:
-                function = self.command_map[message]
-            except KeyError:
-                self.log(
-                    f"Undefined Message {message}, acceptable messages are {[key for key in self.command_map]}"
-                )
-                continue
-            try:
-                halt_flag = function(data)
-            except KeyboardInterrupt:
-                self.log("KeyboardInterrupt received")
-                self.quit(None)
-                break
-            except Exception:  # pylint: disable=broad-exception-caught
-                tb = traceback.format_exc()
-                self.log(f"ERROR\n\n {tb}")
-                self.gui_update_queue.put(
-                    (
-                        UICommands.ERROR,
-                        (
-                            f"{self.environment_name} Error",
-                            f"ERROR:\n\n{tb}",
-                        ),
+        try:
+            while not shutdown_event.is_set():
+                # Get the message from the queue
+                wait_start = perf_counter()
+                try:
+                    message, data = self.environment_command_queue.get(
+                        self.environment_name
                     )
+                except (thqueue.Empty, mpqueue.Empty):
+                    continue
+                except KeyboardInterrupt:
+                    self.log("KeyboardInterrupt received")
+                    self.quit(None)
+                    break
+                wait_time = perf_counter() - wait_start
+                # Call the function corresponding to that message with the data as argument
+                try:
+                    function = self.command_map[message]
+                except KeyError:
+                    self.log(
+                        f"Undefined Message {message}, acceptable messages are {[key for key in self.command_map]}"
+                    )
+                    continue
+                compute_start = perf_counter()
+                try:
+                    halt_flag = function(data)
+                except KeyboardInterrupt:
+                    self.log("KeyboardInterrupt received")
+                    self.quit(None)
+                    break
+                except Exception:  # pylint: disable=broad-exception-caught
+                    tb = traceback.format_exc()
+                    self.log(f"ERROR\n\n {tb}")
+                    self.gui_update_queue.put(
+                        (
+                            UICommands.ERROR,
+                            (
+                                f"{self.environment_name} Error",
+                                f"ERROR:\n\n{tb}",
+                            ),
+                        )
+                    )
+                    if PICKLE_ON_ERROR:
+                        with open(
+                            f"debug_data/{self.environment_name}_error_state.txt",
+                            "w",
+                            encoding="utf-8",
+                        ) as f:
+                            f.write(f"{tb}")
+                        with open(
+                            f"debug_data/{self.environment_name}_error_state.pkl", "wb"
+                        ) as f:
+                            dic = self.dump_to_dict()
+                            pickle.dump(dic, f)
+                        print("Done Writing Pickle File from Error...")
+                    halt_flag = False
+                self.benchmark.record(
+                    message, wait=wait_time, duration=perf_counter() - compute_start
                 )
-                if PICKLE_ON_ERROR:
-                    with open(
-                        f"debug_data/{self.environment_name}_error_state.txt",
-                        "w",
-                        encoding="utf-8",
-                    ) as f:
-                        f.write(f"{tb}")
-                    with open(
-                        f"debug_data/{self.environment_name}_error_state.pkl", "wb"
-                    ) as f:
-                        dic = self.dump_to_dict()
-                        pickle.dump(dic, f)
-                    print("Done Writing Pickle File from Error...")
-                halt_flag = False
-            # If we get a true value, stop.
-            if halt_flag:
-                self.log("Stopping Process")
-                break
+                # If we get a true value, stop.
+                if halt_flag:
+                    self.log("Stopping Process")
+                    break
+        finally:
+            self.benchmark.close()
 
     # endregion
 

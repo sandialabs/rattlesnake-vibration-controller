@@ -2331,8 +2331,11 @@ class SineEnvironment(SysIdEnvironment):
         # See if any data has come in
         try:
             # print('Listening for Data')
-            acquisition_data, last_acquisition = (
+            acquisition_data, last_acquisition, produced_at = (
                 self.queue_container.data_in_queue.get_nowait()
+            )
+            self.benchmark.record(
+                "AcquisitionQueueLag", duration=time.time() - produced_at
             )
             # print('Got Data')
             if last_acquisition:

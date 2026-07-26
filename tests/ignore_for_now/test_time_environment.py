@@ -566,7 +566,7 @@ def test_time_environment_run_environment(
     time_environment.queue_container.data_out_queue = mock_data_out_queue
     time_environment.queue_container.environment_command_queue = mock_command_queue
 
-    mock_data_in_queue.get_nowait.return_value = (np.ones((2, 2000)), False)
+    mock_data_in_queue.get_nowait.return_value = (np.ones((2, 2000)), False, 0.0)
     mock_data_out_queue.empty.return_value = True
 
     time_environment.initialize_hardware(hardware_metadata)
@@ -646,7 +646,7 @@ def test_time_environment_run_environment_final_signal_shutdown(
     time_environment.queue_container.environment_command_queue = mock_command_queue
 
     mock_data_in_queue.get_nowait.side_effect = thqueue.Empty
-    mock_data_in_queue.get.return_value = (np.ones((2, 100)), True)
+    mock_data_in_queue.get.return_value = (np.ones((2, 100)), True, 0.0)
     mock_data_out_queue.empty.return_value = True
 
     time_environment.initialize_hardware(hardware_metadata)
@@ -706,7 +706,7 @@ def test_time_environment_output(
         expected[full_level_index[0] + 1 :] = 0.8
         expected = expected.reshape(1, -1)
 
-    queued_data, last_signal = mock_data_out_queue.put.call_args.args[0]
+    queued_data, last_signal, _ = mock_data_out_queue.put.call_args.args[0]
     np.testing.assert_array_almost_equal(queued_data, expected)
     assert last_signal is False
 

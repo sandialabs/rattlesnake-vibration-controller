@@ -4,6 +4,7 @@ from typing import List
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import queue as thqueue
+import time
 
 import netCDF4 as nc4
 import openpyxl
@@ -528,7 +529,10 @@ class SkeletonEnvironment(Environment):
     def run_control(self, data: None):
         # Get data from data in queue and send it to user interface
         try:
-            acqusition_data, self.last_acqusition = self.data_in_queue.get_nowait()
+            acqusition_data, self.last_acqusition, produced_at = (
+                self.data_in_queue.get_nowait()
+            )
+            self.benchmark.record("AcquisitionQueueLag", duration=time.time() - produced_at)
             self.gui_update_queue.put(
                 (
                     self.environment_name,
@@ -541,7 +545,7 @@ class SkeletonEnvironment(Environment):
         # If required, put data to data out queue
         if self.data_out_queue.empty():
             self.data_out_queue.put(
-                (copy.deepcopy(self.output_signal), self.shutdown_flag)
+                (copy.deepcopy(self.output_signal), self.shutdown_flag, time.time())
             )
             if self.shutdown_flag:
                 self.shutdown_flag = False

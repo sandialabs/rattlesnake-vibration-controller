@@ -1,3 +1,6 @@
+import os
+import time
+
 from rattlesnake.examples.example_registry import (
     HARDWARE_DICT,
     ENVIRONMENT_DICT,
@@ -8,6 +11,7 @@ from rattlesnake.examples.example_registry import (
     EVENT_DICT,
 )
 
+from rattlesnake.benchmarking import generate_benchmark_report, plot_benchmark_data
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.main import launch_rattlesnake_ui
 from rattlesnake.hardware.hardware_utilities import HardwareType
@@ -20,11 +24,11 @@ from rattlesnake.testing.mock_helpers import (
 )
 
 """USER INPUTS"""
-THREADED = True
+THREADED = False
 TIMEOUT = 20
 IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.TRANSIENT
+ENVIRONMENT_TYPE = EnvironmentType.RANDOM
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False
@@ -96,7 +100,21 @@ def build_rattlesnake_object(
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
+    # setdefault() (rather than a module-level assignment) so this only takes
+    # effect for a direct run of this script and never as a side effect of
+    # some other tool merely importing this module, and so an explicit
+    # RATTLESNAKE_BENCHMARK=0 set before launching is still respected.
+    os.environ.setdefault("RATTLESNAKE_BENCHMARK", "1")
+
+    run_start_time = time.time()
     rattlesnake = build_rattlesnake_object()
 
     # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
     launch_rattlesnake_ui(rattlesnake)
+
+    # Post-processing step: by the time launch_rattlesnake_ui returns, every
+    # process has been joined (or force-terminated) by rattlesnake.shutdown(),
+    # so any BenchmarkRecorder data for this run has already been flushed to
+    # disk. See rattlesnake.benchmarking for details.
+    generate_benchmark_report(since=run_start_time)
+    plot_benchmark_data(since=run_start_time)
