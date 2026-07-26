@@ -259,6 +259,65 @@ class Updater(QtCore.QRunnable):
         time.sleep(1)
 
 
+class ThrottledCurveUpdater:
+    """Decouples how often a rolling time-history curve receives new data
+    from how often it is actually redrawn.
+
+    Live time-domain plots work by rolling newly-acquired samples into a
+    fixed-length buffer and pushing the whole buffer to a ``pyqtgraph``
+    curve via ``setData``.  When data arrives faster than the display can
+    usefully redraw (e.g. once acquisition buffer sizes get small), calling
+    ``setData`` on every single incoming frame makes rendering the
+    bottleneck instead of acquisition/control.
+
+    This class keeps the authoritative rolling buffer for each curve in a
+    plain ``numpy`` array (so every incoming frame is still folded in
+    immediately and cheaply, with no data ever dropped), and only pushes the
+    buffer into the curve widget - the part that actually triggers a
+    repaint - when ``flush()`` is called.  ``flush()`` is expected to be
+    driven by a fixed-rate timer (e.g. 10 Hz) rather than once per frame.
+    """
+
+    def __init__(self):
+        self._buffers = {}
+        self._dirty = set()
+
+    def roll(self, curve, new_data):
+        """Rolls ``new_data`` into the buffer backing ``curve``.
+
+        The buffer is seeded from the curve's currently displayed data the
+        first time this curve is seen, so the buffer length matches
+        whatever the curve was already initialized with.
+
+        Parameters
+        ----------
+        curve : pyqtgraph.PlotDataItem
+            The curve that will eventually be updated with the rolled data.
+        new_data : np.ndarray
+            The newest samples to roll into the buffer, oldest-to-newest.
+        """
+        if curve not in self._buffers:
+            _, y0 = curve.getData()
+            self._buffers[curve] = np.array(y0, copy=True)
+        y = self._buffers[curve]
+        self._buffers[curve] = np.concatenate(
+            (y[new_data.size :], new_data[-y.size :]), axis=0
+        )
+        self._dirty.add(curve)
+
+    def flush(self):
+        """Pushes the current buffer into every curve that has received new
+        data since the last flush, then clears the dirty set.
+
+        The curve's x-axis is left untouched (rolling time-history plots
+        keep a fixed x-axis), only the y-data is replaced.
+        """
+        for curve in self._dirty:
+            x, _ = curve.getData()
+            curve.setData(x, self._buffers[curve])
+        self._dirty.clear()
+
+
 class PlotWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 

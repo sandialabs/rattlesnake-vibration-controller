@@ -140,6 +140,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.threadpool.start(self.gui_updater)
         self.gui_updater.signals.update.connect(self.update_gui)
 
+        # Live plots are rolled into a buffer on every incoming frame (cheap),
+        # but only actually pushed to the plot widgets (which triggers a
+        # redraw) at a fixed rate, so plotting cost doesn't scale with how
+        # fast data is arriving.
+        self.plot_flush_timer = QtCore.QTimer()
+        self.plot_flush_timer.timeout.connect(self.flush_environment_plots)
+        self.plot_flush_timer.start(100)
+
         # Storage properties
         self.hardware_file = None
         self.lanxi_ip_addresses = []
@@ -528,6 +536,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 environment_ui.display_environment_started()
             else:
                 environment_ui.display_environment_ended()
+
+    def flush_environment_plots(self):
+        """Pushes any buffered live-plot data into the plot widgets.
+
+        Called on a fixed-rate timer rather than once per incoming frame, so
+        that widget redraws don't scale with how fast data is arriving from
+        acquisition.
+        """
+        for environment_ui in self.environment_uis.values():
+            environment_ui.throttled_curves.flush()
 
     def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller

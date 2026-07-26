@@ -244,9 +244,7 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
     def plot_time_data(self, data: np.array):
         response_data = data
         for curve, this_data in zip(self.plot_data_item, response_data):
-            x, y = curve.getData()
-            y = np.concatenate((y[this_data.size :], this_data[-x.size :]), axis=0)
-            curve.setData(x, y)
+            self.throttled_curves.roll(curve, this_data)
 
     def set_test_level(self, data: float):
         test_level = float(data)
