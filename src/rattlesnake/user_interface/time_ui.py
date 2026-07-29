@@ -87,7 +87,6 @@ class TimeUI(EnvironmentUI):
         self.plot_data_items = {}
 
         # Map commands
-
         self.complete_ui()
         self.connect_callbacks()
 
@@ -306,16 +305,12 @@ class TimeUI(EnvironmentUI):
         for curve, this_data in zip(
             self.plot_data_items["response_signal_measurement"], response_data
         ):
-            x, y = curve.getData()
-            y = np.concatenate((y[this_data.size :], this_data[-x.size :]), axis=0)
-            curve.setData(x, y)
+            self.throttled_curves.roll(curve, this_data)
         # Display the data
         for curve, this_output in zip(
             self.plot_data_items["output_signal_measurement"], output_data
         ):
-            x, y = curve.getData()
-            y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
-            curve.setData(x, y)
+            self.throttled_curves.roll(curve, this_output)
 
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename

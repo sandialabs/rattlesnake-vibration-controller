@@ -101,6 +101,7 @@ RATTLESNAKE_UI_PATH = os.path.join(
 )
 BUFFER_ROWS = 10
 MIN_ROWS = 30
+THROTTLED_BUFFER = 1/20
 
 
 # region User Interface
@@ -139,6 +140,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.gui_updater = Updater(self.gui_update_queue)
         self.threadpool.start(self.gui_updater)
         self.gui_updater.signals.update.connect(self.update_gui)
+
+        self.plot_flush_timer = QtCore.QTimer()
+        self.plot_flush_timer.timeout.connect(self.flush_environment_plots)
+        self.plot_flush_timer.start(int(THROTTLED_BUFFER*1000))
 
         # Storage properties
         self.hardware_file = None
@@ -528,6 +533,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 environment_ui.display_environment_started()
             else:
                 environment_ui.display_environment_ended()
+
+    def flush_environment_plots(self):
+        """
+        Pushes buffered live-plot data into the plot widgets.
+        """
+        for environment_ui in self.environment_uis.values():
+            environment_ui.throttled_curves.flush()
 
     def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller

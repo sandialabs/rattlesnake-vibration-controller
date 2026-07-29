@@ -1,7 +1,8 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Investigate viability of adding benchmarking to the program.
+[ ] Add buffer to user interface plots
+[ ] Build out read environment
 
 Stuff to check
 [ ] Figure out how to do sharing sysid data packages
@@ -28,6 +29,9 @@ Stuff for the future
 [ ] LanXI IP Manager
     [ ] This appends every channel to the ip address list instead of just the unique ones.
         [ ] I kinda want to just add a __eq__ to ip addresses and have it as a set
+
+[ ] Headless example goes to run tab when sysid enviromnet does not have a sysid loaded to it
+    [ ] Should swap this to use with ... as rattlesnake
 
 [ ] Unittests
     [ ] Finish making standard structure for unittests

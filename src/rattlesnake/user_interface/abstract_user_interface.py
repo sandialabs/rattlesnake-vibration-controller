@@ -12,7 +12,11 @@ from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.user_interface.ui_utilities import UICommands, EventWatcher
+from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
+    EventWatcher,
+    ThrottledCurve,
+)
 
 
 # region User Interface
@@ -40,6 +44,7 @@ class EnvironmentUI(ABC):
         self.run_widget = None
         self.event_thread = None
         self.event_watcher = None
+        self.throttled_curves = ThrottledCurve()
 
     # region State Sync
     @property

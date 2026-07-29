@@ -258,6 +258,37 @@ class Updater(QtCore.QRunnable):
         self.signals.finished.emit()
         time.sleep(1)
 
+class ThrottledCurve:
+    """
+    Object that allows data to be rolled into a numpy array.
+
+    This is used to contain data that needs to be plotted on a pyqtgraph without
+    having the pyqtgraph render that data whenever it is added. Allows for the
+    plots within the user interface to be throttled to render at specific timings.
+    These curves
+    """
+    def __init__(self):
+        self._buffers = {}
+        self._dirty = set()
+
+    def roll(self, curve, new_data):
+
+        if curve not in self._buffers:
+            _, y0 = curve.getData()
+            self._buffers[curve] = np.array(y0, copy=True)
+        y = self._buffers[curve]
+        self._buffers[curve] = np.concatenate(
+            (y[new_data.size :], new_data[-y.size :]), axis=0
+        )
+        self._dirty.add(curve)
+
+    def flush(self):
+
+        for curve in self._dirty:
+            x, _ = curve.getData()
+            curve.setData(x, self._buffers[curve])
+        self._dirty.clear()
+
 
 class PlotWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
