@@ -456,7 +456,7 @@ class ModalMetadata(EnvironmentMetadata):
             raise RattlesnakeError(f"Invalid Signal Type {self.signal_generator_type}")
 
         num_hardware_channels = len(hardware_metadata.channel_list)
-        if not (0 <= self.trigger_channel < num_hardware_channels):
+        if not (-1 <= self.trigger_channel < num_hardware_channels):
             raise RattlesnakeError(
                 f"{self.environment_name} trigger_channel {self.trigger_channel} "
                 f"is not a valid channel (must be between 0 and "

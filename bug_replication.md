@@ -72,39 +72,4 @@ Stuff for the future
     [ ] I need to swap queues within environments to threaded queues. This has caused major lag issues which need investigation
     [ ] This basically crashes the system identification process
 
-## Done
-[x] Add a load environment button to user interface
-[x] Modal environment throws a zero division error when there are no references selected
-    [x] Dont enable FRF/spectral stuff with no references/do a try/catch
-[x] Memory Leak
-    [x] Headless mode needs to clear the gui_update_queue at a certain size
-[x] Editable spinboxes tab out when inputting data.
-[x] Figure out how to keep the current light mode theme but change the dark theme to have
-    dark plots
-[x] Figure out how to cleanly close out Rattlesnake object when overwriting an existing rattlesnake object
-[x] System identification throws a streaming error since it is trying to start up after finishing a sysid run in headless mode
-[x] Renaming Environments
-    [x] I want to just pop up a dialog box on add_environment with a name. Disable double click renaming stuff
-    [x] Spin up/shut down environments based off name, not type
-    [x] Unique names need to be capitalization invariant as "Modal" and "MODAL" cannot be in the same workbook
-[x] Sysid environments need to write spec filenames to worksheet if they exists.
-[x] Add a save spec to sine environment
-[x] The modal FRF for the hammer hits only show after acceptance. Should probably show individual one before accepting then average.
-[x] If the Acqusition input/output never syncs, the program is unclosable/stop_acqusition does not stop this behavior.
-    [x] Stop Acqusition should be able to stop the input/output sync loop.
-[x] Prevent the log file task from writing to the same log file if two Controllers are open simultaneously
-[x] Add assist mode to virtual hardware
-    [x] Exodus
-    [x] SDynPyFRF
-    [x] StateSpace
-[x] Figure out validation for each metadata object.
-    [x] NI
-    [x] LanXI
-    [x] Exodus
-    [x] SDynPyFRF
-    [x] StateSpace
-    [x] Time
-    [x] Modal
-    [x] Sine
-    [x] Random
-    [x] Transient
+[ ] Some hardware files need time.sleeps to work at certain points in headless mode (LanXi)
