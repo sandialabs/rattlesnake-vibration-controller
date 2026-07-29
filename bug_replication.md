@@ -1,7 +1,9 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Add buffer to user interface plots
+[ ] Add buffer to other user interface plots
+[ ] Add in patch to LanXi IP Manager
+[ ] Add in IPv4 override on LanXi Generator Sockets
 [ ] Build out read environment
 
 Stuff to check
@@ -45,7 +47,6 @@ Stuff for the future
 
 [ ] Add units to each of the plots.
 
-
 ## Medium (Possible but needs a lot of verification)
 [ ] The first plot data command from the sine environment when starting from headless mode causes an error.
 
@@ -65,6 +66,7 @@ Stuff for the future
 
 ## Impossible
 [ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
+    [ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work
 
 [ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws
 
