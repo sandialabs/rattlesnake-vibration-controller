@@ -2,7 +2,7 @@
 
 Stuff to do in order
 [ ] Add buffer to other user interface plots
-[ ] Add in patch to LanXi IP Manager
+[x] Add in patch to LanXi IP Manager
 [x] Add in IPv4 override on LanXi Generator Sockets
 [ ] Build out read environment
 
@@ -27,10 +27,6 @@ Stuff for the future
 ## Easy
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
-
-[ ] LanXI IP Manager
-    [ ] This appends every channel to the ip address list instead of just the unique ones.
-        [ ] I kinda want to just add a __eq__ to ip addresses and have it as a set
 
 [ ] Headless example goes to run tab when sysid enviromnet does not have a sysid loaded to it
     [ ] Should swap this to use with ... as rattlesnake
@@ -65,8 +61,7 @@ Stuff for the future
     [ ] Make load_sys_id not require the environment to have the same name as the one that generated it
 
 ## Impossible
-[ ] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
-    [ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work
+[ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work
 
 [ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws
 
@@ -79,3 +74,9 @@ Stuff for the future
     [ ] This basically crashes the system identification process
 
 [ ] Some hardware files need time.sleeps to work at certain points in headless mode (LanXi)
+
+## Done
+[x] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
+[x] LanXI IP Manager
+    [x] This appends every channel to the ip address list instead of just the unique ones.
+        [x] I kinda want to just add a __eq__ to ip addresses and have it as a set

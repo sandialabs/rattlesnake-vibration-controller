@@ -1545,8 +1545,10 @@ class SineUI(SysIdEnvironmentUI):
                         for ah in self.achieved_response_amplitudes
                     ]
                 )
-                self.plot_data_items["control_amplitude"][0].setData(
-                    achieved_frequency, achieved_amplitude
+                self.throttled_curves.set(
+                    self.plot_data_items["control_amplitude"][0],
+                    achieved_frequency,
+                    achieved_amplitude,
                 )
             if self.achieved_response_phases is not None:
                 achieved_phase = np.concatenate(
@@ -1555,8 +1557,10 @@ class SineUI(SysIdEnvironmentUI):
                         for ph in self.achieved_response_phases
                     ]
                 )
-                self.plot_data_items["control_phase"][0].setData(
-                    achieved_frequency, achieved_phase
+                self.throttled_curves.set(
+                    self.plot_data_items["control_phase"][0],
+                    achieved_frequency,
+                    achieved_phase,
                 )
         # Go through and remove any closed windows
         self.plot_windows = [

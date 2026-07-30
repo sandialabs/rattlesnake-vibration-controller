@@ -1357,7 +1357,7 @@ class TransientUI(SysIdEnvironmentUI):
                 for curve, this_data in zip(
                     self.plot_data_items["control_signal_measurement"], response_data
                 ):
-                    x, y = curve.getOriginalDataset()
+                    x, y = self.throttled_curves.get(curve)
                     if y is not None:
                         if np.max(y) > max_y:
                             max_y = np.max(y)
@@ -1386,14 +1386,16 @@ class TransientUI(SysIdEnvironmentUI):
                             / self.hardware_metadata.sample_rate
                         )
                         y = this_data
-                    curve.setData(
-                        x[-self.max_plot_samples :], y[-self.max_plot_samples :]
+                    self.throttled_curves.set(
+                        curve,
+                        x[-self.max_plot_samples :],
+                        y[-self.max_plot_samples :],
                     )
                 # Display the data
                 for curve, this_output in zip(
                     self.plot_data_items["output_signal_measurement"], output_data
                 ):
-                    x, y = curve.getOriginalDataset()
+                    x, y = self.throttled_curves.get(curve)
                     if y is not None:
                         if self.max_plot_samples == x.size:
                             x += (this_output.size) / self.hardware_metadata.sample_rate
@@ -1418,12 +1420,16 @@ class TransientUI(SysIdEnvironmentUI):
                             / self.hardware_metadata.sample_rate
                         )
                         y = this_output
-                    curve.setData(
-                        x[-self.max_plot_samples :], y[-self.max_plot_samples :]
+                    self.throttled_curves.set(
+                        curve,
+                        x[-self.max_plot_samples :],
+                        y[-self.max_plot_samples :],
                     )
                 if signal_delay is None:
-                    self.plot_data_items["signal_range"].setData(
-                        np.ones(5) * x[-1], np.zeros(5)
+                    self.throttled_curves.set(
+                        self.plot_data_items["signal_range"],
+                        np.ones(5) * x[-1],
+                        np.zeros(5),
                     )
             case TransientUICommands.CONTROL_DATA:
                 self.last_control_data, self.last_output_data = data
@@ -1434,21 +1440,20 @@ class TransientUI(SysIdEnvironmentUI):
                     self.plot_data_items["control_signal_measurement"],
                     self.last_control_data,
                 ):
-                    x, y = curve.getOriginalDataset()
                     x = np.arange(this_data.size) / self.hardware_metadata.sample_rate
                     y = this_data
-                    curve.setData(x, y)
+                    self.throttled_curves.set(curve, x, y)
                 # Display the data
                 for curve, this_output in zip(
                     self.plot_data_items["output_signal_measurement"],
                     self.last_output_data,
                 ):
-                    x, y = curve.getOriginalDataset()
                     x = np.arange(this_output.size) / self.hardware_metadata.sample_rate
                     y = this_output
-                    curve.setData(x, y)
+                    self.throttled_curves.set(curve, x, y)
                 sr = self.hardware_metadata.sample_rate
-                self.plot_data_items["signal_range"].setData(
+                self.throttled_curves.set(
+                    self.plot_data_items["signal_range"],
                     np.array(
                         (
                             0,

@@ -270,6 +270,7 @@ class ThrottledCurve:
     """
     def __init__(self):
         self._buffers = {}
+        self._xy_buffers = {}
         self._dirty = set()
 
     def roll(self, curve, new_data):
@@ -283,11 +284,24 @@ class ThrottledCurve:
         )
         self._dirty.add(curve)
 
+    def set(self, curve, x, y):
+        self._xy_buffers[curve] = (x, y)
+        self._dirty.add(curve)
+
+    def get(self, curve):
+        if curve in self._xy_buffers:
+            return self._xy_buffers[curve]
+        return curve.getOriginalDataset()
+
     def flush(self):
 
         for curve in self._dirty:
-            x, _ = curve.getData()
-            curve.setData(x, self._buffers[curve])
+            if curve in self._xy_buffers:
+                x, y = self._xy_buffers[curve]
+                curve.setData(x, y)
+            else:
+                x, _ = curve.getData()
+                curve.setData(x, self._buffers[curve])
         self._dirty.clear()
 
 
