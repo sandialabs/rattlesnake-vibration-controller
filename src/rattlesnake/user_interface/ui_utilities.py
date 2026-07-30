@@ -259,6 +259,7 @@ class Updater(QtCore.QRunnable):
         self.signals.finished.emit()
         time.sleep(1)
 
+
 class ThrottledCurve:
     """
     Object that allows data to be rolled into a numpy array.
@@ -268,13 +269,13 @@ class ThrottledCurve:
     plots within the user interface to be throttled to render at specific timings.
     These curves
     """
+
     def __init__(self):
         self._buffers = {}
         self._xy_buffers = {}
         self._dirty = set()
 
     def roll(self, curve, new_data):
-
         if curve not in self._buffers:
             _, y0 = curve.getData()
             self._buffers[curve] = np.array(y0, copy=True)
@@ -294,7 +295,6 @@ class ThrottledCurve:
         return curve.getOriginalDataset()
 
     def flush(self):
-
         for curve in self._dirty:
             if curve in self._xy_buffers:
                 x, y = self._xy_buffers[curve]
