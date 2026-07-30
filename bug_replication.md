@@ -16,17 +16,12 @@ Stuff for the future
 [ ] Deal with minor/harder bugs
 
 ## Warnings
-[ ] Every now and then, the sine environment does not show the spec on the run tab when launching form headless mode.
-
 [ ] Transient example problem results in zero division at the end which sends TRAC values to 0
     [ ] Look into behavior of having a 0 in the transient and random spec
 
 ## Easy
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
-
-[ ] Headless example goes to run tab when sysid enviromnet does not have a sysid loaded to it
-    [ ] Should swap this to use with ... as rattlesnake
 
 [ ] Unittests
     [ ] Finish making standard structure for unittests
@@ -78,3 +73,6 @@ Stuff for the future
     [x] This appends every channel to the ip address list instead of just the unique ones.
         [x] I kinda want to just add a __eq__ to ip addresses and have it as a set
 [x] Add buffer to other user interface plots
+[x] Should swap this to use with ... as rattlesnake in headless example
+[ ] The first frame of the sine environment throws an error when plotting
+[x] Every now and then, the sine environment does not show the spec on the run tab when launching form headless mode.

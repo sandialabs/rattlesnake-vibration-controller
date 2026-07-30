@@ -493,6 +493,7 @@ class SineUI(SysIdEnvironmentUI):
                     item = QtWidgets.QTableWidgetItem("0.000")
                     widget.setItem(i, j, item)
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            # widget.setCurrentCell(0, 0) # TODO: Investigate whether launching from headless plots the wrong signal
             widget.blockSignals(False)
 
         # Set up the prediction and run plots
@@ -1534,7 +1535,7 @@ class SineUI(SysIdEnvironmentUI):
                 np.repeat(spec.breakpoint_table["frequency"], 2),
                 spec.breakpoint_table["abort"][:, 1, :, channel_index].flatten(),
             )
-        if self.achieved_excitation_frequencies is not None:
+        if self.achieved_excitation_frequencies:
             achieved_frequency = np.concatenate(
                 [fh[tone_index] for fh in self.achieved_excitation_frequencies]
             )

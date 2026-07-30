@@ -1,9 +1,7 @@
-import sys
-
-from qtpy import QtWidgets, QtCore
+from qtpy import QtCore
 
 from rattlesnake.engine import RattlesnakeController
-from rattlesnake.user_interface.user_interface import RattlesnakeUI
+from rattlesnake.main import build_rattlesnake_app
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
@@ -101,43 +99,25 @@ def launch_temporary_rattlesnake_ui_profile(
     rattlesnake: RattlesnakeController, closeout_time: float
 ):
     """
-    Function for launching rattlesnake ui with the default formatting
-    that scales correcctly.
+    Launches the rattlesnake ui, auto-starting a profile shortly after open
+    and auto-closing after closeout_time, for unattended testing.
 
     Parameters
     ----------
     rattlesnake : RattlesnakeController
         The rattlesnake controller object that the UI is going to represent.
+    closeout_time : float
+        Time, in seconds, after which the UI will automatically close.
     """
-    # Fix to scale font for different size monitors
-    font_size = 10  # pt size
-    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
-        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
-
-    # Build app
-    app = QtWidgets.QApplication(sys.argv)
-
-    # Scale app to current monitor
-    screen = app.primaryScreen()
-    dpi = screen.logicalDotsPerInch()
-    scale_factor = dpi / 96  # 96 DPI
-    font = app.font()
-    font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
-    app.setFont(font)
-
-    # Execute UI object
-    ui = RattlesnakeUI(rattlesnake)
+    app, ui = build_rattlesnake_app(rattlesnake)
+    ui.show()
     QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
     profile_start = 20
     QtCore.QTimer.singleShot(int(profile_start * 1000), ui.start_profile)
     app.exec_()
 
     # Shutdown processes
+    ui.shutdown()
     rattlesnake.shutdown()
 
 
@@ -145,41 +125,23 @@ def launch_temporary_rattlesnake_ui_environment(
     rattlesnake: RattlesnakeController, closeout_time: float
 ):
     """
-    Function for launching rattlesnake ui with the default formatting
-    that scales correcctly.
+    Launches the rattlesnake ui, auto-stopping acquisition partway through
+    and auto-closing after closeout_time, for unattended testing.
 
     Parameters
     ----------
     rattlesnake : RattlesnakeController
         The rattlesnake controller object that the UI is going to represent.
+    closeout_time : float
+        Time, in seconds, after which the UI will automatically close.
     """
-    # Fix to scale font for different size monitors
-    font_size = 10  # pt size
-    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
-        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
-
-    # Build app
-    app = QtWidgets.QApplication(sys.argv)
-
-    # Scale app to current monitor
-    screen = app.primaryScreen()
-    dpi = screen.logicalDotsPerInch()
-    scale_factor = dpi / 96  # 96 DPI
-    font = app.font()
-    font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
-    app.setFont(font)
-
-    # Execute UI object
-    ui = RattlesnakeUI(rattlesnake)
+    app, ui = build_rattlesnake_app(rattlesnake)
+    ui.show()
     QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
     environment_end = 40
     QtCore.QTimer.singleShot(int(environment_end * 1000), ui.stop_acquisition)
     app.exec_()
 
     # Shutdown processes
+    ui.shutdown()
     rattlesnake.shutdown()
