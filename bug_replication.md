@@ -3,7 +3,7 @@
 Stuff to do in order
 [ ] Add buffer to other user interface plots
 [ ] Add in patch to LanXi IP Manager
-[ ] Add in IPv4 override on LanXi Generator Sockets
+[x] Add in IPv4 override on LanXi Generator Sockets
 [ ] Build out read environment
 
 Stuff to check

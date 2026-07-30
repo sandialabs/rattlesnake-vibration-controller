@@ -1306,6 +1306,7 @@ class LanXIOutput(HardwareOutput):
         self.buffer_size = 5
         self.ready_signal_factor = BUFFER_SIZE
         self.ping_alive_event = ping_alive_event
+        self.ipv4_lookup = {}
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         self.maximum_processes = test_data.maximum_acquisition_processes
@@ -1333,6 +1334,10 @@ class LanXIOutput(HardwareOutput):
                 if not address == self.master_address
             ]
         )
+        self.ipv4_lookup = {
+            ipv6_address: ipv4_address
+            for ipv4_address, ipv6_address in test_data.ipv6_dict.items()
+        }
         print("\nInitial States:")
         self._get_states()
         self.ping_alive_event.set()
@@ -1757,22 +1762,10 @@ class LanXIOutput(HardwareOutput):
                 if generator_device not in self.sockets:
                     self.sockets[generator_device] = {}
 
-                is_ipv4 = re.search(IPV4_PATTERN, generator_device) is not None
-                is_ipv6 = re.search(IPV6_PATTERN, generator_device) is not None
-                if is_ipv4:
-                    self.sockets[generator_device][output["number"]] = socket.socket(
-                        socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
+                self.sockets[generator_device][output["number"]] = (
+                    self._connect_generator_socket(
+                        generator_device, output["inputs"][0]["port"]
                     )
-                elif is_ipv6:
-                    self.sockets[generator_device][output["number"]] = socket.socket(
-                        socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP
-                    )
-                else:  # This will crash but is fixed in overhaul version so...
-                    self.sockets[generator_device][output["number"]] = socket.socket(
-                        socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
-                    )
-                self.sockets[generator_device][output["number"]].connect(
-                    (generator_device, output["inputs"][0]["port"])
                 )
                 print(
                     f"Output Connected to Device {generator_device} Channel {output['number']} "
@@ -1784,6 +1777,77 @@ class LanXIOutput(HardwareOutput):
                     / self.sample_rate
                 )
             print(f"Output overampling factor: {self.oversample_factor}x")
+
+    def _connect_generator_socket(self, generator_device, port, attempts=5, delay=0.5):
+        """
+        Connects a TCP socket to a LAN-XI generator stream.
+
+        This defaults to IPv4 due to LAN-XI firware bugs which prevents IPv6 reconnect.
+        """
+        host = self._strip_ipv6_brackets(generator_device)
+        generator_socket, exc = self._try_connect_generator_socket(
+            host, port, attempts, delay
+        )
+        if generator_socket is not None:
+            return generator_socket
+
+        ipv4_device = self.ipv4_lookup.get(generator_device)
+        if ipv4_device is None or ipv4_device == generator_device:
+            raise LanXIError(
+                f"Could not connect to LAN-XI generator socket {generator_device}:"
+                f"{port} after {attempts} attempts: {exc}"
+            )
+
+        print(
+            f"Generator socket connect to {generator_device}:{port} failed "
+            f"({exc}); retrying over IPv4 address {ipv4_device}"
+        )
+        generator_socket, exc = self._try_connect_generator_socket(
+            ipv4_device, port, attempts, delay
+        )
+        if generator_socket is not None:
+            return generator_socket
+
+        raise LanXIError(
+            f"Could not connect to LAN-XI generator socket {generator_device}:{port} "
+            f"(IPv4 fallback {ipv4_device}:{port} also failed): {exc}"
+        )
+
+    @staticmethod
+    def _strip_ipv6_brackets(device):
+        """
+        LAN-XI REST calls use bracketed IPv6 literals like '[fe80::1%20]',
+        but socket.getaddrinfo/connect need the address without brackets.
+        """
+        device = device.strip()
+        if device.startswith("[") and device.endswith("]"):
+            return device[1:-1]
+        return device
+
+    def _try_connect_generator_socket(self, host, port, attempts, delay):
+        """
+        Attempts a getaddrinfo-resolved TCP connect, retrying on failure.
+        """
+        last_exc = None
+        for attempt in range(attempts):
+            try:
+                candidates = socket.getaddrinfo(
+                    host, port, socket.AF_UNSPEC, socket.SOCK_STREAM, socket.IPPROTO_TCP
+                )
+            except OSError as exc:
+                last_exc = exc
+                candidates = []
+            for family, socktype, proto, _, sockaddr in candidates:
+                generator_socket = socket.socket(family, socktype, proto)
+                try:
+                    generator_socket.connect(sockaddr)
+                    return generator_socket, None
+                except OSError as exc:
+                    generator_socket.close()
+                    last_exc = exc
+            if attempt < attempts - 1:
+                time.sleep(delay)
+        return None, last_exc
 
     def close(self, reboot=False):
         """Method to close down the hardware"""
