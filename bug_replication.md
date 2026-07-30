@@ -1,9 +1,6 @@
 # Ranking bugs based on time/ease of fix
 
 Stuff to do in order
-[ ] Add buffer to other user interface plots
-[x] Add in patch to LanXi IP Manager
-[x] Add in IPv4 override on LanXi Generator Sockets
 [ ] Build out read environment
 
 Stuff to check
@@ -44,7 +41,6 @@ Stuff for the future
 [ ] Add units to each of the plots.
 
 ## Medium (Possible but needs a lot of verification)
-[ ] The first plot data command from the sine environment when starting from headless mode causes an error.
 
 ## Hard (Major issues are going to happen)
 [ ] Figure out issue with changing font size in jupyter notebooks.
@@ -61,9 +57,10 @@ Stuff for the future
     [ ] Make load_sys_id not require the environment to have the same name as the one that generated it
 
 ## Impossible
-[ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work
+[ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work.
+    [ ] Should probably create a notebook to recreate this issue for BK issues tab
 
-[ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws
+[ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws.
 
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
     [ ] Should probably just stop profile events from firing if this happens.
@@ -80,3 +77,4 @@ Stuff for the future
 [x] LanXI IP Manager
     [x] This appends every channel to the ip address list instead of just the unique ones.
         [x] I kinda want to just add a __eq__ to ip addresses and have it as a set
+[x] Add buffer to other user interface plots

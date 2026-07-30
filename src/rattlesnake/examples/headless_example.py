@@ -96,7 +96,6 @@ def build_rattlesnake_object(
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
-    rattlesnake = build_rattlesnake_object()
-
-    # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
-    launch_rattlesnake_ui(rattlesnake)
+    with build_rattlesnake_object() as rattlesnake:
+        # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
+        launch_rattlesnake_ui(rattlesnake)
