@@ -467,7 +467,7 @@ class ModalMetadata(EnvironmentMetadata):
             "reference_channel_indices",
             self.reference_channel_indices,
             num_hardware_channels,
-            require_nonempty=True,
+            require_nonempty=False,
         )
         self._validate_channel_indices(
             "response_channel_indices",
@@ -535,7 +535,7 @@ class ModalMetadata(EnvironmentMetadata):
         if self.signal_generator_type in band_types:
             min_frequency = self.signal_generator_min_frequency
             max_frequency = self.signal_generator_max_frequency
-            if not (0 <= min_frequency < max_frequency <= self.nyquist_frequency):
+            if not (0 <= min_frequency <= max_frequency <= self.nyquist_frequency):
                 raise RattlesnakeError(
                     f"{self.environment_name} signal generator frequencies must "
                     f"satisfy 0 <= minimum < maximum <= nyquist frequency "

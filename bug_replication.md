@@ -24,14 +24,14 @@ Stuff for the future
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
 [ ] Unittests
-    [ ] Finish making standard structure for unittests
-    [ ] Go through and comment/verify unit tests
+    [ ] Finish making standard structure for unittests.
+    [ ] Go through and comment/verify unit tests.
 
-[ ] Build out notebook example
+[ ] Build out notebook example.
 
 [ ] Finish implementation of Read Environment.
 
-[ ] Write guide for building out new environments
+[ ] Write guide for building out new environments.
 
 [ ] Add units to each of the plots.
 
@@ -39,8 +39,8 @@ Stuff for the future
 
 ## Hard (Major issues are going to happen)
 [ ] Figure out issue with changing font size in jupyter notebooks.
-    [ ] A lot of the time this is an import order issue
-    [ ] Can be fixed by inserting font sizes in __init__.py of rattlesnake
+    [ ] A lot of the time this is an import order issue.
+    [ ] Can be fixed by inserting font sizes in __init__.py of rattlesnake but I really dont want to do this.
 
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
     [ ] This is an internal event done to sync the environment user interface before performing the list.
@@ -66,13 +66,3 @@ Stuff for the future
     [ ] This basically crashes the system identification process
 
 [ ] Some hardware files need time.sleeps to work at certain points in headless mode (LanXi)
-
-## Done
-[x] Figure out issue with closing generator sockets in lanxi hardware multiprocessing
-[x] LanXI IP Manager
-    [x] This appends every channel to the ip address list instead of just the unique ones.
-        [x] I kinda want to just add a __eq__ to ip addresses and have it as a set
-[x] Add buffer to other user interface plots
-[x] Should swap this to use with ... as rattlesnake in headless example
-[ ] The first frame of the sine environment throws an error when plotting
-[x] Every now and then, the sine environment does not show the spec on the run tab when launching form headless mode.
