@@ -23,6 +23,11 @@ Stuff for the future
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
+[ ] Rattlesnake.log goes to the examples folder for headless_example
+
+[ ] SDynPy System example throws an error when loaded from netcdf
+    [ ] Do SDynPy System + Modal + initialize hardware/environment > initialize_hardware > random signal > intialize_environment
+
 [ ] Add in new ping alive events into lanxi intialize hardware
 
 [ ] Unittests
