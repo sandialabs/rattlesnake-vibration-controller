@@ -27,6 +27,7 @@ from rattlesnake.utilities import (
     QueueContainer,
     RattlesnakeError,
     VerboseMessageQueue,
+    add_unique_ip_address,
     align_signals,
     autofill_single_ip_address,
     coherence,
@@ -566,6 +567,109 @@ def test_search_for_lanxi_devices(mock_perf_counter, mock_find_lanxi_devices):
     devices = search_for_lanxi_devices(timeout=1.0)
 
     assert devices == [device_2]
+
+
+def test_ip_address_eq_prioritizes_ipv6_over_ipv4_and_host_name():
+    """
+    Verifies that two addresses sharing an ipv6_address are equal even when
+    their ipv4_address/host_name differ.
+    """
+    address_1 = IPAddress(host_name="BK1", ipv4_address="1.1.1.1", ipv6_address="[fe80::1]")
+    address_2 = IPAddress(host_name="BK2", ipv4_address="2.2.2.2", ipv6_address="[fe80::1]")
+
+    assert address_1 == address_2
+
+
+def test_ip_address_eq_falls_back_to_ipv4_when_no_shared_ipv6():
+    """
+    Verifies that addresses without a shared ipv6_address fall back to
+    comparing ipv4_address.
+    """
+    address_1 = IPAddress(host_name="BK1", ipv4_address="1.1.1.1")
+    address_2 = IPAddress(host_name="BK2", ipv4_address="1.1.1.1")
+
+    assert address_1 == address_2
+
+
+def test_ip_address_eq_falls_back_to_host_name_when_no_shared_ipv4_or_ipv6():
+    """
+    Verifies that addresses without any shared ipv6_address/ipv4_address
+    fall back to comparing host_name.
+    """
+    address_1 = IPAddress(host_name="BK3050-123456")
+    address_2 = IPAddress(host_name="BK3050-123456")
+
+    assert address_1 == address_2
+
+
+def test_ip_address_eq_false_when_no_comparable_field_shared():
+    """
+    Verifies addresses with no overlapping non-None field are not equal,
+    even if the values would coincidentally line up across fields.
+    """
+    address_1 = IPAddress(host_name="BK3050-123456")
+    address_2 = IPAddress(ipv4_address="1.1.1.1")
+
+    assert address_1 != address_2
+
+
+def test_ip_address_merge_fills_in_missing_fields_without_conflict():
+    """
+    Verifies merging two equal addresses fills in fields missing from
+    either side and does not flag a conflict.
+    """
+    existing = IPAddress(host_name=None, ipv4_address="1.1.1.1", ipv6_address="[fe80::1]")
+    candidate = IPAddress(host_name="BK3050-123456", ipv4_address=None, ipv6_address="[fe80::1]")
+
+    merged, conflict = existing.merge(candidate)
+
+    assert conflict is False
+    assert merged.host_name == "BK3050-123456"
+    assert merged.ipv4_address == "1.1.1.1"
+    assert merged.ipv6_address == "[fe80::1]"
+
+
+def test_ip_address_merge_flags_conflict_on_disagreeing_lower_priority_field():
+    """
+    Verifies merging two addresses that share an ipv6_address but disagree
+    on ipv4_address is flagged as a conflict and marked unvalidated.
+    """
+    existing = IPAddress(ipv4_address="1.1.1.1", ipv6_address="[fe80::1]", valid_ip=True)
+    candidate = IPAddress(ipv4_address="2.2.2.2", ipv6_address="[fe80::1]", valid_ip=True)
+
+    merged, conflict = existing.merge(candidate)
+
+    assert conflict is True
+    assert merged.valid_ip is False
+
+
+def test_add_unique_ip_address_appends_new_address():
+    """
+    Verifies a non-matching candidate is appended to the list.
+    """
+    unique_addresses = [IPAddress(ipv4_address="1.1.1.1")]
+    candidate = IPAddress(ipv4_address="2.2.2.2")
+
+    conflict = add_unique_ip_address(unique_addresses, candidate)
+
+    assert conflict is False
+    assert unique_addresses == [IPAddress(ipv4_address="1.1.1.1"), candidate]
+
+
+def test_add_unique_ip_address_merges_matching_address_instead_of_appending():
+    """
+    Verifies a candidate considered equal to an existing entry is merged in
+    place instead of appended as a duplicate.
+    """
+    unique_addresses = [IPAddress(host_name="BK1", ipv4_address="1.1.1.1")]
+    candidate = IPAddress(ipv4_address="1.1.1.1")
+
+    conflict = add_unique_ip_address(unique_addresses, candidate)
+
+    assert conflict is False
+    assert len(unique_addresses) == 1
+    assert unique_addresses[0].host_name == "BK1"
+    assert unique_addresses[0].ipv4_address == "1.1.1.1"
 
 
 @mock.patch("rattlesnake.utilities.IPAddress.get_ip_from_host_name")

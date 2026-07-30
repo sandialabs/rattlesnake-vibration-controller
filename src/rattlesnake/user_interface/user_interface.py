@@ -1353,37 +1353,28 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Creates an IP Lookup window"""
         ipv4_pattern = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
         ipv6_pattern = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
-        stored_addresses = self.lanxi_ip_addresses
 
-        bknum = []
-        ipv4 = []
-        ipv6 = []
-        for ip_address in stored_addresses:
-            bknum.append(ip_address.host_name)
-            ipv4.append(ip_address.ipv4_address)
-            ipv6.append(ip_address.ipv6_address)
+        # Copy so we don't touch self.lanxi_ip_addresses until the manager closes
+        candidate_addresses = list(self.lanxi_ip_addresses)
 
-        # Loop through table devices and append unique IP addresses
+        # Loop through table devices and append candidate IP addresses. The
+        # manager itself is responsible for deduplicating/merging these.
         for row in range(self.channel_table.rowCount()):
             table_item = self.channel_table.item(row, 10)
             if table_item is None:
                 table_text = ""
             else:
                 table_text = table_item.text()
+            if table_text == "":
+                continue
             if re.search(ipv4_pattern, table_text) is not None:
-                if table_text not in ipv4:
-                    stored_addresses.append(IPAddress(None, table_text, None))
-                    ipv4.append(table_text)
+                candidate_addresses.append(IPAddress(None, table_text, None))
             elif re.search(ipv6_pattern, table_text) is not None:
-                if table_text not in ipv6:
-                    stored_addresses.append(IPAddress(None, None, table_text))
-                    ipv6.append(table_text)
-            elif table_text != "":
-                if table_text not in bknum:
-                    stored_addresses.append(IPAddress(table_text, None, None))
-                    bknum.append(table_text)
+                candidate_addresses.append(IPAddress(None, None, table_text))
+            else:
+                candidate_addresses.append(IPAddress(table_text, None, None))
 
-        ip_manager = IPAddressManager(stored_addresses)
+        ip_manager = IPAddressManager(candidate_addresses)
         ip_manager.exec()
         self.lanxi_ip_addresses = ip_manager.ip_addresses
 

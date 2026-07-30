@@ -47,6 +47,7 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
     GlobalCommands,
     IPAddress,
+    add_unique_ip_address,
     autofill_single_ip_address,
     search_for_lanxi_devices,
 )
@@ -1487,6 +1488,7 @@ class IPAddressManager(QtWidgets.QDialog):
 
         self.ip_addresses = []
         self.unique_indices = []
+        self.needs_revalidation = False
         for address in ip_addresses:
             self.add_ip_address(ip_address=address)
         self.max_processes = 10
@@ -1496,6 +1498,11 @@ class IPAddressManager(QtWidgets.QDialog):
 
         self.refresh_ip_table()
         self.loading_bar.hide()
+
+        if self.needs_revalidation:
+            self.autofill_ip_addresses()
+            self.refresh_ip_table()
+            self.needs_revalidation = False
 
         self.connect_callbacks()
 
@@ -1591,6 +1598,11 @@ class IPAddressManager(QtWidgets.QDialog):
         # Find which IP addresses are valid
         for address in ip_addresses:
             self.add_ip_address(ip_address=address)
+
+        if self.needs_revalidation:
+            self.autofill_ip_addresses()
+            self.needs_revalidation = False
+
         self.refresh_ip_table()
 
     def clear_ip_addresses(self):
@@ -1609,12 +1621,31 @@ class IPAddressManager(QtWidgets.QDialog):
         clicked=None,
         ip_address=None,
     ):  # pylint: disable=unused-argument
-        """Adds a new IP address to the manager"""
+        """Adds a new IP address to the manager.
+
+        If ``ip_address`` is equivalent to one already in the manager (per
+        ``IPAddress.__eq__``, which matches on ipv6 > ipv4 > host name), it is
+        merged into that existing row instead of being appended as a
+        duplicate.
+        """
         if isinstance(ip_address, IPAddress):
-            new_ip = ip_address
+            previous_count = len(self.ip_addresses)
+            if add_unique_ip_address(self.ip_addresses, ip_address):
+                self.needs_revalidation = True
+            if len(self.ip_addresses) == previous_count:
+                # Merged into an existing row rather than being appended as
+                # a new one, so just refresh that row's displayed text.
+                merged_row = next(
+                    row
+                    for row, address in enumerate(self.ip_addresses)
+                    if address == ip_address
+                )
+                self.refresh_ip_table([merged_row])
+                return
+            new_ip = self.ip_addresses[-1]
         else:
             new_ip = IPAddress()
-        self.ip_addresses.append(new_ip)
+            self.ip_addresses.append(new_ip)
         unique_index = 0
         while unique_index in self.unique_indices:
             unique_index += 1
@@ -1862,6 +1893,10 @@ class IPAddressManager(QtWidgets.QDialog):
 
         for address in ip_addresses:
             self.add_ip_address(ip_address=address)
+
+        if self.needs_revalidation:
+            self.autofill_ip_addresses()
+            self.needs_revalidation = False
 
         self.refresh_ip_table()
 

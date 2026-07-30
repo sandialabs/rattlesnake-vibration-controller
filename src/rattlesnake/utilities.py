@@ -784,6 +784,79 @@ class IPAddress:
         except Exception:
             self.valid_ip = False
 
+    def __eq__(self, other):
+        """
+        The equality of addresses takes priority of ipv6 > ipv4 > bknum. This order
+        is chosen based off the priority of validation as well as how reliable each
+        connection is.
+        """
+        if not isinstance(other, IPAddress):
+            return NotImplemented
+        if self.ipv6_address is not None and other.ipv6_address is not None:
+            return self.ipv6_address == other.ipv6_address
+        if self.ipv4_address is not None and other.ipv4_address is not None:
+            return self.ipv4_address == other.ipv4_address
+        if self.host_name is not None and other.host_name is not None:
+            return self.host_name == other.host_name
+        return False
+
+    # Equality is content-based on mutable fields, so instances are not safe
+    # to use as dict/set keys.
+    __hash__ = None
+
+    def merge(self, other):
+        """
+        Combines this address with another address that ``__eq__``
+        considers the same device, keeping whichever fields are filled in.
+        """
+        merged = IPAddress()
+        conflict = False
+        for attr in ("ipv6_address", "ipv4_address", "host_name"):
+            self_value = getattr(self, attr)
+            other_value = getattr(other, attr)
+            if self_value is not None and other_value is not None and self_value != other_value:
+                conflict = True
+            setattr(merged, attr, self_value if self_value is not None else other_value)
+
+        if conflict:
+            merged.valid_ip = False
+            merged.module_info = None
+            merged.sync_type = None
+        else:
+            merged.valid_ip = self.valid_ip or other.valid_ip
+            merged.module_info = self.module_info or other.module_info
+            merged.sync_type = self.sync_type or other.sync_type
+
+        return merged, conflict
+
+
+def add_unique_ip_address(unique_addresses, candidate):
+    """Adds ``candidate`` into ``unique_addresses`` in place, merging it into
+    an existing entry (per ``IPAddress.__eq__``/``merge``) instead of
+    appending a duplicate when an equivalent address is already present.
+
+    Parameters
+    ----------
+    unique_addresses : list[IPAddress]
+        The list to add to. Modified in place.
+    candidate : IPAddress
+        The address to add or merge.
+
+    Returns
+    -------
+    bool
+        True if the candidate was merged into an existing entry and that
+        merge disagreed on a field, meaning the merged entry needs to be
+        re-validated against the device.
+    """
+    for index, existing in enumerate(unique_addresses):
+        if existing == candidate:
+            merged, conflict = existing.merge(candidate)
+            unique_addresses[index] = merged
+            return conflict
+    unique_addresses.append(candidate)
+    return False
+
 
 # endregion
 
