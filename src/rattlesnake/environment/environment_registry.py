@@ -47,6 +47,20 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_CLASS[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.SYSID_SKELETON] = skeleton_sysid_process
             SYSID_ENVIRONMENTS.append(EnvironmentType.SYSID_SKELETON)
+        case EnvironmentType.READ:
+            from rattlesnake.environment.read_environment import (
+                ReadCommands,
+                ReadMetadata,
+                ReadInstructions,
+                ReadEnvironment,
+                read_process,
+            )
+
+            ENVIRONMENT_COMMANDS[EnvironmentType.READ] = ReadCommands
+            ENVIRONMENT_METADATA[EnvironmentType.READ] = ReadMetadata
+            ENVIRONMENT_INSTRUCTION[EnvironmentType.READ] = ReadInstructions
+            ENVIRONMENT_CLASS[EnvironmentType.READ] = ReadEnvironment
+            ENVIRONMENT_PROCESS[EnvironmentType.READ] = read_process
         case EnvironmentType.TIME:
             from rattlesnake.environment.time_environment import (
                 TimeCommands,
