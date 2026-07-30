@@ -23,13 +23,20 @@ Stuff for the future
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
+[ ] Add in new ping alive events into lanxi intialize hardware
+
 [ ] Unittests
     [ ] Finish making standard structure for unittests.
     [ ] Go through and comment/verify unit tests.
 
 [ ] Build out notebook example.
 
+[ ] Skeleton/Read environments take a suspiciously long time to intialize enviornment
+
 [ ] Finish implementation of Read Environment.
+    [ ] Add callbacks to when the window spinbox value is changed
+    [ ] Edit the profile commands to block signals of that spinbox
+    [ ] Add logic to the plot enabled table
 
 [ ] Write guide for building out new environments.
 
@@ -52,6 +59,8 @@ Stuff for the future
     [ ] Make load_sys_id not require the environment to have the same name as the one that generated it
 
 ## Impossible
+[ ] Weird BrokenPipeError when rattlesnake.shutdown with LanXi
+
 [ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work.
     [ ] Should probably create a notebook to recreate this issue for BK issues tab
 
