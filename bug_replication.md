@@ -1,9 +1,18 @@
 # Adaptive Buffer Stuff
 The goal for the adaptive buffer size is to get the Rattlesnake software to a point where we can
 benchmark it and make meaningful changes to optimize the program. The goals for this refactor are:
-[ ] Clean up control loops to allow for easier human readability
+[x] Clean up control loops to allow for easier human readability
+[x] Add in buffers to the user interface so that it does not crash when updating a lot
 [ ] Add in adaptive buffer sizes/read sizes so that the program runs as fast as possible
-[ ] Add in buffers to the user interface so that it does not crash when updating a lot
+    [ ] The way I want this to work is that each environment predicts the output for the next ~0.25 seconds
+    [ ] The ammount of data each environment gets is based off the time per read which will change adaptively
+    [ ] Each environment will output data to the output process everytime they get data comming in
+    [ ] When the output process gets this data, it will overide the stale prediction
+        [ ] Output will sync with input to see which input sample each output sample corresponds to
+        [ ] Output will assume this does not vary over time
+        [ ] The logic for staleness is as follows
+            [ ] If acqusition sends 0.1 data to the environment
+            [ ] Output is assuming that the last 0.1 data 
 [ ] Build out a benchmarking tool that gets runtime statistics for each read/write loop
     [ ] I want this to ONLY do statistics when the environment is active so I can see exactly
         where bottlenecks are arrising.
