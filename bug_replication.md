@@ -1,7 +1,5 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
-[ ] Deal with keyboard interrupt issues
-[ ] Build out buttons for read environment
 
 Stuff to check
 [ ] Figure out how to do sharing sysid data packages
@@ -22,16 +20,8 @@ Stuff for the future
 [ ] Run Sysid results in zero division with virtual hardware due to no noise signal
 
 ## Easy
-[ ] Fix keyboard interrupt
-
-[ ] Read environment
-    [ ] Add in enable all/disable all/enable/disable buttons
-
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
-
-[ ] SDynPy System example throws an error when loaded from netcdf
-    [ ] Do SDynPy System + Modal + initialize hardware/environment > initialize_hardware > random signal > intialize_environment
 
 [ ] Add in new ping alive events into lanxi intialize hardware
 
@@ -40,11 +30,6 @@ Stuff for the future
     [ ] Go through and comment/verify unit tests.
 
 [ ] Build out notebook example.
-
-[ ] Finish implementation of Read Environment.
-    [ ] Add callbacks to when the window spinbox value is changed
-    [ ] Edit the profile commands to block signals of that spinbox
-    [ ] Add logic to the plot enabled table
 
 [ ] Write guide for building out new environments.
 
@@ -65,8 +50,6 @@ Stuff for the future
     [ ] Make load_sys_id not require the environment to have the same name as the one that generated it
 
 ## Impossible
-[ ] Weird BrokenPipeError when rattlesnake.shutdown with LanXi
-
 [ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work.
     [ ] Should probably create a notebook to recreate this issue for BK issues tab
 
@@ -92,3 +75,11 @@ Stuff for the future
     [x] Functions that compare metadata objects/netcdf files/worksheets.
 [x] Skeleton/Read environments take a suspiciously long time to intialize enviornment
 [x] Rattlesnake.log goes to the examples folder for headless_example
+[x] Finish implementation of Read Environment.
+    [x] Add callbacks to when the window spinbox value is changed
+    [x] Edit the profile commands to block signals of that spinbox
+    [x] Add logic to the plot enabled table
+    [x] Add in enable all/disable all/enable/disable buttons
+[x] Fix keyboard interrupt
+[x] SDynPy System example throws an error when loaded from netcdf
+[x] Weird BrokenPipeError when rattlesnake.shutdown with LanXi
