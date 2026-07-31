@@ -59,6 +59,14 @@ class ReadUI(EnvironmentUI):
         self.run_widget.window_size_spinbox.editingFinished.connect(
             self.change_window_size
         )
+        self.run_widget.check_all_button.clicked.connect(self.check_all_channels)
+        self.run_widget.uncheck_all_button.clicked.connect(self.uncheck_all_channels)
+        self.run_widget.check_selected_button.clicked.connect(
+            self.check_selected_channels
+        )
+        self.run_widget.uncheck_selected_button.clicked.connect(
+            self.uncheck_selected_channels
+        )
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -121,6 +129,24 @@ class ReadUI(EnvironmentUI):
             return
         for curve, checkbox in zip(self.plot_data_item, self.channel_enable_checkboxes):
             curve.setVisible(checkbox.isChecked())
+
+    def check_all_channels(self):
+        for checkbox in self.channel_enable_checkboxes:
+            checkbox.setChecked(True)
+
+    def uncheck_all_channels(self):
+        for checkbox in self.channel_enable_checkboxes:
+            checkbox.setChecked(False)
+
+    def check_selected_channels(self):
+        select = self.run_widget.channel_enable_table.selectionModel()
+        for row in select.selectedRows():
+            self.channel_enable_checkboxes[row.row()].setChecked(True)
+
+    def uncheck_selected_channels(self):
+        select = self.run_widget.channel_enable_table.selectionModel()
+        for row in select.selectedRows():
+            self.channel_enable_checkboxes[row.row()].setChecked(False)
 
     def get_environment_metadata(self, global_channel_list: list[Channel]):
         if self.hardware_metadata and global_channel_list:
