@@ -105,11 +105,10 @@ class ReadUI(EnvironmentUI):
             self.run_widget.window_size_spinbox.value()
             * self.hardware_metadata.sample_rate
         )
+        x = np.arange(num_samples) / self.hardware_metadata.sample_rate
+        y = np.zeros(num_samples)
         for curve in self.plot_data_item:
-            curve.setData(
-                np.arange((num_samples)) / self.hardware_metadata.sample_rate,
-                np.zeros(num_samples),
-            )
+            curve.setData(x, y)
 
         for checkbox in self.channel_enable_checkboxes:
             checkbox.setChecked(True)

@@ -80,11 +80,10 @@ class SkeletonUI(EnvironmentUI):
             environment_metadata.example_window_size
             * self.hardware_metadata.sample_rate
         )
+        x = np.arange(num_samples) / self.hardware_metadata.sample_rate
+        y = np.zeros(num_samples)
         for curve in self.plot_data_item:
-            curve.setData(
-                np.arange((num_samples)) / self.hardware_metadata.sample_rate,
-                np.zeros(num_samples),
-            )
+            curve.setData(x, y)
 
         return super().initialize_environment(environment_metadata)
 
