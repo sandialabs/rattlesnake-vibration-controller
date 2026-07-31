@@ -22,12 +22,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import atexit
-import copy
 import ctypes
 import multiprocessing as mp
 import os
 import re
+import signal
 import sys
 import time
 import traceback
@@ -212,6 +211,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Store any presets within Rattlesnake to UI
         self.load_ui_from_rattlesnake()
+
+        # Shutdown UI during app.exec_ keyboard interupt
+        self._previous_sigint_handler = signal.signal(
+            signal.SIGINT, self.on_keyboard_interrupt
+        )
+        self._shutdown_complete = False
 
     def __del__(self):
         try:
@@ -2847,9 +2852,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         super().show()
 
+    def on_keyboard_interrupt(self, signum, frame):
+        self.close()
+
     def shutdown(self):
+        if self._shutdown_complete:
+            return
+        print("Rattlesnake UI Shutting Down")
         self.gui_update_queue.put((GlobalCommands.QUIT, None))
         self.threadpool.waitForDone()
+        self._shutdown_complete = True
 
     def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
         """

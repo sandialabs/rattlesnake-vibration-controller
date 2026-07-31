@@ -76,34 +76,5 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
-def keyboard_interrupt_issue():
-
-    rattlesnake = build_example_rattlesnake_object(
-        threaded=False,
-        timeout=20,
-        import_method="manual",
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.RANDOM,
-        stream_type=StreamType.NO_STREAM,
-        load_sysid=True,
-        run_sysid=False,
-        start_hardware=True,
-        start_environment=True,
-        run_profile=False,
-    )
-
-
 if __name__ == "__main__":
-    rattlesnake = build_example_rattlesnake_object(
-        threaded=False,
-        timeout=20,
-        import_method="manual",
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.RANDOM,
-        stream_type=StreamType.NO_STREAM,
-        load_sysid=True,
-        run_sysid=False,
-        start_hardware=True,
-        start_environment=True,
-        run_profile=False,
-    )
+    pass

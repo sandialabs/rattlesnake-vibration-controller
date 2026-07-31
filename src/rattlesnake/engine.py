@@ -1,4 +1,3 @@
-import atexit
 from datetime import datetime
 from enum import Enum
 import multiprocessing as mp
@@ -322,6 +321,8 @@ class RattlesnakeController:
         # controller
         self.last_stream_metadata = None
         self.last_profile_event_list = []
+
+        self._shutdown_complete = False
 
         if self.blocking:
             ready_event_list = [
@@ -1242,6 +1243,8 @@ class RattlesnakeController:
 
     # region Shutdown
     def shutdown(self):
+        if self._shutdown_complete:
+            return
         print("Rattlesnake Shutting Down")
         if self.state in (
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -1334,6 +1337,13 @@ class RattlesnakeController:
         if self.log_file_process.is_alive():
             self.log_file_process.terminate()
             self.log_file_process.join()
+
+        try:
+            self.controller_queue_name_manager.shutdown()
+        except Exception:
+            print("Failed Manager Shutdown")
+
+        self._shutdown_complete = True
 
     def log(self, string):
         """Pass a message to the log_file_queue along with date/time and task name

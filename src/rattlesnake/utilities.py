@@ -182,8 +182,11 @@ class VerboseMessageQueue:
     def log_name(self):
         """The name used to identify this queue in log messages"""
         if self.environment_name:
-            env = self.environment_name.value
-            return f"{self.base_name} | {env}" if env else self.base_name
+            try:
+                env = self.environment_name.value
+                return f"{self.base_name} | {env}" if env else self.base_name
+            except Exception:
+                return self.base_name
 
         return self.base_name
 
