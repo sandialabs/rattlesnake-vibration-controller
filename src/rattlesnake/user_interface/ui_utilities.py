@@ -259,6 +259,7 @@ class Updater(QtCore.QRunnable):
         self.signals.finished.emit()
         time.sleep(1)
 
+
 class ThrottledCurve:
     """
     Object that allows data to be rolled into a numpy array.
@@ -268,40 +269,35 @@ class ThrottledCurve:
     plots within the user interface to be throttled to render at specific timings.
     These curves
     """
+
     def __init__(self):
         self._buffers = {}
-        self._xy_buffers = {}
         self._dirty = set()
 
     def roll(self, curve, new_data):
-
         if curve not in self._buffers:
-            _, y0 = curve.getData()
-            self._buffers[curve] = np.array(y0, copy=True)
-        y = self._buffers[curve]
-        self._buffers[curve] = np.concatenate(
-            (y[new_data.size :], new_data[-y.size :]), axis=0
+            x0, y0 = curve.getData()
+            self._buffers[curve] = (x0, np.array(y0, copy=True))
+        x, y = self._buffers[curve]
+        self._buffers[curve] = (
+            x,
+            np.concatenate((y[new_data.size :], new_data[-y.size :]), axis=0),
         )
         self._dirty.add(curve)
 
     def set(self, curve, x, y):
-        self._xy_buffers[curve] = (x, y)
+        self._buffers[curve] = (x, y)
         self._dirty.add(curve)
 
     def get(self, curve):
-        if curve in self._xy_buffers:
-            return self._xy_buffers[curve]
+        if curve in self._buffers:
+            return self._buffers[curve]
         return curve.getOriginalDataset()
 
     def flush(self):
-
         for curve in self._dirty:
-            if curve in self._xy_buffers:
-                x, y = self._xy_buffers[curve]
-                curve.setData(x, y)
-            else:
-                x, _ = curve.getData()
-                curve.setData(x, self._buffers[curve])
+            x, y = self._buffers[curve]
+            curve.setData(x, y)
         self._dirty.clear()
 
 

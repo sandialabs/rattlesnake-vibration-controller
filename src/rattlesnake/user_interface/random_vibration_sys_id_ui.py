@@ -655,7 +655,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
         )
 
-        specification_file = self.definition_widget.specification_file_name_display.text()
+        specification_file = (
+            self.definition_widget.specification_file_name_display.text()
+        )
         if specification_file:
             metadata.set_file(specification_file)
 
