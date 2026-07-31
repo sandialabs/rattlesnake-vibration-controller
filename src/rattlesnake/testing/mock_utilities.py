@@ -1,8 +1,8 @@
 import inspect
 from unittest import mock
-
 import threading
 import queue as thqueue
+import signal
 
 import numpy as np
 
@@ -226,6 +226,10 @@ def clear_log_queue(queue, log_string):
         output_string = queue.get()
         output_string = output_string.encode("utf-8")
         log_string.value = log_string.value + output_string
+
+
+def keyboard_interrupt():
+    signal.raise_signal(signal.SIGINT)
 
 
 # region Hardware

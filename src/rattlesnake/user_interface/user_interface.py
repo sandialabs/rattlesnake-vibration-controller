@@ -22,7 +22,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import contextlib
+import atexit
 import copy
 import ctypes
 import multiprocessing as mp
@@ -106,7 +106,24 @@ THROTTLED_BUFFER = 1 / 20
 
 
 # region Launchers
-@contextlib.contextmanager
+class RattlesnakeAppHandle:
+    def __init__(self, rattlesnake, rattlesnake_ui, app):
+        self.rattlesnake = rattlesnake
+        self.rattlesnake_ui = rattlesnake_ui
+        self.app = app
+
+    def __iter__(self):
+        return iter((self.rattlesnake, self.rattlesnake_ui, self.app))
+
+    def __enter__(self):
+        return self.rattlesnake, self.rattlesnake_ui, self.app
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.rattlesnake_ui.shutdown()
+        self.rattlesnake.shutdown()
+        return False
+
+
 def build_rattlesnake_app(
     rattlesnake: RattlesnakeController,
     *,
@@ -138,11 +155,7 @@ def build_rattlesnake_app(
 
     rattlesnake_ui = RattlesnakeUI(rattlesnake)
 
-    try:
-        yield rattlesnake, rattlesnake_ui, app
-    finally:
-        rattlesnake_ui.shutdown()
-        rattlesnake.shutdown()
+    return RattlesnakeAppHandle(rattlesnake, rattlesnake_ui, app)
 
 
 # endregion

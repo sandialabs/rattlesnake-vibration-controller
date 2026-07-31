@@ -1,4 +1,5 @@
 import time
+import threading
 
 import netCDF4 as nc4
 from qtpy import QtCore
@@ -75,18 +76,34 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
-def modal_netcdf_issue():
-    event_list = [
-        UIEvent(5, "initialize_hardware"),
-        UIEvent(10, "initialize_environments"),
-    ]
-    with test_example_rattlesnake_object(
-        import_method="netcdf",
+def keyboard_interrupt_issue():
+
+    rattlesnake = build_example_rattlesnake_object(
+        threaded=False,
+        timeout=20,
+        import_method="manual",
         hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.MODAL,
-    ) as rattlesnake:
-        launch_temporary_rattlesnake_ui(rattlesnake, event_list, 15)
+        environment_type=EnvironmentType.RANDOM,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=True,
+        run_sysid=False,
+        start_hardware=True,
+        start_environment=True,
+        run_profile=False,
+    )
 
 
 if __name__ == "__main__":
-    modal_netcdf_issue()
+    rattlesnake = build_example_rattlesnake_object(
+        threaded=False,
+        timeout=20,
+        import_method="manual",
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.RANDOM,
+        stream_type=StreamType.NO_STREAM,
+        load_sysid=True,
+        run_sysid=False,
+        start_hardware=True,
+        start_environment=True,
+        run_profile=False,
+    )

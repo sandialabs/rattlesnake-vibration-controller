@@ -1,3 +1,4 @@
+import atexit
 from datetime import datetime
 from enum import Enum
 import multiprocessing as mp
@@ -47,8 +48,10 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
-THREADING = False # Decides whether to spin up multiple processes or threads
-GUI_QUEUE_MAX_SIZE = 500  # Max size of gui_update_queue before it is trimmed in headless mode
+THREADING = False  # Decides whether to spin up multiple processes or threads
+GUI_QUEUE_MAX_SIZE = (
+    500  # Max size of gui_update_queue before it is trimmed in headless mode
+)
 GUI_QUEUE_POLL_INTERVAL = 0.25  # Seconds between gui_update_queue size checks
 
 
@@ -206,7 +209,7 @@ class RattlesnakeController:
                 self.gui_queue_cleanup_close_event,
                 lambda: self.has_gui,
                 GUI_QUEUE_MAX_SIZE,
-                GUI_QUEUE_POLL_INTERVAL
+                GUI_QUEUE_POLL_INTERVAL,
             ),
             daemon=True,
         )
@@ -337,7 +340,7 @@ class RattlesnakeController:
     def __exit__(self, exc_type, exc_value, traceback):
         self.shutdown()
         return False
-    
+
     def __del__(self):
         try:
             self.shutdown()
@@ -1239,6 +1242,7 @@ class RattlesnakeController:
 
     # region Shutdown
     def shutdown(self):
+        print("Rattlesnake Shutting Down")
         if self.state in (
             RattlesnakeState.HARDWARE_ACTIVE,
             RattlesnakeState.ENVIRONMENT_ACTIVE,

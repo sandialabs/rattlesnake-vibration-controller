@@ -19,6 +19,7 @@ from rattlesnake.testing.comparison import (
     diff_worksheets,
     diff_metadata_objects,
 )
+from rattlesnake.testing.mock_utilities import keyboard_interrupt
 
 __all__ = [
     # Builders
@@ -39,4 +40,6 @@ __all__ = [
     "diff_netcdf_groups",
     "diff_worksheets",
     "diff_metadata_objects",
+    # Utilities
+    "keyboard_interrupt",
 ]
