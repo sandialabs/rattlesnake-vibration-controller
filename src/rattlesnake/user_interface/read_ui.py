@@ -38,6 +38,7 @@ class ReadUI(EnvironmentUI):
         uic.loadUi(skeleton_ui_run_path, self.run_widget)
 
         self.plot_data_item = None
+        self.channel_enable_checkboxes = []
 
         self.complete_ui()
         self.connect_callbacks()
@@ -47,6 +48,10 @@ class ReadUI(EnvironmentUI):
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
+
+        self.run_widget.channel_enable_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
+        )
 
     def connect_callbacks(self):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
@@ -72,6 +77,27 @@ class ReadUI(EnvironmentUI):
             other_pen_options={"width": 1},
             names=plot_names,
         )
+
+        self.run_widget.channel_enable_table.setRowCount(len(plot_names))
+        self.channel_enable_checkboxes = []
+        for row, name in enumerate(plot_names):
+            item = QtWidgets.QTableWidgetItem(name)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            self.run_widget.channel_enable_table.setItem(row, 0, item)
+
+            checkbox = QtWidgets.QCheckBox()
+            checkbox.setChecked(True)
+            checkbox.stateChanged.connect(self.update_channel_visibility)
+            checkbox_container = QtWidgets.QWidget()
+            checkbox_layout = QtWidgets.QHBoxLayout(checkbox_container)
+            checkbox_layout.addWidget(checkbox)
+            checkbox_layout.setAlignment(QtCore.Qt.AlignCenter)
+            checkbox_layout.setContentsMargins(0, 0, 0, 0)
+            self.run_widget.channel_enable_table.setCellWidget(
+                row, 1, checkbox_container
+            )
+            self.channel_enable_checkboxes.append(checkbox)
+
         return super().initialize_hardware(hardware_metadata)
 
     def initialize_environment(self, environment_metadata: ReadMetadata):
@@ -85,7 +111,17 @@ class ReadUI(EnvironmentUI):
                 np.zeros(num_samples),
             )
 
+        for checkbox in self.channel_enable_checkboxes:
+            checkbox.setChecked(True)
+        self.update_channel_visibility()
+
         return super().initialize_environment(environment_metadata)
+
+    def update_channel_visibility(self):
+        if self.plot_data_item is None:
+            return
+        for curve, checkbox in zip(self.plot_data_item, self.channel_enable_checkboxes):
+            curve.setVisible(checkbox.isChecked())
 
     def get_environment_metadata(self, global_channel_list: list[Channel]):
         if self.hardware_metadata and global_channel_list:
