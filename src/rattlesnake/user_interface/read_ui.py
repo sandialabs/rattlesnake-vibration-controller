@@ -51,6 +51,9 @@ class ReadUI(EnvironmentUI):
     def connect_callbacks(self):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
         self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
+        self.run_widget.window_size_spinbox.editingFinished.connect(
+            self.change_window_size
+        )
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -139,11 +142,39 @@ class ReadUI(EnvironmentUI):
         self.run_widget.stop_test_button.setEnabled(False)
         return super().display_environment_ended()
 
+    def change_window_size(self):
+        new_window_size = self.run_widget.window_size_spinbox.value()
+        try:
+            self.rattlesnake.send_environment_command(
+                self.environment_name,
+                ReadCommands.CHANGE_WINDOW_SIZE,
+                new_window_size,
+            )
+        except Exception as e:
+            self.display_error(e)
+
     # endregion
 
     # region Commands
     def set_window_size(self, data):
+        self.run_widget.window_size_spinbox.blockSignals(True)
         self.run_widget.window_size_spinbox.setValue(data)
+        self.run_widget.window_size_spinbox.blockSignals(False)
+
+        if self.hardware_metadata is None or self.plot_data_item is None:
+            return
+
+        num_samples = int(data * self.hardware_metadata.sample_rate)
+        if num_samples <= 0:
+            return
+
+        new_x = np.arange(num_samples) / self.hardware_metadata.sample_rate
+        for curve in self.plot_data_item:
+            _, old_y = self.throttled_curves.get(curve)
+            new_y = np.zeros(num_samples)
+            copy_size = min(num_samples, old_y.size)
+            new_y[-copy_size:] = old_y[-copy_size:]
+            self.throttled_curves.set(curve, new_x, new_y)
 
     def plot_time_data(self, data: np.array):
         response_data = data
