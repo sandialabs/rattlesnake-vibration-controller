@@ -221,12 +221,12 @@ def save_rattlesnake_to_workbook(
     # Open workbook and save to blank template
     channel_worksheet = workbook.active
     HardwareMetadata.save_blank_hardware_to_workbook(workbook)
-
     # Save hardware metadata values
-    hardware_metadata.save_metadata_to_workbook(workbook)
+    if hardware_metadata:
+        hardware_metadata.save_metadata_to_workbook(workbook)
 
-    # Save environment metadata values
     channel_worksheet.cell(row=1, column=24, value="Environments")
+    # Save environment metadata values
     if environment_metadata_dict:
         for col, (environment_name, environment_metadata) in enumerate(
             environment_metadata_dict.items()

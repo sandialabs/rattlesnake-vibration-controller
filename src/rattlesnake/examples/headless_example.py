@@ -15,10 +15,6 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 from rattlesnake.process.streaming import StreamType
 
-from rattlesnake.testing.mock_helpers import (
-    launch_temporary_rattlesnake_ui_environment,
-)
-
 """USER INPUTS"""
 THREADED = False
 TIMEOUT = 20
@@ -33,7 +29,7 @@ START_ENVIRONMENT = False
 RUN_PROFILE = False
 
 
-def build_rattlesnake_object(
+def build_example_rattlesnake_object(
     threaded=THREADED,
     timeout=TIMEOUT,
     import_method=IMPORT_METHOD,
@@ -96,6 +92,5 @@ def build_rattlesnake_object(
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
-    with build_rattlesnake_object() as rattlesnake:
-        # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
+    with build_example_rattlesnake_object() as rattlesnake:
         launch_rattlesnake_ui(rattlesnake)

@@ -27,41 +27,9 @@ from qtpy import QtWidgets, QtCore
 
 # from rattlesnake.process.streaming import streaming_process
 from rattlesnake.engine import RattlesnakeController
-from rattlesnake.user_interface.user_interface import RattlesnakeUI
-
-
-def build_rattlesnake_app(
-    rattlesnake: RattlesnakeController,
-    *,
-    set_font_size: bool = True,
-):
-    # Configure High DPI for UI scaling
-    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
-        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
-
-    # Reuse an existing QApplication if one is already running
-    app = QtWidgets.QApplication.instance()
-    if app is None:
-        app = QtWidgets.QApplication(sys.argv)
-
-    # Set font size.
-    if set_font_size:
-        font_size = 10  # pt size
-        screen = app.primaryScreen()
-        dpi = screen.logicalDotsPerInch()
-        scale_factor = dpi / 96  # 96 DPI
-        font = app.font()
-        font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
-        app.setFont(font)
-
-    rattlesnake_ui = RattlesnakeUI(rattlesnake)
-
-    return app, rattlesnake_ui
+from rattlesnake.user_interface.user_interface import (
+    build_rattlesnake_app,
+)
 
 
 def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
@@ -74,11 +42,9 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     rattlesnake : RattlesnakeController
         The rattlesnake controller object that the UI is going to represent.
     """
-    app, rattlesnake_ui = build_rattlesnake_app(rattlesnake)
-    rattlesnake_ui.show()
-    app.exec_()
-    rattlesnake_ui.shutdown()
-    rattlesnake.shutdown()
+    with build_rattlesnake_app(rattlesnake) as (rattlesnake, rattlesnake_ui, app):
+        rattlesnake_ui.show()
+        app.exec_()
 
 
 def main():

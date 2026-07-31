@@ -22,6 +22,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import contextlib
 import copy
 import ctypes
 import multiprocessing as mp
@@ -101,7 +102,50 @@ RATTLESNAKE_UI_PATH = os.path.join(
 )
 BUFFER_ROWS = 10
 MIN_ROWS = 30
-THROTTLED_BUFFER = 1/20
+THROTTLED_BUFFER = 1 / 20
+
+
+# region Launchers
+@contextlib.contextmanager
+def build_rattlesnake_app(
+    rattlesnake: RattlesnakeController,
+    *,
+    set_font_size: bool = True,
+):
+    # Configure High DPI for UI scaling
+    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
+        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+
+    # Reuse an existing QApplication if one is already running
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(sys.argv)
+
+    # Set font size.
+    if set_font_size:
+        font_size = 10  # pt size
+        screen = app.primaryScreen()
+        dpi = screen.logicalDotsPerInch()
+        scale_factor = dpi / 96  # 96 DPI
+        font = app.font()
+        font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
+        app.setFont(font)
+
+    rattlesnake_ui = RattlesnakeUI(rattlesnake)
+
+    try:
+        yield rattlesnake, rattlesnake_ui, app
+    finally:
+        rattlesnake_ui.shutdown()
+        rattlesnake.shutdown()
+
+
+# endregion
 
 
 # region User Interface
@@ -143,7 +187,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.plot_flush_timer = QtCore.QTimer()
         self.plot_flush_timer.timeout.connect(self.flush_environment_plots)
-        self.plot_flush_timer.start(int(THROTTLED_BUFFER*1000))
+        self.plot_flush_timer.start(int(THROTTLED_BUFFER * 1000))
 
         # Storage properties
         self.hardware_file = None
@@ -345,9 +389,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Updates the color scheme of the UI"""
         self.theme = text
 
-        background, foreground = PLOT_THEME_COLORS.get(
-            text, PLOT_THEME_COLORS["Light"]
-        )
+        background, foreground = PLOT_THEME_COLORS.get(text, PLOT_THEME_COLORS["Light"])
         self.apply_plot_theme(background, foreground)
         self.update_profile_plot()
 
@@ -1976,9 +2018,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         current_index = self.environment_definition_environment_tabs.currentIndex()
         if current_index < 0:
-            self.display_error(
-                "Please select an environment tab to load a file into"
-            )
+            self.display_error("Please select an environment tab to load a file into")
             return
 
         environment_name = self.environment_definition_environment_tabs.tabText(
@@ -2809,7 +2849,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         # Close event dialogs
         for widget in QtWidgets.QApplication.topLevelWidgets():
-            if widget is not self and isinstance(widget, QtWidgets.QDialog) and widget.isVisible():
+            if (
+                widget is not self
+                and isinstance(widget, QtWidgets.QDialog)
+                and widget.isVisible()
+            ):
                 widget.close()
 
         self.gui_update_queue.put((UICommands.GUI_CLOSED, None))

@@ -43,9 +43,8 @@ from rattlesnake.testing.mock_utilities import (
     skeleton_environment_instructions,
     skeleton_queues,
     skeleton_environment,
-    diff_worksheets,
-    diff_netcdf_groups,
 )
+from rattlesnake.testing.comparison import diff_worksheets, diff_netcdf_groups
 from rattlesnake.environment.skeleton_environment import SkeletonCommands
 
 

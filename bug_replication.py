@@ -5,13 +5,13 @@ from qtpy import QtCore
 
 from rattlesnake.headless import *
 from rattlesnake.examples import *
-
+from rattlesnake.testing import *
 
 
 def transient_zero_trac():
     """Transient example problem results in zero division at the end which sends TRAC values to 0. When starting
     transient environment from headless, Unable to Parse Line is written"""
-    rattlesnake = build_rattlesnake_object(
+    rattlesnake = build_example_rattlesnake_object(
         threaded=False,
         timeout=20,
         import_method="manual",
@@ -33,7 +33,7 @@ def profile_event_crash():
     """Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment). It should
     either skip validation and send the command anyways or just stop the profile from firing future events and continuing
     the crash"""
-    rattlesnake = build_rattlesnake_object(
+    rattlesnake = build_example_rattlesnake_object(
         threaded=False,
         timeout=20,
         import_method="manual",
@@ -75,5 +75,18 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
+def modal_netcdf_issue():
+    event_list = [
+        UIEvent(5, "initialize_hardware"),
+        UIEvent(10, "initialize_environments"),
+    ]
+    with test_example_rattlesnake_object(
+        import_method="netcdf",
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.MODAL,
+    ) as rattlesnake:
+        launch_temporary_rattlesnake_ui(rattlesnake, event_list, 15)
+
+
 if __name__ == "__main__":
-    pass
+    modal_netcdf_issue()

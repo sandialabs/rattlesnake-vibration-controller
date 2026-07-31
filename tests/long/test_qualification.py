@@ -2,12 +2,12 @@ import time
 
 import pytest
 
-from rattlesnake.testing.mock_helpers import (
-    launch_temporary_rattlesnake_ui_environment,
-    launch_temporary_rattlesnake_ui_profile,
+from rattlesnake.testing.builders import (
+    UIEvent,
+    launch_temporary_rattlesnake_ui,
 )
 
-from rattlesnake.examples.headless_example import build_rattlesnake_object
+from rattlesnake.examples.headless_example import build_example_rattlesnake_object
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.streaming import StreamType
@@ -38,7 +38,7 @@ def test_rattlesnake_qualification(
     elif test_type == "profile":
         run_profile = True
 
-    rattlesnake = build_rattlesnake_object(
+    rattlesnake = build_example_rattlesnake_object(
         threaded=threaded,
         timeout=60,
         import_method=import_method,
@@ -81,7 +81,7 @@ def test_rattlesnake_qualification(
 def not_test_rattlesnake_ui_profile_qualification(
     threaded, import_method, hardware_type, environment_type
 ):
-    rattlesnake = build_rattlesnake_object(
+    rattlesnake = build_example_rattlesnake_object(
         threaded=threaded,
         timeout=30,
         import_method=import_method,
@@ -95,7 +95,7 @@ def not_test_rattlesnake_ui_profile_qualification(
         run_profile=False,
     )
 
-    launch_temporary_rattlesnake_ui_profile(rattlesnake, 60)
+    launch_temporary_rattlesnake_ui(rattlesnake, [UIEvent(20, "start_profile")], 60)
 
 
 @pytest.mark.parametrize("threaded", [True, False])
@@ -122,7 +122,7 @@ def not_test_rattlesnake_ui_profile_qualification(
 def not_test_rattlesnake_ui_start_environment_qualification(
     threaded, import_method, hardware_type, environment_type
 ):
-    rattlesnake = build_rattlesnake_object(
+    rattlesnake = build_example_rattlesnake_object(
         threaded=threaded,
         timeout=30,
         import_method=import_method,
@@ -136,7 +136,7 @@ def not_test_rattlesnake_ui_start_environment_qualification(
         run_profile=False,
     )
 
-    launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
+    launch_temporary_rattlesnake_ui(rattlesnake, [UIEvent(40, "stop_acquisition")], 60)
 
 
 @pytest.mark.parametrize("threaded", [False])
@@ -160,7 +160,7 @@ def not_test_rattlesnake_ui_start_environment_qualification(
 def not_test_minimal_qualification(
     threaded, import_method, hardware_type, environment_type
 ):
-    rattlesnake = build_rattlesnake_object(
+    rattlesnake = build_example_rattlesnake_object(
         threaded=threaded,
         timeout=30,
         import_method=import_method,
@@ -174,4 +174,4 @@ def not_test_minimal_qualification(
         run_profile=False,
     )
 
-    launch_temporary_rattlesnake_ui_profile(rattlesnake, 60)
+    launch_temporary_rattlesnake_ui(rattlesnake, [UIEvent(20, "start_profile")], 60)

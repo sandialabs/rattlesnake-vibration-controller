@@ -1,5 +1,4 @@
-from rattlesnake.examples.headless_example import build_rattlesnake_object
-from rattlesnake.testing.mock_helpers import mock_rattlesnake_object
+from rattlesnake.examples.headless_example import build_example_rattlesnake_object
 from rattlesnake.examples.hardware.exodus.exodus_metadata import (
     worksheet_exodus_metadata,
     netcdf_exodus_metadata,
@@ -95,8 +94,7 @@ from rattlesnake.examples.environment.transient.transient_metadata import (
 
 __all__ = [
     # Main
-    "build_rattlesnake_object",
-    "mock_rattlesnake_object",
+    "build_example_rattlesnake_object",
     # Exodus
     "worksheet_exodus_metadata",
     "netcdf_exodus_metadata",
