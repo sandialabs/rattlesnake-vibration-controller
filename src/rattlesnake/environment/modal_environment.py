@@ -726,12 +726,12 @@ class ModalMetadata(EnvironmentMetadata):
         signal_generator_on_percent = (
             netcdf_group_handle.signal_generator_on_fraction * 100
         )
-        reference_channel_indices = netcdf_group_handle.variables[
-            "reference_channel_indices"
-        ][...]
-        response_channel_indices = netcdf_group_handle.variables[
-            "response_channel_indices"
-        ][...]
+        reference_channel_indices = list(
+            netcdf_group_handle.variables["reference_channel_indices"][...]
+        )
+        response_channel_indices = list(
+            netcdf_group_handle.variables["response_channel_indices"][...]
+        )
         environment_channel_list = [
             channel
             for channel, channel_bool in zip(
