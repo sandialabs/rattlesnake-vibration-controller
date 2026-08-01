@@ -22,10 +22,10 @@ IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.MODAL
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = False
+LOAD_SYSID = True
 RUN_SYSID = False
-START_HARDWARE = False
-START_ENVIRONMENT = False
+START_HARDWARE = True
+START_ENVIRONMENT = True
 RUN_PROFILE = False
 
 

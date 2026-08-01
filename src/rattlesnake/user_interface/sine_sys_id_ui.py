@@ -21,6 +21,8 @@ from rattlesnake.environment.sine_sys_id_environment import (
 from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
 from rattlesnake.user_interface.ui_utilities import (
     TransformationMatrixWindow,
+    axis_label,
+    channel_unit_label,
     multiline_plotter,
     blended_scatter_plot,
     UICommands,
@@ -31,7 +33,6 @@ from rattlesnake.user_interface.sine_sys_id_ui_utilities import (
     FilterExplorer,
     PlotSineWindow,
 )
-
 
 CONTROL_TYPE = EnvironmentType.SINE
 MAXIMUM_NAME_LENGTH = 50
@@ -158,20 +159,20 @@ class SineUI(SysIdEnvironmentUI):
         plotitem = (
             self.definition_widget.specification_all_frequencies_plot.getPlotItem()
         )
-        plotitem.setLabel("bottom", "Time")
-        plotitem.setLabel("left", "Frequency")
+        plotitem.setLabel("bottom", "Time (s)")
+        plotitem.setLabel("left", "Frequency (Hz)")
         plotitem = (
             self.definition_widget.specification_all_amplitudes_plot.getPlotItem()
         )
-        plotitem.setLabel("bottom", "Frequency")
+        plotitem.setLabel("bottom", "Frequency (Hz)")
         plotitem.setLabel("left", "Amplitude")
         plotitem = (
             self.definition_widget.specification_channel_amplitude_plot.getPlotItem()
         )
-        plotitem.setLabel("bottom", "Frequency")
+        plotitem.setLabel("bottom", "Frequency (Hz)")
         plotitem.setLabel("left", "Amplitude")
         plotitem = self.definition_widget.specification_channel_phase_plot.getPlotItem()
-        plotitem.setLabel("bottom", "Frequency")
+        plotitem.setLabel("bottom", "Frequency (Hz)")
         plotitem.setLabel("left", "Phase (deg)")
 
         self.change_filter_setting_visibility()
@@ -300,6 +301,37 @@ class SineUI(SysIdEnvironmentUI):
                     self.environment_metadata.reference_transformation_matrix.shape[0]
                 )
             ]
+
+    def initialized_control_unit(self, control_index):
+        """Engineering unit of an initialized control channel, or None if unknown
+
+        Returns None for transformed control channels, since those don't
+        correspond to a single physical channel with a single unit.
+        """
+        if self.environment_metadata.response_transformation_matrix is not None:
+            return None
+        try:
+            channel_index = self.environment_metadata.control_channel_indices[
+                control_index
+            ]
+            return self.hardware_metadata.channel_list[channel_index].unit
+        except (IndexError, TypeError):
+            return None
+
+    def initialized_output_unit(self, output_index):
+        """Engineering unit of an initialized drive channel, or None if unknown
+
+        Returns None for transformed drive channels, since those don't
+        correspond to a single physical channel with a single unit.
+        """
+        if self.environment_metadata.reference_transformation_matrix is not None:
+            return None
+        try:
+            return self.hardware_metadata.channel_list[
+                self.physical_output_indices[output_index]
+            ].unit
+        except (IndexError, TypeError):
+            return None
 
     # endregion
 
@@ -504,6 +536,24 @@ class SineUI(SysIdEnvironmentUI):
         self.run_widget.phase_plot.getPlotItem().clear()
         self.run_widget.amplitude_plot.getPlotItem().addLegend()
         self.run_widget.phase_plot.getPlotItem().addLegend()
+        self.run_widget.control_updates_plot.getPlotItem().setLabel("bottom", "Real")
+        self.run_widget.control_updates_plot.getPlotItem().setLabel("left", "Imaginary")
+        control_unit = (
+            channel_unit_label(
+                self.hardware_metadata.channel_list[i]
+                for i in self.environment_metadata.control_channel_indices
+            )
+            if self.environment_metadata.response_transformation_matrix is None
+            else None
+        )
+        self.run_widget.amplitude_plot.getPlotItem().setLabel(
+            "bottom", "Frequency (Hz)"
+        )
+        self.run_widget.amplitude_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Amplitude", control_unit)
+        )
+        self.run_widget.phase_plot.getPlotItem().setLabel("bottom", "Frequency (Hz)")
+        self.run_widget.phase_plot.getPlotItem().setLabel("left", "Phase (deg)")
         self.prediction_widget.excitation_display_plot.getPlotItem().addLegend()
         self.prediction_widget.response_display_plot.getPlotItem().addLegend()
         self.plot_data_items["response_prediction"] = multiline_plotter(
@@ -745,7 +795,9 @@ class SineUI(SysIdEnvironmentUI):
             sine_table = self.sine_tables[idx]
             sine_table.set_specification(spec)
             sine_table.specification_filename = (
-                specification_filenames[idx] if idx < len(specification_filenames) else None
+                specification_filenames[idx]
+                if idx < len(specification_filenames)
+                else None
             )
         # self.update_specification()
 
@@ -811,6 +863,13 @@ class SineUI(SysIdEnvironmentUI):
         )
         self.define_transformation_matrices(None, False)
         self.clear_and_update_specification_table()
+        control_unit = channel_unit_label(
+            self.hardware_metadata.channel_list[i]
+            for i in self.physical_control_indices
+        )
+        self.definition_widget.specification_all_amplitudes_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Amplitude", control_unit)
+        )
 
     def check_selected_control_channels(self):
         """Checks the selected control channels on the UI"""
@@ -921,6 +980,14 @@ class SineUI(SysIdEnvironmentUI):
             return
         table_index = self.definition_widget.sine_table_tab_widget.currentIndex()
         control_index = self.definition_widget.specification_row_selector.currentIndex()
+        control_unit = None
+        if 0 <= control_index < len(self.physical_control_indices):
+            control_unit = self.hardware_metadata.channel_list[
+                self.physical_control_indices[control_index]
+            ].unit
+        self.definition_widget.specification_channel_amplitude_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Amplitude", control_unit)
+        )
         all_ordinate = []
         all_abscissa = []
         all_frequency = []
@@ -1090,7 +1157,7 @@ class SineUI(SysIdEnvironmentUI):
     ):  # pylint: disable=unused-argument
         """Defines the transformation matrices using the dialog box"""
         if dialog:
-            (response_transformation, output_transformation, result) = (
+            response_transformation, output_transformation, result = (
                 TransformationMatrixWindow.define_transformation_matrices(
                     self.response_transformation_matrix,
                     self.definition_widget.control_channels_display.value(),
@@ -1209,6 +1276,17 @@ class SineUI(SysIdEnvironmentUI):
             self.prediction_widget.excitation_display_tone.blockSignals(False)
         self.send_excitation_prediction_plot_choices()
 
+    @staticmethod
+    def _prediction_plot_labels(type_index, amplitude_unit):
+        """Bottom/left axis label text for a prediction plot's display type"""
+        bottom = "Frequency (Hz)" if type_index in (3, 4) else "Time (s)"
+        left = (
+            "Phase (deg)"
+            if type_index in (2, 4)
+            else axis_label("amplitude", "Amplitude", amplitude_unit)
+        )
+        return bottom, left
+
     def send_response_prediction_plot_choices(self):
         """Sends the response prediction plot choices to the environment"""
         channel_index = self.prediction_widget.response_selector.currentIndex()
@@ -1216,6 +1294,12 @@ class SineUI(SysIdEnvironmentUI):
         tone_index = (
             self.prediction_widget.response_display_tone.currentIndex() - 1
         )  # All tones is first
+        bottom, left = self._prediction_plot_labels(
+            type_index, self.initialized_control_unit(channel_index)
+        )
+        plot_item = self.prediction_widget.response_display_plot.getPlotItem()
+        plot_item.setLabel("bottom", bottom)
+        plot_item.setLabel("left", left)
         self.rattlesnake.send_environment_command(
             self.environment_name,
             SineCommands.SEND_RESPONSE_PREDICTION,
@@ -1230,6 +1314,12 @@ class SineUI(SysIdEnvironmentUI):
         tone_index = (
             self.prediction_widget.excitation_display_tone.currentIndex() - 1
         )  # All tones is first
+        bottom, left = self._prediction_plot_labels(
+            type_index, self.initialized_output_unit(channel_index)
+        )
+        plot_item = self.prediction_widget.excitation_display_plot.getPlotItem()
+        plot_item.setLabel("bottom", bottom)
+        plot_item.setLabel("left", left)
         self.rattlesnake.send_environment_command(
             self.environment_name,
             SineCommands.SEND_EXCITATION_PREDICTION,
@@ -1725,7 +1815,7 @@ class SineUI(SysIdEnvironmentUI):
                 self.log(f"Plot Downsample: {self.plot_downsample}")
                 self.update_run_plot(update_spec=True)
             case SineUICommands.TIME_DATA:
-                (last_excitation, last_control) = data
+                last_excitation, last_control = data
                 self.achieved_excitation_signals_combined.append(last_excitation)
                 self.achieved_response_signals_combined.append(last_control)
             case SineUICommands.CONTROL_DATA:

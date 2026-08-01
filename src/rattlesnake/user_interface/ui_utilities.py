@@ -323,6 +323,8 @@ class PlotWindow(QtWidgets.QDialog):
         datatype_name,
         warning_matrix=None,
         abort_matrix=None,
+        row_unit=None,
+        column_unit=None,
     ):
         """
         Creates a window showing CPSD matrix information for a single channel.
@@ -346,6 +348,10 @@ class PlotWindow(QtWidgets.QDialog):
             Channel name for the column.
         datatype_name : str
             Name for the datatype.
+        row_unit : str
+            Engineering unit of the row channel. (Default value = None)
+        column_unit : str
+            Engineering unit of the column channel. (Default value = None)
 
 
         """
@@ -366,6 +372,14 @@ class PlotWindow(QtWidgets.QDialog):
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
+        plot_item.setLabel("bottom", "Frequency (Hz)")
+        common_unit = row_unit if row_unit == column_unit else None
+        if self.datatype in (0, 3, 4):  # Magnitude, Real, Imaginary
+            plot_item.setLabel("left", axis_label("psd", datatype_name, common_unit))
+        elif self.datatype == 2:  # Phase
+            plot_item.setLabel("left", f"{datatype_name} (rad)")
+        else:  # Coherence
+            plot_item.setLabel("left", datatype_name)
         if self.datatype == 0:
             plot_item.setLogMode(False, True)
         plot_item.plot(self.frequencies, self.spec_data, pen={"color": "b", "width": 1})
@@ -455,7 +469,9 @@ class PlotWindow(QtWidgets.QDialog):
 class PlotTimeWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
-    def __init__(self, parent, index, specification, sample_rate, index_name):
+    def __init__(
+        self, parent, index, specification, sample_rate, index_name, unit=None
+    ):
         """
         Creates a window showing time history information for a single channel.
 
@@ -471,6 +487,8 @@ class PlotTimeWindow(QtWidgets.QDialog):
             The sample rate of the time signal
         index_name : str
             Channel name for the row.
+        unit : str
+            Engineering unit of the channel. (Default value = None)
         """
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowFlags(self.windowFlags() & Qt.Tool)
@@ -488,12 +506,13 @@ class PlotTimeWindow(QtWidgets.QDialog):
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.plot(self.times, self.spec_data, pen={"color": "b", "width": 1})
+        plot_item.setLabel("bottom", "Time (s)")
         plot_item.setLabel("left", "TRAC: 0.0")
         self.plot_item = plot_item
         self.curve = plot_item.plot(
             self.times, self.data, pen={"color": "r", "width": 1}
         )
-        self.setWindowTitle(f"{index_name}")
+        self.setWindowTitle(f"{index_name}" + (f" ({unit})" if unit else ""))
         self.show()
 
     def reduce_matrix(self, matrix):
@@ -1474,6 +1493,36 @@ class EventWatcher(QtCore.QObject):
 
 
 # region Hardware
+def channel_unit_label(channel_list):
+    """
+    Returns the units from a channel list.
+    """
+    units = {
+        c.unit for c in channel_list if c is not None and c.unit not in (None, "", "-")
+    }
+    return units.pop() if len(units) == 1 else None
+
+
+def axis_label(type, base, unit=None):
+    """
+    Builds an axis label, appending the unit in parentheses if one is known.
+    """
+    match type:
+        case "amplitude":
+            return base if not unit else f"{base} ({unit})"
+        case "psd":
+            return base if not unit else f"{base} ({unit}²/Hz)"
+        case "ratio":
+            numerator, denominator = unit
+            return (
+                base
+                if not (numerator and denominator)
+                else f"{base} ({numerator}/{denominator})"
+            )
+        case _:
+            return base
+
+
 class HardwareAssistModules(Enum):
     NONE = 0
     COMBOBOX = 2
@@ -2098,6 +2147,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
         self.parent = parent
         self.channel_names = self.parent.channel_names
+        self.channel_list = getattr(self.parent, "channel_list", None)
         self.reference_names = np.array(
             [
                 self.parent.channel_names[i]
@@ -2320,9 +2370,118 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         )
         self.setWindowTitle(f"{signal_name} {response_name} {reference_name}")
 
+    def _channel_at(self, index):
+        """Returns the Channel at a physical channel_list index, or None if unknown"""
+        if self.channel_list is None or index is None:
+            return None
+        try:
+            return self.channel_list[index]
+        except (IndexError, TypeError):
+            return None
+
+    def selected_response_unit(self):
+        """Engineering unit of the currently selected response channel, or None"""
+        index = self.response_coordinate_selector.currentIndex()
+        if index < 0:
+            return None
+        current_signal = self.signal_selector.currentIndex()
+        if current_signal in (
+            0,
+            1,
+            2,
+            3,
+        ):  # Time, Windowed Time, Spectrum, Autospectrum
+            channel = self._channel_at(index)
+        elif current_signal == 7:  # Reciprocity
+            try:
+                response_index = self.reciprocal_responses[index]
+                channel = self._channel_at(
+                    self.parent.response_channel_indices[response_index]
+                )
+            except (IndexError, TypeError):
+                channel = None
+        else:  # FRF, FRF+Coherence, Coherence
+            try:
+                channel = self._channel_at(self.parent.response_channel_indices[index])
+            except (IndexError, TypeError):
+                channel = None
+        return None if channel is None else channel.unit
+
+    def selected_reference_unit(self):
+        """Engineering unit of the currently selected reference channel, or None"""
+        index = self.reference_coordinate_selector.currentIndex()
+        if index < 0:
+            return None
+        try:
+            channel = self._channel_at(self.parent.reference_channel_indices[index])
+        except (IndexError, TypeError):
+            channel = None
+        return None if channel is None else channel.unit
+
+    def update_axis_labels(self):
+        """Sets the primary/secondary/twin axis labels for the current display mode"""
+        current_signal = self.signal_selector.currentIndex()
+        response_unit = self.selected_response_unit()
+        if current_signal in (0, 1):  # Time, Windowed Time
+            self.primary_plotitem.setLabel("bottom", "Time (s)")
+            self.primary_plotitem.setLabel(
+                "left", axis_label("amplitude", "Response", response_unit)
+            )
+        elif current_signal == 2:  # Spectrum
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            self.primary_plotitem.setLabel(
+                "left", axis_label("amplitude", "Response", response_unit)
+            )
+        elif current_signal == 3:  # Autospectrum
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            self.primary_plotitem.setLabel(
+                "left", axis_label("psd", "Autospectrum", response_unit)
+            )
+        elif current_signal in (4, 6, 7):  # FRF, FRF+Coherence, Reciprocity
+            reference_unit = self.selected_reference_unit()
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            data_type = self.data_type_selector.currentIndex()
+            if data_type == 0:  # Magnitude
+                self.primary_plotitem.setLabel(
+                    "left",
+                    axis_label("ratio", "Magnitude", (response_unit, reference_unit)),
+                )
+            elif data_type == 1:  # Magnitude/Phase
+                self.primary_plotitem.setLabel("left", "Phase (rad)")
+                self.secondary_plotitem.setLabel(
+                    "left",
+                    axis_label("ratio", "Magnitude", (response_unit, reference_unit)),
+                )
+            elif data_type in (2, 3):  # Real, Imaginary
+                self.primary_plotitem.setLabel(
+                    "left",
+                    axis_label(
+                        "ratio",
+                        "Real" if data_type == 2 else "Imaginary",
+                        (
+                            response_unit,
+                            reference_unit,
+                        ),
+                    ),
+                )
+            elif data_type == 4:  # Real/Imaginary
+                self.primary_plotitem.setLabel(
+                    "left", axis_label("ratio", "Real", (response_unit, reference_unit))
+                )
+                self.secondary_plotitem.setLabel(
+                    "left",
+                    axis_label("ratio", "Imaginary", (response_unit, reference_unit)),
+                )
+            if current_signal == 6 and self.twinx_axis is not None:
+                self.twinx_axis.setLabel("Coherence")
+        elif current_signal == 5:  # Coherence
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            self.primary_plotitem.setLabel("left", "Coherence")
+
     def update_data(self):
         """Updates the data in the plot"""
         self.set_window_title()
+        self.update_axis_labels()
         current_index = self.signal_selector.currentIndex()
         if current_index in [0, 1]:  # Time history
             if self.parent.last_frame is None:

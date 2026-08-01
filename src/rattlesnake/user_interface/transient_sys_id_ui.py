@@ -34,6 +34,8 @@ from rattlesnake.user_interface.ui_utilities import (
     UICommands,
     PlotTimeWindow,
     TransformationMatrixWindow,
+    axis_label,
+    channel_unit_label,
     colororder,
     multiline_plotter,
 )
@@ -109,6 +111,8 @@ class TransientUI(SysIdEnvironmentUI):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLabel("bottom", "Time (s)")
+            plot_item.setLabel("left", "Amplitude")
 
         self.connect_callbacks()
 
@@ -231,6 +235,37 @@ class TransientUI(SysIdEnvironmentUI):
                     self.environment_metadata.reference_transformation_matrix.shape[0]
                 )
             ]
+
+    def initialized_control_unit(self, control_index):
+        """Engineering unit of an initialized control channel, or None if unknown
+
+        Returns None for transformed control channels, since those don't
+        correspond to a single physical channel with a single unit.
+        """
+        if self.environment_metadata.response_transformation_matrix is not None:
+            return None
+        try:
+            channel_index = self.environment_metadata.control_channel_indices[
+                control_index
+            ]
+            return self.hardware_metadata.channel_list[channel_index].unit
+        except (IndexError, TypeError):
+            return None
+
+    def initialized_output_unit(self, output_index):
+        """Engineering unit of an initialized drive channel, or None if unknown
+
+        Returns None for transformed drive channels, since those don't
+        correspond to a single physical channel with a single unit.
+        """
+        if self.environment_metadata.reference_transformation_matrix is not None:
+            return None
+        try:
+            return self.hardware_metadata.channel_list[
+                self.physical_output_indices[output_index]
+            ].unit
+        except (IndexError, TypeError):
+            return None
 
     # endregion
 
@@ -376,6 +411,23 @@ class TransientUI(SysIdEnvironmentUI):
             names=self.initialized_output_names,
             downsample={"auto": True},
             clip_to_view=True,
+        )
+        control_unit = (
+            channel_unit_label(
+                self.hardware_metadata.channel_list[i]
+                for i in self.environment_metadata.control_channel_indices
+            )
+            if self.environment_metadata.response_transformation_matrix is None
+            else None
+        )
+        output_unit = channel_unit_label(
+            self.hardware_metadata.channel_list[i] for i in self.physical_output_indices
+        )
+        self.run_widget.output_signal_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Response", control_unit)
+        )
+        self.run_widget.response_signal_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Drive", output_unit)
         )
         if (
             self.definition_widget.control_function_generator_selector.currentIndex()
@@ -612,6 +664,11 @@ class TransientUI(SysIdEnvironmentUI):
         """Shows the signal on the user interface"""
         pi = self.definition_widget.signal_display_plot.getPlotItem()
         pi.clear()
+        control_unit = channel_unit_label(
+            self.hardware_metadata.channel_list[i]
+            for i in self.physical_control_indices
+        )
+        pi.setLabel("left", axis_label("amplitude", "Amplitude", control_unit))
         if self.specification_signal is None:
             self.definition_widget.signal_information_table.setRowCount(0)
             return
@@ -827,12 +884,20 @@ class TransientUI(SysIdEnvironmentUI):
         self.plot_data_items["excitation_prediction"][0].setData(
             times, self.excitation_prediction[index]
         )
+        self.prediction_widget.excitation_display_plot.getPlotItem().setLabel(
+            "left",
+            axis_label("amplitude", "Amplitude", self.initialized_output_unit(index)),
+        )
         index = self.prediction_widget.response_selector.currentIndex()
         self.plot_data_items["response_prediction"][0].setData(
             times, self.response_prediction[index]
         )
         self.plot_data_items["response_prediction"][1].setData(
             times, self.specification_signal[index]
+        )
+        self.prediction_widget.response_display_plot.getPlotItem().setLabel(
+            "left",
+            axis_label("amplitude", "Amplitude", self.initialized_control_unit(index)),
         )
 
     def show_max_voltage_prediction(self):
@@ -904,6 +969,7 @@ class TransientUI(SysIdEnvironmentUI):
                 self.environment_metadata.control_signal,
                 self.hardware_metadata.sample_rate,
                 self.run_widget.control_channel_selector.itemText(control_index),
+                self.initialized_control_unit(control_index),
             )
         )
         if self.last_control_data is not None:

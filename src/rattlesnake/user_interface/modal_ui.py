@@ -157,6 +157,7 @@ class ModalUI(EnvironmentUI):
         self.run_widget.channel_display_area.last_frf = None
         self.run_widget.channel_display_area.last_coh = None
         self.run_widget.channel_display_area.channel_names = None
+        self.run_widget.channel_display_area.channel_list = None
         self.run_widget.channel_display_area.reference_channel_indices = None
         self.run_widget.channel_display_area.response_channel_indices = None
 
@@ -238,6 +239,8 @@ class ModalUI(EnvironmentUI):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLabel("bottom", "Time (s)")
+            plot_item.setLabel("left", "Amplitude")
 
         # Disable the currently inactive portions of the definition layout
         self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(
@@ -1316,6 +1319,9 @@ class ModalUI(EnvironmentUI):
                 ]
             )
         self.run_widget.channel_display_area.channel_names = self.channel_names
+        self.run_widget.channel_display_area.channel_list = (
+            self.hardware_metadata.channel_list
+        )
 
     def increment_savefile(self):
         """

@@ -13,7 +13,7 @@ from rattlesnake.environment.sine_sys_id_utilities import (
     digital_tracking_filter_generator,
     vold_kalman_filter_generator,
 )
-from rattlesnake.user_interface.ui_utilities import VaryingNumberOfLinePlot
+from rattlesnake.user_interface.ui_utilities import VaryingNumberOfLinePlot, axis_label
 
 
 class FilterExplorer(QtWidgets.QDialog):
@@ -168,6 +168,14 @@ class FilterExplorer(QtWidgets.QDialog):
         self.order_amplitude_plotter = VaryingNumberOfLinePlot(
             self.order_amplitude_plot.getPlotItem()
         )
+        self.full_time_history_plot.getPlotItem().setLabel("bottom", "Time (s)")
+        self.full_time_history_plot.getPlotItem().setLabel("left", "Amplitude")
+        self.order_time_history_plot.getPlotItem().setLabel("bottom", "Time (s)")
+        self.order_time_history_plot.getPlotItem().setLabel("left", "Amplitude")
+        self.order_amplitude_plot.getPlotItem().setLabel("bottom", "Frequency (Hz)")
+        self.order_amplitude_plot.getPlotItem().setLabel("left", "Amplitude")
+        self.order_phase_plot.getPlotItem().setLabel("bottom", "Frequency (Hz)")
+        self.order_phase_plot.getPlotItem().setLabel("left", "Phase (deg)")
 
         self.filter_type_selector.setCurrentIndex(current_filter_type)
         self.tracking_filter_order_selector.setValue(current_tracking_filter_order)
@@ -510,6 +518,14 @@ class PlotSineWindow(QtWidgets.QDialog):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLabel("bottom", "Frequency (Hz)")
+        amp_plot_item.setLabel(
+            "left",
+            axis_label(
+                "amplitude", "Amplitude", ui.initialized_control_unit(channel_index)
+            ),
+        )
+        phs_plot_item.setLabel("left", "Phase (deg)")
         amp_plot_item.plot(
             spec_frequency, spec_amplitude, pen={"color": "b", "width": 1}
         )

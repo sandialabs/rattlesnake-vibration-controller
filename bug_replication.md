@@ -1,5 +1,7 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
+[ ] Figure out what the sysid sharing user interface should look like
+[ ] Look for and document/recreate warnings
 
 Stuff to check
 [ ] Figure out how to do sharing sysid data packages
@@ -19,7 +21,13 @@ Stuff for the future
 
 [ ] Run Sysid results in zero division with virtual hardware due to no noise signal
 
+[ ] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
+
 ## Easy
+[ ] Add units to each of the plots.
+    [ ] Add units to example problems
+    [ ] Check units in the plots
+
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
     [ ] There is a pip install nbstripout that works for this: https://github.com/kynan/nbstripout
 
@@ -32,8 +40,6 @@ Stuff for the future
 [ ] Build out notebook example.
 
 [ ] Write guide for building out new environments.
-
-[ ] Add units to each of the plots.
 
 ## Hard (Major issues are going to happen)
 [ ] Figure out issue with changing font size in jupyter notebooks.

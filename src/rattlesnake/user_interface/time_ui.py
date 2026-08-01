@@ -13,7 +13,11 @@ from rattlesnake.environment.time_environment import (
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
-from rattlesnake.user_interface.ui_utilities import multiline_plotter
+from rattlesnake.user_interface.ui_utilities import (
+    axis_label,
+    channel_unit_label,
+    multiline_plotter,
+)
 from rattlesnake.utilities import (
     DIRECTORY,
     load_time_history,
@@ -103,6 +107,8 @@ class TimeUI(EnvironmentUI):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLabel("bottom", "Time (s)")
+            plot_item.setLabel("left", "Amplitude")
 
     def connect_callbacks(self):
         """Helper function to connect callbacks to functions in the class"""
@@ -186,6 +192,23 @@ class TimeUI(EnvironmentUI):
         self.definition_widget.signal_display_plot.getPlotItem().clear()
         self.run_widget.output_signal_plot.getPlotItem().clear()
         self.run_widget.response_signal_plot.getPlotItem().clear()
+
+        output_unit = channel_unit_label(
+            channel for channel in channels if channel.feedback_device
+        )
+        measurement_unit = channel_unit_label(
+            channel for channel in channels if channel.feedback_device is None
+        )
+        for plot in [
+            self.definition_widget.signal_display_plot,
+            self.run_widget.output_signal_plot,
+        ]:
+            plot.getPlotItem().setLabel(
+                "left", axis_label("amplitude", "Amplitude", output_unit)
+            )
+        self.run_widget.response_signal_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Response", measurement_unit)
+        )
 
         # Set initial lines
         self.plot_data_items["output_signal_definition"] = multiline_plotter(

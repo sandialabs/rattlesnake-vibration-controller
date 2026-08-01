@@ -14,7 +14,11 @@ from rattlesnake.environment.skeleton_environment import (
     SkeletonMetadata,
     SkeletonInstructions,
 )
-from rattlesnake.user_interface.ui_utilities import multiline_plotter
+from rattlesnake.user_interface.ui_utilities import (
+    axis_label,
+    channel_unit_label,
+    multiline_plotter,
+)
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
 
 ENVIRONMENT_TYPE = EnvironmentType.SKELETON
@@ -51,6 +55,8 @@ class SkeletonUI(EnvironmentUI):
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
+        plot_item.setLabel("bottom", "Time (s)")
+        plot_item.setLabel("left", "Amplitude")
 
     def connect_callbacks(self):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
@@ -72,6 +78,14 @@ class SkeletonUI(EnvironmentUI):
             widget=self.run_widget.response_signal_plot,
             other_pen_options={"width": 1},
             names=plot_names,
+        )
+        self.run_widget.response_signal_plot.getPlotItem().setLabel(
+            "left",
+            axis_label(
+                "amplitude",
+                "Amplitude",
+                channel_unit_label(hardware_metadata.channel_list),
+            ),
         )
         return super().initialize_hardware(hardware_metadata)
 

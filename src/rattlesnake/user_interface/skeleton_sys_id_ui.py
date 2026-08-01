@@ -15,7 +15,11 @@ from rattlesnake.environment.skeleton_sys_id_environment import (
     SkeletonSysIdUICommands,
     SkeletonSysIdInstructions,
 )
-from rattlesnake.user_interface.ui_utilities import multiline_plotter
+from rattlesnake.user_interface.ui_utilities import (
+    axis_label,
+    channel_unit_label,
+    multiline_plotter,
+)
 from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
 
 CONTROL_TYPE = EnvironmentType.SYSID_SKELETON  # noqa pylint: disable=no-member
@@ -57,6 +61,8 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
+        plot_item.setLabel("bottom", "Time (s)")
+        plot_item.setLabel("left", "Amplitude")
 
     def connect_callbacks(self):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
@@ -140,6 +146,14 @@ class SkeletonSysIdUI(SysIdEnvironmentUI):
             widget=self.run_widget.response_signal_plot,
             other_pen_options={"width": 1},
             names=plot_names,
+        )
+        self.run_widget.response_signal_plot.getPlotItem().setLabel(
+            "left",
+            axis_label(
+                "amplitude",
+                "Amplitude",
+                channel_unit_label(hardware_metadata.channel_list),
+            ),
         )
 
     def initialize_environment(self, environment_metadata: SkeletonSysIdMetadata):

@@ -27,7 +27,8 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
 )
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
 from rattlesnake.user_interface.ui_utilities import (
-    error_message_qt,
+    axis_label,
+    channel_unit_label,
     RotatedAxisItem,
     SysIdSelector,
 )
@@ -161,7 +162,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 row=0, column=0
             )
         )
-        self.transfer_function_phase_plot.setLabel("left", "Phase")
+        self.transfer_function_phase_plot.setLabel("left", "Phase (deg)")
         self.transfer_function_phase_plot.setLabel("bottom", "Frequency (Hz)")
         self.transfer_function_magnitude_plot = (
             self.system_id_widget.transfer_function_graphics_layout.addPlot(
@@ -198,8 +199,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
         self.kurtosis_reference_plot = (
             self.system_id_widget.kurtosis_graphicslayout.addPlot(row=0, column=1)
         )
-        self.kurtosis_response_plot.setLabel("left", "Response")
-        self.kurtosis_reference_plot.setLabel("left", "Reference")
+        self.kurtosis_response_plot.setLabel("left", "Kurtosis")
+        self.kurtosis_reference_plot.setLabel("left", "Kurtosis")
         response_axis = RotatedAxisItem("bottom")
         reference_axis = RotatedAxisItem("bottom")
         response_axis.setAngle(-60)
@@ -1012,6 +1013,39 @@ class SysIdEnvironmentUI(EnvironmentUI):
         ]
         # print(response_indices)
         # print(reference_indices)
+        response_channels = [
+            self.hardware_metadata.channel_list[i]
+            for i in np.array(self.environment_metadata.response_channel_indices)[
+                response_indices
+            ]
+        ]
+        reference_channels = [
+            self.hardware_metadata.channel_list[i]
+            for i in np.array(self.environment_metadata.reference_channel_indices)[
+                reference_indices
+            ]
+        ]
+        response_unit = channel_unit_label(response_channels)
+        reference_unit = channel_unit_label(reference_channels)
+        self.time_response_plot.setLabel(
+            "left", axis_label("amplitude", "Response", response_unit)
+        )
+        self.time_reference_plot.setLabel(
+            "left", axis_label("amplitude", "Reference", reference_unit)
+        )
+        self.level_response_plot.setLabel(
+            "left", axis_label("psd", "Response PSD", response_unit)
+        )
+        self.level_reference_plot.setLabel(
+            "left", axis_label("psd", "Reference PSD", reference_unit)
+        )
+        self.transfer_function_magnitude_plot.setLabel(
+            "left", axis_label("ratio", "Amplitude", (response_unit, reference_unit))
+        )
+        self.impulse_response_plot.setLabel(
+            "left",
+            axis_label("ratio", "Impulse Response", (response_unit, reference_unit)),
+        )
         if update_time:
             self.time_response_plot.clear()
             self.time_reference_plot.clear()

@@ -14,7 +14,11 @@ from rattlesnake.environment.read_environment import (
     ReadMetadata,
     ReadInstructions,
 )
-from rattlesnake.user_interface.ui_utilities import multiline_plotter
+from rattlesnake.user_interface.ui_utilities import (
+    axis_label,
+    channel_unit_label,
+    multiline_plotter,
+)
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
 
 ENVIRONMENT_TYPE = EnvironmentType.READ
@@ -48,6 +52,8 @@ class ReadUI(EnvironmentUI):
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
+        plot_item.setLabel("bottom", "Time (s)")
+        plot_item.setLabel("left", "Amplitude")
 
         self.run_widget.channel_enable_table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeToContents
@@ -84,6 +90,14 @@ class ReadUI(EnvironmentUI):
             widget=self.run_widget.response_signal_plot,
             other_pen_options={"width": 1},
             names=plot_names,
+        )
+        self.run_widget.response_signal_plot.getPlotItem().setLabel(
+            "left",
+            axis_label(
+                "amplitude",
+                "Amplitude",
+                channel_unit_label(hardware_metadata.channel_list),
+            ),
         )
 
         self.run_widget.channel_enable_table.setRowCount(len(plot_names))

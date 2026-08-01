@@ -2555,6 +2555,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         plot_item.clear()
         plot_item.showGrid(True, True, 0.25)
         plot_item.disableAutoRange()
+        plot_item.setLabel("bottom", "Time (s)")
 
         if self.theme == "Light":
             text_color = (0, 0, 0)
