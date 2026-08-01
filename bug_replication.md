@@ -23,6 +23,8 @@ Stuff for the future
 
 [ ] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
 
+[ ] Figure out why some errors do not display on user interface (errors inside control laws)
+
 ## Easy
 [ ] Add units to each of the plots.
     [ ] Add units to example problems
