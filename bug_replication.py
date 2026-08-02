@@ -76,5 +76,21 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
+def dual_sysid_environment():
+    with test_example_rattlesnake_object(
+        hardware_type=HardwareType.SDYNPY_SYSTEM
+    ) as rattlesnake:
+        metadata_1 = manual_random_metadata(
+            rattlesnake.hardware_metadata, environment_name="Random 0"
+        )
+        metadata_2 = manual_random_metadata(
+            rattlesnake.hardware_metadata, environment_name="Random 1"
+        )
+
+        rattlesnake.initialize_environments([metadata_1, metadata_2])
+
+        launch_rattlesnake_ui(rattlesnake)
+
+
 if __name__ == "__main__":
-    pass
+    dual_sysid_environment()

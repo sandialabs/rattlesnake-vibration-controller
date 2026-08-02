@@ -2622,6 +2622,38 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
 
 # region System Id
+class SysIdSharingDialog(QtWidgets.QDialog):
+    """Dialog offering to apply a just-loaded/completed SysIdDataPackage to
+    other environments that share the same control and response channels."""
+
+    def __init__(self, target_environments, parent=None):
+        super().__init__(parent)
+
+        ui_path = os.path.join(
+            DIRECTORY,
+            "user_interface",
+            "ui_files",
+            "system_identification_selector.ui",
+        )
+        uic.loadUi(ui_path, self)
+
+        self.target_environments = list(target_environments)
+
+        self.target_environment_table.setRowCount(len(self.target_environments))
+        for row, name in enumerate(self.target_environments):
+            item = QtWidgets.QTableWidgetItem(str(name))
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            self.target_environment_table.setItem(row, 0, item)
+
+    def selected_targets(self):
+        return [
+            self.target_environment_table.item(row, 0).text()
+            for row in range(self.target_environment_table.rowCount())
+            if self.target_environment_table.item(row, 0).checkState() == Qt.Checked
+        ]
+
+
 class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
     """Plot axis labels that can be rotated by some value"""
 

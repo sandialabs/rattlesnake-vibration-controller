@@ -263,6 +263,31 @@ class EnvironmentManager:
 
         return environment_metadata_dict
 
+    def find_sysid_compatible_environments(self, environment_name: str):
+        try:
+            source_queue_name = self.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(f"No environments exist for {environment_name} name")
+
+        if self.environment_types[source_queue_name] not in SYSID_ENVIRONMENTS:
+            return []
+
+        source_metadata = self.environment_metadata[source_queue_name]
+
+        compatible_names = []
+        for target_queue_name, name in self.environment_names.items():
+            if target_queue_name == source_queue_name:
+                continue
+            if self.environment_types[target_queue_name] not in SYSID_ENVIRONMENTS:
+                continue
+            target_metadata = self.environment_metadata[target_queue_name]
+            if target_metadata is None:
+                continue
+            if source_metadata.sysid_shared(target_metadata):
+                compatible_names.append(name)
+
+        return compatible_names
+
     # endregion
 
     # region Validation

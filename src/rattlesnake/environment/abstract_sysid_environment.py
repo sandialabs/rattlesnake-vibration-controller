@@ -170,6 +170,26 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
     def reference_transformation_matrix(self):
         """Gets the excitation transformation matrix"""
 
+    def sysid_shared(self, target_metadata):
+        for indices_attr, matrix_attr in (
+            ("response_channel_indices", "response_transformation_matrix"),
+            ("reference_channel_indices", "reference_transformation_matrix"),
+        ):
+            global_indices_a = [
+                self.channel_indices[i] for i in getattr(self, indices_attr)
+            ]
+            global_indices_b = [
+                target_metadata.channel_indices[i]
+                for i in getattr(target_metadata, indices_attr)
+            ]
+            if global_indices_a != global_indices_b:
+                return False
+            if not np.array_equal(
+                getattr(self, matrix_attr), getattr(target_metadata, matrix_attr)
+            ):
+                return False
+        return True
+
     # endregion
 
     # region Validation
@@ -1169,7 +1189,10 @@ class SysIdEnvironment(Environment):
             )
         )
         self.gui_update_queue.put(
-            (UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data))
+            (
+                UICommands.COMPLETED_SYSTEM_ID,
+                (self.environment_name, data),
+            )
         )  # Enable tabs
         self.set_sysid_stored()
 

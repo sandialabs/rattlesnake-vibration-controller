@@ -884,18 +884,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
                     filename, "r", format="NETCDF4"
                 )
-                # the world is not ready for this right now
-                # source_environments = netcdf_dataset.variables["environment_names"][...]
-                # target_environments = (
-                #     self.rattlesnake.environment_manager.environment_names.values()
-                # )
-                # load_environment, save_environments = self.open_sysid_selector(
-                #     source_environments, target_environments
-                # )
-                # if not load_environment or not save_environments:
-                #     return
-
-                netcdf_handle = netcdf_dataset.groups[self.environment_name]
+                group_name = next(iter(netcdf_dataset.groups))
+                netcdf_handle = netcdf_dataset.groups[group_name]
                 sysid_metadata = SysIdMetadata().load_metadata_from_netcdf(
                     netcdf_handle, self.hardware_metadata
                 )

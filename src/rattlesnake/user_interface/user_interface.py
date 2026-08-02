@@ -73,6 +73,7 @@ from rattlesnake.user_interface.ui_utilities import (
     HardwareAssistModules,
     EditableCombobox,
     EditableSpinBox,
+    SysIdSharingDialog,
 )
 from rattlesnake.user_interface.ui_registry import (
     UI_HARDWARE_OPTIONS,
@@ -626,10 +627,23 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case UICommands.HARDWARE_ENDED:
                 self.display_acquisition_ended()
             case UICommands.COMPLETED_SYSTEM_ID:
-                environment, _ = data
+                environment, package = data
+                sysid_metadata, sysid_data_package = package
                 print(f"System Id Completed for {environment}")
                 self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
                 self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+                target_environments = self.check_sysid_package_sharing(environment)
+                if target_environments:
+                    for target in target_environments:
+                        try:
+                            self.rattlesnake.initialize_system_id(
+                                sysid_metadata, target
+                            )
+                            self.rattlesnake.load_system_id_from_package(
+                                target, sysid_data_package
+                            )
+                        except Exception as e:
+                            self.display_error(e)
             case UICommands.MONITOR:
                 if self.channel_monitor_window is not None:
                     if not self.channel_monitor_window.isVisible():
@@ -1092,6 +1106,37 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         except Exception as e:  # pylint: disable=broad-exception-caught
             self.display_error(e)
             return
+
+    def check_sysid_package_sharing(self, environment_name, parent=None):
+        # Check for other viable sysid environments
+        try:
+            targets = (
+                self.rattlesnake.environment_manager.find_sysid_compatible_environments(
+                    environment_name
+                )
+            )
+        except RattlesnakeError:
+            return
+        if not targets:
+            return
+
+        # Ask user if they wish to share the data package
+        response = QtWidgets.QMessageBox.question(
+            self,
+            "Share Sysid Data",
+            "Would you like to apply this system identification to other environments?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if response != QtWidgets.QMessageBox.Yes:
+            return
+
+        # Pull up sharing dialog box
+        dialog = SysIdSharingDialog(targets, parent=parent)
+        if dialog.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        selected_targets = dialog.selected_targets()
+        return selected_targets
 
     # endregion
 

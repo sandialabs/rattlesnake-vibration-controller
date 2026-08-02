@@ -1,5 +1,8 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
+[ ] Get these changes into the actual branch
+[ ] Test if the sysid metadata ui will update when loading.
+
 [ ] Figure out what the sysid sharing user interface should look like
 [ ] Look for and document/recreate warnings
 
@@ -26,6 +29,8 @@ Stuff for the future
 [ ] Figure out why some errors do not display on user interface (errors inside control laws)
 
 ## Easy
+[ ] Rework regions so they are nested
+
 [ ] Add units to each of the plots.
     [ ] Add units to example problems
     [ ] Check units in the plots
