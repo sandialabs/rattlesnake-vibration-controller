@@ -91,6 +91,7 @@ class SystemIdCommands(Enum):
 class SysIdUICommands(Enum):
     SYSID_STARTED = 0
     SYSID_ENDED = 1
+    DISPLAY_METADATA = 2
 
     @property
     def label(self):
@@ -633,6 +634,9 @@ class SysIdEnvironment(Environment):
                 SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
                 sysid_metadata,
             ),
+        )
+        self.gui_update_queue.put(
+            (self.environment_name, (SysIdUICommands.DISPLAY_METADATA, sysid_metadata))
         )
         # self.set_ready() # Call this at the end of your function
 
@@ -1191,7 +1195,10 @@ class SysIdEnvironment(Environment):
         self.gui_update_queue.put(
             (
                 UICommands.COMPLETED_SYSTEM_ID,
-                (self.environment_name, data),
+                (
+                    self.environment_name,
+                    (self.environment_metadata.sysid_metadata, self.sysid_data),
+                ),
             )
         )  # Enable tabs
         self.set_sysid_stored()

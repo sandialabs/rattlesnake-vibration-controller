@@ -78,11 +78,12 @@ def profile_event_crash():
 
 def dual_sysid_environment():
     with test_example_rattlesnake_object(
-        hardware_type=HardwareType.SDYNPY_SYSTEM
+        threaded=True, hardware_type=HardwareType.SDYNPY_SYSTEM
     ) as rattlesnake:
         metadata_1 = manual_random_metadata(
             rattlesnake.hardware_metadata, environment_name="Random 0"
         )
+        metadata_1.sysid_metadata.sysid_level_ramp_time = 2.5
         metadata_2 = manual_random_metadata(
             rattlesnake.hardware_metadata, environment_name="Random 1"
         )

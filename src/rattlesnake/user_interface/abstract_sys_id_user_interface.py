@@ -1310,6 +1310,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 self.display_system_id_started()
             case SysIdUICommands.SYSID_ENDED:
                 self.display_system_id_ended()
+            case SysIdUICommands.DISPLAY_METADATA:
+                self.set_sysid_metadata(data)
             case DataCollectorUICommands.TIME_FRAME:
                 self.last_time_response, accept = data
                 self.update_sysid_plots(
