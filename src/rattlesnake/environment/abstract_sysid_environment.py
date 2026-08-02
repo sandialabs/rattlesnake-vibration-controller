@@ -557,6 +557,7 @@ class SysIdEnvironment(Environment):
         self.spectral_processing_command_queue = spectral_processing_command_queue
         self.data_analysis_command_queue = data_analysis_command_queue
         self.sysid_data = SysIdDataPackage()
+        self._sysid_loaded_from_share = False
         self.collector_shutdown_achieved = True
         self.spectral_shutdown_achieved = True
         self.siggen_shutdown_achieved = True
@@ -863,9 +864,9 @@ class SysIdEnvironment(Environment):
 
         self.set_ready()
 
-    def load_system_id_from_package(self, data: SysIdDataPackage):
+    def load_system_id_from_package(self, data: tuple[SysIdDataPackage, bool]):
         # Store SystemIdDataPackage to data_analysis process and environment
-        sysid_data = data
+        sysid_data, ask_to_share = data
         self.data_analysis_command_queue.put(
             self.environment_name,
             (SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, sysid_data),
@@ -891,7 +892,8 @@ class SysIdEnvironment(Environment):
         )
 
         # This seems counterintuitive but lots of environments overwrite the
-        # system_id_complete function so it is easier to do it this way
+        # system_id_complete function so it is easier to do it this way.
+        self._sysid_loaded_from_share = not ask_to_share
         self.environment_command_queue.put(
             self.environment_name,
             (
@@ -1201,6 +1203,18 @@ class SysIdEnvironment(Environment):
                 ),
             )
         )  # Enable tabs
+        if self._sysid_loaded_from_share:
+            self._sysid_loaded_from_share = False
+        else:
+            self.gui_update_queue.put(
+                (
+                    UICommands.SHARE_SYSTEM_ID,
+                    (
+                        self.environment_name,
+                        (self.environment_metadata.sysid_metadata, self.sysid_data),
+                    ),
+                )
+            )
         self.set_sysid_stored()
 
     @abstractmethod

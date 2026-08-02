@@ -929,7 +929,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         try:
             self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
             self.rattlesnake.load_system_id_from_package(
-                self.environment_name, sysid_data
+                self.environment_name, sysid_data, ask_to_share=True
             )
         except Exception as e:
             self.display_error(e)

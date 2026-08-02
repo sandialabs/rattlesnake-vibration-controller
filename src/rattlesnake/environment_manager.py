@@ -358,6 +358,13 @@ class EnvironmentManager:
                 f"{environment_name} is not a system identification environment"
             )
 
+        if not isinstance(
+            self.environment_metadata[queue_name].sysid_metadata, SysIdMetadata
+        ):
+            raise RattlesnakeError(
+                f"{environment_name} does not have a system identification metadata object loaded to it."
+            )
+
         if not isinstance(data_package, SysIdDataPackage):
             raise RattlesnakeError(
                 "Rattlesnake was provided an sysid_data_package that was "

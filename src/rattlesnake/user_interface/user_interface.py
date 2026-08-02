@@ -628,10 +628,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.display_acquisition_ended()
             case UICommands.COMPLETED_SYSTEM_ID:
                 environment, package = data
-                sysid_metadata, sysid_data_package = package
                 print(f"System Id Completed for {environment}")
                 self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
                 self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+            case UICommands.SHARE_SYSTEM_ID:
+                environment, package = data
+                sysid_metadata, sysid_data_package = package
                 target_environments = self.check_sysid_package_sharing(environment)
                 if target_environments:
                     for target in target_environments:
@@ -640,7 +642,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                                 sysid_metadata, target
                             )
                             self.rattlesnake.load_system_id_from_package(
-                                target, sysid_data_package
+                                target, sysid_data_package, ask_to_share=False
                             )
                         except Exception as e:
                             self.display_error(e)

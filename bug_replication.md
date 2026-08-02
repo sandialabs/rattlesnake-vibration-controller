@@ -1,14 +1,9 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
-[ ] Get these changes into the actual branch
-[ ] Test if the sysid metadata ui will update when loading.
-
-[ ] Figure out what the sysid sharing user interface should look like
 [ ] Look for and document/recreate warnings
 
-Stuff to check
-[ ] Figure out how to do sharing sysid data packages
-[ ] Figure out notebooks on git repo
+[ ] Prevent sharing sysid from shared environments
+[ ] Check what happens when loading user interface from sysid stuff
 
 Stuff for the future
 [ ] Clear jupyter notebooks automatically on push
@@ -56,17 +51,12 @@ Stuff for the future
 [ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
     [ ] This is an internal event done to sync the environment user interface before performing the list.
 
-[ ] Allow for SysID data packages to be sent to other environments that share the same control/channel_table.
-    [ ] Have some equality/function that checks if SysIdDataPackages can go with a certain environment
-    [ ] When one sysid has completed, have the user interface ask if it wants to be stored to other environments
-        [ ] Maybe have a dialog box to select other environments with a table and checkboxes for their names
-    [ ] Make load_sys_id not require the environment to have the same name as the one that generated it
+[ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws.
 
 ## Impossible
 [ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work.
     [ ] Should probably create a notebook to recreate this issue for BK issues tab
 
-[ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws.
 
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
     [ ] Should probably just stop profile events from firing if this happens.
@@ -96,3 +86,9 @@ Stuff for the future
 [x] Fix keyboard interrupt
 [x] SDynPy System example throws an error when loaded from netcdf
 [x] Weird BrokenPipeError when rattlesnake.shutdown with LanXi
+[x] Allow for SysID data packages to be sent to other environments that share the same control/channel_table.
+    [x] Have some equality/function that checks if SysIdDataPackages can go with a certain environment
+    [x] When one sysid has completed, have the user interface ask if it wants to be stored to other environments
+        [x] Maybe have a dialog box to select other environments with a table and checkboxes for their names
+    [x] Make load_sys_id not require the environment to have the same name as the one that generated it.
+    [x] Have initialize sysid update the user interface

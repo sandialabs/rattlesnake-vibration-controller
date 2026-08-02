@@ -965,7 +965,7 @@ def test_rattlesnake_load_system_id_from_package(rattlesnake_package):
     )
     mock_environment_queue.put.assert_called_once_with(
         "Rattlesnake",
-        (GlobalCommands.LOAD_SYSTEM_ID, sysid_package),
+        (GlobalCommands.LOAD_SYSTEM_ID, (sysid_package, False)),
     )
     rattlesnake.wait_for_events.assert_called_once()
 

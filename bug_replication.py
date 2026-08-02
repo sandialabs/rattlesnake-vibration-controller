@@ -90,6 +90,11 @@ def dual_sysid_environment():
 
         rattlesnake.initialize_environments([metadata_1, metadata_2])
 
+        # rattlesnake.initialize_system_id(
+        #     manual_sysid_metadata(rattlesnake.hardware_metadata), "Random 0"
+        # )
+        rattlesnake.load_system_id_from_package("Random 0", netcdf_sysid_data_package())
+
         launch_rattlesnake_ui(rattlesnake)
 
 

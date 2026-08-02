@@ -611,7 +611,9 @@ class RattlesnakeController:
         active_event_list = []
         self.wait_for_events(ready_event_list, active_event_list)
 
-    def load_system_id_from_package(self, environment_name, sysid_package):
+    def load_system_id_from_package(
+        self, environment_name, sysid_package, ask_to_share=False
+    ):
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for loading system identification: {self.state}"
@@ -621,9 +623,12 @@ class RattlesnakeController:
             environment_name, sysid_package
         )
 
+        if not self.has_gui:
+            ask_to_share = False
+
         self.event_container.environment_sysid_stored_events[queue_name].clear()
         self.queue_container.environment_command_queues[queue_name].put(
-            TASK_NAME, (GlobalCommands.LOAD_SYSTEM_ID, sysid_package)
+            TASK_NAME, (GlobalCommands.LOAD_SYSTEM_ID, (sysid_package, ask_to_share))
         )
 
         ready_event_list = [
