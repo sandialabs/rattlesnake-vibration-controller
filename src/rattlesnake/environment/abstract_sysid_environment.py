@@ -620,9 +620,17 @@ class SysIdEnvironment(Environment):
         """
         self.data_analysis_command_queue.put(
             self.environment_name,
-            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_name),
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata),
         )
         super().initialize_environment(environment_metadata)
+
+        self.data_analysis_command_queue.put(
+            self.environment_name,
+            (
+                SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
+                environment_metadata.sysid_metadata,
+            ),
+        )
 
     @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):

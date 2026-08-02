@@ -142,14 +142,6 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     # endregion
 
     # region StateSync
-    def initialize_environment(self, data):
-        # This is a terrible way to do this. Basically, data is supposed to be just a str of
-        # environment name but in this case, the data analysis process requires knowledge of
-        # the original environment metadata so we are storing it here instead. Breaks chain
-        # of inheritance for this environment.
-        self.environment_metadata = data
-        super().initialize_environment(data.environment_name)
-
     def initialize_sysid_parameters(self, data: SysIdMetadata):
         self.parameters: SysIdMetadata
         super().initialize_sysid_parameters(data)  # This defines self.parameters

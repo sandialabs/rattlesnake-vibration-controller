@@ -83,10 +83,12 @@ def dual_sysid_environment():
         metadata_1 = manual_random_metadata(
             rattlesnake.hardware_metadata, environment_name="Random 0"
         )
+        metadata_1.sysid_metadata = manual_sysid_metadata(rattlesnake.hardware_metadata)
         metadata_1.sysid_metadata.sysid_level_ramp_time = 2.5
         metadata_2 = manual_random_metadata(
             rattlesnake.hardware_metadata, environment_name="Random 1"
         )
+        metadata_2.sysid_metadata = manual_sysid_metadata(rattlesnake.hardware_metadata)
 
         rattlesnake.initialize_environments([metadata_1, metadata_2])
 

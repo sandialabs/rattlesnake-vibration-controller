@@ -1215,17 +1215,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.set_ready()
 
     def initialize_environment(self, environment_metadata: RandomVibrationMetadata):
-        self.environment_name = environment_metadata.environment_name
-        self.environment_metadata = environment_metadata
-
-        # Set up the data analysis
-        self.queue_container.data_analysis_command_queue.put(
-            self.environment_name,
-            (
-                RandomVibrationDataAnalysisCommands.INITIALIZE_ENVIRONMENT,
-                self.environment_metadata,
-            ),
-        )
+        super().initialize_environment(environment_metadata)
 
         # Set up the collector
         self.queue_container.collector_command_queue.put(

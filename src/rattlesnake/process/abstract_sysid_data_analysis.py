@@ -151,9 +151,7 @@ class SysIdMetadata:
     # region Validation
     def validate(self, hardware_metadata):
         if self.sysid_frame_size <= 0:
-            raise RattlesnakeError(
-                "System ID samples per frame must be greater than 0"
-            )
+            raise RattlesnakeError("System ID samples per frame must be greater than 0")
 
         if not (0 <= self.sysid_overlap < 1):
             raise RattlesnakeError(
@@ -176,8 +174,7 @@ class SysIdMetadata:
             0 < self.sysid_burst_on <= 1
         ):
             raise RattlesnakeError(
-                "System ID burst on percent must be greater than 0 and up "
-                "to 100"
+                "System ID burst on percent must be greater than 0 and up " "to 100"
             )
 
         if self.sysid_averaging_type not in ("Linear", "Exponential"):
@@ -218,9 +215,7 @@ class SysIdMetadata:
             )
 
         if self.sysid_level < 0:
-            raise RattlesnakeError(
-                "System ID level must be greater than or equal to 0"
-            )
+            raise RattlesnakeError("System ID level must be greater than or equal to 0")
 
         nyquist_frequency = self.sample_rate / 2
         if not (
@@ -919,13 +914,22 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.frames = None
         self.sysid_data = SysIdDataPackage()
         self.startup = True
+        self.environment_metadata = None
 
     def ping_alive(self):
         self._ping_alive_event.set()
 
     # region State Sync
-    def initialize_environment(self, data: str):
-        self.environment_name = data
+    def initialize_environment(self, data):
+        """
+        Parameters
+        ----------
+        data : SysIdEnvironmentMetadata
+            The full environment metadata object (not just the environment
+            name), so subclasses have access to it if needed.
+        """
+        self.environment_name = data.environment_name
+        self.environment_metadata = data
 
     def initialize_sysid_parameters(self, data: SysIdMetadata):
         """Stores parameters describing the system identification into the object
