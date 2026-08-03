@@ -55,14 +55,6 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
-def profile_event_list_ui():
-    with test_example_rattlesnake_object(
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.MODAL,
-    ) as rattlesnake:
-        launch_rattlesnake_ui(rattlesnake)
-
-
 def dual_sysid_environment():
     with test_example_rattlesnake_object(
         threaded=True, hardware_type=HardwareType.SDYNPY_SYSTEM
@@ -120,7 +112,7 @@ def modal_environment_reciprocity_issue():
             ),
         ]
         launch_temporary_rattlesnake_ui(
-            rattlesnake, ui_event_list, closeout_time=None, display_errors=False
+            rattlesnake, ui_event_list, closeout_time=8, display_errors=False
         )
 
 

@@ -9,7 +9,7 @@ Stuff for the future
 [ ] Write guide for building new environments
 
 ## Warnings/Minor Fixes
-[ ] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
+[x] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
 
 [ ] Figure out why some errors do not display on user interface (errors inside control laws)
 

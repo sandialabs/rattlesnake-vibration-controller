@@ -2556,6 +2556,8 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         elif current_index == 7:  # FRF or FRF Coherence
             if self.parent.last_frf is None:
                 return
+            if any(val is None for val in self.reciprocal_responses):
+                return
             resp_ind = self.response_coordinate_selector.currentIndex()
             ref_ind = self.reference_coordinate_selector.currentIndex()
             data = self.parent.last_frf[:, self.reciprocal_responses[resp_ind], ref_ind]
