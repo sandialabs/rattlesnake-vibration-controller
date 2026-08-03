@@ -382,8 +382,10 @@ class KurtosisBuffer:
         # c3 = m3 - (3*m1*m2) + (2*(m1**3)) # not needed for kurtosis
         c4 = m4 - (4 * m1 * m3) + (6 * (m1**2) * m2) - (3 * (m1**4))
 
-        # compute kurtosis
-        k = c4 / (c2**2)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            k = c4 / (c2**2)
+        # a zero-variance signal has no meaningful kurtosis;
+        k = np.where(c2 == 0, 3.0, k)
         return k - 3 if fisher else k
 
 

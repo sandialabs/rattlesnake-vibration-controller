@@ -97,7 +97,10 @@ class SpectralProcessingMetadata:
     def __eq__(self, other):
         try:
             return np.all(
-                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
+                [
+                    np.all(value == other.__dict__[field])
+                    for field, value in self.__dict__.items()
+                ]
             )
         except (AttributeError, KeyError):
             return False
@@ -129,7 +132,10 @@ class SpectralProcessingMetadata:
     def requires_full_spectral_reference(self):
         """Checks if the requested outputs require calculation of the full reference CPSD"""
         if (
-            (self.compute_frf and self.frf_estimator in [Estimator.H1, Estimator.H3, Estimator.HV])
+            (
+                self.compute_frf
+                and self.frf_estimator in [Estimator.H1, Estimator.H3, Estimator.HV]
+            )
             or self.compute_cpsd
             or self.compute_coherence
         ):
@@ -235,7 +241,8 @@ class SpectralProcessingProcess(AbstractMessageProcess):
         if self.spectral_processing_parameters is None:
             reshape_arrays = True
         elif (
-            self.spectral_processing_parameters.num_frequency_lines != data.num_frequency_lines
+            self.spectral_processing_parameters.num_frequency_lines
+            != data.num_frequency_lines
             or self.spectral_processing_parameters.num_response_channels
             != data.num_response_channels
             or self.spectral_processing_parameters.num_reference_channels
@@ -255,7 +262,10 @@ class SpectralProcessingProcess(AbstractMessageProcess):
             self.response_reference_spectral_matrix = None
             self.reference_diagonal_matrix = None
             self.response_diagonal_matrix = None
-            if self.spectral_processing_parameters.averaging_type == AveragingTypes.LINEAR:
+            if (
+                self.spectral_processing_parameters.averaging_type
+                == AveragingTypes.LINEAR
+            ):
                 self.response_fft = np.nan * np.ones(
                     (
                         self.spectral_processing_parameters.averages,
@@ -335,7 +345,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     (SpectralProcessingCommands.RUN_SPECTRAL_PROCESSING, None),
                 )
                 return
-            mean_fft = np.mean(np.abs(self.reference_fft[~exclude_averages]), axis=(-1, -2))
+            mean_fft = np.mean(
+                np.abs(self.reference_fft[~exclude_averages]), axis=(-1, -2)
+            )
             self.log(f"Mean FFT Value Over Averaged Frames: \n  {mean_fft}")
 
             # Now we compute the spectral matrices depending on what is required.
@@ -352,8 +364,12 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     / self.response_fft[~exclude_averages].shape[0]
                 )
                 # Get the diagonal matrix as well
-                self.response_diagonal_matrix = np.einsum("fii->fi", self.response_spectral_matrix)
-            elif self.spectral_processing_parameters.requires_diagonal_spectral_response:
+                self.response_diagonal_matrix = np.einsum(
+                    "fii->fi", self.response_spectral_matrix
+                )
+            elif (
+                self.spectral_processing_parameters.requires_diagonal_spectral_response
+            ):
                 self.log("Computing Diagonal of Spectral Response Matrix")
                 # self.response_diagonal_matrix = np.einsum(
                 #     'aif,aif->fi',
@@ -390,7 +406,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                 self.reference_diagonal_matrix = np.einsum(
                     "fii->fi", self.reference_spectral_matrix
                 )
-            elif self.spectral_processing_parameters.requires_diagonal_spectral_reference:
+            elif (
+                self.spectral_processing_parameters.requires_diagonal_spectral_reference
+            ):
                 self.log("Computing Diagonal of Spectral Reference Matrix")
                 self.reference_diagonal_matrix = (
                     np.einsum(
@@ -425,7 +443,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     "Computed Crossspectral Matrix in "
                     f"{time.time() - cross_spectral_time:0.2f} seconds"
                 )
-            frames = self.spectral_processing_parameters.averages - np.sum(exclude_averages)
+            frames = self.spectral_processing_parameters.averages - np.sum(
+                exclude_averages
+            )
 
         else:  # For exponential averaging
             for frame in data:
@@ -442,7 +462,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     else:
                         self.response_spectral_matrix = (
                             self.spectral_processing_parameters.exponential_averaging_coefficient
-                            * np.einsum("if,jf->fij", response_fft, np.conj(response_fft))
+                            * np.einsum(
+                                "if,jf->fij", response_fft, np.conj(response_fft)
+                            )
                             + (
                                 1
                                 - self.spectral_processing_parameters.exponential_averaging_coefficient
@@ -453,7 +475,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     self.response_diagonal_matrix = np.einsum(
                         "fii->fi", self.response_spectral_matrix
                     )
-                elif self.spectral_processing_parameters.requires_diagonal_spectral_response:
+                elif (
+                    self.spectral_processing_parameters.requires_diagonal_spectral_response
+                ):
                     self.log("Computing Diagonal of Spectral Response Matrix")
                     if self.response_diagonal_matrix is None:
                         self.response_diagonal_matrix = np.einsum(
@@ -462,7 +486,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     else:
                         self.response_diagonal_matrix = (
                             self.spectral_processing_parameters.exponential_averaging_coefficient
-                            * np.einsum("if,if->fi", response_fft, np.conj(response_fft))
+                            * np.einsum(
+                                "if,if->fi", response_fft, np.conj(response_fft)
+                            )
                             + (
                                 1
                                 - self.spectral_processing_parameters.exponential_averaging_coefficient
@@ -489,7 +515,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     else:
                         self.reference_spectral_matrix = (
                             self.spectral_processing_parameters.exponential_averaging_coefficient
-                            * np.einsum("if,jf->fij", reference_fft, np.conj(reference_fft))
+                            * np.einsum(
+                                "if,jf->fij", reference_fft, np.conj(reference_fft)
+                            )
                             + (
                                 1
                                 - self.spectral_processing_parameters.exponential_averaging_coefficient
@@ -500,7 +528,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     self.reference_diagonal_matrix = np.einsum(
                         "fii->fi", self.reference_spectral_matrix
                     )
-                elif self.spectral_processing_parameters.requires_diagonal_spectral_reference:
+                elif (
+                    self.spectral_processing_parameters.requires_diagonal_spectral_reference
+                ):
                     self.log("Computing Diagonal of Spectral Reference Matrix")
                     if self.reference_diagonal_matrix is None:
                         self.reference_diagonal_matrix = np.einsum(
@@ -509,7 +539,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     else:
                         self.reference_diagonal_matrix = (
                             self.spectral_processing_parameters.exponential_averaging_coefficient
-                            * np.einsum("if,if->fi", reference_fft, np.conj(reference_fft))
+                            * np.einsum(
+                                "if,if->fi", reference_fft, np.conj(reference_fft)
+                            )
                             + (
                                 1
                                 - self.spectral_processing_parameters.exponential_averaging_coefficient
@@ -526,7 +558,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     )
 
                 # Compute reference and response cross spectra
-                if self.spectral_processing_parameters.requires_spectral_reference_response:
+                if (
+                    self.spectral_processing_parameters.requires_spectral_reference_response
+                ):
                     cross_spectral_time = time.time()
                     self.log("Computing Full Cross Spectral Response/Reference Matrix")
                     if self.response_reference_spectral_matrix is None:
@@ -536,7 +570,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                     else:
                         self.response_reference_spectral_matrix = (
                             self.spectral_processing_parameters.exponential_averaging_coefficient
-                            * np.einsum("if,jf->fij", response_fft, np.conj(reference_fft))
+                            * np.einsum(
+                                "if,jf->fij", response_fft, np.conj(reference_fft)
+                            )
                             + (
                                 1
                                 - self.spectral_processing_parameters.exponential_averaging_coefficient
@@ -602,7 +638,9 @@ class SpectralProcessingProcess(AbstractMessageProcess):
             self.log(f"Computed FRF in {time.time() - frf_time:0.2f} seconds")
             cond_time = time.time()
             frf_condition = np.linalg.cond(frf) if frf.size else None
-            self.log(f"Computed FRF Condition Number in {time.time() - cond_time:0.2f} seconds")
+            self.log(
+                f"Computed FRF Condition Number in {time.time() - cond_time:0.2f} seconds"
+            )
         else:
             frf = None
             frf_condition = None
@@ -612,15 +650,16 @@ class SpectralProcessingProcess(AbstractMessageProcess):
                 gffpinv = np.linalg.pinv(
                     self.reference_spectral_matrix, rcond=1e-12, hermitian=True
                 )
-            coherence = (
-                np.einsum(
-                    "fij,fjk,fik->fi",
-                    self.response_reference_spectral_matrix,
-                    gffpinv,
-                    self.response_reference_spectral_matrix.conj(),
-                )
-                / self.response_diagonal_matrix
-            ).real
+            coherence_numerator = np.einsum(
+                "fij,fjk,fik->fi",
+                self.response_reference_spectral_matrix,
+                gffpinv,
+                self.response_reference_spectral_matrix.conj(),
+            )
+            # guard against zero response power
+            with np.errstate(invalid="ignore", divide="ignore"):
+                coherence = (coherence_numerator / self.response_diagonal_matrix).real
+            coherence = np.where(self.response_diagonal_matrix == 0, 0.0, coherence)
             self.log(f"Computed Coherence in {time.time() - coh_time:0.2f} seconds")
         else:
             coherence = None
