@@ -1014,11 +1014,22 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 timestamp_spinbox = self.profile_table.cellWidget(row, 0)
                 timestamp_spinbox.setValue(timestamp)
                 environment_combobox = self.profile_table.cellWidget(row, 1)
+                environment_combobox.blockSignals(True)
+                environment_combobox.clear()
+                environment_combobox.addItem(environment_name)
                 environment_combobox.setCurrentText(environment_name)
+                environment_combobox.blockSignals(False)
                 command_combobox = self.profile_table.cellWidget(row, 2)
+                command_combobox.blockSignals(True)
+                command_combobox.clear()
+                command_combobox.addItem(
+                    UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label,
+                    userData=UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
+                )
                 command_combobox.setCurrentText(
                     UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label
                 )
+                command_combobox.blockSignals(False)
                 data_item = QtWidgets.QTableWidgetItem("")
                 data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
                 self.profile_table.setItem(row, 3, data_item)
@@ -2501,13 +2512,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             lambda text, row=selected_row: self.update_profile_operations(text, row)
         )
 
-        operation_combobox = QtWidgets.QComboBox()
+        command_combobox = QtWidgets.QComboBox()
         valid_commands = VALID_COMMANDS["Global"]
         valid_operations = [command.label for command in valid_commands]
         for command, operation in zip(valid_commands, valid_operations):
-            operation_combobox.addItem(operation, userData=command)
-        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
-        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
+            command_combobox.addItem(operation, userData=command)
+        self.profile_table.setCellWidget(selected_row, 2, command_combobox)
+        command_combobox.currentIndexChanged.connect(self.update_profile_plot)
 
         data_item = QtWidgets.QTableWidgetItem()
         self.profile_table.setItem(selected_row, 3, data_item)
@@ -2536,7 +2547,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             environment_type = self.environment_uis[environment_name].environment_type
 
         # Find valid commands for that environment type
-        valid_commands = VALID_COMMANDS[environment_type]
+        valid_commands = VALID_COMMANDS[environment_type].copy()
+        valid_commands.remove(
+            UICommands.SET_ENVIRONMENT_INSTRUCTIONS
+        )  # Remove this from the user interface
         valid_operations = [command.label for command in valid_commands]
 
         # Set operation combobox to those commands

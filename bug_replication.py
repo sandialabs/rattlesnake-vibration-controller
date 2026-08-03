@@ -9,15 +9,6 @@ from rattlesnake.examples import *
 from rattlesnake.testing import *
 
 
-def virtual_hardware_zero_division():
-    with test_example_rattlesnake_object(
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.RANDOM,
-        run_sysid=True,
-    ) as rattlesnake:
-        pass
-
-
 def modal_environment_plot_issues():
     with test_example_rattlesnake_object(
         hardware_type=HardwareType.SDYNPY_SYSTEM,
@@ -89,6 +80,14 @@ def profile_event_crash():
     rattlesnake.shutdown()
 
 
+def profile_event_list_ui():
+    with test_example_rattlesnake_object(
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.MODAL,
+    ) as rattlesnake:
+        launch_rattlesnake_ui(rattlesnake)
+
+
 def dual_sysid_environment():
     with test_example_rattlesnake_object(
         threaded=True, hardware_type=HardwareType.SDYNPY_SYSTEM
@@ -114,4 +113,4 @@ def dual_sysid_environment():
 
 
 if __name__ == "__main__":
-    dual_sysid_environment()
+    profile_event_list_ui()
