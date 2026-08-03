@@ -16,8 +16,8 @@ Stuff for the future
 
 [x] After sysid is loaded, the icon for the rattlesnake gui is missing
 
-[ ] Transient example problem results in zero division at the end which sends TRAC values to 0
-    [ ] Look into behavior of having a 0 in the transient and random spec
+[x] Transient example problem results in zero division at the end which sends TRAC values to 0
+    [x] Look into behavior of having a 0 in the transient and random spec
 
 [ ] Run Sysid results in zero division with virtual hardware due to no noise signal
 

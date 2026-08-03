@@ -1379,10 +1379,13 @@ def trac(th_1, th_2=None):
     th_1_original_shape = th_1.shape
     th_1_flattened = th_1.reshape(-1, th_1.shape[-1])
     th_2_flattened = th_2.reshape(-1, th_2.shape[-1])
-    trac_val = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2 / (
-        (np.sum(th_1_flattened * th_1_flattened.conj(), axis=-1))
-        * np.sum(th_2_flattened * th_2_flattened.conj(), axis=-1)
+    numerator = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2
+    denominator = np.sum(th_1_flattened * th_1_flattened.conj(), axis=-1) * np.sum(
+        th_2_flattened * th_2_flattened.conj(), axis=-1
     )
+    with np.errstate(invalid="ignore", divide="ignore"):
+        trac_val = numerator / denominator
+    trac_val = np.where(denominator == 0, 1.0, trac_val)
     return trac_val.reshape(th_1_original_shape[:-1])
 
 
