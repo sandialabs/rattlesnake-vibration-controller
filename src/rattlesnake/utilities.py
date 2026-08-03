@@ -1588,12 +1588,13 @@ def align_signals(
         spec_fft = np.fft.rfft(specification, axis=-1)
         spec_portion_fft = np.fft.rfft(specification_portion, axis=-1)
 
-        # Compute phase angle differences for subpixel alignment
-        phase_difference = np.angle(spec_portion_fft / spec_fft)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            phase_difference = np.angle(spec_portion_fft / spec_fft)
+        phase_difference = np.where(spec_fft == 0, np.nan, phase_difference)
         phase_slope = (
             phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
         )
-        mean_phase_slope = np.median(
+        mean_phase_slope = np.nanmedian(
             phase_slope
         )  # Use Median to discard outliers due to potentially noisy phase
 
