@@ -15,6 +15,7 @@ Stuff for the future
 
 ## Easy
 [ ] Rework regions so they are nested
+
 [ ] Add in new ping alive events into lanxi intialize hardware
 
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
@@ -32,9 +33,6 @@ Stuff for the future
 [ ] Figure out issue with changing font size in jupyter notebooks.
     [ ] A lot of the time this is an import order issue.
     [ ] Can be fixed by inserting font sizes in __init__.py of rattlesnake but I really dont want to do this.
-
-[ ] Remove Set Environment Instructions from the list of options in the profile event list user interface.
-    [ ] This is an internal event done to sync the environment user interface before performing the list.
 
 [ ] Certain load_sysid files (forcefinder, etc.) do not contain all of the information that is usually sent to control laws.
 

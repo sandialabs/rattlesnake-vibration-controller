@@ -100,7 +100,7 @@ class UIEvent:
 def launch_temporary_rattlesnake_ui(
     rattlesnake: RattlesnakeController,
     ui_event_list: list,
-    closeout_time: float,
+    closeout_time: float = None,
     *,
     set_font_size: bool = True,
     display_errors: bool = False,
@@ -134,5 +134,6 @@ def launch_temporary_rattlesnake_ui(
             QtCore.QTimer.singleShot(
                 int(event.timestamp * 1000), functools.partial(event.fire, ui)
             )
-        QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
+        if closeout_time:
+            QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
         app.exec_()

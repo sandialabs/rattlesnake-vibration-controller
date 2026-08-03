@@ -9,31 +9,6 @@ from rattlesnake.examples import *
 from rattlesnake.testing import *
 
 
-def modal_environment_plot_issues():
-    with test_example_rattlesnake_object(
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.MODAL,
-        start_hardware=True,
-    ) as rattlesnake:
-        ui_event_list = [
-            UIEvent(5, lambda ui: ui.environment_uis["Modal 0"].preview_acquisition()),
-            UIEvent(7.5, lambda ui: ui.environment_uis["Modal 0"].new_window()),
-            UIEvent(10, lambda ui: ui.environment_uis["Modal 0"].stop_environment()),
-            UIEvent(
-                12.5,
-                lambda ui: ui.environment_uis[
-                    "Modal 0"
-                ].definition_widget.samples_per_frame_selector.setValue(2048),
-            ),
-            UIEvent(15, lambda ui: ui.initialize_environments()),
-            UIEvent(17.5, lambda ui: ui.stop_acquisition()),
-            UIEvent(20, lambda ui: ui.initialize_environments()),
-        ]
-        launch_temporary_rattlesnake_ui(
-            rattlesnake, ui_event_list, closeout_time=30, display_errors=False
-        )
-
-
 def profile_event_crash():
     """Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment). It should
     either skip validation and send the command anyways or just stop the profile from firing future events and continuing
@@ -104,13 +79,50 @@ def dual_sysid_environment():
 
         rattlesnake.initialize_environments([metadata_1, metadata_2])
 
-        # rattlesnake.initialize_system_id(
-        #     manual_sysid_metadata(rattlesnake.hardware_metadata), "Random 0"
-        # )
-        # rattlesnake.load_system_id_from_package("Random 0", netcdf_sysid_data_package())
-
         launch_rattlesnake_ui(rattlesnake)
 
 
+def forcefinder_control_law_issue():
+    with test_example_rattlesnake_object(
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.RANDOM,
+    ) as rattlesnake:
+        ui_event_list = [
+            UIEvent(
+                5,
+                lambda ui: ui.environment_uis["Random 0"].select_python_module(
+                    clicked=False,
+                    filename=r"forcefinder_path",
+                ),
+            ),
+        ]
+        launch_temporary_rattlesnake_ui(
+            rattlesnake, ui_event_list, closeout_time=10, display_errors=True
+        )
+
+
+def modal_environment_reciprocity_issue():
+    with test_example_rattlesnake_object(
+        hardware_type=HardwareType.SDYNPY_SYSTEM,
+        environment_type=EnvironmentType.MODAL,
+        start_hardware=True,
+        start_environment=True,
+    ) as rattlesnake:
+        ui_event_list = []
+        ui_event_list = [
+            UIEvent(2.5, lambda ui: ui.environment_uis["Modal 0"].new_window()),
+            UIEvent(
+                5,
+                lambda ui: ui.environment_uis["Modal 0"]
+                .run_widget.channel_display_area.activeSubWindow()
+                .widget()
+                .signal_selector.setCurrentText("Reciprocity"),
+            ),
+        ]
+        launch_temporary_rattlesnake_ui(
+            rattlesnake, ui_event_list, closeout_time=None, display_errors=False
+        )
+
+
 if __name__ == "__main__":
-    profile_event_list_ui()
+    modal_environment_reciprocity_issue()
