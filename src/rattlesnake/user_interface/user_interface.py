@@ -129,6 +129,7 @@ def build_rattlesnake_app(
     rattlesnake: RattlesnakeController,
     *,
     set_font_size: bool = True,
+    display_errors: bool = True,
 ):
     # Configure High DPI for UI scaling
     if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
@@ -154,7 +155,7 @@ def build_rattlesnake_app(
         font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
         app.setFont(font)
 
-    rattlesnake_ui = RattlesnakeUI(rattlesnake)
+    rattlesnake_ui = RattlesnakeUI(rattlesnake, display_errors=display_errors)
 
     return RattlesnakeAppHandle(rattlesnake, rattlesnake_ui, app)
 
@@ -166,7 +167,7 @@ def build_rattlesnake_app(
 class RattlesnakeUI(QtWidgets.QMainWindow):
     """Main user interface from which the rattlesnake controller object is controlled."""
 
-    def __init__(self, rattlesnake: RattlesnakeController):
+    def __init__(self, rattlesnake: RattlesnakeController, *, display_errors=True):
         """
         Initializes user interface from an existing rattlesnake controller object.
 
@@ -213,6 +214,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Storage properties
         self.hardware_file = None
         self.lanxi_ip_addresses = []
+
+        # Debugging error
+        self._display_errors = display_errors
 
         # Complete UI layout
         self.connect_callbacks()
@@ -623,7 +627,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case UICommands.ERROR:
                 dialog_title, error_message = data
                 self.recover_ui_after_crash()
-                error_message_qt(dialog_title, error_message)
+                if self._display_errors:
+                    error_message_qt(dialog_title, error_message)
             case UICommands.HARDWARE_STARTED:
                 self.display_acquisition_started()
             case UICommands.HARDWARE_ENDED:

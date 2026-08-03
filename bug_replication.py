@@ -9,18 +9,29 @@ from rattlesnake.examples import *
 from rattlesnake.testing import *
 
 
-def transient_zero_trac():
-    """Transient example problem results in zero division at the end which sends TRAC values to 0. When starting
-    transient environment from headless, Unable to Parse Line is written"""
+def modal_environment_plot_issues():
     with test_example_rattlesnake_object(
         hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.TRANSIENT,
-        load_sysid=True,
+        environment_type=EnvironmentType.MODAL,
         start_hardware=True,
-        start_environment=True,
     ) as rattlesnake:
-        time.sleep(3)
-        rattlesnake.stop_environment("Transient 0")
+        ui_event_list = [
+            UIEvent(5, lambda ui: ui.environment_uis["Modal 0"].preview_acquisition()),
+            UIEvent(7.5, lambda ui: ui.environment_uis["Modal 0"].new_window()),
+            UIEvent(10, lambda ui: ui.environment_uis["Modal 0"].stop_environment()),
+            UIEvent(
+                12.5,
+                lambda ui: ui.environment_uis[
+                    "Modal 0"
+                ].definition_widget.samples_per_frame_selector.setValue(2048),
+            ),
+            UIEvent(15, lambda ui: ui.initialize_environments()),
+            UIEvent(17.5, lambda ui: ui.stop_acquisition()),
+            UIEvent(20, lambda ui: ui.initialize_environments()),
+        ]
+        launch_temporary_rattlesnake_ui(
+            rattlesnake, ui_event_list, closeout_time=30, display_errors=False
+        )
 
 
 def profile_event_crash():
@@ -94,4 +105,4 @@ def dual_sysid_environment():
 
 
 if __name__ == "__main__":
-    transient_zero_trac()
+    modal_environment_plot_issues()

@@ -103,6 +103,7 @@ def launch_temporary_rattlesnake_ui(
     closeout_time: float,
     *,
     set_font_size: bool = True,
+    display_errors: bool = False,
 ) -> None:
     """
     Launches the rattlesnake ui, firing each UIEvent in ``ui_event_list`` at
@@ -119,7 +120,11 @@ def launch_temporary_rattlesnake_ui(
     closeout_time : float
         Time, in seconds, after which the UI will automatically close.
     """
-    with build_rattlesnake_app(rattlesnake, set_font_size=set_font_size) as (
+    with build_rattlesnake_app(
+        rattlesnake,
+        set_font_size=set_font_size,
+        display_errors=display_errors,
+    ) as (
         rattlesnake,
         ui,
         app,
