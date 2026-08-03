@@ -1,3 +1,4 @@
+import atexit
 from datetime import datetime
 from enum import Enum
 import multiprocessing as mp
@@ -97,6 +98,10 @@ class RattlesnakeController:
             the previous state and require you to perform the command
             again.
         """
+        # Shutdown behavior
+        self._shutdown_complete = False
+        atexit.register(self.shutdown)
+
         # Initialize values for checking state
         self._threaded = threaded
         self._blocking = True  # Wait for ready events?, True for IDE, False for UI
@@ -321,8 +326,6 @@ class RattlesnakeController:
         # controller
         self.last_stream_metadata = None
         self.last_profile_event_list = []
-
-        self._shutdown_complete = False
 
         if self.blocking:
             ready_event_list = [

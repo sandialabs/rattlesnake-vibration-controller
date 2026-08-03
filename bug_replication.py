@@ -12,22 +12,15 @@ from rattlesnake.testing import *
 def transient_zero_trac():
     """Transient example problem results in zero division at the end which sends TRAC values to 0. When starting
     transient environment from headless, Unable to Parse Line is written"""
-    rattlesnake = build_example_rattlesnake_object(
-        threaded=False,
-        timeout=20,
-        import_method="manual",
+    with test_example_rattlesnake_object(
         hardware_type=HardwareType.SDYNPY_SYSTEM,
         environment_type=EnvironmentType.TRANSIENT,
-        stream_type=StreamType.NO_STREAM,
         load_sysid=True,
-        run_sysid=False,
         start_hardware=True,
         start_environment=True,
-        run_profile=False,
-    )
-    time.sleep(10)
-    rattlesnake.stop_environment("Transient 0")
-    rattlesnake.shutdown()
+    ) as rattlesnake:
+        time.sleep(3)
+        rattlesnake.stop_environment("Transient 0")
 
 
 def profile_event_crash():
@@ -101,4 +94,4 @@ def dual_sysid_environment():
 
 
 if __name__ == "__main__":
-    dual_sysid_environment()
+    transient_zero_trac()

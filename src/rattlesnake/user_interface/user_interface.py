@@ -22,6 +22,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import atexit
 import ctypes
 import multiprocessing as mp
 import os
@@ -178,6 +179,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         rattlesnake : RattlesnakeController
             The rattlesnake controller object that the UI is going to represent.
         """
+        # Shutdown behavior
+        self._previous_sigint_handler = signal.signal(
+            signal.SIGINT, self.on_keyboard_interrupt
+        )
+        self._shutdown_complete = False
+        # atexit.register(self.shutdown)
+
         super(RattlesnakeUI, self).__init__()
 
         uic.loadUi(RATTLESNAKE_UI_PATH, self)
@@ -212,12 +220,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Store any presets within Rattlesnake to UI
         self.load_ui_from_rattlesnake()
-
-        # Shutdown UI during app.exec_ keyboard interupt
-        self._previous_sigint_handler = signal.signal(
-            signal.SIGINT, self.on_keyboard_interrupt
-        )
-        self._shutdown_complete = False
 
     def __del__(self):
         try:
