@@ -1,19 +1,21 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
 [ ] Look for and document/recreate warnings
+    [ ] Lets try using a jupyter notebook for this
 
-[ ] Prevent sharing sysid from shared environments
-[ ] Check what happens when loading user interface from sysid stuff
 
 Stuff for the future
 [ ] Clear jupyter notebooks automatically on push
 [ ] Make Unittests/documentation
 [ ] Build out notebook example
-[ ] Build out read environment
 [ ] Write guide for building new environments
-[ ] Deal with minor/harder bugs
 
-## Warnings
+## Warnings/Minor Fixes
+[x] When launching the gui a second time after loading a sysid object, the profile tab does not enable.x
+    [x] This is due to the queue eating that command and load_ui_from_rattlesnake disabling those tabs.
+
+[x] After sysid is loaded, the icon for the rattlesnake gui is missing
+
 [ ] Transient example problem results in zero division at the end which sends TRAC values to 0
     [ ] Look into behavior of having a 0 in the transient and random spec
 
@@ -57,6 +59,8 @@ Stuff for the future
 [ ] This is an internal firmware issue with reconnecting generator sockets with IPv6. BNK would need to fix this in order for it to work.
     [ ] Should probably create a notebook to recreate this issue for BK issues tab
 
+[ ] A dll in cvxpy clashes with a dll in pyqt so if cvxpy is not imported before pyqt, the entire kernel will crash
+    [ ] Has issues with some custom control laws
 
 [ ] Profile events can error out when going to fast. (ex. Stop Environment then immediate Start Environment)
     [ ] Should probably just stop profile events from firing if this happens.
@@ -92,3 +96,5 @@ Stuff for the future
         [x] Maybe have a dialog box to select other environments with a table and checkboxes for their names
     [x] Make load_sys_id not require the environment to have the same name as the one that generated it.
     [x] Have initialize sysid update the user interface
+    [x] Add logic to prevent sending share dialog when being shared to
+[x] Sysid metadata objects are not stored to data analysis processes correctly when they are set during initialize_environments

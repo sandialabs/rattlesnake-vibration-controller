@@ -708,8 +708,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def load_ui_from_rattlesnake(self):
         """
-        Gets the current state of the rattlesnake object and formats
-        user interface to represent that state.
+        Gets the current state of the rattlesnake object and formats user
+        interface to represent that state.
+
+        This function does A LOT of heavy lifting when it comes to syncing
+        the user interface with the rattlesnake object. Most of the issues
+        with launching rattlesnake adaptively come from the UI determining
+        the ownership and visibility of it's own widgets. This means that
+        a lot of enabling/disabling will not happen when rattlesnake does
+        not have an active gui managing itself. This function must figure
+        out what logic went on before launching the gui and recreate the
+        missing pieces.
         """
         # Get rattlesnake state
         state = self.rattlesnake.state
@@ -740,13 +749,19 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_environments()
                 # Enable next tab (sysid/profile)
                 if self.has_system_id:
-                    # There is an edge case that helps us here: If the engine has had a system id loaded to it,
-                    # the abstract sys id data process will put the system id completed command to the ui gui
-                    # queue which is processed in order when the UI launches, therefore enabling the next tabs
                     self.rattlesnake_tabs.setTabEnabled(
                         TabIndices.SYSTEM_ID.value, True
                     )
                     self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
+                    if any(
+                        self.rattlesnake.environment_manager.environment_sysid_stored_events
+                    ):
+                        self.rattlesnake_tabs.setTabEnabled(
+                            TabIndices.PREDICTION.value, True
+                        )
+                        self.rattlesnake_tabs.setTabEnabled(
+                            TabIndices.PROFILE.value, True
+                        )
                 else:
                     self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
                     self.rattlesnake_tabs.setCurrentIndex(TabIndices.PROFILE.value)
@@ -1591,77 +1606,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         )
                     )
                     self.channel_table.setCellWidget(row, col, spinbox)
-
-    # def sample_rate_update(self):
-    #     """Updates the sample rate selector based on valid available rates"""
-    #     if self.hardware_selector.currentIndex() == 2:
-    #         current_value = self.sample_rate_selector.value()
-    #         valid_dp_sample_rates = np.array(
-    #             [
-    #                 16,
-    #                 20,
-    #                 25,
-    #                 32,
-    #                 40,
-    #                 50,
-    #                 64,
-    #                 80,
-    #                 100,
-    #                 128,
-    #                 160,
-    #                 200,
-    #                 256,
-    #                 320,
-    #                 400,
-    #                 512,
-    #                 640,
-    #                 800,
-    #                 1024,
-    #                 1280,
-    #                 1600,
-    #                 2048,
-    #                 2560,
-    #                 3200,
-    #                 4096,
-    #                 5120,
-    #                 6400,
-    #                 8192,
-    #                 10240,
-    #                 12800,
-    #                 20480,
-    #                 25600,
-    #                 40960,
-    #                 51200,
-    #                 102400,
-    #             ]
-    #         )
-    #         closest_index = np.argmin(abs(valid_dp_sample_rates - current_value))
-    #         closest_rate = valid_dp_sample_rates[closest_index]
-    #         # Check if it is either one above or one below a previous rate
-    #         if (
-    #             current_value - closest_rate == 1
-    #             and closest_index != len(valid_dp_sample_rates) - 1
-    #         ):
-    #             closest_index += 1
-    #             closest_rate = valid_dp_sample_rates[closest_index]
-    #         elif current_value - closest_rate == -1 and closest_index != 0:
-    #             closest_index -= 1
-    #             closest_rate = valid_dp_sample_rates[closest_index]
-    #         self.sample_rate_selector.blockSignals(True)
-    #         self.sample_rate_selector.setValue(closest_rate)
-    #         self.sample_rate_selector.blockSignals(False)
-
-    # def task_trigger_update(self):
-    #     """Updates task trigger widgets based on other widget's selections"""
-    #     if (
-    #         self.hardware_selector.currentIndex() == 0
-    #         and self.task_trigger_selector.currentIndex() == 2
-    #     ):
-    #         self.task_trigger_output_selector.show()
-    #         self.task_trigger_output_label.show()
-    #     else:
-    #         self.task_trigger_output_selector.hide()
-    #         self.task_trigger_output_label.hide()
 
     def select_hardware_file(self):
         filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
