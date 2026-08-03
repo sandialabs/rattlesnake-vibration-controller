@@ -20,7 +20,7 @@ Stuff for the future
     [x] Look into behavior of having a 0 in the transient and random spec
     [x] Look into phase_difference giving a 0/0 warning
 
-[ ] Run Sysid results in zero division with virtual hardware due to no noise signal
+[x] Run Sysid results in zero division with virtual hardware due to no noise signal
 
 [ ] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
 
@@ -30,6 +30,8 @@ Stuff for the future
 results in modal plots erroring out because of invalid shapes.
 
 ## Easy
+[ ] Remove Skeleton/Skeleton Sysid in user interface manually
+
 [ ] Rework regions so they are nested
 
 [ ] Add units to each of the plots.
