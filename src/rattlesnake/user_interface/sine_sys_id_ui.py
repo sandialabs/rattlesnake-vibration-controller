@@ -1129,20 +1129,24 @@ class SineUI(SysIdEnvironmentUI):
             )
             if filename == "":
                 return
-        self.python_control_module = load_python_module(filename)
-        classes = [
-            function
-            for function in inspect.getmembers(self.python_control_module)
-            if (
-                inspect.isclass(function[1])
-                and all(
-                    [
-                        method in function[1].__dict__
-                        for method in ["system_id_update", "control"]
-                    ]
+        try:
+            self.python_control_module = load_python_module(filename)
+            classes = [
+                function
+                for function in inspect.getmembers(self.python_control_module)
+                if (
+                    inspect.isclass(function[1])
+                    and all(
+                        [
+                            method in function[1].__dict__
+                            for method in ["system_id_update", "control"]
+                        ]
+                    )
                 )
-            )
-        ]
+            ]
+        except Exception as e:
+            self.display_error(e)
+            return
         self.log(
             f"Loaded module {self.python_control_module.__name__} with classes "
             f"{[control_class[0] for control_class in classes]}"

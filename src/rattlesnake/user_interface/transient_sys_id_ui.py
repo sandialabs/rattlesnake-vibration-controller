@@ -793,33 +793,40 @@ class TransientUI(SysIdEnvironmentUI):
             )
             if filename == "":
                 return
-        self.python_control_module = load_python_module(filename)
-        functions = [
-            function
-            for function in inspect.getmembers(self.python_control_module)
-            if (
-                inspect.isfunction(function[1])
-                and len(inspect.signature(function[1]).parameters) >= 6
-            )
-            or inspect.isgeneratorfunction(function[1])
-            or (
-                inspect.isclass(function[1])
-                and all(
-                    [
-                        (
-                            method in function[1].__dict__
-                            and not (
-                                hasattr(
-                                    function[1].__dict__[method], "__isabstractmethod__"
-                                )
-                                and function[1].__dict__[method].__isabstractmethod__
-                            )
-                        )
-                        for method in ["system_id_update", "control"]
-                    ]
+        try:
+            self.python_control_module = load_python_module(filename)
+            functions = [
+                function
+                for function in inspect.getmembers(self.python_control_module)
+                if (
+                    inspect.isfunction(function[1])
+                    and len(inspect.signature(function[1]).parameters) >= 6
                 )
-            )
-        ]
+                or inspect.isgeneratorfunction(function[1])
+                or (
+                    inspect.isclass(function[1])
+                    and all(
+                        [
+                            (
+                                method in function[1].__dict__
+                                and not (
+                                    hasattr(
+                                        function[1].__dict__[method],
+                                        "__isabstractmethod__",
+                                    )
+                                    and function[1].__dict__[
+                                        method
+                                    ].__isabstractmethod__
+                                )
+                            )
+                            for method in ["system_id_update", "control"]
+                        ]
+                    )
+                )
+            ]
+        except Exception as e:
+            self.display_error(e)
+            return
         self.log(
             f"Loaded module {self.python_control_module.__name__} with "
             f"functions {[function[0] for function in functions]}"

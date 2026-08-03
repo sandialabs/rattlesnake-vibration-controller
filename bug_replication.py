@@ -84,37 +84,14 @@ def forcefinder_control_law_issue():
                 5,
                 lambda ui: ui.environment_uis["Random 0"].select_python_module(
                     clicked=False,
-                    filename=r"forcefinder_path",
+                    filename=r"E:\Rattlesnake\forcefinder\src\forcefinder\rattlesnake_control_laws\spr_random_control_law.py",
                 ),
             ),
         ]
         launch_temporary_rattlesnake_ui(
-            rattlesnake, ui_event_list, closeout_time=10, display_errors=True
-        )
-
-
-def modal_environment_reciprocity_issue():
-    with test_example_rattlesnake_object(
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.MODAL,
-        start_hardware=True,
-        start_environment=True,
-    ) as rattlesnake:
-        ui_event_list = []
-        ui_event_list = [
-            UIEvent(2.5, lambda ui: ui.environment_uis["Modal 0"].new_window()),
-            UIEvent(
-                5,
-                lambda ui: ui.environment_uis["Modal 0"]
-                .run_widget.channel_display_area.activeSubWindow()
-                .widget()
-                .signal_selector.setCurrentText("Reciprocity"),
-            ),
-        ]
-        launch_temporary_rattlesnake_ui(
-            rattlesnake, ui_event_list, closeout_time=8, display_errors=False
+            rattlesnake, ui_event_list, closeout_time=None, display_errors=True
         )
 
 
 if __name__ == "__main__":
-    modal_environment_reciprocity_issue()
+    forcefinder_control_law_issue()
