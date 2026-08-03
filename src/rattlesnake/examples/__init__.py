@@ -53,6 +53,14 @@ from rattlesnake.examples.environment.sine.sine_metadata import (
     sine_event_list,
     worksheet_sine_event_list,
 )
+from rattlesnake.examples.environment.read.read_metadata import (
+    manual_read_metadata,
+    worksheet_read_metadata,
+    netcdf_read_metadata,
+    read_instructions,
+    read_event_list,
+    worksheet_read_event_list,
+)
 from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
     worksheet_skeleton_metadata,
     netcdf_skeleton_metadata,
@@ -140,6 +148,13 @@ __all__ = [
     "sine_instructions",
     "sine_event_list",
     "worksheet_sine_event_list",
+    # Read
+    "manual_read_metadata",
+    "worksheet_read_metadata",
+    "netcdf_read_metadata",
+    "read_instructions",
+    "read_event_list",
+    "worksheet_read_event_list",
     # Skeleton
     "worksheet_skeleton_metadata",
     "netcdf_skeleton_metadata",
