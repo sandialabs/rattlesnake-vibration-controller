@@ -101,14 +101,14 @@ for environment_type in EnvironmentType:
             from rattlesnake.user_interface.skeleton_ui import SkeletonUI
 
             ENVIRONMENT_UIS[EnvironmentType.SKELETON] = SkeletonUI
-            UI_ENVIRONMENT_OPTIONS["Skeleton Environment"] = EnvironmentType.SKELETON
+            # UI_ENVIRONMENT_OPTIONS["Skeleton Environment"] = EnvironmentType.SKELETON
         case EnvironmentType.SYSID_SKELETON:
             from rattlesnake.user_interface.skeleton_sys_id_ui import SkeletonSysIdUI
 
             ENVIRONMENT_UIS[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdUI
-            UI_ENVIRONMENT_OPTIONS["Skeleton SysId Environment"] = (
-                EnvironmentType.SYSID_SKELETON
-            )
+            # UI_ENVIRONMENT_OPTIONS["Skeleton SysId Environment"] = (
+            #     EnvironmentType.SYSID_SKELETON
+            # )
         case EnvironmentType.READ:
             from rattlesnake.user_interface.read_ui import ReadUI
 

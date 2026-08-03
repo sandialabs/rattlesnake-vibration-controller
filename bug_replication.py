@@ -108,10 +108,10 @@ def dual_sysid_environment():
         # rattlesnake.initialize_system_id(
         #     manual_sysid_metadata(rattlesnake.hardware_metadata), "Random 0"
         # )
-        rattlesnake.load_system_id_from_package("Random 0", netcdf_sysid_data_package())
+        # rattlesnake.load_system_id_from_package("Random 0", netcdf_sysid_data_package())
 
         launch_rattlesnake_ui(rattlesnake)
 
 
 if __name__ == "__main__":
-    virtual_hardware_zero_division()
+    dual_sysid_environment()
