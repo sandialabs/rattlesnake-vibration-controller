@@ -2120,18 +2120,21 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         try:
             # Build environment metadata list
-            environment_metadata_list = []
-            for environment_ui in self.environment_uis.values():
-                metadata = environment_ui.get_environment_metadata(
+            environment_metadata_list = [
+                environment_ui.get_environment_metadata(
                     self.rattlesnake.hardware_metadata.channel_list
                 )
-                environment_ui.initialize_environment(metadata)
-                environment_metadata_list.append(metadata)
+                for environment_ui in self.environment_uis.values()
+            ]
 
-            # Send hardware metadata to rattlesnake
             environment_metadata = self.rattlesnake.initialize_environments(
                 environment_metadata_list
             )
+
+            for environment_ui, metadata in zip(
+                self.environment_uis.values(), environment_metadata_list
+            ):
+                environment_ui.initialize_environment(metadata)
 
         except Exception as e:
             self.initialize_environments_error(e)

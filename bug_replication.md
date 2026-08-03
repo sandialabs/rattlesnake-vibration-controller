@@ -18,12 +18,16 @@ Stuff for the future
 
 [x] Transient example problem results in zero division at the end which sends TRAC values to 0
     [x] Look into behavior of having a 0 in the transient and random spec
+    [x] Look into phase_difference giving a 0/0 warning
 
 [ ] Run Sysid results in zero division with virtual hardware due to no noise signal
 
 [ ] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
 
 [ ] Figure out why some errors do not display on user interface (errors inside control laws)
+
+[x] Modal environment changing samples per frame when hardware is active and initializing environment
+results in modal plots erroring out because of invalid shapes.
 
 ## Easy
 [ ] Rework regions so they are nested
