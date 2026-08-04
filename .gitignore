@@ -1,6 +1,5 @@
 .spyproject/**
 **/__pycache__/**
-test_data/**
 todo.txt
 todo.md
 logs/**
@@ -9,6 +8,7 @@ logs/**
 **/*.bbl
 **/*.blg
 **/*.log
+**/*.lock
 **/*.out
 **/*.lof
 **/*.lot
@@ -46,4 +46,3 @@ coverage.xml
 documentation/_build/**
 _build/
 output.html
-debug_script.py
