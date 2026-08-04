@@ -1,5 +1,6 @@
 import time
 import threading
+import multiprocessing as mp
 
 import netCDF4 as nc4
 from qtpy import QtCore
@@ -81,11 +82,18 @@ def lanxi_invalid_physical_device():
 
 
 def temporarary_ui():
-    with RattlesnakeController() as rattlesnake:
+    rattlesnake = RattlesnakeController()
+    with build_rattlesnake_app(rattlesnake) as (rattlesnake, ui, app):
         for i in range(2):
+            print(f"Run {i}")
             hardware_metadata = manual_sdynpy_system_metadata()
             rattlesnake.initialize_hardware(hardware_metadata)
-            launch_temporary_rattlesnake_ui(rattlesnake, closeout_time=60)
+            launch_temporary_rattlesnake_ui(
+                rattlesnake,
+                closeout_time=5,
+                rattlesnake_ui=ui,
+                app=app,
+            )
 
 
 if __name__ == "__main__":
