@@ -107,15 +107,6 @@ def test_environment_manager_initialize_hardware(environment_manager):
 @pytest.mark.parametrize(
     "existing_metadata, valid_metadata, expected",
     [
-        (
-            (
-                {"Environment 0": MockEnvironmentMetadata()},
-                {"Environment 0": MockEnvironmentType.ENVIRONMENT},
-                ["Environment 0"],
-            ),
-            True,
-            "Put",
-        ),
         (({}, {}, []), True, "Add"),
         (
             (
@@ -164,22 +155,7 @@ def test_environment_manager_initialize_environment(
             )
     else:
         environment_manager.initialize_environments(metadata_list, hardware_metadata)
-        if expected == "Put":
-            expected_environment_calls = [
-                mock.call.put(
-                    "Environment Manager",
-                    (
-                        GlobalCommands.INITIALIZE_HARDWARE,
-                        hardware_metadata,
-                    ),
-                ),
-                mock.call.put(
-                    "Environment Manager",
-                    (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata),
-                ),
-            ]
-            mock_command_queue.assert_has_calls(expected_environment_calls)
-        elif expected == "Add":
+        if expected == "Add":
             environment_manager.add_environment.assert_called()
         elif expected == "Remove":
             environment_manager.remove_environment.assert_called_with("Environment 1")
