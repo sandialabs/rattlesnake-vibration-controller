@@ -16,6 +16,9 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Table Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specify the control targets in the Breakpoint Table.  Specify warning limits in the Warning Table.  Specify abort thresholds in the Abort Table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -26,6 +29,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QTableWidget" name="breakpoint_table">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Breakpoint Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table allows users to specify the frequency breakpoints for the selected sine tone in the environment.  Sweep type and speed between the breakpoints can also be specified, as well as the amplitude and phase targets for each control channel at that breakpoint.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <property name="selectionMode">
           <enum>QAbstractItemView::SingleSelection</enum>
          </property>
@@ -67,6 +73,9 @@
          </item>
          <item>
           <widget class="QLineEdit" name="name_editor">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Name&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The name used to reference this specific sine tone in the environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Sine 1</string>
            </property>
@@ -81,6 +90,9 @@
          </item>
          <item>
           <widget class="QDoubleSpinBox" name="start_time_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Used to specify the start time of this sine tone, allowing the different tones to start at different times.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="keyboardTracking">
             <bool>false</bool>
            </property>
@@ -110,6 +122,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="add_breakpoint_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Add Breakpoint&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Adds a row to the breakpoint table, warning table, and abort tables.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Add Breakpoint</string>
            </property>
@@ -117,6 +132,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="remove_breakpoint_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Breakpoint&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes the selected row from the breakpoint, warning, and abort tables.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Remove Breakpoint</string>
            </property>
@@ -124,6 +142,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="load_breakpoints_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load Specification...&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens up a file dialog to load in a specification for this sine tone that was saved outside of Rattlesnake.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Load Specification...</string>
            </property>
@@ -131,6 +152,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="remove_tone_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Tone&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes this entire sine tone from the test specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Remove Tone</string>
            </property>
@@ -147,6 +171,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
         <widget class="QTableWidget" name="warning_table">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Warning Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Define warning thresholds.  For each breakpoint, both the warning ampiltude to the left of the breakpoint and to the right of the breakpoint can be specified.  This allows users to, for example, set one level below a given breakpoint and a separate level above a given breakpoint.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <row>
           <property name="text">
            <string>1</string>
@@ -173,6 +200,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_8">
        <item>
         <widget class="QTableWidget" name="abort_table">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Abort Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Define abort thresholds.  For each breakpoint, both the abort ampiltude to the left of the breakpoint and to the right of the breakpoint can be specified.  This allows users to, for example, set one level below a given breakpoint and a separate level above a given breakpoint.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <row>
           <property name="text">
            <string>1</string>

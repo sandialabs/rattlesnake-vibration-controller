@@ -42,7 +42,7 @@
             </sizepolicy>
            </property>
            <property name="toolTip">
-            <string>Total time that the environment has been running for.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total Test Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Total time that the environment has been running for.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -75,7 +75,7 @@
             </sizepolicy>
            </property>
            <property name="toolTip">
-            <string>Time that the environment has been running at the current test level.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Time at Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Time that the environment has been running at the current test level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -93,7 +93,7 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>Environment progress.  When the bar reaches 100%, the environment will stop automatically.</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Environment Progress&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When the bar reaches 100%, the environment will stop automatically.  Will not be active during a continuous run.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="value">
           <number>0</number>
@@ -107,7 +107,7 @@
        <item>
         <widget class="QRadioButton" name="continuous_test_radiobutton">
          <property name="toolTip">
-          <string>Run the environment until it is manually stopped.</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Continuous Run&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Run the environment until it is manually stopped.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Continuous Run</string>
@@ -125,7 +125,7 @@
          <item>
           <widget class="QRadioButton" name="timed_test_radiobutton">
            <property name="toolTip">
-            <string>Run the environment for a specified amount of time</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Run for (timed run)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Run the environment for a specified amount of time&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
             <string>Run for</string>
@@ -138,7 +138,7 @@
          <item>
           <widget class="QTimeEdit" name="test_time_selector">
            <property name="toolTip">
-            <string>Amount of time that the environment will run for.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Run Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amount of time that the environment will run for.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="displayFormat">
             <string>h:mm:ss</string>
@@ -150,7 +150,7 @@
        <item>
         <widget class="QCheckBox" name="time_test_at_target_level_checkbox">
          <property name="toolTip">
-          <string>If checked, the timer will only run when the test is at the target test level.</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;at Target Test Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, the timer will only run when the test is at the target test level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>at Target Test Level</string>
@@ -220,7 +220,7 @@
         </font>
        </property>
        <property name="toolTip">
-        <string>Stops the environment</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Stops the environment manually&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Stop Environment</string>
@@ -241,7 +241,7 @@
          <item>
           <widget class="QDoubleSpinBox" name="target_test_level_selector">
            <property name="toolTip">
-            <string>Target test level in dB.  This can be used to automatically trigger streaming or used to stop the controller after a specified amount of time.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Target Test Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Target test level in dB.  This can be used to automatically trigger streaming or used to stop the controller after a specified amount of time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="keyboardTracking">
             <bool>false</bool>
@@ -291,7 +291,7 @@
          <item>
           <widget class="QDoubleSpinBox" name="current_test_level_selector">
            <property name="toolTip">
-            <string>Current test level in dB.  0 dB is the actual test level from the specification.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Current Test Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Current test level in dB.  0 dB is the actual test level from the specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="keyboardTracking">
             <bool>false</bool>
@@ -348,7 +348,7 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>Current excitation voltages being output from the controller</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltages (RMS)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Current excitation voltages being output from the controller.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -409,7 +409,7 @@
         </font>
        </property>
        <property name="toolTip">
-        <string>Starts the environment controlling to the specification.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the environment controlling to the specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Start Environment</string>
@@ -444,7 +444,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Current control RMS dB error.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Error (dB)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Current control RMS dB error.  Double clicking on an item will open up a window showing that channel's magnitude.  Channels will be highlighted yellow if they hit a warning limit and red if they hit an abort limit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -457,7 +457,7 @@
      <item row="7" column="0" colspan="2">
       <widget class="QPushButton" name="save_current_spectral_data_button">
        <property name="toolTip">
-        <string>Saves current spectral data to a NetCDF4 file.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Current Spectral Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves current spectral data to a NetCDF4 file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Save Current Spectral Data</string>
@@ -467,7 +467,11 @@
     </layout>
    </item>
    <item>
-    <widget class="PlotWidget" name="global_test_performance_plot"/>
+    <widget class="PlotWidget" name="global_test_performance_plot">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sum of ASDs Display&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This plot shows the trace of the response CPSD matrix compared to the specification.  This is essentially an &amp;quot;average&amp;quot; quantity, and individual channels may be higher or lower at each frequency line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QVBoxLayout" name="data_display_layout">
@@ -487,7 +491,7 @@
         <item>
          <widget class="QComboBox" name="control_channel_1_selector">
           <property name="toolTip">
-           <string>Row of the CPSD matrix to create a window for.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channel 1&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Row of the CPSD matrix to create a window for.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -501,7 +505,7 @@
         <item>
          <widget class="QComboBox" name="control_channel_2_selector">
           <property name="toolTip">
-           <string>Column of the CPSD matrix to create a window for</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channel 2&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Column of the CPSD matrix to create a window for&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -515,7 +519,7 @@
         <item>
          <widget class="QComboBox" name="data_type_selector">
           <property name="toolTip">
-           <string>Data type to display on the new visualization window.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Data Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Data type to display on the new visualization window.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -547,7 +551,7 @@
         <item>
          <widget class="QPushButton" name="create_window_button">
           <property name="toolTip">
-           <string>Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Create Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Create Window</string>
@@ -571,7 +575,7 @@
         <item>
          <widget class="QPushButton" name="show_all_asds_button">
           <property name="toolTip">
-           <string>Show Autospectral Densities (ASDs) for all control channels.  This will create a window for every channel in the test.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All Autospectral Densities&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Show Autospectral Densities (ASDs) for all control channels. This will create a window for every channel in the test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Autospectral
@@ -582,7 +586,7 @@ Densities</string>
         <item>
          <widget class="QPushButton" name="show_all_csds_phscoh_button">
           <property name="toolTip">
-           <string>Show the entire CPSD matrix.  This will show Autospectral Densities on the diagonal, and phase and coherence on the off-diagonals.  WARNING: this will create a number of windows equal to the number of control channels squared, which for large tests could be a huge number of windows that can bog down the user interface of the software and make it unresponsive.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All Spectral Densities (phase/coh)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Show the entire CPSD matrix.  This will show Autospectral Densities on the diagonal, and phase and coherence on the off-diagonals.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;WARNING&lt;/span&gt;: this will create a number of windows equal to the number of control channels squared, which for large tests could be a huge number of windows that can bog down the user interface of the software and make it unresponsive.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Spectral Densities
@@ -593,7 +597,7 @@ Densities</string>
         <item>
          <widget class="QPushButton" name="show_all_csds_realimag_button">
           <property name="toolTip">
-           <string>Show the entire CPSD matrix.  This will show Autospectral Densities on the diagonal, and real and imaginary parts on the off-diagonals.  WARNING: this will create a number of windows equal to the number of control channels squared, which for large tests could be a huge number of windows that can bog down the user interface of the software and make it unresponsive.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All Spectral Densities (real/imag)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Show the entire CPSD matrix. This will show Autospectral Densities on the diagonal, and real and imaginary parts on the off-diagonals.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;WARNING&lt;/span&gt;: this will create a number of windows equal to the number of control channels squared, which for large tests could be a huge number of windows that can bog down the user interface of the software and make it unresponsive.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Spectral Densities
@@ -618,7 +622,7 @@ Densities</string>
         <item>
          <widget class="QPushButton" name="tile_windows_button">
           <property name="toolTip">
-           <string>Tiles all windows over the main monitor</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tile All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Tiles all windows over the main monitor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Tile All
@@ -629,7 +633,7 @@ Windows</string>
         <item>
          <widget class="QPushButton" name="close_windows_button">
           <property name="toolTip">
-           <string>Closes all visualization windows</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Close All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Closes all visualization windows&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Close All

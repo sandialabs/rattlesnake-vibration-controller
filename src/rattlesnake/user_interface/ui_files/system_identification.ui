@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1165</width>
-    <height>914</height>
+    <height>915</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -38,7 +38,7 @@
         <item row="0" column="1">
          <widget class="QSpinBox" name="samplesPerFrameSpinBox">
           <property name="toolTip">
-           <string>Samples per measurement frame used in the system identification</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Samples per Frame&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Samples per measurement frame used in the system identification.  Some environments force system identification to use the same frame size as the signal processing performed in the environment.  If this field cannot be edited here, then check the Environment Definition tab for a similar property.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="maximum">
            <number>999999999</number>
@@ -61,7 +61,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Type of averaging used in the system identification.  Linear averaging weights each measurement frame equally.  Exponential averaging treats more recent averages with a higher weight.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Averaging Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Type of averaging used in the system identification.  Linear averaging weights each measurement frame equally.  Exponential averaging treats more recent averages with a higher weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -85,7 +85,7 @@
         <item row="2" column="1">
          <widget class="QSpinBox" name="noiseAveragesSpinBox">
           <property name="toolTip">
-           <string>Number of measurement frames to acquire to analyze the noise level of the test.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Noise Averages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of measurement frames to acquire to analyze the noise level of the test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="minimum">
            <number>1</number>
@@ -108,7 +108,7 @@
         <item row="3" column="1">
          <widget class="QSpinBox" name="systemIDAveragesSpinBox">
           <property name="toolTip">
-           <string>Number of measurement frames to acquire to identify the system and compute transfer functions.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;System ID Averages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of measurement frames to acquire to identify the system and compute transfer functions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="minimum">
            <number>1</number>
@@ -131,7 +131,7 @@
         <item row="4" column="1">
          <widget class="QDoubleSpinBox" name="averagingCoefficientDoubleSpinBox">
           <property name="toolTip">
-           <string>Averaging coefficient used to weight the most recent measurement frame if exponential averaging is used.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Averaging Coefficient&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Averaging coefficient used to weight the most recent measurement frame if exponential averaging is used.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="maximum">
            <double>1.000000000000000</double>
@@ -160,7 +160,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Estimator to use to compute the system identification.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Estimator&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The estimator to use to compute transfer functions when performing system identification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -194,7 +194,7 @@
         <item row="6" column="1">
          <widget class="QDoubleSpinBox" name="levelDoubleSpinBox">
           <property name="toolTip">
-           <string>RMS voltage level to play to the shakers when computing system identification</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Root-mean-square voltage level to play to the shakers when computing system identification&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="keyboardTracking">
            <bool>false</bool>
@@ -222,7 +222,10 @@
         <item row="7" column="1">
          <widget class="QDoubleSpinBox" name="levelRampTimeDoubleSpinBox">
           <property name="toolTip">
-           <string>Time to ramp the system identification voltage to the test level.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Ramp Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Time to ramp the system identification voltage to the test level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="suffix">
+           <string> s</string>
           </property>
           <property name="minimum">
            <double>0.250000000000000</double>
@@ -276,7 +279,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Excitation used for system identification.  Random and Burst random excitation are suitable for MIMO control problems.  Chrip and Pseudorandom should only be used for single-shaker excitation.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Excitation used for system identification.  Random and Burst random excitation are suitable for MIMO control problems.  Chirp and Pseudorandom should only be used for single-shaker excitation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -322,7 +325,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Window to apply to the data when computing transfer functions</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Window function to apply to the data when computing transfer functions during system identification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -352,7 +355,7 @@
         <item row="2" column="1">
          <widget class="QDoubleSpinBox" name="overlapDoubleSpinBox">
           <property name="toolTip">
-           <string>Overlap to use between measurement frames when computing transfer functions.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Overlap&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Overlap to use between measurement frames when computing transfer functions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="suffix">
            <string>%</string>
@@ -372,7 +375,7 @@
         <item row="3" column="1">
          <widget class="QDoubleSpinBox" name="onFractionDoubleSpinBox">
           <property name="toolTip">
-           <string>Fraction of the measurement frame that the burst random excitation is active for.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;On Fraction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Fraction of the measurement frame that the burst random excitation is active for.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="suffix">
            <string>%</string>
@@ -392,7 +395,7 @@
         <item row="4" column="1">
          <widget class="QDoubleSpinBox" name="pretriggerDoubleSpinBox">
           <property name="toolTip">
-           <string>Percentage of the measurement frame that is before the burst random excitation.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Pretrigger&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Percentage of the measurement frame that is before the burst random excitation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="suffix">
            <string>%</string>
@@ -412,7 +415,7 @@
         <item row="5" column="1">
          <widget class="QDoubleSpinBox" name="rampFractionDoubleSpinBox">
           <property name="toolTip">
-           <string>Percentage of the burst that is used to ramp from zero to the test level.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Ramp Fraction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Percentage of the burst that is used to ramp from zero to the test level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="suffix">
            <string>%</string>
@@ -436,6 +439,9 @@
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
            <widget class="QSpinBox" name="lowFreqCutoffSpinBox">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Bandwidth Minimum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The lowest frequency content in the excitation signal used in system identification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="suffix">
              <string> Hz</string>
             </property>
@@ -446,6 +452,9 @@
           </item>
           <item>
            <widget class="QSpinBox" name="highFreqCutoffSpinBox">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Bandwidth Maximum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The highest frequency content in the excitation signal used in system identification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="suffix">
              <string> Hz</string>
             </property>
@@ -479,7 +488,7 @@
           <item>
            <widget class="QCheckBox" name="stream_transfer_function_data_checkbox">
             <property name="toolTip">
-             <string>If checked, time data from system identification will be streamed to disk.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stream Time Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, time data from system identification will be streamed to disk.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Stream Time Data</string>
@@ -489,7 +498,7 @@
           <item>
            <widget class="QPushButton" name="select_transfer_function_stream_file_button">
             <property name="toolTip">
-             <string>Selects the file to which time data will be streamed.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Select File...&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to select the file to which the system identification data will be streamed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Select File...</string>
@@ -514,7 +523,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>File to which system identification data will be streamed.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Streaming File:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;File to which system identification data will be streamed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="readOnly">
            <bool>true</bool>
@@ -533,7 +542,7 @@
         <item>
          <widget class="QPushButton" name="save_system_id_matrices_button">
           <property name="toolTip">
-           <string>Save system identification spectral data to a file on the disk.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save System Identification Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Save system identification spectral data to a file on the disk.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Save System Identification Data</string>
@@ -542,6 +551,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="load_system_id_matrices_button">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load System Identification Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Loads system identification data from a file on the disk.  System identification being loaded must contain the same control and excitation degrees of freedom in the same order as the current environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="text">
            <string>Load System Identification Data</string>
           </property>
@@ -565,7 +577,7 @@
         <item row="0" column="0">
          <widget class="QPushButton" name="preview_noise_button">
           <property name="toolTip">
-           <string>Starts the noise identification of the system identification process.  No excitation will be applied to the shakers.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Preview Noise&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the noise identification of the system identification process in preview mode.  No excitation will be applied to the shakers.  The preview will continue until stopped manually.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Preview Noise</string>
@@ -575,7 +587,7 @@
         <item row="1" column="0">
          <widget class="QPushButton" name="preview_system_id_button">
           <property name="toolTip">
-           <string>Previews system identification, where excitation is played to the shakers.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Preview System Identification&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the system identification process in preview mode with excitation applied to the shakers.  The preview will continue until stopped manually.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Preview System ID</string>
@@ -588,7 +600,7 @@
            <bool>false</bool>
           </property>
           <property name="toolTip">
-           <string>Stops the system identification process.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Manually stops the system identification process.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Stop</string>
@@ -598,7 +610,7 @@
         <item row="2" column="0">
          <widget class="QPushButton" name="start_button">
           <property name="toolTip">
-           <string>Starts the full system identification process, including noise characterization and transfer function computation.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the full system identification process, including noise characterization and transfer function computation.  Each step will stop automatically when the requested number of averages has been acquired.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Start</string>
@@ -619,7 +631,7 @@
           <item>
            <widget class="QSpinBox" name="current_frames_spinbox">
             <property name="toolTip">
-             <string>Current number of system identification averages that have been acquired.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Current Averages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Current number of system identification averages that have been acquired.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -648,7 +660,7 @@
           <item>
            <widget class="QSpinBox" name="total_frames_spinbox">
             <property name="toolTip">
-             <string>Total number of system identification averages that will be acquired.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total Averages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Total number of system identification averages that will be acquired.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -688,7 +700,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>System identification progress display.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;System Identification Progress Bar&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Graphically displays the system identification's progress for the current noise or system identification step.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="value">
            <number>0</number>
@@ -738,15 +750,18 @@
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
             <widget class="GraphicsLayoutWidget" name="time_data_graphicslayout">
-             <property name="backgroundBrush">
-              <brush brushstyle="NoBrush">
-               <color alpha="255">
-                <red>255</red>
-                <green>255</green>
-                <blue>255</blue>
-               </color>
-              </brush>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Time Data Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the most recently acquired measurement frames for the selected reference and response channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
+             <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
             </widget>
            </item>
           </layout>
@@ -760,15 +775,18 @@
           <layout class="QVBoxLayout" name="verticalLayout_10">
            <item>
             <widget class="GraphicsLayoutWidget" name="transfer_function_graphics_layout">
-             <property name="backgroundBrush">
-              <brush brushstyle="NoBrush">
-               <color alpha="255">
-                <red>255</red>
-                <green>255</green>
-                <blue>255</blue>
-               </color>
-              </brush>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transfer Function Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the current estimation of the system transfer functions for the currently selected reference and response channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
+             <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
             </widget>
            </item>
           </layout>
@@ -782,15 +800,18 @@
           <layout class="QHBoxLayout" name="horizontalLayout_8">
            <item>
             <widget class="GraphicsLayoutWidget" name="impulse_graphicslayout">
-             <property name="backgroundBrush">
-              <brush brushstyle="NoBrush">
-               <color alpha="255">
-                <red>255</red>
-                <green>255</green>
-                <blue>255</blue>
-               </color>
-              </brush>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Impulse Response Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the current estimation of the impulse response function for the currently selected reference and response channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
+             <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
             </widget>
            </item>
           </layout>
@@ -804,15 +825,18 @@
           <layout class="QVBoxLayout" name="verticalLayout_11">
            <item>
             <widget class="GraphicsLayoutWidget" name="coherence_graphicslayout">
-             <property name="backgroundBrush">
-              <brush brushstyle="NoBrush">
-               <color alpha="255">
-                <red>255</red>
-                <green>255</green>
-                <blue>255</blue>
-               </color>
-              </brush>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Coherence and Condition Number Plots&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the multiple coherence for the currently selected response channel, and the condition number for each frequency line in the transfer function matrix.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
+             <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
             </widget>
            </item>
           </layout>
@@ -826,15 +850,18 @@
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
             <widget class="GraphicsLayoutWidget" name="levels_graphicslayout">
-             <property name="backgroundBrush">
-              <brush brushstyle="NoBrush">
-               <color alpha="255">
-                <red>255</red>
-                <green>255</green>
-                <blue>255</blue>
-               </color>
-              </brush>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Levels Plots&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the levels of the selected response and reference channels compared to the noise level on that measurement.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
+             <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
             </widget>
            </item>
           </layout>
@@ -848,15 +875,18 @@
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
             <widget class="GraphicsLayoutWidget" name="kurtosis_graphicslayout">
-             <property name="backgroundBrush">
-              <brush brushstyle="NoBrush">
-               <color alpha="255">
-                <red>255</red>
-                <green>255</green>
-                <blue>255</blue>
-               </color>
-              </brush>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Kurtosis Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the kurtosis of all channels in the system identification.  A kurtosis of 3 suggests gaussian measurements.  A value far from 3 suggests some nonlinear effect is distorting the gaussian excitation signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
+             <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
             </widget>
            </item>
           </layout>
@@ -884,7 +914,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Select the references to visualize</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;References&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the reference channels to visualize on the plots on the System Identification tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -899,7 +929,7 @@
           <item>
            <widget class="QPushButton" name="references_all_button">
             <property name="toolTip">
-             <string>Select all references</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;All&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize all references.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>All</string>
@@ -909,7 +939,7 @@
           <item>
            <widget class="QPushButton" name="references_none_button">
             <property name="toolTip">
-             <string>Deselect all references</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;None&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize no references.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>None</string>
@@ -936,7 +966,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Select responses to visualize</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Responses&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the response channels to visualize on the plots on the System Identification tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -951,7 +981,7 @@
           <item>
            <widget class="QPushButton" name="responses_all_button">
             <property name="toolTip">
-             <string>Visualize all responses</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;All&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize all responses.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>All</string>
@@ -961,7 +991,7 @@
           <item>
            <widget class="QPushButton" name="responses_none_button">
             <property name="toolTip">
-             <string>Visualize no responses</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;None&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Visualize no responses.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>None</string>
@@ -982,7 +1012,7 @@
         <item>
          <widget class="QCheckBox" name="time_data_checkbox">
           <property name="toolTip">
-           <string>Check to show time data during the system identification</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Time Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to show time data during the system identification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Time Data</string>
@@ -995,7 +1025,7 @@
         <item>
          <widget class="QCheckBox" name="transfer_function_checkbox">
           <property name="toolTip">
-           <string>Check to show transfer functions in the system identification</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transfer Function&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to show transfer functions in the system identification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Transfer Function</string>
@@ -1008,7 +1038,7 @@
         <item>
          <widget class="QCheckBox" name="impulse_checkbox">
           <property name="toolTip">
-           <string>Check to show the impulse response function, which is the IFFT of the transfer function.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Impulse Response&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to show the impulse response function, which is the IFFT of the transfer function.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Impulse Response</string>
@@ -1018,7 +1048,7 @@
         <item>
          <widget class="QCheckBox" name="coherence_checkbox">
           <property name="toolTip">
-           <string>Check to show multiple coherence and condition number of the transfer function matrix</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Coherence and Conditioning&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to show multiple coherence and condition number of the transfer function matrix.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Coherence and Conditioning</string>
@@ -1028,7 +1058,7 @@
         <item>
          <widget class="QCheckBox" name="levels_checkbox">
           <property name="toolTip">
-           <string>Check to show levels for system identification and noise characterization</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Levels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to show levels for system identification and noise characterization&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Levels</string>
@@ -1037,6 +1067,9 @@
         </item>
         <item>
          <widget class="QCheckBox" name="kurtosis_checkbox">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Kurtosis&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to show kurtosis of response and reference channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="text">
            <string>Kurtosis</string>
           </property>

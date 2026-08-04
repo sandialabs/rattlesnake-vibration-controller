@@ -42,7 +42,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>

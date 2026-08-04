@@ -19,7 +19,7 @@
      <item>
       <widget class="QComboBox" name="signal_selector">
        <property name="toolTip">
-        <string>Select the type of data to look at.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Type Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the type of data to look at.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <item>
         <property name="text">
@@ -66,7 +66,7 @@
      <item>
       <widget class="QComboBox" name="response_coordinate_selector">
        <property name="toolTip">
-        <string>Select the channel to look at.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the channel to look at.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="sizeAdjustPolicy">
         <enum>QComboBox::AdjustToContents</enum>
@@ -76,7 +76,7 @@
      <item>
       <widget class="QComboBox" name="reference_coordinate_selector">
        <property name="toolTip">
-        <string>Select the reference to look at.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Reference Channel Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the reference to look at.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="sizeAdjustPolicy">
         <enum>QComboBox::AdjustToContents</enum>
@@ -86,7 +86,7 @@
      <item>
       <widget class="QComboBox" name="data_type_selector">
        <property name="toolTip">
-        <string>Select how the data is displayed.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Data Display Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select how the data is displayed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <item>
         <property name="text">
@@ -118,7 +118,7 @@
      <item>
       <widget class="QCheckBox" name="lock_response_checkbox">
        <property name="toolTip">
-        <string>Locks the channel so it does not update when the increment channels buttons are clicked.  Channel can still be manually changed.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Lock&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Locks the channel so it does not update when the increment channels buttons are clicked.  Channel can still be manually changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Lock</string>

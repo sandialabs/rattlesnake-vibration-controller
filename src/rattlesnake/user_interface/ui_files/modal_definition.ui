@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1176</width>
+    <width>1172</width>
     <height>660</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Number of new samples that the control process acquires at a time.  This added to the overlapped samples will result in the Samples per Frame.  This will be equal to the Samples per Frame * (1 - Overlap Percentage / 100).  This need not correspond to the read or write size of the data acquisition system as the control process acquisition is buffered.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Samples per Acquire&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of samples that the control process processes at a time. This will be equal to the Samples per Frame * (1 - Overlap Percentage / 100). This need not correspond to the read or write size of the data acquisition system as the control process acquisition is buffered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -72,7 +72,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sample rate in samples per second of the data acquisition hardware, for display only.  This is a global parameter and must be set in the Data Acquisition Setup tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -108,7 +108,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>The Nyquist Frequency is the highest frequency that can be analyzed using frequency domain techniques.  It is the Sample Rate / 2.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Nyquist Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The Nyquist Frequency is the highest frequency that can be analyzed using frequency domain techniques.  It is the Sample Rate / 2.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -141,7 +141,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>The number of frequency lines in the Fast Fourier Transform output, which is the number of frequency lines that will be in the Transfer Function and CPSD matrices.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;FFT Lines&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of frequency lines in the Fast Fourier Transform output, which is the number of frequency lines that will be in the Transfer Function and CPSD matrices.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -174,7 +174,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>The frequency resolution of the measurement, computed by 1/Frame Time.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Frequency Spacing&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The frequency resolution of the measurement, computed by 1/Frame Time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -207,7 +207,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Samples per measurement frame in the signal processing. The measurement frame is the `block` of data upon which the signal processing will be performed. This value will determine the window size. A larger value will result in more frequency lines in the FFT analysis. This need not correspond to the read or write size in the data acquisition system.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Samples per Frame&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Samples per measurement frame in the controller. The measurement frame is the &amp;quot;block&amp;quot; of data upon which the signal processing will be performed. This value will determine the window size. A larger value will result in more frequency lines in the FFT analysis. This need not correspond to the read or write size in the data acquisition system.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>false</bool>
@@ -246,7 +246,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Time to acquire each measurement frame in seconds.  This is the Samples per Frame divided by the Sample Rate.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Frame Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Time to acquire each measurement frame in seconds. This is the Samples per Frame divided by the Sample Rate.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -282,7 +282,7 @@
             <item>
              <widget class="QComboBox" name="system_id_averaging_scheme_selector">
               <property name="toolTip">
-               <string>Specifies how averaging is performed.  Linear averaging weights all measurement frames equally.  Exponential averaging weights more recent frames more heavily.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Averaging Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies how averaging is performed.  Linear averaging weights all measurement frames equally.  Exponential averaging weights more recent frames more heavily.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -310,7 +310,7 @@
             <item>
              <widget class="QDoubleSpinBox" name="system_id_overlap_percentage_selector">
               <property name="toolTip">
-               <string>The percentage overlap used between measurement frames.  A 25% overlap means the last quarter of the previous measurement frame is used as the first quarter of the new measurement frame.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Overlap Percentage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The percentage overlap used between measurement frames.  A 25% overlap means the last quarter of the previous measurement frame is used as the first quarter of the new measurement frame.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="suffix">
                <string>%</string>
@@ -334,7 +334,7 @@
             <item>
              <widget class="QDoubleSpinBox" name="system_id_averaging_coefficient_selector">
               <property name="toolTip">
-               <string>Weighting applied to the most recent average for Exponential Averaging.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Averaging Coefficient&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Weighting applied to the most recent average when Exponential Averaging is used&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="decimals">
                <number>3</number>
@@ -367,7 +367,7 @@
             <item>
              <widget class="QComboBox" name="system_id_frf_technique_selector">
               <property name="toolTip">
-               <string>Technique to compute the Transfer Function. H1 averages noise on the response channels.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;FRF Technique&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Technique to compute the Transfer Function. H1 averages noise on the response channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -390,7 +390,7 @@
             <item>
              <widget class="QSpinBox" name="system_id_frames_to_average_selector">
               <property name="toolTip">
-               <string>The number of averages used for Linear Averaging, and the number of frames that will be used for the initial System Identification step for Exponential Averaging.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Number of Averages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of averages used to compute the frequency response functions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="maximum">
                <number>9999</number>
@@ -414,13 +414,7 @@
             <item>
              <widget class="QComboBox" name="system_id_transfer_function_computation_window_selector">
               <property name="toolTip">
-               <string>The window function applied to the measurement frames when computing the transfer functions.
-
-Rectangle: No window is used, all samples are weighted equally.  Used for periodic signals or signals that start and end at zero in the measurement frame.
-
-Hann: Window that weights the start and end of the frame to zero and the middle to one.  Useful for Random excitation to reduce leakage.
-
-Exponential: Window that weights the beginning of the frame more heavily than the end of the frame.  Useful for impact testing where the test article's response doesn't decay by itself by the end of the measurement frame.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;FRF Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The window function applied to the measurement frames when computing the transfer functions.&lt;/p&gt;&lt;p&gt;Rectangle: No window is used, all samples are weighted equally. Used for periodic signals or signals that start and end at zero in the measurement frame.&lt;/p&gt;&lt;p&gt;Hann: Window that weights the start and end of the frame to zero and the middle to one. Useful for Random excitation to reduce leakage.&lt;/p&gt;&lt;p&gt;Exponential: Window that weights the beginning of the frame more heavily than the end of the frame. Useful for impact testing where the test article's response doesn't decay by itself by the end of the measurement frame.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -453,7 +447,7 @@ Exponential: Window that weights the beginning of the frame more heavily than th
             <item>
              <widget class="QDoubleSpinBox" name="window_value_selector">
               <property name="toolTip">
-               <string>Value of the exponential window at the end of the measurement frame, which is used to specify how quickly the exponential window decays.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Window value at frame end&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Value of the exponential window at the end of the measurement frame, which is used to specify how quickly the exponential window decays.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="suffix">
                <string>%</string>
@@ -502,7 +496,7 @@ Exponential: Window that weights the beginning of the frame more heavily than th
             <item>
              <widget class="QSpinBox" name="hysteresis_samples_display">
               <property name="toolTip">
-               <string>Number of samples that the trigger channel must be below the Hysteresis level.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Samples&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of samples that the trigger channel must be below the Hysteresis level.  This property is read only and shown for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -531,7 +525,7 @@ Exponential: Window that weights the beginning of the frame more heavily than th
               <item>
                <widget class="QDoubleSpinBox" name="pretrigger_selector">
                 <property name="toolTip">
-                 <string>Amount of time in the measurement frame before the trigger occurs.  The system retains a running buffer of recently acquired data looking for the trigger.  When the trigger is found, the specified percentage of the frame is data that occured before the trigger.  This is used to capture, for example, the entire transient of a shock, some of which may occur before the trigger depending on the trigger level.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Pretrigger&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amount of time in the measurement frame before the trigger occurs.  The system retains a running buffer of recently acquired data looking for the trigger.  When the trigger is found, the specified percentage of the frame is data that occured before the trigger.  This is used to capture, for example, the entire transient of a shock, some of which may occur before the trigger depending on the trigger level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="suffix">
                  <string>%</string>
@@ -554,7 +548,7 @@ Exponential: Window that weights the beginning of the frame more heavily than th
             <item>
              <widget class="QComboBox" name="trigger_channel_selector">
               <property name="toolTip">
-               <string>Select the channel to use as a trigger.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Trigger Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the channel to use as a trigger.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
              </widget>
             </item>
@@ -574,14 +568,10 @@ Exponential: Window that weights the beginning of the frame more heavily than th
               <item>
                <widget class="QDoubleSpinBox" name="wait_for_steady_selector">
                 <property name="toolTip">
-                 <string>Amount of time to wait for the measurement to achieve a steady state response prior to performing signal processing operations.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Wait for Steady State&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amount of time to wait for the measurement to achieve a steady state response prior to performing signal processing operations.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="wait_for_steady_selector_label">
-                <property name="text">
-                 <string>s</string>
+                <property name="suffix">
+                 <string> s</string>
                 </property>
                </widget>
               </item>
@@ -601,7 +591,7 @@ Exponential: Window that weights the beginning of the frame more heavily than th
             <item>
              <widget class="QDoubleSpinBox" name="trigger_level_voltage_display">
               <property name="toolTip">
-               <string>Level to trigger at in volts.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Trigger Level (V)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Level to trigger at in volts.  This property is read only and displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -628,13 +618,7 @@ Exponential: Window that weights the beginning of the frame more heavily than th
             <item>
              <widget class="QComboBox" name="triggering_type_selector">
               <property name="toolTip">
-               <string>Type of trigger used for the analysis.
-
-Free Run: No triggering is used.
-
-First Frame: Triggering only starts the first measurement frame and then the measurement proceeds as if it were a Free Run.
-
-Every Frame: The measurement waits for a trigger for every measurement frame.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Triggering Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Type of trigger used for the analysis.&lt;/p&gt;&lt;p&gt;Free Run: No triggering is used.&lt;/p&gt;&lt;p&gt;First Frame: Triggering only starts the first measurement frame and then the measurement proceeds as if it were a Free Run.&lt;/p&gt;&lt;p&gt;Every Frame: The measurement waits for a trigger for every measurement frame.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -667,13 +651,7 @@ Every Frame: The measurement waits for a trigger for every measurement frame.</s
             <item>
              <widget class="QComboBox" name="acceptance_selector">
               <property name="toolTip">
-               <string>Determines how measurement frames are accepted or rejected.
-
-Accept All: Accepts all measurement frames
-
-Manual: Allows the user to specify whether the recently obtained measurement frame should be accepted or rejected.
-
-Autoreject...: Allows the user to load in a Python function to automatically accept or reject the measurement frame based off of arbitrary criteria.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Acceptance&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines how measurement frames are accepted or rejected.&lt;/p&gt;&lt;p&gt;Accept All: Accepts all measurement frames&lt;/p&gt;&lt;p&gt;Manual: Allows the user to specify whether the recently obtained measurement frame should be accepted or rejected.&lt;/p&gt;&lt;p&gt;Autoreject...: Allows the user to load in a Python function to automatically accept or reject the measurement frame based off of arbitrary criteria.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -708,7 +686,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
               <item>
                <widget class="QDoubleSpinBox" name="trigger_level_selector">
                 <property name="toolTip">
-                 <string>Level to trigger at as a percentage of the range of the channel.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Trigger Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Level to trigger at as a percentage of the range of the channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="suffix">
                  <string>%</string>
@@ -737,7 +715,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <item>
              <widget class="QDoubleSpinBox" name="trigger_level_eu_display">
               <property name="toolTip">
-               <string>Level to trigger at in Engineering Units.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Trigger Level (EU)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Level to trigger at in Engineering Units.  This property is read only and displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -766,7 +744,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
               <item>
                <widget class="QDoubleSpinBox" name="hysteresis_selector">
                 <property name="toolTip">
-                 <string>Level that the signal must return to prior to a new trigger being able to be accepted.  This ensures that the system must return to some nominal state prior to a new trigger being obtained.  Specified in percentage of the range of the channel.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Level that the signal must return to prior to a new trigger being able to be accepted.  This ensures that the system must return to some nominal state prior to a new trigger being obtained.  Specified in percentage of the range of the channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="suffix">
                  <string>%</string>
@@ -789,7 +767,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <item>
              <widget class="QDoubleSpinBox" name="hysteresis_voltage_display">
               <property name="toolTip">
-               <string>Level that the trigger channel must fall below to achieve a subsequent trigger in volts.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Level (V)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Level that the trigger channel must fall below to achieve a subsequent trigger in volts. This property is read only and displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -816,7 +794,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <item>
              <widget class="QDoubleSpinBox" name="hysteresis_eu_display">
               <property name="toolTip">
-               <string>Level that the trigger channel must fall below to achieve a subsequent trigger in Engineering Units.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Level (EU)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Level that the trigger channel must fall below to achieve a subsequent trigger in Engineering Units.  This property is read only and displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -843,7 +821,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <item>
              <widget class="QComboBox" name="trigger_slope_selector">
               <property name="toolTip">
-               <string>Slope of the trigger.  If the slope is Positive, it will look for a rising signal to trigger the measurement.  If the trigger slope is Negative, it will look for a falling signal to trigger the measurement.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Trigger Slope&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Slope of the trigger.  If the slope is Positive, it will look for a rising signal to trigger the measurement.  If the trigger slope is Negative, it will look for a falling signal to trigger the measurement.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -871,7 +849,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <item>
              <widget class="QDoubleSpinBox" name="hysteresis_time_display">
               <property name="toolTip">
-               <string>Amount of time that the trigger channel must be below the Hysteresis level.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Time (s)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amount of time that the trigger channel must be below the Hysteresis level. This property is read only and is displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -901,7 +879,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <item>
              <widget class="QDoubleSpinBox" name="hysteresis_length_selector">
               <property name="toolTip">
-               <string>Percentage of the measurement frame that the signal must be below the Hysteresis value in order to accept a new trigger.  Useful for Burst Random excitation where you don't want to accidentally trigger midway through the burst.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Frame %&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Percentage of the measurement frame that the signal must be below the Hysteresis value in order to accept a new trigger.  Useful for Burst Random excitation where you don't want to accidentally trigger midway through the burst.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="suffix">
                <string>%</string>
@@ -937,7 +915,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Number of reference channels used to compute frequency response function</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Reference Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of reference channels used to compute frequency response function&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -970,7 +948,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Number of output channels in the current test.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of excitation channels in the current test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -1003,7 +981,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Number of response channels used when computing frequency response functions.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of response channels used when computing frequency response functions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -1053,16 +1031,19 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Selection Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;By checking the box in the Reference column, a channel can be made into a reference channel rather than a response channel.  Unchecking the box in the Enabled column with disable the channel.  Disabling an excitation channel will disable that excitation device.  Disabling a reference will remove that reference from the FRF computation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
           </property>
           <property name="selectionBehavior">
            <enum>QAbstractItemView::SelectRows</enum>
           </property>
-          <attribute name="horizontalHeaderMinimumSectionSize">
+          <attribute name="horizontalHeaderDefaultSectionSize">
            <number>70</number>
           </attribute>
-          <attribute name="horizontalHeaderDefaultSectionSize">
+          <attribute name="horizontalHeaderMinimumSectionSize">
            <number>70</number>
           </attribute>
           <column>
@@ -1070,7 +1051,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <string>Enabled</string>
            </property>
            <property name="toolTip">
-            <string>If checked, the given channel is enabled for the measurement.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Enabled&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, the given channel is enabled for the measurement.  Disabling excitation channels will disable that excitation device.  Disabling references will remove them from the computation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </column>
           <column>
@@ -1078,7 +1059,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <string>Reference</string>
            </property>
            <property name="toolTip">
-            <string>If checked, the given channel is used as a reference for computing frequency response functions.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Reference&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, the given channel is used as a reference for computing frequency response functions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </column>
           <column>
@@ -1086,7 +1067,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
             <string>Channel</string>
            </property>
            <property name="toolTip">
-            <string>Name of the channel used by the Modal Environment</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Name of the channel used by the Modal Environment&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </column>
          </widget>
@@ -1096,7 +1077,7 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
           <item row="1" column="0">
            <widget class="QPushButton" name="disable_selected_button">
             <property name="toolTip">
-             <string>Disables selected channels.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Disable Selected&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Disables the currently selected channels in the Channel Selections table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Disable
@@ -1107,7 +1088,7 @@ Selected</string>
           <item row="0" column="0">
            <widget class="QPushButton" name="enable_selected_button">
             <property name="toolTip">
-             <string>Enables selected channels.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Enable Selected&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Enables the channels currently selected in the Channel Selections table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Enable
@@ -1118,7 +1099,7 @@ Selected</string>
           <item row="0" column="1">
            <widget class="QPushButton" name="check_selected_button">
             <property name="toolTip">
-             <string>Makes selected channels references.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Check Selected References&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Turns the selected channels into reference channels for computing FRFs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Check Selected
@@ -1129,7 +1110,7 @@ References</string>
           <item row="1" column="1">
            <widget class="QPushButton" name="uncheck_selected_button">
             <property name="toolTip">
-             <string>Makes selected channels responses.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Uncheck Selected References&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Turns the selected channels into response channels for computing FRFs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Uncheck Selected
@@ -1159,7 +1140,7 @@ References</string>
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>Type of signal that will be output.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Generation Tabs&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Switching tabs will change the type of excitation signal that will be output.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
              <number>0</number>
@@ -1197,7 +1178,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="random_rms_selector">
                     <property name="toolTip">
-                     <string>RMS voltage level of the Random signal</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Random RMS&lt;/span&gt;&lt;/p&gt;&lt;p&gt;RMS voltage level of the Random signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1235,7 +1216,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="random_min_frequency_selector">
                     <property name="toolTip">
-                     <string>Minimum frequency cutoff for the random vibration signal.</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Random Minimum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Minimum frequency cutoff for the random vibration signal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1255,7 +1236,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="random_max_frequency_selector">
                     <property name="toolTip">
-                     <string>Maximum frequency cutoff for the random vibration signal.</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Random Maximum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Maximum frequency cutoff for the random vibration signal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1303,7 +1284,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="burst_rms_selector">
                     <property name="toolTip">
-                     <string>RMS voltage of the burst portion of the excitation</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Burst Random RMS&lt;/span&gt;&lt;/p&gt;&lt;p&gt;RMS voltage of the burst portion of the excitation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1341,7 +1322,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="burst_min_frequency_selector">
                     <property name="toolTip">
-                     <string>Minimum frequency of the burst excitation</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Burst Random Minimum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Minimum frequency of the burst excitation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1361,7 +1342,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="burst_max_frequency_selector">
                     <property name="toolTip">
-                     <string>Maximum frequency of the burst excitation.</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Burst Random Maximum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Maximum frequency of the burst excitation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1389,7 +1370,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="burst_on_percentage_selector">
                     <property name="toolTip">
-                     <string>Percentage of the measurement frame that the burst is active for.</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Burst Random On Percentage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Percentage of the measurement frame that the burst is active for.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1446,7 +1427,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="pseudorandom_rms_selector">
                     <property name="toolTip">
-                     <string>RMS voltage of the pseudorandom excitation</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Pseudorandom RMS&lt;/span&gt;&lt;/p&gt;&lt;p&gt;RMS voltage of the pseudorandom excitation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1484,7 +1465,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="pseudorandom_min_frequency_selector">
                     <property name="toolTip">
-                     <string>Minimum frequency of the pseudorandom excitation</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Pseudorandom Minimum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Minimum frequency of the pseudorandom excitation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1504,7 +1485,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="pseudorandom_max_frequency_selector">
                     <property name="toolTip">
-                     <string>Maximum frequency of the pseudorandom excitation.</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Pseudorandom Maximum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Maximum frequency of the pseudorandom excitation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1552,7 +1533,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="chirp_level_selector">
                     <property name="toolTip">
-                     <string>Peak level of the chirp signal</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Chirp Peak Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Peak level of the chirp signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1590,7 +1571,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="chirp_min_frequency_selector">
                     <property name="toolTip">
-                     <string>Starting frequency of the chirp</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Chirp Minimum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starting frequency of the chirp&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1610,7 +1591,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="chirp_max_frequency_selector">
                     <property name="toolTip">
-                     <string>Ending frequency of the chirp</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Chirp Maximum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Ending frequency of the chirp&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1658,7 +1639,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="square_level_selector">
                     <property name="toolTip">
-                     <string>Amplitude of the square pulse</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Square Wave Peak Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amplitude of the square pulse&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1696,7 +1677,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="square_frequency_selector">
                     <property name="toolTip">
-                     <string>Frequency of the square pulse</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Square Wave Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Frequency of the square pulse&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1740,7 +1721,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="square_percent_on_selector">
                     <property name="toolTip">
-                     <string>Percentage of the square pulse's period that it is &quot;up&quot;.</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Square Wave Percent On&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Percentage of the square pulse's period that it is &amp;quot;up&amp;quot;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1794,7 +1775,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="sine_level_selector">
                     <property name="toolTip">
-                     <string>Amplitude of the sinusoidal excitation</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sine Wave Peak Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amplitude of the sinusoidal excitation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1832,7 +1813,7 @@ References</string>
                   <item>
                    <widget class="QDoubleSpinBox" name="sine_frequency_selector">
                     <property name="toolTip">
-                     <string>Frequency of the sinusoidal excitation</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sine Wave Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Frequency of the sinusoidal excitation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="keyboardTracking">
                      <bool>false</bool>
@@ -1888,14 +1869,8 @@ References</string>
           </item>
           <item>
            <widget class="PlotWidget" name="output_signal_plot">
-            <property name="backgroundBrush">
-             <brush brushstyle="NoBrush">
-              <color alpha="255">
-               <red>255</red>
-               <green>255</green>
-               <blue>255</blue>
-              </color>
-             </brush>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Signal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Realization of the signals that will be generated.  Note that for random signals, the actual signal may vary slightly from this representation, as the generation of those signals is random.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </widget>
           </item>
@@ -1904,7 +1879,7 @@ References</string>
             <item>
              <widget class="QCheckBox" name="regenerate_signal_auto_checkbox">
               <property name="toolTip">
-               <string>Check to automatically regenerate signals when parameters are updated.  If not checked, you will need to click the `Regenerate Signals` button to see changes.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Automatically Regenerate Signal on Parameter Change&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Check to automatically regenerate signals when signal generation parameters are updated.  If not checked, you will need to click the `Regenerate Signals` button to see changes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string>Automatically Regenerate Signal on Parameter Change</string>
@@ -1930,7 +1905,7 @@ References</string>
             <item>
              <widget class="QPushButton" name="regenerate_signal_button">
               <property name="toolTip">
-               <string>Generate a new realization of the output signals.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Regenerate Signal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Generate a new realization of the output signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string>Regenerate Signal</string>

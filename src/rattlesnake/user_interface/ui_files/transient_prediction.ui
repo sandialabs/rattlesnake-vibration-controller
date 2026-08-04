@@ -19,7 +19,7 @@
      <item row="2" column="0">
       <widget class="QPushButton" name="minimum_voltage_button">
        <property name="toolTip">
-        <string>Visualize the signal with the smallest drive voltage</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Voltage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the excitation signal with the smallest peak voltage and display it in the Output Voltage Prediction plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Go to Minimum</string>
@@ -29,7 +29,7 @@
      <item row="1" column="0">
       <widget class="QPushButton" name="maximum_voltage_button">
        <property name="toolTip">
-        <string>Visualize the drive signal with the largest voltage</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Voltage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the excitation signal with the largest peak voltage and display it in the Output Voltage Prediction plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Go to Maximum</string>
@@ -57,7 +57,7 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>Peak voltage for each drive signal</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltages (Peak)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the peak voltage that will be supplied to each of the excitation channels in the environment based on the prescribed control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -70,7 +70,7 @@
      <item row="1" column="1">
       <widget class="QComboBox" name="excitation_selector">
        <property name="toolTip">
-        <string>Select the signal to visualize</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Signal Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select which signal should be plotted on the Output Voltage Prediction Plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -81,6 +81,9 @@
          <horstretch>1</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltage Prediction Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the selected voltage signal that will be output to the excitation devices to achieve the desired response signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -103,7 +106,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Time Response Assurance Criterion between the predicted response and the desired response</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Error (TRAC)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Time Response Assurance Criterion between the predicted response and the desired response.  Note that the TRAC may be sensitive to small time delays in the signal, so a poor TRAC value does not immediately mean a terrible test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -116,7 +119,7 @@
      <item row="1" column="0">
       <widget class="QPushButton" name="maximum_error_button">
        <property name="toolTip">
-        <string>Visualize the signal with the largest predicted error</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum TRAC&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the response signal with the largest TRAC and display it in the Response Prediction plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Go to Maximum</string>
@@ -126,7 +129,7 @@
      <item row="1" column="1">
       <widget class="QComboBox" name="response_selector">
        <property name="toolTip">
-        <string>Select the signal prediction to visualize</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Signal Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select which signal should be plotted on the Response Prediction Plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -138,12 +141,15 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Prediction Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the selected response signal.  Both the desired time signal and the predicted time signal will be plotted.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
       </widget>
      </item>
      <item row="2" column="0">
       <widget class="QPushButton" name="minimum_error_button">
        <property name="toolTip">
-        <string>Visualize the signal with the smallest predicted error</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum TRAC&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the response signal with the smallest TRAC and display it in the Response Prediction plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Go to Minimum</string>
@@ -168,7 +174,7 @@
        <item>
         <widget class="QPushButton" name="recompute_predictions_button">
          <property name="toolTip">
-          <string>Recompute predictions by running the control law again.</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Recompute Predictions&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Recompute predictions by running the control law again.  If a closed loop control law is implemented, the previous predictions will be used as the &amp;quot;measured&amp;quot; data and a closed-loop update will be performed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Recompute Predictions</string>

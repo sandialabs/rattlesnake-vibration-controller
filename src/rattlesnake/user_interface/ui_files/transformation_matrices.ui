@@ -32,7 +32,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_add_row_button">
           <property name="toolTip">
-           <string>Add a virtual control channel to the response transformation</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation Matrix Add Row&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Add a virtual control channel to the response transformation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Add Row</string>
@@ -42,7 +42,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_remove_row_button">
           <property name="toolTip">
-           <string>Remove a virtual control channel from the response transformation</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation Matrix Remove Row&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Remove the selected virtual control channel from the response transformation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Remove Row</string>
@@ -65,7 +65,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_save_matrix_button">
           <property name="toolTip">
-           <string>Save the response transformation matrix to a file</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation Matrix Save&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog allowing the user to save the response transformation matrix to a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Save</string>
@@ -75,7 +75,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_load_matrix_button">
           <property name="toolTip">
-           <string>Load the response transformation matrix from a file</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation Matrix Load&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to allow the user to load in a response transformation matrix from a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Load</string>
@@ -85,7 +85,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_identity_button">
           <property name="toolTip">
-           <string>Set the response transformation to the identity matrix (removes the transformation)</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation Matrix Identity&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Set the response transformation to the identity matrix (effectively removes the transformation)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Identity</string>
@@ -95,7 +95,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_6dof_kinematic_button">
           <property name="toolTip">
-           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation 6DoF Kinematic&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the response transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>6DoF Kinematic</string>
@@ -105,7 +105,7 @@
         <item>
          <widget class="QPushButton" name="response_transformation_reversed_6dof_kinematic_button">
           <property name="toolTip">
-           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation 6DoF Kinematic Reversed&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the response transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker. This default switches the signs on some of the coefficients based on shaker wiring.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>6DoF Kinematic Reversed</string>
@@ -172,7 +172,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_add_row_button">
           <property name="toolTip">
-           <string>Add a virtual excitation channel</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation Matrix Add Row&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Add a virtual excitation channel to the output transformation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Add Row</string>
@@ -182,7 +182,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_remove_row_button">
           <property name="toolTip">
-           <string>Remove a virtual excitation channel</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation Matrix Remove Row&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Remove the selected virtual excitation channel from the output transformation&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Remove Row</string>
@@ -205,7 +205,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_save_matrix_button">
           <property name="toolTip">
-           <string>Save the output transformation matrix to a file</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation Matrix Save&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog allowing the user to save the output transformation matrix to a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Save</string>
@@ -215,7 +215,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_load_matrix_button">
           <property name="toolTip">
-           <string>Load an output transformation matrix from a file</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation Matrix Load&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to allow the user to load in an output transformation matrix from a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Load</string>
@@ -225,7 +225,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_identity_button">
           <property name="toolTip">
-           <string>Set the output transformation to the identity matrix (removes the transformation)</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation Matrix Identity&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Set the output transformation to the identity matrix (effectively removes the transformation)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Identity</string>
@@ -235,7 +235,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_6dof_kinematic_button">
           <property name="toolTip">
-           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation 6DoF Kinematic&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the output transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>6DoF Kinematic</string>
@@ -245,7 +245,7 @@
         <item>
          <widget class="QPushButton" name="output_transformation_reversed_6dof_kinematic_button">
           <property name="toolTip">
-           <string>Sets the transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation 6DoF Kinematic Reversed&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the output transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker. This default switches the signs on some of the coefficients based on shaker wiring.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>6DoF Kinematic Reversed</string>
@@ -321,7 +321,7 @@
      <item>
       <widget class="QPushButton" name="ok_button">
        <property name="toolTip">
-        <string>Saves the transformation matrices to the environment</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;OK&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves the transformation matrices to the environment&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>OK</string>
@@ -331,7 +331,7 @@
      <item>
       <widget class="QPushButton" name="cancel_button">
        <property name="toolTip">
-        <string>Cancels modification of the transformation matrices</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Cancel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Cancels modification of the transformation matrices&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Cancel</string>

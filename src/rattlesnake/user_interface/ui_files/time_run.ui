@@ -46,7 +46,7 @@
           <item>
            <widget class="QSpinBox" name="test_level_selector">
             <property name="toolTip">
-             <string>Scale factor applied to the signal.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Scale factor in decibels applied to the signal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="keyboardTracking">
              <bool>false</bool>
@@ -77,7 +77,7 @@
         <item>
          <widget class="QCheckBox" name="repeat_signal_checkbox">
           <property name="toolTip">
-           <string>Check to continually repeat the signal</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Repeat Signal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, the signal will repeat continuously.  If not checked, the environment will stop after the signal is played in its entirety.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Repeat Signal</string>
@@ -137,7 +137,7 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>Start playing the signal</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts playing the signal from the shakers and recording responses to that signal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Start Environment</string>
@@ -198,7 +198,7 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>Stop playing the signal by ramping down the level</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Stops the signal currently playing.  It will ramp down the signal to zero over the time specified by the Cancel Rampdown Time parameter on the Environment Definition tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Stop Environment</string>
@@ -241,15 +241,18 @@
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
          <widget class="PlotWidget" name="output_signal_plot">
-          <property name="backgroundBrush">
-           <brush brushstyle="NoBrush">
-            <color alpha="255">
-             <red>255</red>
-             <green>255</green>
-             <blue>255</blue>
-            </color>
-           </brush>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Outputs Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A plot of the output signals as they are measured.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
+          <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
          </widget>
         </item>
        </layout>
@@ -269,15 +272,18 @@
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="PlotWidget" name="response_signal_plot">
-          <property name="backgroundBrush">
-           <brush brushstyle="NoBrush">
-            <color alpha="255">
-             <red>255</red>
-             <green>255</green>
-             <blue>255</blue>
-            </color>
-           </brush>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Responses Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A plot of the responses to the outputs that are being measured.  Responses defined as any channel active in the environment that is not an output channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
+          <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
          </widget>
         </item>
        </layout>
