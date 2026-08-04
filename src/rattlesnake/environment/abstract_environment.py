@@ -148,8 +148,6 @@ class EnvironmentMetadata(ABC):
         ]
         return environment_channel_list
 
-    # endregion
-
     # region Validation
     @abstractmethod
     def validate(self, hardware_metadata: HardwareMetadata):
@@ -295,6 +293,9 @@ class EnvironmentMetadata(ABC):
         """
 
     # endregion
+
+
+# endregion
 
 
 # region Instructions
@@ -711,6 +712,9 @@ class Environment(ABC):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

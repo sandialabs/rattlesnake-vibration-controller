@@ -331,8 +331,6 @@ class ModalUI(EnvironmentUI):
             self.remove_override_channel
         )
 
-    # endregion
-
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
@@ -1516,3 +1514,6 @@ class ModalUI(EnvironmentUI):
                 print(f"Unknown Modal UI Command {command}")
 
     # endregion
+
+
+# endregion

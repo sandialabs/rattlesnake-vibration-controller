@@ -554,9 +554,7 @@ class ModalMetadata(EnvironmentMetadata):
                         "samples per frame"
                     )
         elif self.signal_generator_type in single_frequency_types:
-            if not (
-                0 < self.signal_generator_min_frequency <= self.nyquist_frequency
-            ):
+            if not (0 < self.signal_generator_min_frequency <= self.nyquist_frequency):
                 raise RattlesnakeError(
                     f"{self.environment_name} signal generator frequency must be "
                     f"greater than 0 and up to the nyquist frequency "
@@ -1121,6 +1119,9 @@ class ModalMetadata(EnvironmentMetadata):
     # endregion
 
 
+# endregion
+
+
 # region Instructions
 class ModalInstructions(EnvironmentInstructions):
     def __init__(
@@ -1260,8 +1261,6 @@ class ModalEnvironment(Environment):
         )
 
         self.set_ready()
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -1786,7 +1785,7 @@ class ModalEnvironment(Environment):
             self.shutdown_recheck_timer = threading.Timer(
                 1.0, self.requeue_shutdown_check
             )
-            self.shutdown_recheck_timer.daemon = True # Scary Daemons
+            self.shutdown_recheck_timer.daemon = True  # Scary Daemons
             self.shutdown_recheck_timer.start()
 
     def requeue_shutdown_check(self):
@@ -1864,7 +1863,7 @@ class ModalEnvironment(Environment):
         """
         if self.shutdown_recheck_timer is not None:
             self.shutdown_recheck_timer.cancel()
-                
+
         self.close_data_file()
         for queue in [
             self.queue_container.spectral_command_queue,
@@ -1875,6 +1874,9 @@ class ModalEnvironment(Environment):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

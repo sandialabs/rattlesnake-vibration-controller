@@ -269,3 +269,8 @@ class ReadUI(EnvironmentUI):
                 self.plot_time_data(data)
             case _:
                 print(f"Unknown Read UI Command {command}")
+
+    # endregion
+
+
+# endregion

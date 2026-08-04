@@ -243,8 +243,6 @@ class SysIdEnvironmentUI(EnvironmentUI):
         except:
             return False
 
-    # endregion
-
     # region State Sync
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -1384,3 +1382,6 @@ class SysIdEnvironmentUI(EnvironmentUI):
         return True
 
     # endregion
+
+
+# endregion

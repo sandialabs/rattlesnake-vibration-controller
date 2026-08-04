@@ -89,6 +89,9 @@ for hardware_type in HardwareType:
             UI_ASK_FOR_FILE.append(HardwareType.SDYNPY_FRF)
 
 
+# endregion
+
+
 # region Environments
 ENVIRONMENT_UIS = {}
 UI_ENVIRONMENT_OPTIONS = {"Add Environment": None}

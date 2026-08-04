@@ -66,6 +66,9 @@ class RattlesnakeState(Enum):
     SYS_ID_ACTIVE = 5  # System identification is being performed
 
 
+# endregion
+
+
 # region Rattlesnake
 class RattlesnakeController:
     """Object responsible for setting up, sending data to, and running processes that
@@ -484,8 +487,6 @@ class RattlesnakeController:
                 raise RattlesnakeError("Timeout waiting for all events to be ready")
 
             time.sleep(0.25)
-
-    # endregion
 
     # region Loading
     def setup_gui(self):
@@ -1367,3 +1368,6 @@ class RattlesnakeController:
         )
 
     # endregion
+
+
+# endregion

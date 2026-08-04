@@ -258,3 +258,6 @@ class AbstractMessageProcess(ABC):
 
         """
         return True
+
+
+# endregion

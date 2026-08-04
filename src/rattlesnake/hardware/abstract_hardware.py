@@ -89,8 +89,6 @@ class HardwareMetadata:
         """Property returning the output sample rate."""
         return self.sample_rate * self.output_oversample
 
-    # endregion
-
     # region Validation
     @abstractmethod
     def validate(self):
@@ -112,9 +110,7 @@ class HardwareMetadata:
             not isinstance(self.output_oversample, (int, float))
             or self.output_oversample <= 0
         ):
-            raise RattlesnakeError(
-                f"output_oversample must be a number greater than 0"
-            )
+            raise RattlesnakeError(f"output_oversample must be a number greater than 0")
 
     @abstractmethod
     def valid_channel_dict(self, channel: Channel):
@@ -472,6 +468,9 @@ class HardwareMetadata:
         hardware_worksheet.cell(5, 2, str(self.time_per_write))
 
     # endregion
+
+
+# endregion
 
 
 # region Acquisition

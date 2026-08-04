@@ -38,10 +38,10 @@ CONTROL_TYPE = EnvironmentType.SINE
 MAXIMUM_NAME_LENGTH = 50
 
 
+# region User Interface
 class SineUI(SysIdEnvironmentUI):
     """Class to represent the user interface of the MIMO sine module"""
 
-    # region User Interface
     def __init__(
         self,
         environment_name: str,
@@ -332,8 +332,6 @@ class SineUI(SysIdEnvironmentUI):
             ].unit
         except (IndexError, TypeError):
             return None
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata):
@@ -1845,3 +1843,6 @@ class SineUI(SysIdEnvironmentUI):
                 )
             case _:
                 print(f"Unknown Sine UI Command {command}")
+
+    # endregion
+# endregion

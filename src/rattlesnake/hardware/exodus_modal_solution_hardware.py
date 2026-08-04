@@ -100,7 +100,9 @@ class ExodusMetadata(HardwareMetadata):
                     f"Invalid node number in channel table row {row+1}"
                 )
             num_dimensions = len(self.valid_node_directions(channel.node_number)) // 2
-            if not self._is_valid_node_direction(channel.node_direction, num_dimensions):
+            if not self._is_valid_node_direction(
+                channel.node_direction, num_dimensions
+            ):
                 raise RattlesnakeError(
                     f"Invalid node direction in channel table row {row+1}. Must be "
                     "one of 'X+', 'X-', 'Y+', 'Y-', 'Z+', 'Z-' or a comma-separated "
@@ -303,6 +305,11 @@ class ExodusMetadata(HardwareMetadata):
             hardware_file,
             damping_ratio,
         )
+
+    # endregion
+
+
+# endregion
 
 
 # region Acquisition
@@ -638,6 +645,9 @@ class ExodusAcquisition(HardwareAcquisition):
         return phi_row
 
 
+# endregion
+
+
 # region Output
 class ExodusOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
@@ -719,6 +729,9 @@ class ExodusOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
+
+
+# endregion
 
 
 # region Exodus Reader
@@ -1033,3 +1046,6 @@ def mck_to_state_space(m, c, k):
 #     c = np.diag((2*2*np.pi*natural_frequencies*damping_ratios))
 #     q = integrate_MCK(m,c,k,times,modal_forces,np.concatenate((q0,qd0)))[:2]
 #     return q
+
+
+# endregion

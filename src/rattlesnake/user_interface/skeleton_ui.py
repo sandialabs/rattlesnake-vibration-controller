@@ -193,3 +193,8 @@ class SkeletonUI(EnvironmentUI):
                 self.plot_time_data(data)
             case _:
                 print(f"Unknown Skeleton UI Command {command}")
+
+    # endregion
+
+
+# endregion

@@ -116,8 +116,6 @@ class TimeUI(EnvironmentUI):
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
         self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
 
-    # endregion
-
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
@@ -504,3 +502,6 @@ class TimeUI(EnvironmentUI):
                 print(f"Unknown Time UI Command {command}")
 
     # endregion
+
+
+# endregion

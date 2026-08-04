@@ -84,8 +84,6 @@ class SDynPyFRFMetadata(HardwareMetadata):
         self._sdynpy_data = None  # Dont set this
         self._function_type = None  # Dont set this
 
-    # endregion
-
     # region Validation
     def validate(self):
         super().validate()
@@ -353,6 +351,8 @@ class SDynPyFRFMetadata(HardwareMetadata):
             time_per_write,
             hardware_file,
         )
+
+    # endregion
 
 
 # endregion

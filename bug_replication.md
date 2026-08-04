@@ -8,14 +8,7 @@ Stuff for the future
 [ ] Build out notebook example
 [ ] Write guide for building new environments
 
-## Warnings/Minor Fixes
-[x] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
-
-[ ] Figure out why some errors do not display on user interface (errors inside control laws)
-
 ## Easy
-[ ] Rework regions so they are nested
-
 [ ] Add in new ping alive events into lanxi intialize hardware
 
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
@@ -54,3 +47,6 @@ Stuff for the future
 [ ] Some hardware files need time.sleeps to work at certain points in headless mode (LanXi)
 
 ## Done
+[x] Figure out why some errors do not display on user interface (errors inside control laws)
+[x] Reciprocity plots show warning in example. Not sure when reciprocity is meant to be shown
+[x] Rework regions so they are nested

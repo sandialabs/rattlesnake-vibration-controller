@@ -57,8 +57,6 @@ class ReadMetadata(EnvironmentMetadata):
             sample_rate,
         )
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata: HardwareMetadata):
         super().validate(hardware_metadata)
@@ -160,6 +158,9 @@ class ReadMetadata(EnvironmentMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Instructions
@@ -283,8 +284,6 @@ class ReadEnvironment(Environment):
         # Tell controller that initialization was successful
         self.set_ready()
 
-    # endregion
-
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         super().initialize_hardware(hardware_metadata)
@@ -376,6 +375,11 @@ class ReadEnvironment(Environment):
                 (ReadUICommands.SET_WINDOW_SIZE, data),
             )
         )
+
+    # endregion
+
+
+# endregion
 
 
 def read_process(

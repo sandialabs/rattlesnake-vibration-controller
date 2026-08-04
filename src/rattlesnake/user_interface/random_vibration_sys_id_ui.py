@@ -370,8 +370,6 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         except (IndexError, TypeError):
             return None
 
-    # endregion
-
     # region State Sync
     def initialize_hardware(self, hardware_metadata):
         super().initialize_hardware(hardware_metadata)
@@ -1865,3 +1863,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 widget.setEnabled(False)
             case _:
                 print(f"Unknown Random UI Command {command}")
+
+    # endregion
+
+
+# endregion

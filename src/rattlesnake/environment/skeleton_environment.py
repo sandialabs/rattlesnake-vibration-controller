@@ -137,8 +137,6 @@ class SkeletonMetadata(EnvironmentMetadata):
         )
         self.example_window_size = example_window_size
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata: HardwareMetadata):
         """
@@ -165,7 +163,9 @@ class SkeletonMetadata(EnvironmentMetadata):
         super().validate(hardware_metadata)
 
         if self.example_window_size <= 0:
-            raise RattlesnakeError("{self.environment_name} must have a window size greater than 0")
+            raise RattlesnakeError(
+                "{self.environment_name} must have a window size greater than 0"
+            )
 
     # endregion
 
@@ -327,6 +327,9 @@ class SkeletonMetadata(EnvironmentMetadata):
     # endregion
 
 
+# endregion
+
+
 # region Instructions
 class SkeletonInstructions(EnvironmentInstructions):
     """
@@ -476,8 +479,6 @@ class SkeletonEnvironment(Environment):
         # Tell controller that initialization was successful
         self.set_ready()
 
-    # endregion
-
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         super().initialize_hardware(hardware_metadata)
@@ -569,6 +570,11 @@ class SkeletonEnvironment(Environment):
 
     def set_float_command(self, data):
         print(f"Settting float value {data}")
+
+    # endregion
+
+
+# endregion
 
 
 def skeleton_process(

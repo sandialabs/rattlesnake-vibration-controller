@@ -76,8 +76,6 @@ class SDynPySystemMetadata(HardwareMetadata):
         self.hardware_file = hardware_file
         self._node_dict = None  # Dont set this
 
-    # endregion
-
     # region Validation
     def validate(self):
         super().validate()
@@ -281,6 +279,9 @@ class SDynPySystemMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Acquisition
@@ -662,6 +663,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
+# endregion
+
+
 # region Output
 class SDynPySystemOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
@@ -739,3 +743,6 @@ class SDynPySystemOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
+
+
+# endregion

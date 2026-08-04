@@ -146,8 +146,6 @@ class SysIdMetadata:
             )
         )
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata):
         if self.sysid_frame_size <= 0:
@@ -549,8 +547,11 @@ class SysIdMetadata:
     # endregion
 
 
+# endregion
+
+
+# region Data Package
 class SysIdDataPackage:
-    # region Data Package
     def __init__(
         self,
         sysid_frames=None,
@@ -573,7 +574,6 @@ class SysIdDataPackage:
         self.sysid_response_noise = sysid_response_noise
         self.sysid_reference_noise = sysid_reference_noise
 
-    # endregion
     @property
     def num_response_channels(self):
         if self.sysid_frf is None:
@@ -845,11 +845,14 @@ class SysIdDataPackage:
     # endregion
 
 
+# endregion
+
+
+# region Data Analysis
 class SysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
     using system id"""
 
-    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -1118,6 +1121,8 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
+    # endregion
+
 
 # endregion
 
@@ -1174,3 +1179,6 @@ def sysid_data_analysis_process(
     )
 
     data_analysis_instance.run(shutdown_event)
+
+
+# endregion

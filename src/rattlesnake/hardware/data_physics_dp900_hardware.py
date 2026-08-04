@@ -68,8 +68,6 @@ class DataPhysicsDP900Metadata(HardwareMetadata):
         )
         self.hardware_file = hardware_file
 
-    # endregion
-
     # region Validation
     def validate(self):
         return super().validate()
@@ -143,6 +141,9 @@ class DataPhysicsDP900Metadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Acqusition
@@ -497,6 +498,9 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         return
 
 
+# endregion
+
+
 # region Output
 class DataPhysicsDP900Output(HardwareOutput):
     """Abstract class defining the interface between the controller and output
@@ -565,3 +569,6 @@ class DataPhysicsDP900Output(HardwareOutput):
 
         Returns ``True`` if the data-passing queue is empty."""
         return self.queue.empty()
+
+
+# endregion

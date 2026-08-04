@@ -44,10 +44,10 @@ CONTROL_TYPE = EnvironmentType.TRANSIENT
 MAXIMUM_NAME_LENGTH = 50
 
 
+# region User Interface
 class TransientUI(SysIdEnvironmentUI):
     """Class defining the user interface for the transient environment"""
 
-    # region User Interface
     def __init__(
         self,
         environment_name: str,
@@ -266,8 +266,6 @@ class TransientUI(SysIdEnvironmentUI):
             ].unit
         except (IndexError, TypeError):
             return None
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, data_acquisition_parameters):
@@ -814,9 +812,9 @@ class TransientUI(SysIdEnvironmentUI):
                                         function[1].__dict__[method],
                                         "__isabstractmethod__",
                                     )
-                                    and function[1].__dict__[
-                                        method
-                                    ].__isabstractmethod__
+                                    and function[1]
+                                    .__dict__[method]
+                                    .__isabstractmethod__
                                 )
                             )
                             for method in ["system_id_update", "control"]
@@ -1465,3 +1463,8 @@ class TransientUI(SysIdEnvironmentUI):
                 widget.setEnabled(False)
             case _:
                 print(f"Unknown Sine UI Command {command}")
+
+    # endregion
+
+
+# endregion

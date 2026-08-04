@@ -138,8 +138,6 @@ class AcquisitionProcess(AbstractMessageProcess):
         self._streaming_active_event = streaming_active_event
         # print('acquisition setup')
 
-    # endregion
-
     # region State Sync
     @property
     def acquisition_active(self):
@@ -613,6 +611,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

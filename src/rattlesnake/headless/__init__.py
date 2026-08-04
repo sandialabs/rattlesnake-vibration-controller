@@ -3,6 +3,9 @@ from rattlesnake.engine import RattlesnakeController
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
 
+# endregion
+
+
 # region Hardware
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.skeleton_hardware import SkeletonHardwareMetadata
@@ -14,6 +17,9 @@ from rattlesnake.hardware.sdynpy_system_virtual_hardware import SDynPySystemMeta
 from rattlesnake.hardware.sdynpy_frf_virtual_hardware import SDynPyFRFMetadata
 from rattlesnake.hardware.exodus_modal_solution_hardware import ExodusMetadata
 from rattlesnake.hardware.state_space_virtual_hardware import StateSpaceMetadata
+
+# endregion
+
 
 # region Environment
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -53,6 +59,9 @@ from rattlesnake.environment.sine_sys_id_environment import (
     SineInstructions,
 )
 
+# endregion
+
+
 # region Process
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.process.abstract_sysid_data_analysis import (
@@ -60,8 +69,14 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataPackage,
 )
 
+# endregion
+
+
 # region User Interface
 from rattlesnake.main import build_rattlesnake_app, launch_rattlesnake_ui
+
+# endregion
+
 
 __all__ = [
     # Main

@@ -294,8 +294,6 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             )
         )
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata):
         super().validate(hardware_metadata)
@@ -324,7 +322,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         try:
             sig.get_window(str(self.cola_window).lower(), 2)
         except ValueError as e:
-            raise RattlesnakeError(f"Invalid COLA window {self.cola_window}: {e}") from e
+            raise RattlesnakeError(
+                f"Invalid COLA window {self.cola_window}: {e}"
+            ) from e
 
         if self.sigma_clip <= 0:
             raise RattlesnakeError("Sigma clipping must be greater than 0")
@@ -973,9 +973,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 [
                     (
                         environment_channel_list[i].node_number,
-                        _direction_map[
-                            environment_channel_list[i].node_direction
-                        ],
+                        _direction_map[environment_channel_list[i].node_direction],
                     )
                     for i in control_channel_indices
                 ],
@@ -1031,6 +1029,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             metadata.set_file(specification_file)
 
         return metadata
+
+    # endregion
+
+
+# endregion
 
 
 # region Instructions
@@ -1128,10 +1131,10 @@ from rattlesnake.process.random_vibration_sys_id_data_analysis import (  # noqa:
 )
 
 
+# region Environment
 class RandomVibrationEnvironment(SysIdEnvironment):
     """Random Environment class defining the interface with the controller"""
 
-    # region Environment
     def __init__(
         self,
         environment_name: str,
@@ -1205,8 +1208,6 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.queue_container = queue_container
 
         self.set_ready()
-
-    # endregion
 
     # region StateSync
     def initialize_hardware(self, hardware_metadata):
@@ -1595,6 +1596,8 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             )
         )
 
+    # endregion
+
     # region Shutdown
     def check_for_control_shutdown(self, data):  # pylint: disable=unused-argument
         """Checks the different processes to see if the controller has shut down gracefully"""
@@ -1633,6 +1636,9 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

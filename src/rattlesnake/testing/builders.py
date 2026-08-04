@@ -137,3 +137,6 @@ def launch_temporary_rattlesnake_ui(
         if closeout_time:
             QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
         app.exec_()
+
+
+# endregion

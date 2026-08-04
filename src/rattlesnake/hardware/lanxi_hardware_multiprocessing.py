@@ -34,7 +34,11 @@ import openpyxl
 import numpy as np
 import requests
 
-from rattlesnake.utilities import IPAddress, autofill_single_ip_address, RattlesnakeError
+from rattlesnake.utilities import (
+    IPAddress,
+    autofill_single_ip_address,
+    RattlesnakeError,
+)
 from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareOutput,
@@ -169,8 +173,6 @@ class LanXIMetadata(HardwareMetadata):
                 address.get_host_name_from_ip()
                 address.get_ip_from_host_name()
                 self.ip_addresses.append(address)
-
-    # endregion
 
     # region Validation
     def validate(self):
@@ -564,6 +566,9 @@ class LanXIMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 class LanXIError(Exception):

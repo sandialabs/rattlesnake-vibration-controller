@@ -124,10 +124,10 @@ class TransientUICommands(Enum):
 # endregion
 
 
+# region Metadata
 class TransientMetadata(SysIdEnvironmentMetadata):
     """Metadata required to define a transient control law in rattlesnake."""
 
-    # region Metadata
     def __init__(
         self,
         environment_name,
@@ -233,8 +233,6 @@ class TransientMetadata(SysIdEnvironmentMetadata):
     def signal_samples(self):
         """Gets the number of samples in the signal that is being controlled to"""
         return self.control_signal.shape[-1]
-
-    # endregion
 
     # region Validation
     def validate(self, hardware_metadata):
@@ -704,6 +702,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
 
         return metadata
 
+    # endregion
+
 
 # endregion
 
@@ -796,10 +796,13 @@ class TransientQueues:
         self.log_file_queue = log_file_queue
 
 
+# endregion
+
+
+# region Environment
 class TransientEnvironment(SysIdEnvironment):
     """Class defining calculations for the transient environment"""
 
-    # region Environment
     def __init__(
         self,
         environment_name: str,
@@ -866,8 +869,6 @@ class TransientEnvironment(SysIdEnvironment):
         self.last_interactive_parameters = None
 
         self.set_ready()
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata):
@@ -1416,6 +1417,9 @@ class TransientEnvironment(SysIdEnvironment):
         self.startup = True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

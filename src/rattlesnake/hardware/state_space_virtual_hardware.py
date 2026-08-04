@@ -66,8 +66,6 @@ class StateSpaceMetadata(HardwareMetadata):
         )
         self.hardware_file = hardware_file
 
-    # endregion
-
     # region Validation
     def validate(self):
         super().validate()
@@ -112,17 +110,17 @@ class StateSpaceMetadata(HardwareMetadata):
                     f"Invalid channel type in channel table row {row+1}. "
                     "Valid channel types include 'Acceleration', 'Force'"
                 )
-            if (
-                str(channel.channel_type).lower() == "force"
-                and not self._has_feedback_device(channel)
-            ):
+            if str(
+                channel.channel_type
+            ).lower() == "force" and not self._has_feedback_device(channel):
                 raise RattlesnakeError(
                     "Force channel types require an 'Input' feedback device "
                     f"in channel table row {row+1}"
                 )
-            if self._has_feedback_device(
-                channel
-            ) and channel.feedback_device not in self.valid_feedback_device:
+            if (
+                self._has_feedback_device(channel)
+                and channel.feedback_device not in self.valid_feedback_device
+            ):
                 raise RattlesnakeError(
                     f"Invalid feedback device in channel table row {row+1}. "
                     "Valid feedback devices include 'Input' or blank"
@@ -158,16 +156,12 @@ class StateSpaceMetadata(HardwareMetadata):
             try:
                 data = np.load(self.hardware_file)
             except:
-                raise RattlesnakeError(
-                    f"Invalid state space file {self.hardware_file}"
-                )
+                raise RattlesnakeError(f"Invalid state space file {self.hardware_file}")
         elif extension.lower() == ".mat":
             try:
                 data = loadmat(self.hardware_file)
             except:
-                raise RattlesnakeError(
-                    f"Invalid state space file {self.hardware_file}"
-                )
+                raise RattlesnakeError(f"Invalid state space file {self.hardware_file}")
         else:
             raise RattlesnakeError(
                 f"Unknown extension on state space file {self.hardware_file}, "
@@ -289,6 +283,8 @@ class StateSpaceMetadata(HardwareMetadata):
             output_oversample,
             hardware_file,
         )
+
+    # endregion
 
 
 # endregion

@@ -2778,3 +2778,6 @@ class SysIdSelector(QtWidgets.QDialog):
         load_to = [item.text() for item in current_items]
 
         return load_from, load_to
+
+
+# endregion

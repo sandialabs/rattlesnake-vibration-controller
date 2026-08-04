@@ -117,8 +117,6 @@ class NIDAQmxMetadata(HardwareMetadata):
         }
         self._coupling = {"Acceleration": ["AC"], "Force": ["AC"], "Voltage": ["DC"]}
 
-    # endregion
-
     # region Validation
     def validate(self):
         super().validate()
@@ -501,6 +499,9 @@ class NIDAQmxMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Acqusition

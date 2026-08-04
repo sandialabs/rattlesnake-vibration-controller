@@ -232,6 +232,9 @@ def keyboard_interrupt():
     signal.raise_signal(signal.SIGINT)
 
 
+# endregion
+
+
 # region Hardware
 IMPLEMENTED_HARDWARE = [
     hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE

@@ -59,7 +59,7 @@ class EnvironmentUI(ABC):
         ]
 
         return self.rattlesnake.queue_container.environment_command_queues[queue_name]
-    
+
     @property
     def active(self):
         try:
@@ -277,6 +277,8 @@ class EnvironmentUI(ABC):
         shut down. Needs to enable the user to start up the process again.
         """
 
+    # endregion
+
     # region Commands
     @property
     def log_file_queue(self) -> mp.Queue:
@@ -404,3 +406,8 @@ class EnvironmentUI(ABC):
                 (f"{self.log_name} Error", f"ERROR:\n\n{error_message}"),
             )
         )
+
+    # endregion
+
+
+# endregion

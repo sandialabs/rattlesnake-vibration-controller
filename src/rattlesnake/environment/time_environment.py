@@ -149,8 +149,6 @@ class TimeMetadata(EnvironmentMetadata):
     def set_file(self, filepath):
         self._signal_file = filepath
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata):
         # Prevent duplicate entries
@@ -353,6 +351,9 @@ class TimeMetadata(EnvironmentMetadata):
     # endregion
 
 
+# endregion
+
+
 # region Instructions
 class TimeInstructions(EnvironmentInstructions):
     def __init__(self, environment_name, current_test_level: float, repeat: bool):
@@ -481,8 +482,6 @@ class TimeEnvironment(Environment):
         self.output_channels = None
         self.measurement_channels = None
         self.set_ready()
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -765,6 +764,9 @@ class TimeEnvironment(Environment):
     # endregion
 
 
+# endregion
+
+
 # region Process
 def time_process(
     environment_name: str,
@@ -830,3 +832,6 @@ def time_process(
         ready_event,
     )
     process_class.run(shutdown_event)
+
+
+# endregion

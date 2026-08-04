@@ -70,10 +70,10 @@ class RandomVibrationDataAnalysisUICommands(Enum):
 # endregion
 
 
+# region Data Analysis
 class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
 
-    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -138,8 +138,6 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         self.startup = True
         self.has_sent_interactive_control_transfer_function_results = False
         self.last_interactive_parameters = None
-
-    # endregion
 
     # region StateSync
     def initialize_sysid_parameters(self, data: SysIdMetadata):
@@ -242,6 +240,8 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.control_function = getattr(
                 module, self.environment_metadata.control_python_function
             )
+
+    # endregion
 
     # region Commands
     def perform_control_prediction(self, data):  # pylint: disable=unused-argument
@@ -687,6 +687,8 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
         netcdf_dataset.close()
 
+    # endregion
+
 
 # endregion
 
@@ -739,3 +741,6 @@ def random_data_analysis_process(
     )
 
     data_analysis_instance.run(shutdown_event)
+
+
+# endregion

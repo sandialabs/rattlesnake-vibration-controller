@@ -106,6 +106,9 @@ MIN_ROWS = 30
 THROTTLED_BUFFER = 1 / 20
 
 
+# endregion
+
+
 # region Launchers
 class RattlesnakeAppHandle:
     def __init__(self, rattlesnake, rattlesnake_ui, app):
@@ -462,8 +465,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         axis.setTextPen(foreground)
                 if plot_item.legend is not None:
                     plot_item.legend.setLabelTextColor(foreground)
-
-    # endregion
 
     # region Process
     @property
@@ -2901,3 +2902,4 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         event.accept()
 
     # endregion
+# endregion
