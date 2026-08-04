@@ -19,7 +19,7 @@ from rattlesnake.process.streaming import StreamType
 THREADED = False
 TIMEOUT = 20
 IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
+HARDWARE_TYPE = HardwareType.NONE
 ENVIRONMENT_TYPE = EnvironmentType.NONE
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False

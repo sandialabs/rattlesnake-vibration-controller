@@ -74,24 +74,11 @@ def dual_sysid_environment():
         launch_rattlesnake_ui(rattlesnake)
 
 
-def forcefinder_control_law_issue():
-    with test_example_rattlesnake_object(
-        hardware_type=HardwareType.SDYNPY_SYSTEM,
-        environment_type=EnvironmentType.RANDOM,
-    ) as rattlesnake:
-        ui_event_list = [
-            UIEvent(
-                5,
-                lambda ui: ui.environment_uis["Random 0"].select_python_module(
-                    clicked=False,
-                    filename=r"E:\Rattlesnake\forcefinder\src\forcefinder\rattlesnake_control_laws\spr_random_control_law.py",
-                ),
-            ),
-        ]
-        launch_temporary_rattlesnake_ui(
-            rattlesnake, ui_event_list, closeout_time=None, display_errors=True
-        )
+def lanxi_invalid_physical_device():
+    with RattlesnakeController() as rattlesnake:
+        hardware_metadata = load_hardware_metadata_from_file("")
+        rattlesnake.initialize_hardware(hardware_metadata)
 
 
 if __name__ == "__main__":
-    forcefinder_control_law_issue()
+    lanxi_invalid_physical_device()

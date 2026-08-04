@@ -134,7 +134,7 @@ def test_environment_commands_valid_data():
     predefined types.
     """
     assert SkeletonCommands.valid_data() == {
-        SkeletonCommands.EXAMPLE_SET_TEST_LEVEL: type(None),
+        SkeletonCommands.EXAMPLE_SET_TEST_LEVEL: float,
         SkeletonCommands.EXAMPLE_FLOAT_COMMAND: float,
     }
 

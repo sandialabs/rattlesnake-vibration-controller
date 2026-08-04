@@ -290,7 +290,7 @@ def skeleton_environment_metadata(**overrides):
         environment_name="Skeleton Environment",
         channel_list_bools=mock_channel_list_bools(),
         sample_rate=1024,
-        example_window_size="Example Window Size",
+        example_window_size=5,
     )
     kwargs.update(overrides)
     return SkeletonMetadata(**kwargs)
