@@ -1,6 +1,9 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
-[ ] Look for and document/recreate warnings
+[ ] Add in new ping alive events into lanxi intialize hardware
+[ ] Make Unittests
+[ ] Clean up documentation
+[ ] Write guides
 
 Stuff for the future
 [ ] Clear jupyter notebooks automatically on push
@@ -20,7 +23,10 @@ Stuff for the future
 
 [ ] Build out notebook example.
 
-[ ] Write guide for building out new environments.
+[ ] Write guide for rattlesnake architecture
+    [ ] Compile list of need to knows for making environments
+    [ ] Compile list of need to knows for making hardware
+    [ ] Compile list of need to knows for processes
 
 ## Hard (Major issues are going to happen)
 [ ] Figure out issue with changing font size in jupyter notebooks.
