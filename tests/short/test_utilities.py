@@ -58,7 +58,7 @@ def test_log_file_process(mock_file, log_file_queue):
     # Test if the message was stored
     mock_file().write.assert_any_call(message)
     # Test if the log quit out correctly
-    mock_file().write.assert_called_with("Program quitting, logging terminated.")
+    mock_file().write.assert_called_with("Program quitting, logging terminated.\n")
     # Test if the file was flushed
     mock_file().flush.assert_called()
 
