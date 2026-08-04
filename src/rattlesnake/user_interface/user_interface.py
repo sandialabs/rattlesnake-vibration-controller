@@ -129,7 +129,7 @@ class RattlesnakeAppHandle:
 
 
 def build_rattlesnake_app(
-    rattlesnake: RattlesnakeController,
+    rattlesnake: RattlesnakeController = RattlesnakeController(),
     *,
     set_font_size: bool = True,
     display_errors: bool = True,
