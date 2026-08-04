@@ -42,9 +42,17 @@ def verbose_fixture(request, log_file_queue, name_manager):
 
 
 # region log_file_task
-# Prevent a file from opening
+@mock.patch("rattlesnake.utilities.unlock_file")
+@mock.patch("rattlesnake.utilities.get_unique_log_filename")
 @mock.patch("builtins.open", new_callable=mock.mock_open)
-def test_log_file_process(mock_file, log_file_queue):
+def test_log_file_process(
+    mock_file, mock_get_unique_log_filename, mock_unlock_file, log_file_queue
+):
+    mock_get_unique_log_filename.return_value = (
+        mock.MagicMock(),
+        "Rattlesnake.log",
+    )
+
     # Put messages into the queue
     message = "This is a test"
     log_file_queue.put(message)
@@ -61,6 +69,8 @@ def test_log_file_process(mock_file, log_file_queue):
     mock_file().write.assert_called_with("Program quitting, logging terminated.\n")
     # Test if the file was flushed
     mock_file().flush.assert_called()
+    # Test if the lock was released on closeout
+    mock_unlock_file.assert_called_once()
 
 
 # region VerboseMessageQueue
