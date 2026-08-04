@@ -1,12 +1,15 @@
 import functools
 
-from qtpy import QtCore
+from qtpy import QtCore, QtWidgets
 
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.streaming import StreamType
-from rattlesnake.user_interface.user_interface import build_rattlesnake_app
+from rattlesnake.user_interface.user_interface import (
+    build_rattlesnake_app,
+    RattlesnakeUI,
+)
 from rattlesnake.examples.headless_example import build_example_rattlesnake_object
 
 
@@ -102,6 +105,8 @@ def launch_temporary_rattlesnake_ui(
     ui_event_list: list,
     closeout_time: float = None,
     *,
+    rattlesnake_ui: RattlesnakeUI = None,
+    app: QtWidgets.QApplication = None,
     set_font_size: bool = True,
     display_errors: bool = False,
 ) -> None:
@@ -120,15 +125,25 @@ def launch_temporary_rattlesnake_ui(
     closeout_time : float
         Time, in seconds, after which the UI will automatically close.
     """
-    with build_rattlesnake_app(
-        rattlesnake,
-        set_font_size=set_font_size,
-        display_errors=display_errors,
-    ) as (
-        rattlesnake,
-        ui,
-        app,
-    ):
+    if rattlesnake_ui is None and app is None:
+        with build_rattlesnake_app(
+            rattlesnake,
+            set_font_size=set_font_size,
+            display_errors=display_errors,
+        ) as (
+            rattlesnake,
+            ui,
+            app,
+        ):
+            ui.show()
+            for event in ui_event_list:
+                QtCore.QTimer.singleShot(
+                    int(event.timestamp * 1000), functools.partial(event.fire, ui)
+                )
+            if closeout_time:
+                QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
+            app.exec_()
+    else:
         ui.show()
         for event in ui_event_list:
             QtCore.QTimer.singleShot(

@@ -80,5 +80,13 @@ def lanxi_invalid_physical_device():
         rattlesnake.initialize_hardware(hardware_metadata)
 
 
+def temporarary_ui():
+    with RattlesnakeController() as rattlesnake:
+        for i in range(2):
+            hardware_metadata = manual_sdynpy_system_metadata()
+            rattlesnake.initialize_hardware(hardware_metadata)
+            launch_temporary_rattlesnake_ui(rattlesnake, closeout_time=60)
+
+
 if __name__ == "__main__":
-    lanxi_invalid_physical_device()
+    temporarary_ui()
