@@ -102,7 +102,7 @@ class UIEvent:
 
 def launch_temporary_rattlesnake_ui(
     rattlesnake: RattlesnakeController,
-    ui_event_list: list,
+    ui_event_list: list = [],
     closeout_time: float = None,
     *,
     rattlesnake_ui: RattlesnakeUI = None,
@@ -132,25 +132,29 @@ def launch_temporary_rattlesnake_ui(
             display_errors=display_errors,
         ) as (
             rattlesnake,
-            ui,
+            rattlesnake_ui,
             app,
         ):
-            ui.show()
+            rattlesnake_ui.show()
             for event in ui_event_list:
                 QtCore.QTimer.singleShot(
-                    int(event.timestamp * 1000), functools.partial(event.fire, ui)
+                    int(event.timestamp * 1000),
+                    functools.partial(event.fire, rattlesnake_ui),
                 )
             if closeout_time:
-                QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
+                QtCore.QTimer.singleShot(
+                    int(closeout_time * 1000), rattlesnake_ui.close
+                )
             app.exec_()
     else:
-        ui.show()
+        rattlesnake_ui.show()
         for event in ui_event_list:
             QtCore.QTimer.singleShot(
-                int(event.timestamp * 1000), functools.partial(event.fire, ui)
+                int(event.timestamp * 1000),
+                functools.partial(event.fire, rattlesnake_ui),
             )
         if closeout_time:
-            QtCore.QTimer.singleShot(int(closeout_time * 1000), ui.close)
+            QtCore.QTimer.singleShot(int(closeout_time * 1000), rattlesnake_ui.close)
         app.exec_()
 
 
