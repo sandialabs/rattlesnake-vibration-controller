@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import importlib.util
-import msvcrt
+import fcntl
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
@@ -54,54 +54,79 @@ else:
     DIRECTORY = this_path
 
 
-def open_and_lock_file(log_filename: str, encoding: str = "utf-8"):
+def open_and_lock_file(lock_filename: str, encoding: str = "utf-8"):
     """
     Returns a new file if the filename is not a locked file. Returns None
     if the file is in use by another program
     """
-    if not os.path.exists(log_filename):
-        open(log_filename, "a", encoding=encoding).close()
-    f = open(log_filename, "r+", encoding=encoding)
+    lock_file = open(lock_filename, "a+", encoding=encoding)
+
     try:
-        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        f.close()
+        lock_file.close()
         return None
-    f.seek(0)
-    f.truncate(0)
-    return f
+
+    # Optional: record who owns the lock for debugging.
+    lock_file.seek(0)
+    lock_file.truncate()
+    lock_file.write(f"pid={os.getpid()}\n")
+    lock_file.flush()
+
+    return lock_file
+
+
+def get_unique_log_filename():
+    lock_filename = "Rattlesnake.log.lock"
+    lock = open_and_lock_file(lock_filename)
+    ind = 0
+    while lock is None:
+        base_filename = f"Rattlesnake_{ind}.log"
+        lock_filename = f"Rattlesnake_{ind}.log.lock"
+        lock = open_and_lock_file(lock_filename)
+        ind = ind + 1
+
+    return lock, base_filename
 
 
 def log_file_task(
-    queue: mp.Queue,
+    log_queue: mp.Queue,
     shutdown_event,
 ):
-    """A multiprocessing function that collects logging data and writes to file
+    """
+    A multiprocessing function that collects logging data and writes to file
 
     Parameters
     ----------
     queue : mp.queues.Queue
         The multiprocessing queue to collect logging messages from
     """
-    f = open_and_lock_file("Rattlesnake.log")
-    ind = 0
-    while f is None:
-        filename = f"Rattlesnake_{ind}.log"
-        f = open_and_lock_file(filename)
-        ind = ind + 1
-    with f:
-        while not shutdown_event.is_set():
-            output = queue.get()
-            if " ERROR" in str(output):
-                print(output)
-            if output == GlobalCommands.QUIT:
-                f.write("Program quitting, logging terminated.")
-                break
-            num_newlines = output.count("\n")
-            if num_newlines > 1:
-                output = output.replace("\n", "////", num_newlines - 1)
-            f.write(output)
-            f.flush()
+    lock, log_filename = get_unique_log_filename()
+
+    try:
+        with open(log_filename, "w", encoding="utf-8") as f:
+            while not shutdown_event.is_set():
+                try:
+                    output = log_queue.get(timeout=0.2)
+                except (mpqueue.Empty, thqueue.Empty):
+                    continue
+
+                if output == GlobalCommands.QUIT:
+                    f.write("Program quitting, logging terminated.\n")
+                    break
+
+                text = str(output)
+                if " ERROR" in text:
+                    print(text)
+
+                num_newlines = text.count("\n")
+                if num_newlines > 1:
+                    text = text.replace("\n", "////", num_newlines - 1)
+                f.write(text)
+                f.flush()
+
+    finally:
+        lock.release()
 
 
 class RattlesnakeError(Exception):

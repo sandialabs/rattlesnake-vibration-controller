@@ -14,6 +14,9 @@ Stuff for the future
 [ ] Write guide for building new environments
 
 ## Easy
+[ ] Rework log file locking behavior
+    [ ] log file locking is dependent on windows packages right now.
+
 [ ] The validation functions for lanxi result in multiple copies of the same ip addresses.
     [ ] Swap them to use ip address list with unique addresses
 
