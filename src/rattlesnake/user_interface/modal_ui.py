@@ -8,8 +8,11 @@ import netCDF4 as nc4
 from qtpy import QtWidgets, uic, QtCore
 
 from rattlesnake.engine import RattlesnakeController
-from rattlesnake.utilities import DIRECTORY, load_python_module
-from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
+from rattlesnake.utilities import (
+    DIRECTORY,
+    load_python_module,
+    save_rattlesnake_to_netcdf,
+)
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
