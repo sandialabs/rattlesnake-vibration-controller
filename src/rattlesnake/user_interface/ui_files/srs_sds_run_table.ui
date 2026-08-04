@@ -34,6 +34,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="save_table_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves the current sum-of-decayed-sines table to a NumPy, CSV, or Excel file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Save Table</string>
        </property>
@@ -41,6 +44,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="load_table_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Loads a sum-of-decayed-sines table from a NumPy, CSV, or Excel file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Load Table</string>
        </property>
@@ -48,6 +54,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="allow_manual_updates_checkbox">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Allow Manual Updates&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the user can manually update the sum-of-decayed-sines parameters by modifying values in the table.  If not selected, the user cannot change these parameters.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Allow Manual Updates</string>
        </property>
@@ -58,6 +67,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="allow_automatic_updates_checkbox">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Allow Automatic Updates&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the control law will be run after each impact to potentially update the sum-of-decayed-sines parameters automatically.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Allow Automatic Updates</string>
        </property>

@@ -44,7 +44,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>RMS Voltage predicted for each excitation channel</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltages (Peak)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Maximum output voltage that will be sent to the shaker to generate the sum-of-decayed-sines signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="sizeAdjustPolicy">
                <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -57,7 +57,7 @@
          <item>
           <widget class="QPushButton" name="maximum_voltage_button">
            <property name="toolTip">
-            <string>Shows the excitation channel with the largest voltage</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Voltage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the voltage plot to show the excitation signal that reaches the largest maximum value.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
             <string>Go to Maximum</string>
@@ -67,7 +67,7 @@
          <item>
           <widget class="QPushButton" name="minimum_voltage_button">
            <property name="toolTip">
-            <string>Shows the excitation channel with the smallest voltage</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Voltage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the voltage plot to show the excitation signal that reaches the smallest maximum value.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
             <string>Go to Minimum</string>
@@ -80,6 +80,9 @@
         <layout class="QVBoxLayout" name="excitation_plot_layout">
          <item>
           <widget class="QTableWidget" name="sds_table">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sum of Decayed Sines Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Table showing sum-of-decayed-sines parameters used to generate the output voltage signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <column>
             <property name="text">
              <string>Frequency</string>
@@ -110,12 +113,15 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation Display&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the time history of the selected voltage signal generated from the sum-of-decayed-sines parameters.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QComboBox" name="excitation_selector">
            <property name="toolTip">
-            <string>Select the column of the excitation CPSD matrix to visualize</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies the excitation voltage channel to display in the plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
@@ -142,7 +148,7 @@
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>RMS dB error predicted at each control channel</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Peak Response Error (dB)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the maximum error between the specified SRS and the predicted or measured SRS in decibels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="sizeAdjustPolicy">
                <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -155,7 +161,7 @@
          <item>
           <widget class="QPushButton" name="maximum_error_button">
            <property name="toolTip">
-            <string>Show the control channel prediction with the largest predicted error</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the response plots to show the control signal that has the largest maximum error.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
             <string>Go to Maximum</string>
@@ -165,7 +171,7 @@
          <item>
           <widget class="QPushButton" name="minimum_error_button">
            <property name="toolTip">
-            <string>Show the control channel prediction with the smallest predicted error</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the response plots to show the control signal that has the smallest maximum error.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
             <string>Go to Minimum</string>
@@ -184,6 +190,9 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control SRS Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the SRS for the specification as well as the predicted and measured signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -194,12 +203,15 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Time History Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the time for the predicted and measured response signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QComboBox" name="response_selector">
            <property name="toolTip">
-            <string>Select the row of the response CPSD matrix to visualize</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the control channel that will be displayed on the response plots.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>

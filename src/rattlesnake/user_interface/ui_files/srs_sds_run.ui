@@ -36,7 +36,7 @@
          <item>
           <widget class="QDoubleSpinBox" name="current_test_level_selector">
            <property name="toolTip">
-            <string>Current test level in dB.  0 dB is the actual test level from the specification.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Test Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the current test level in dB.  0 dB is the actual test level from the specification.  Negative values reduce the shock level; positive values increase it.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="keyboardTracking">
             <bool>false</bool>
@@ -117,7 +117,7 @@
         </font>
        </property>
        <property name="toolTip">
-        <string>Stops the environment</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Stops the environment prematurely when operating in automatic hit mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Stop Environment</string>
@@ -138,7 +138,7 @@
          <item>
           <widget class="QSpinBox" name="target_hits_at_level_selector">
            <property name="toolTip">
-            <string>Target test level in dB.  This can be used to automatically trigger streaming or used to stop the controller after a specified amount of time.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Target Hits at Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of hits desired at the current test level.  If Automatic Hits is used, the measurement will stop after the target number of hits is reached.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="keyboardTracking">
             <bool>false</bool>
@@ -203,7 +203,7 @@
         </font>
        </property>
        <property name="toolTip">
-        <string>Starts the environment controlling to the specification.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the environment controlling to the specification.  Will perform a single hit in manual mode or several hits up to the target hits at level in automatic mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Start Environment</string>
@@ -220,7 +220,7 @@
      <item row="13" column="0" colspan="2">
       <widget class="QPushButton" name="save_current_control_data_button">
        <property name="toolTip">
-        <string>Saves current spectral data to a NetCDF4 file.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Current Control Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves the control data, including specified and measured SRS, to a NumPy, Matlab, or NetCDF4 file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Save Current Control Data</string>
@@ -241,7 +241,7 @@
          <item>
           <widget class="QSpinBox" name="current_hits_at_level_display">
            <property name="toolTip">
-            <string>Target test level in dB.  This can be used to automatically trigger streaming or used to stop the controller after a specified amount of time.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Current Hits at Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the current number of hits that have been performed at the current test level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -260,6 +260,9 @@
      </item>
      <item row="9" column="0">
       <widget class="QPushButton" name="sds_table_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;SDS Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens up the sum-of-decayed-sines table dialog box, which allows the user to modify the sum-of-decayed-sines parameters manually, make predictions, and view measured data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>SDS Table</string>
        </property>
@@ -292,7 +295,7 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>Current excitation voltages being output from the controller</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltages (Peak)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the peak voltages that will be played to the shaker amplifiers for each drive channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -323,7 +326,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Current control RMS dB error.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Peak Response Error (dB)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the maximum error between the specification and the predicted or measured SRS in decibels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -335,6 +338,9 @@
      </item>
      <item row="9" column="1">
       <widget class="QPushButton" name="shock_history_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Shock History&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens the shock history dialog which shows a history of all shocks applied to the test article.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Shock History</string>
        </property>
@@ -344,6 +350,9 @@
       <layout class="QHBoxLayout" name="manual_auto_layout">
        <item>
         <widget class="QRadioButton" name="manual_hits_checkbox">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Manual Hits&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the controller will play one shock each time the Start Environment button is pressed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <property name="text">
           <string>Manual Hits</string>
          </property>
@@ -354,6 +363,9 @@
        </item>
        <item>
         <widget class="QRadioButton" name="auto_hits_checkbox">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Automatic Hits&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the controller will continue to hit the test article until the Target Hits at Level is reached.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <property name="text">
           <string>Automatic Hits -  Interval:</string>
          </property>
@@ -385,7 +397,7 @@
          <item>
           <widget class="QSpinBox" name="current_total_hits_display">
            <property name="toolTip">
-            <string>Target test level in dB.  This can be used to automatically trigger streaming or used to stop the controller after a specified amount of time.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Current Total Hits&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the total number of hits performed at any test level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -410,7 +422,11 @@
       </widget>
      </item>
      <item row="3" column="0" colspan="2">
-      <widget class="QProgressBar" name="current_hits_progress"/>
+      <widget class="QProgressBar" name="current_hits_progress">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Progress Bar&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When automatic impacts are performed, it displays the progress towards the target number of hits at this level.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -421,7 +437,11 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="PlotWidget" name="global_test_performance_plot"/>
+       <widget class="PlotWidget" name="global_test_performance_plot">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Global Control Response&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the measured shock response spectra for all control channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -444,14 +464,14 @@
         <item>
          <widget class="QComboBox" name="control_channel_selector">
           <property name="toolTip">
-           <string>Row of the CPSD matrix to create a window for.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channel Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies the channel for which a SRS or Time History plot will be created.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="create_srs_window_button">
           <property name="toolTip">
-           <string>Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Create SRS Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates a window displaying the specified and measured SRS for the selected channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Create SRS
@@ -462,7 +482,7 @@ Window</string>
         <item>
          <widget class="QPushButton" name="create_time_history_window_button">
           <property name="toolTip">
-           <string>Creates a new window to visualize the response of a given entry in the CPSD matrix with Control Channel 1 and Control Channel 2 specifying the row and column of the CPSD matrix, and Data Type specifying how the channel is displayed.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Create Time History Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates a window displaying the measured time history for the selected channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Create Time
@@ -480,7 +500,7 @@ History Window</string>
         <item>
          <widget class="QPushButton" name="show_all_srs_channels_button">
           <property name="toolTip">
-           <string>Show Autospectral Densities (ASDs) for all control channels.  This will create a window for every channel in the test.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All SRS Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates an SRS window for each control channel in the test and then tiles the windows across the main monitor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Show All
@@ -491,7 +511,7 @@ SRS Channels</string>
         <item>
          <widget class="QPushButton" name="show_all_time_history_channels_button">
           <property name="toolTip">
-           <string>Show Autospectral Densities (ASDs) for all control channels.  This will create a window for every channel in the test.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All Time Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates a window showing the time response for all control channels and tiles them across the main monitor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Show All
@@ -516,7 +536,7 @@ Time Channels</string>
         <item>
          <widget class="QPushButton" name="tile_windows_button">
           <property name="toolTip">
-           <string>Tiles all windows over the main monitor</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tile All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Tiles all existing windows over the main monitor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Tile All
@@ -527,7 +547,7 @@ Windows</string>
         <item>
          <widget class="QPushButton" name="close_windows_button">
           <property name="toolTip">
-           <string>Closes all visualization windows</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Close All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Close all existing SRS or Time History windows.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Close All

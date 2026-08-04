@@ -17,10 +17,17 @@
    <item>
     <layout class="QHBoxLayout" name="selection_layout">
      <item>
-      <widget class="QComboBox" name="response_selector"/>
+      <widget class="QComboBox" name="response_selector">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This selects the channel that will be displayed and have the sum-of-decayed-sine tones computed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="synthesize_current_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Synthesize SDS&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Computes the sum-of-decayed-sines parameters for the currently selected channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Synthesize SDS</string>
        </property>
@@ -28,6 +35,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="synthesize_all_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Synthesize All SDSs&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Computes sum-of-decayed-sines parameters for all of the channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Synthesize All SDSs</string>
        </property>
@@ -57,6 +67,9 @@
       <layout class="QVBoxLayout" name="table_layout">
        <item>
         <widget class="QTableWidget" name="sds_table">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;SDS Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays a table of sum-of-decayed-sines parameters.  Selecting a row of the table will highlight that specific sine tone component in the time history plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <column>
           <property name="text">
            <string>Frequency</string>
@@ -84,14 +97,22 @@
      <widget class="QWidget" name="verticalLayoutWidget_2">
       <layout class="QVBoxLayout" name="time_history_layout">
        <item>
-        <widget class="PlotWidget" name="time_history_plot"/>
+        <widget class="PlotWidget" name="time_history_plot">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Time History Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the time history generated from the sum-of-decayed-sines parameters.  The Single Tone curve displays a single sine tone that is specified by selecting a row in the table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
      <widget class="QWidget" name="verticalLayoutWidget_3">
       <layout class="QVBoxLayout" name="srs_layout">
        <item>
-        <widget class="PlotWidget" name="srs_plot"/>
+        <widget class="PlotWidget" name="srs_plot">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;SRS Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the specified SRS as well as the SRS computed from the sum-of-decayed-sines parameters.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>

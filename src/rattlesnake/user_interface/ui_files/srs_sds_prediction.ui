@@ -34,6 +34,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="recompute_prediction_button">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Recompute Prediction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Recomputes the predictions from specified parameters and system identification data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Recompute Prediction</string>
        </property>
