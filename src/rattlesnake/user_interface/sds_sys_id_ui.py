@@ -45,6 +45,10 @@ from rattlesnake.utilities import (
     load_python_module,
     DIRECTORY,
 )
+from rattlesnake.user_interface.sds_sys_id_ui_utilities import (
+    SDSPlotSRSWindow,
+    SDSPlotTimeHistoryWindow,
+)
 from multiprocessing.queues import Queue
 from rattlesnake.user_interface.sds_sys_id_prediction_table import SDSPredictionTable
 from rattlesnake.user_interface.sds_sys_id_synthesize_dialog import SDSSynthesizeDialog
@@ -106,6 +110,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.python_function_extra_argument_widgets = {}
         self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
         self.shock_history = None
+        self.plot_windows = []
 
         self.control_selector_widgets = [self.definition_widget.specification_plot_selector]
 
@@ -207,6 +212,16 @@ class SDSUI(SysIdEnvironmentUI):
             self.update_hits_at_selected_level_display
         )
         self.run_widget.save_current_control_data_button.clicked.connect(self.save_control_data)
+        self.run_widget.create_srs_window_button.clicked.connect(self.create_srs_window)
+        self.run_widget.create_time_history_window_button.clicked.connect(
+            self.create_time_history_window
+        )
+        self.run_widget.show_all_srs_channels_button.clicked.connect(self.show_all_srs_channels)
+        self.run_widget.show_all_time_history_channels_button.clicked.connect(
+            self.show_all_time_history_channels
+        )
+        self.run_widget.tile_windows_button.clicked.connect(self.tile_windows)
+        self.run_widget.close_windows_button.clicked.connect(self.close_windows)
 
     # region UI Data Acquisition
 
@@ -1077,6 +1092,11 @@ class SDSUI(SysIdEnvironmentUI):
             self.initialized_output_names, self.initialized_control_names
         )
         self.run_table.update_names(self.initialized_output_names, self.initialized_control_names)
+        self.run_widget.control_channel_selector.blockSignals(True)
+        self.run_widget.control_channel_selector.clear()
+        for i, control_name in enumerate(self.initialized_control_names):
+            self.run_widget.control_channel_selector.addItem(f"{i + 1}: {control_name}")
+        self.run_widget.control_channel_selector.blockSignals(False)
         self.prediction_table.update_parameters(environment_metadata)
         self.run_table.update_parameters(environment_metadata)
         return self.environment_metadata
@@ -1597,6 +1617,61 @@ class SDSUI(SysIdEnvironmentUI):
             self.environment_name, SDSCommands.SAVE_CONTROL_DATA, filename
         )
 
+    def create_srs_window(self, event=None, control_index=None):
+        if control_index is None:
+            control_index = self.run_widget.control_channel_selector.currentIndex()
+
+        window = SDSPlotSRSWindow(self.run_widget, self, control_index)
+        self.plot_windows.append(window)
+        return window
+
+    def create_time_history_window(self, event=None, control_index=None):
+        if control_index is None:
+            control_index = self.run_widget.control_channel_selector.currentIndex()
+
+        window = SDSPlotTimeHistoryWindow(self.run_widget, self, control_index)
+        self.plot_windows.append(window)
+        return window
+
+    def show_all_srs_channels(self):
+        for i in range(len(self.initialized_control_names)):
+            self.create_srs_window(control_index=i)
+        self.tile_windows()
+
+    def show_all_time_history_channels(self):
+        for i in range(len(self.initialized_control_names)):
+            self.create_time_history_window(control_index=i)
+        self.tile_windows()
+
+    def tile_windows(self):
+        screen_rect = QtWidgets.QApplication.desktop().screenGeometry()
+        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
+        num_windows = len(self.plot_windows)
+        if num_windows == 0:
+            return
+
+        ncols = int(np.ceil(np.sqrt(num_windows)))
+        nrows = int(np.ceil(num_windows / ncols))
+        window_width = int(screen_rect.width() / ncols)
+        window_height = int(screen_rect.height() / nrows)
+
+        for index, window in enumerate(self.plot_windows):
+            window.resize(window_width, window_height)
+            row_ind = index // ncols
+            col_ind = index % ncols
+            window.move(col_ind * window_width, row_ind * window_height)
+
+    def close_windows(self):
+        for window in self.plot_windows:
+            window.close()
+        self.plot_windows = []
+
+    def update_control_windows(self):
+        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
+        for window in self.plot_windows:
+            if hasattr(window, "update_plot"):
+                window.update_plot()
+
     # region UI Update and Templates
 
     def update_gui(self, queue_data):
@@ -1670,3 +1745,5 @@ class SDSUI(SysIdEnvironmentUI):
                 hits_at_target=data["hits_at_target"],
                 target_hits=data["target_hits_at_level"],
             )
+
+            self.update_control_windows()
