@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import importlib.util
-import fcntl
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
@@ -45,6 +44,11 @@ import scipy.signal as sig
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
+
 # region Global
 # Define base directory
 this_path = os.path.split(__file__)[0]
@@ -60,15 +64,17 @@ def open_and_lock_file(lock_filename: str, encoding: str = "utf-8"):
     if the file is in use by another program
     """
     lock_file = open(lock_filename, "a+", encoding=encoding)
+    lock_file.seek(0)
 
     try:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if sys.platform == "win32":
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         lock_file.close()
         return None
 
-    # Optional: record who owns the lock for debugging.
-    lock_file.seek(0)
     lock_file.truncate()
     lock_file.write(f"pid={os.getpid()}\n")
     lock_file.flush()
@@ -76,7 +82,22 @@ def open_and_lock_file(lock_filename: str, encoding: str = "utf-8"):
     return lock_file
 
 
+def unlock_file(lock_file):
+    """
+    Releases the lock acquired by `open_and_lock_file` and closes the file.
+    """
+    try:
+        if sys.platform == "win32":
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    finally:
+        lock_file.close()
+
+
 def get_unique_log_filename():
+    base_filename = "Rattlesnake.log"
     lock_filename = "Rattlesnake.log.lock"
     lock = open_and_lock_file(lock_filename)
     ind = 0
@@ -126,7 +147,7 @@ def log_file_task(
                 f.flush()
 
     finally:
-        lock.release()
+        unlock_file(lock)
 
 
 class RattlesnakeError(Exception):
