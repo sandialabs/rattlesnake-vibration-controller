@@ -33,7 +33,6 @@ import openpyxl
 import netCDF4 as nc4
 import numpy as np
 
-from rattlesnake.utilities import save_rattlesnake_to_netcdf
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.environment.abstract_environment import (
     EnvironmentCommands,
@@ -52,13 +51,11 @@ from rattlesnake.process.signal_generation import (
 )
 from rattlesnake.utilities import (
     GlobalCommands,
-    RattlesnakeError,
     VerboseMessageQueue,
     flush_queue,
-    load_python_module,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.process.data_collector import (  # noqa # pylint: disable=wrong-import-position
+from ..process.data_collector import (  # noqa # pylint: disable=wrong-import-position
     Acceptance,
     AcquisitionType,
     CollectorMetadata,
@@ -67,12 +64,12 @@ from rattlesnake.process.data_collector import (  # noqa # pylint: disable=wrong
     Window,
     data_collector_process,
 )
-from rattlesnake.process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
+from ..process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from rattlesnake.process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
+from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,
@@ -91,20 +88,17 @@ class ModalCommands(EnvironmentCommands):
     ACCEPT_FRAME = 2
     RUN_CONTROL = 3
     CHECK_FOR_COMPLETE_SHUTDOWN = 4
-    CHANGE_SAVEFILE = 5
 
-    VALID_PROFILE_COMMANDS = (CHANGE_SAVEFILE,)
+    VALID_PROFILE_COMMANDS = ()
     VALID_DATA = {
         ACCEPT_FRAME: int,
         RUN_CONTROL: type(None),
         CHECK_FOR_COMPLETE_SHUTDOWN: type(None),
-        CHANGE_SAVEFILE: str,
     }
 
 
 class ModalUICommands(Enum):
     SPECTRAL_UPDATE = 1
-    CHANGE_SAVEFILE = 2
 
 
 # endregion
@@ -268,7 +262,7 @@ class ModalMetadata(EnvironmentMetadata):
                 output_oversample=self.output_oversample,
             )
         else:
-            signal_generator = None
+            raise ValueError(f"Invalid Signal Type {self.signal_generator_type}")
         return signal_generator
 
     @property
@@ -384,202 +378,8 @@ class ModalMetadata(EnvironmentMetadata):
             return self.signal_generator.generate_frame()[0]
 
     # region Validation
-    def validate(self, hardware_metadata: HardwareMetadata):
-        super().validate(hardware_metadata)
-
-        if self.sample_rate <= 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} sample_rate must be greater than 0"
-            )
-
-        if self.samples_per_frame <= 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} samples_per_frame must be greater than 0"
-            )
-
-        if self.output_oversample <= 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} output_oversample must be greater than 0"
-            )
-
-        if not (0 <= self.overlap < 1):
-            raise RattlesnakeError(
-                f"{self.environment_name} FRF overlap must be a percentage from 0 "
-                "up to but not including 100"
-            )
-
-        if not (0 <= self.pretrigger < 1):
-            raise RattlesnakeError(
-                f"{self.environment_name} pretrigger must be a percentage from 0 "
-                "up to but not including 100"
-            )
-
-        if not (0 < self.exponential_window_value_at_frame_end < 1):
-            raise RattlesnakeError(
-                f"{self.environment_name} exponential window end value must be "
-                "greater than 0 and less than 1"
-            )
-
-        if self.num_averages <= 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} num_averages must be greater than 0"
-            )
-
-        if not (0 < self.averaging_coefficient <= 1):
-            raise RattlesnakeError(
-                f"{self.environment_name} averaging_coefficient must be greater "
-                "than 0 and up to 1"
-            )
-
-        if self.wait_for_steady_state < 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} wait_for_steady_state must be greater "
-                "than or equal to 0"
-            )
-
-        if self.averaging_type not in ("Linear", "Exponential"):
-            raise RattlesnakeError(f"Invalid Averaging Type: {self.averaging_type}")
-
-        if self.trigger_type not in ("Free Run", "First Frame", "Every Frame"):
-            raise RattlesnakeError(f"Invalid Acquisition Type: {self.trigger_type}")
-
-        if self.accept_type not in ("Accept All", "Manual", "Autoreject..."):
-            raise RattlesnakeError(f"Invalid Acceptance Type: {self.accept_type}")
-
-        if self.frf_window not in ("hann", "rectangle", "exponential"):
-            raise RattlesnakeError(f"Invalid Window Type: {self.frf_window}")
-
-        if self.frf_technique not in ("H1", "H2", "H3", "Hv"):
-            raise RattlesnakeError(f"Invalid FRF Estimator {self.frf_technique}")
-
-        if self.signal_generator is None:
-            raise RattlesnakeError(f"Invalid Signal Type {self.signal_generator_type}")
-
-        num_hardware_channels = len(hardware_metadata.channel_list)
-        if not (-1 <= self.trigger_channel < num_hardware_channels):
-            raise RattlesnakeError(
-                f"{self.environment_name} trigger_channel {self.trigger_channel} "
-                f"is not a valid channel (must be between 0 and "
-                f"{num_hardware_channels - 1})"
-            )
-
-        self._validate_channel_indices(
-            "reference_channel_indices",
-            self.reference_channel_indices,
-            num_hardware_channels,
-            require_nonempty=False,
-        )
-        self._validate_channel_indices(
-            "response_channel_indices",
-            self.response_channel_indices,
-            num_hardware_channels,
-            require_nonempty=True,
-        )
-        self._validate_channel_indices(
-            "output_channel_indices",
-            self.output_channel_indices,
-            num_hardware_channels,
-            require_nonempty=False,
-        )
-
-        self._validate_signal_generator_parameters()
-
-        if self.accept_type == "Autoreject...":
-            self._validate_acceptance_function()
-
-    def _validate_channel_indices(
-        self, field_name, indices, num_hardware_channels, require_nonempty
-    ):
-        """Checks that every index in a channel-index field is a valid,
-        in-range index into hardware_metadata.channel_list. These are used
-        directly to index the raw acquisition frame in the data collector
-        subprocess (e.g. ``frame[response_channel_indices]``), so an
-        out-of-range value raises an IndexError there.
-        """
-        if require_nonempty and len(indices) == 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} {field_name} must contain at least "
-                "one channel"
-            )
-        for index in indices:
-            if not (0 <= index < num_hardware_channels):
-                raise RattlesnakeError(
-                    f"{self.environment_name} {field_name} contains invalid "
-                    f"channel index {index} (must be between 0 and "
-                    f"{num_hardware_channels - 1})"
-                )
-
-    def _validate_signal_generator_parameters(self):
-        """
-        Checks the signal generator fields against the specific generator
-        class that ``get_signal_generator()`` will construct for the current
-        ``signal_generator_type``.
-        """
-        band_types = ("none", "random", "pseudorandom", "burst", "chirp")
-        single_frequency_types = ("square", "sine")
-
-        if self.signal_generator_type != "none" and self.signal_generator_level < 0:
-            raise RattlesnakeError(
-                f"{self.environment_name} signal_generator_level must be "
-                "greater than or equal to 0"
-            )
-
-        if self.signal_generator_type in ("burst", "square") and not (
-            0 < self.signal_generator_on_fraction <= 1
-        ):
-            raise RattlesnakeError(
-                f"{self.environment_name} signal generator on percent must be "
-                "greater than 0 and up to 100"
-            )
-
-        if self.signal_generator_type in band_types:
-            min_frequency = self.signal_generator_min_frequency
-            max_frequency = self.signal_generator_max_frequency
-            if not (0 <= min_frequency <= max_frequency <= self.nyquist_frequency):
-                raise RattlesnakeError(
-                    f"{self.environment_name} signal generator frequencies must "
-                    f"satisfy 0 <= minimum < maximum <= nyquist frequency "
-                    f"({self.nyquist_frequency})"
-                )
-            if self.signal_generator_type != "chirp":
-                freq = np.fft.rfftfreq(
-                    self.samples_per_frame * self.output_oversample,
-                    1 / (self.sample_rate * self.output_oversample),
-                )
-                if not np.any((freq >= min_frequency) & (freq <= max_frequency)):
-                    raise RattlesnakeError(
-                        f"{self.environment_name} signal generator frequency "
-                        f"range [{min_frequency}, {max_frequency}] does not "
-                        "contain any frequency line at this sample rate and "
-                        "samples per frame"
-                    )
-        elif self.signal_generator_type in single_frequency_types:
-            if not (0 < self.signal_generator_min_frequency <= self.nyquist_frequency):
-                raise RattlesnakeError(
-                    f"{self.environment_name} signal generator frequency must be "
-                    f"greater than 0 and up to the nyquist frequency "
-                    f"({self.nyquist_frequency})"
-                )
-
-    def _validate_acceptance_function(self):
-        """
-        When accept_type is "Autoreject...", acceptance_function must be a
-        (script path, function name) pair that the data collector subprocess
-        can actually load.
-        """
-        script_path, function_name = self.acceptance_function
-        try:
-            module = load_python_module(script_path)
-        except Exception as e:
-            raise RattlesnakeError(
-                f"{self.environment_name} could not load autoacceptance script "
-                f"{script_path}: {e}"
-            ) from e
-        if not callable(getattr(module, function_name, None)):
-            raise RattlesnakeError(
-                f"{self.environment_name} autoacceptance script {script_path} "
-                f"has no callable function named {function_name}"
-            )
+    def validate(self, hardware_metadata):
+        return super().validate(hardware_metadata)
 
     # endregion
 
@@ -721,15 +521,13 @@ class ModalMetadata(EnvironmentMetadata):
         signal_generator_max_frequency = (
             netcdf_group_handle.signal_generator_max_frequency
         )
-        signal_generator_on_percent = (
-            netcdf_group_handle.signal_generator_on_fraction * 100
-        )
-        reference_channel_indices = list(
-            netcdf_group_handle.variables["reference_channel_indices"][...]
-        )
-        response_channel_indices = list(
-            netcdf_group_handle.variables["response_channel_indices"][...]
-        )
+        signal_generator_on_percent = netcdf_group_handle.signal_generator_level * 100
+        reference_channel_indices = netcdf_group_handle.variables[
+            "reference_channel_indices"
+        ][...]
+        response_channel_indices = netcdf_group_handle.variables[
+            "response_channel_indices"
+        ][...]
         environment_channel_list = [
             channel
             for channel, channel_bool in zip(
@@ -1058,8 +856,7 @@ class ModalMetadata(EnvironmentMetadata):
             column_index += 1
         max_row = len(channel_list_bools)
         for i in range(max_row):
-            if i not in reference_channel_indices:
-                response_channel_indices.append(int(i))
+            response_channel_indices.append(int(i))
         column_index = 2
         while True:
             value = worksheet.cell(27, column_index).value
@@ -1119,20 +916,10 @@ class ModalMetadata(EnvironmentMetadata):
     # endregion
 
 
-# endregion
-
-
 # region Instructions
 class ModalInstructions(EnvironmentInstructions):
-    def __init__(
-        self,
-        environment_name,
-        save_filename: str = None,
-        override_table: dict = {},
-    ):
+    def __init__(self, environment_name):
         super().__init__(CONTROL_TYPE, environment_name)
-        self.save_filename = save_filename
-        self.override_table = override_table
 
     def validate(self):
         return super().validate()
@@ -1231,14 +1018,12 @@ class ModalEnvironment(Environment):
             ready_event,
         )
         self.queue_container = queue_container
+        self.hardware_metadata = None
+        self.environment_metadata = None
         self.frame_number = 0
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
-        self.netcdf_dataset = None
-        self.save_filename = None
-        self.shutdown_recheck_timer = None
-        self.override_table = {}
 
         # Map commands
         self.map_command(ModalCommands.ACCEPT_FRAME, self.accept_frame)
@@ -1247,8 +1032,6 @@ class ModalEnvironment(Environment):
         self.map_command(
             ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown
         )
-        self.map_command(ModalCommands.CHANGE_SAVEFILE, self.change_savefile)
-        self.map_command(DataCollectorCommands.TIME_FRAME, self.write_time_frame)
         self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
@@ -1261,6 +1044,8 @@ class ModalEnvironment(Environment):
         )
 
         self.set_ready()
+
+    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -1333,8 +1118,9 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.trigger_type == "Every Frame":
             acquisition_type = AcquisitionType.TRIGGER_EVERY_FRAME
         else:
-            acquisition_type = None
-            print(f"Invalid Acquisition Type: {self.environment_metadata.trigger_type}")
+            raise ValueError(
+                f"Invalid Acquisition Type: {self.environment_metadata.trigger_type}"
+            )
         if self.environment_metadata.accept_type == "Accept All":
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = None
@@ -1345,9 +1131,9 @@ class ModalEnvironment(Environment):
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = self.environment_metadata.acceptance_function
         else:
-            acceptance = None
-            acceptance_function = None
-            print(f"Invalid Acceptance Type: {self.environment_metadata.accept_type}")
+            raise ValueError(
+                f"Invalid Acceptance Type: {self.environment_metadata.accept_type}"
+            )
         overlap_fraction = self.environment_metadata.overlap
         trigger_channel_index = self.environment_metadata.trigger_channel
         trigger_slope = (
@@ -1370,8 +1156,9 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            window = None
-            print(f"Invalid Window Type: {self.environment_metadata.frf_window}")
+            raise ValueError(
+                f"Invalid Window Type: {self.environment_metadata.frf_window}"
+            )
         window_parameter = -(frame_size) / np.log(
             self.environment_metadata.exponential_window_value_at_frame_end
         )
@@ -1394,7 +1181,6 @@ class ModalEnvironment(Environment):
             response_transformation_matrix=None,
             reference_transformation_matrix=None,
             window_parameter_2=window_parameter,
-            write_time_data=True,
         )
 
     def get_spectral_processing_metadata(self) -> SpectralProcessingMetadata:
@@ -1417,8 +1203,7 @@ class ModalEnvironment(Environment):
         elif self.environment_metadata.frf_technique == "Hv":
             frf_estimator = Estimator.HV
         else:
-            frf_estimator = None
-            print(
+            raise ValueError(
                 f"Invalid FRF Estimator {self.environment_metadata.frf_technique}. "
                 "How did you get here?"
             )
@@ -1458,129 +1243,20 @@ class ModalEnvironment(Environment):
 
     # endregion
 
-    # region Data Saving
-    def create_file(self):
-        """Creates a netCDF file to save the modal test's spectral data to
-
-        Parameters
-        ----------
-        filename : str
-            Path to the netCDF file that will be created
-        """
-        self.close_data_file()
-        if not self.save_filename:
-            return
-        self.netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
-            self.save_filename, "w", format="NETCDF4", clobber=True
-        )
-        save_rattlesnake_to_netcdf(
-            self.netcdf_dataset,
-            self.hardware_metadata,
-            {self.environment_name: self.environment_metadata},
-        )
-
-        channel_group = self.netcdf_dataset["channels"]
-        node_number_var = channel_group["node_number"]
-        node_direction_var = channel_group["node_direction"]
-        num_channels = self.netcdf_dataset.dimensions["response_channels"].size
-
-        for row_num, override_values in self.override_table.items():
-            new_node_number, new_node_direction = override_values
-
-            if row_num < 0 or row_num >= num_channels:
-                raise IndexError(
-                    f"Override row {row_num} is outside valid channel range "
-                    f"0 to {num_channels - 1}"
-                )
-
-            node_number_var[row_num] = (
-                "" if new_node_number is None else str(new_node_number)
-            )
-            node_direction_var[row_num] = (
-                "" if new_node_direction is None else str(new_node_direction)
-            )
-
-        group_handle = self.netcdf_dataset.groups[self.environment_name]
-        group_handle.createDimension("fft_lines", self.environment_metadata.fft_lines)
-        group_handle.createVariable(
-            "frf_data_real",
-            "f8",
-            ("fft_lines", "response_channels", "reference_channels"),
-        )
-        group_handle.createVariable(
-            "frf_data_imag",
-            "f8",
-            ("fft_lines", "response_channels", "reference_channels"),
-        )
-        group_handle.createVariable(
-            "coherence", "f8", ("fft_lines", "response_channels")
-        )
-        self.log(f"Saving spectral data to {self.save_filename}")
-
-    def close_data_file(self):
-        """Closes the netCDF file used to save spectral data, if one is open"""
-        if self.netcdf_dataset is not None:
-            self.netcdf_dataset.close()
-            self.netcdf_dataset = None
-
-    def write_time_frame(self, data):
-        """Writes an accepted measurement frame's time data to the netCDF file
-
-        Parameters
-        ----------
-        data : tuple
-            A ``(frame, accepted)`` tuple as sent by the data collector,
-            where ``frame`` is the raw measurement frame and ``accepted``
-            indicates whether the frame was accepted into the average.
-        """
-        frame, accepted = data
-        if self.netcdf_dataset is not None and accepted:
-            num_timesteps = self.netcdf_dataset.dimensions["time_samples"].size
-            current_frame = num_timesteps // self.environment_metadata.samples_per_frame
-            if current_frame < self.environment_metadata.num_averages:
-                timesteps = slice(num_timesteps, None, None)
-                self.netcdf_dataset.variables["time_data"][:, timesteps] = frame
-
-    def change_savefile(self, data):
-        """
-        Changes the file that spectral data is saved to
-
-        Parameters
-        ----------
-        data : str
-            The new filename to save spectral data to. If empty, the
-            environment will stop saving spectral data.
-        """
-        filename = data
-        self.gui_update_queue.put(
-            (self.environment_name, (ModalUICommands.CHANGE_SAVEFILE, data))
-        )
-        self.close_data_file()
-        self.save_filename = filename
-        if filename:
-            self.create_file()
-
-    # endregion
-
     # region Commands
-    def start_environment(self, data):
+    def start_environment(self, data):  # pylint: disable=unused-argument
         """Starts the environment
 
         Parameters
         ----------
-        data : ModalInstructions or NoneType
-            Instructions for this run of the environment. If a
-            ``data_filename`` is provided, the environment will save its
-            spectral data to that file as it runs.
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
         """
         self.log("Starting Modal")
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
-
-        self.save_filename = data.save_filename
-        self.override_table = data.override_table
-        self.create_file()
 
         # Set up the collector
         self.queue_container.collector_command_queue.put(
@@ -1677,7 +1353,6 @@ class ModalEnvironment(Environment):
         spectral_data = flush_queue(
             self.queue_container.updated_spectral_quantities_queue, timeout=WAIT_TIME
         )
-        stopping = False
         if len(spectral_data) > 0:
             self.log("Received Data")
             (
@@ -1707,20 +1382,11 @@ class ModalEnvironment(Environment):
                     ),
                 )
             )
-            if self.netcdf_dataset is not None:
-                group_handle = self.netcdf_dataset.groups[self.environment_name]
-                group_handle.variables["frf_data_real"][:] = np.real(frf)
-                group_handle.variables["frf_data_imag"][:] = np.imag(frf)
-                group_handle.variables["coherence"][:] = coherence
-                if frames >= self.environment_metadata.num_averages:
-                    self.stop_environment(None)
-                    stopping = True
         else:
             time.sleep(WAIT_TIME)
-        if not stopping:
-            self.queue_container.environment_command_queue.put(
-                self.environment_name, (ModalCommands.RUN_CONTROL, None)
-            )
+        self.queue_container.environment_command_queue.put(
+            self.environment_name, (ModalCommands.RUN_CONTROL, None)
+        )
 
     # endregion
 
@@ -1773,8 +1439,6 @@ class ModalEnvironment(Environment):
             and self.spectral_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
-            self.close_data_file()
-            self.save_filename = None
             self.clear_active()
             self.queue_container.gui_update_queue.put(
                 (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
@@ -1782,22 +1446,10 @@ class ModalEnvironment(Environment):
             # self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
         else:
             # Recheck some time later
-            self.shutdown_recheck_timer = threading.Timer(
-                1.0, self.requeue_shutdown_check
+            time.sleep(1)
+            self.environment_command_queue.put(
+                self.environment_name, (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
             )
-            self.shutdown_recheck_timer.daemon = True  # Scary Daemons
-            self.shutdown_recheck_timer.start()
-
-    def requeue_shutdown_check(self):
-        """Timer callback that re-enqueues the shutdown check.
-
-        Runs on a background timer thread so it does not block the main
-        command loop from continuing to drain ``environment_command_queue``
-        while a shutdown is pending.
-        """
-        self.environment_command_queue.put(
-            self.environment_name, (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
-        )
 
     def accept_frame(self, data):
         """Accepts or rejects the previous measurement frame"""
@@ -1821,15 +1473,7 @@ class ModalEnvironment(Environment):
 
         """
         self.log("Stopping Control")
-        # This only discards the Run control commands so that the environment
-        # can keep writing to the stream file.
-        pending_commands = flush_queue(self.queue_container.environment_command_queue)
-        for message, message_data in pending_commands:
-            if message is ModalCommands.RUN_CONTROL:
-                continue
-            self.queue_container.environment_command_queue.put(
-                self.environment_name, (message, message_data)
-            )
+        flush_queue(self.queue_container.environment_command_queue)
         self.queue_container.collector_command_queue.put(
             self.environment_name, (DataCollectorCommands.SET_TEST_LEVEL, (1000, 1))
         )
@@ -1861,10 +1505,6 @@ class ModalEnvironment(Environment):
             that it is time to close down the environment.
 
         """
-        if self.shutdown_recheck_timer is not None:
-            self.shutdown_recheck_timer.cancel()
-
-        self.close_data_file()
         for queue in [
             self.queue_container.spectral_command_queue,
             self.queue_container.signal_generation_command_queue,
@@ -1874,9 +1514,6 @@ class ModalEnvironment(Environment):
         return True
 
     # endregion
-
-
-# endregion
 
 
 # region Process
@@ -1948,7 +1585,6 @@ def modal_process(
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
             queue_container.log_file_queue,
-            shutdown_event,
         ),
     )
     spectral_proc.start()
@@ -1963,7 +1599,6 @@ def modal_process(
             queue_container.environment_command_queue,
             queue_container.log_file_queue,
             queue_container.gui_update_queue,
-            shutdown_event,
         ),
     )
     siggen_proc.start()
@@ -1978,7 +1613,6 @@ def modal_process(
             queue_container.environment_command_queue,
             queue_container.log_file_queue,
             queue_container.gui_update_queue,
-            shutdown_event,
         ),
     )
     collection_proc.start()
