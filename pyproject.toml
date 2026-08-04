@@ -70,6 +70,20 @@ local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead o
 [tool.hatch.build.targets.wheel]
 packages = ["src/rattlesnake"]
 
+[tool.hatch.build.targets.sdist]
+# Explicit allowlist: without this, hatchling's default sdist packaging sweeps
+# in every tracked file at the repo root (documentation/, badges/, etc.),
+# which pulled in documentation/Rattlesnake.pdf (78 MB) and pushed the sdist
+# past PyPI/TestPyPI's 100 MB per-file limit (see release of v3.1.2rc4).
+include = [
+  "/src",
+  "/tests",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+  "/uv.lock",
+]
+
 [tool.pytest.ini_options]
 python_files = ["test_*.py"]  # Ignores files without "test" prefix for pytest runs
 testpaths = ["tests/"]
