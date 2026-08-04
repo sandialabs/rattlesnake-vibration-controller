@@ -42,7 +42,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sample rate in samples per second of the data acquisition hardware.  This is a global parameter and must be set in the Data Acquisition Setup tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sample rate in samples per second of the data acquisition hardware, for display only.  This is a global parameter and must be set in the Data Acquisition Setup tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -75,7 +75,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>Samples per measurement frame in the controller. The measurement frame is the &amp;quot;block&amp;quot; of data upon which the signal processing will be performed. This value will determine the window size. A larger value will result in more frequency lines in the SRS analysis. This need not correspond to the read or write size in the data acquisition system.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Block Size&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The length of the time signal in samples that will be generated.  If this is too short for the specified decay, the signals will be truncated.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>false</bool>
@@ -115,6 +115,9 @@
            <layout class="QHBoxLayout" name="tone_type_layout">
             <item>
              <widget class="QRadioButton" name="from_spec_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;From Specification&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the sum of decayed sine signals generated will have a sine tone for each breakpoint in the specified shock response spectra.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>From Specification</string>
               </property>
@@ -125,6 +128,9 @@
             </item>
             <item>
              <widget class="QRadioButton" name="octave_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Octave&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, sine tones will be specified using a minimum frequency, maximum frequency, and number of sine tones per octave.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Octave</string>
               </property>
@@ -132,6 +138,9 @@
             </item>
             <item>
              <widget class="QRadioButton" name="manual_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Manual&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the user can manually specify sine tone frequencies.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Manual</string>
               </property>
@@ -152,6 +161,9 @@
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="max_frequency_selector">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Maximum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This sets the maximum sine tone frequency when specifying sine tones by octave.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="suffix">
                  <string> Hz</string>
                 </property>
@@ -176,6 +188,9 @@
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="min_frequency_selector">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Minimum Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This sets the minimum sine tone frequency when specifying sine tones by octave.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="suffix">
                  <string> Hz</string>
                 </property>
@@ -200,6 +215,9 @@
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="tones_per_octave_selector">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tones per Octave&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This specifies the number of sine tones per octave when sine tones are specified by octave.  Each octave is a doubling of the frequency, so sine tones will be logarithmically spaced with the number of tones specified occuring between each doubling of the frequency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="minimum">
                  <double>1.000000000000000</double>
                 </property>
@@ -224,6 +242,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="use_compensation_pulse_checkbox">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Use Compensation Pulse&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, a compensation pulse will be utilized.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;The compensation pulse is often utilized by shock controllers to allow the shaker to return to zero displacement and velocity without a sharp pull-back at the end of the signal.  How the compensation pulse is used (if at all) is determined by the control law specified.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Use Compensation Pulse</string>
             </property>
@@ -238,6 +259,9 @@
              <layout class="QVBoxLayout" name="autoselect_comp_frequency_layout">
               <item>
                <widget class="QCheckBox" name="autoselect_comp_frequency_checkbox">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Auto-select Compensation Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, the frequency of the compensation pulse will be set to 1/3 of the frequency of the lowest sine tone.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="text">
                  <string>Auto-select Comp.
 Frequency</string>
@@ -260,6 +284,9 @@ Frequency</string>
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="compensation_frequency_selector">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compensation Pulse Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies the frequency used by the compensation pulse.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="suffix">
                  <string> Hz</string>
                 </property>
@@ -281,6 +308,9 @@ Frequency</string>
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="compensation_decay_selector">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compensation Decay&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies the decay parameter used by the compensation pulse.  This determines how quickly the compensation pulse decays.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="suffix">
                  <string>%</string>
                 </property>
@@ -312,6 +342,9 @@ Frequency</string>
            <layout class="QVBoxLayout" name="decay_type_layout">
             <item>
              <widget class="QRadioButton" name="damping_zeta_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Damping (Zeta)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If this is selected, decay will be specified as a critical damping ratio (specified by the variable zeta in many formulas).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Damping (Zeta)</string>
               </property>
@@ -319,6 +352,9 @@ Frequency</string>
             </item>
             <item>
              <widget class="QRadioButton" name="time_constant_tau_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Time Constant (Tau)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If this is selected, decay will be specified as a time constant (specified by the variable tau in many formulas). The time constant is time where the decay has reached 63.2% of the original value.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Time Constant (Tau)</string>
               </property>
@@ -326,6 +362,9 @@ Frequency</string>
             </item>
             <item>
              <widget class="QRadioButton" name="num_time_constants_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Number Time Constants&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If this is selected, decay will be specified as the number of time constants (specified by the variable tau in many formulas within the block. The time constant is time where the decay has reached 63.2% of the original value. The if the number of time constants is set to 5, the decay will be such that the time constant will be 1/5 of the the block size.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Num Time Constants</string>
               </property>
@@ -340,6 +379,9 @@ Frequency</string>
            <layout class="QVBoxLayout" name="decay_value_layout">
             <item>
              <widget class="QCheckBox" name="common_decay_checkbox">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Common Decay for All Sine Tones&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If selected, all sine tones will have the same decay value. If not selected, each sine tone's decay value can be specified individually.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Common Decay for
 All Sine Tones</string>
@@ -351,6 +393,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="decay_value_selector">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Decay Value&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This is the numerical value used to specify the damping.  The meaning of this value will depend on the type of decay selected (Damping, Time Constant, or Num Time Constants).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="decimals">
                <number>5</number>
               </property>
@@ -381,6 +426,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QComboBox" name="srs_type_setter">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;SRS Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This specifies the type of SRS to compute. There are many different SRS types, including:&lt;/p&gt;&lt;p&gt;Primary refers to the peak occuring during the pulse.  Residual refers to the peak occuring after the input has ended.&lt;/p&gt;&lt;p&gt;Positive, Negative, and Absolute Maximum refer to the maximum positive, maximum negative, and maximum absolute value of response.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;0&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Primary Positive&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest positive response during input&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Primary Negative&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest negative response during input&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Primary Absolute Maximum&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest magnitude response during input&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Residual Positive&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest positive response after input ends&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Residual Negative&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest negative response after input ends&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Residual Absolute Maximum&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest magnitude response after input ends&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Maximum Positive&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest positive response over entire event&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Maximum Negative&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest negative response over entire event&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Maximum Absolute Maximum&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Largest magnitude response over entire event&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="currentIndex">
                <number>8</number>
               </property>
@@ -444,6 +492,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QComboBox" name="srs_displacement_setter">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Displacement&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This specifies what displacement type is measured by the SRS.  Absolute displacement refers to the oscillator's motion in inertial space.  Relative displacement refers to the oscillator's motion relative to its base motion.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="currentIndex">
                <number>0</number>
               </property>
@@ -472,6 +523,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="srs_damping_setter">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;SRS Damping&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This is the fraction of critical damping applied to each single degree of freedom oscillator when computing the SRS.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="suffix">
                <string>%</string>
               </property>
@@ -505,6 +559,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="sds_convergence_selector">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Convergence&lt;/span&gt;&lt;/p&gt;&lt;p&gt;SRS are nonlinear functions, so an optimization routine is required to solve for sum of decayed sine amplitudes that match the SRS.  The convergence parameter specifies how much change the optimizer is allowed to make at each step.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="suffix">
                <string>%</string>
               </property>
@@ -535,6 +592,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="sds_scale_factor_selector">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Scale Factor&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The scale factor is applied to the SRS to make the sum of decayed sines match the SRS better, rather than just touching it at the sine tones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="suffix">
                <string>%</string>
               </property>
@@ -565,6 +625,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QSpinBox" name="sds_iterations_selector">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Iterations&lt;/span&gt;&lt;/p&gt;&lt;p&gt;SRS are nonlinear functions, so an optimization routine is required to solve for sum of decayed sine amplitudes that match the SRS.  This value specifies the number of optimization routines to use.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="minimum">
                <number>2</number>
               </property>
@@ -589,6 +652,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QDoubleSpinBox" name="error_tolerance_selector">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Error Tolerance&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This is the allowable error in the optimization.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="suffix">
                <string>%</string>
               </property>
@@ -649,7 +715,7 @@ All Sine Tones</string>
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Python script used to specify the control law.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Python Script&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Python script used to specify the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
@@ -659,7 +725,7 @@ All Sine Tones</string>
               <item>
                <widget class="QPushButton" name="control_script_load_file_button">
                 <property name="toolTip">
-                 <string>Loads in a Python script to use as the control strategy</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to load in a Python script containing the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string>Load</string>
@@ -690,7 +756,7 @@ All Sine Tones</string>
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Select the item within the script to use as the control law.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Python Function&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the function or class in the Python script to use as the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
@@ -703,7 +769,7 @@ All Sine Tones</string>
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Select if the selected control law is a Function, Generator, or Class</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select if the selected control law is a Function, Class, or Interactive Class. This should be detected automatically by inspection; users should not have to adjust this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <item>
                  <property name="text">
@@ -737,6 +803,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QScrollArea" name="control_parameters_scroll_area">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Parameters&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Any additional parameters needed by the control law are entered in this area.  This area will be automatically populated based on the extra arguments required by the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="widgetResizable">
                <bool>true</bool>
               </property>
@@ -770,6 +839,9 @@ All Sine Tones</string>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QTableWidget" name="tone_table">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sine Tone Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The sine tones and decay values used in the test are listed here.  If sine tone frequencies or decay values are specified manually, they can be set in this table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <column>
              <property name="text">
               <string>Frequency</string>
@@ -786,6 +858,9 @@ All Sine Tones</string>
            <layout class="QHBoxLayout" name="tone_buttons">
             <item>
              <widget class="QPushButton" name="add_tone_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Add Tone&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Adds a sine tone to the sine tone table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Add Tone</string>
               </property>
@@ -793,6 +868,9 @@ All Sine Tones</string>
             </item>
             <item>
              <widget class="QPushButton" name="remove_tone_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Tone&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes the selected sine tone from the table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Remove Tone</string>
               </property>
@@ -828,7 +906,7 @@ All Sine Tones</string>
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>Check channels that will be treated as control channels</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Channels that are checked will be used as the control channels for this environment. The control channels should be ordered in the specification the same way they are ordered in this list. For example, the first SRS in the specification will correspond to the first checked channel in this list.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -841,7 +919,7 @@ All Sine Tones</string>
           <item>
            <widget class="QPushButton" name="check_selected_button">
             <property name="toolTip">
-             <string>Checks selected channels to use them as control channels.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Check Selected&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When clicked, any selected channels in the Control Channels list will be checked, and therefore used as control channels in the environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Check Selected</string>
@@ -851,7 +929,7 @@ All Sine Tones</string>
           <item>
            <widget class="QPushButton" name="uncheck_selected_button">
             <property name="toolTip">
-             <string>Unchecks selected channels so they are not treated as control channels.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Uncheck Selected&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When clicked, any selected channels in the Control Channels list will be unchecked, and therefore not used as control channels in the environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Uncheck Selected</string>
@@ -892,7 +970,7 @@ All Sine Tones</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of acquisition channels that the controller is measuring.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Input Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the total number of physical channels this environment is measuring, including excitation channels and control channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -921,7 +999,7 @@ All Sine Tones</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of excitation channels that the controller is generating.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the total number of physical channels this environment is outputting to excitation devices such as vibration shakers.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -950,7 +1028,7 @@ All Sine Tones</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of channels that the controller is using to control the system.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the total number of physical channels this environment is controlling to.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -984,7 +1062,7 @@ All Sine Tones</string>
           <item row="1" column="0">
            <widget class="QLabel" name="transform_channels_label">
             <property name="text">
-             <string>Transform Channels</string>
+             <string>Transform Controls</string>
             </property>
            </widget>
           </item>
@@ -994,7 +1072,7 @@ All Sine Tones</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of virtual channels used for control if transformations are specified.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transform Controls&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the number of virtual control channels in the environment due to transformation matrices applied to the physical control channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -1023,7 +1101,7 @@ All Sine Tones</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of virtual outputs defined if transformations are specified.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transform Outputs&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the number of virtual excitation channels in the environment due to transformation matrices applied to the physical excitation channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -1048,7 +1126,7 @@ All Sine Tones</string>
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>Open the transformation matrix dialog to allow specification of transformations to virtual control or virtual excitation channels.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transformation Matrices...&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Open the transformation matrix dialog to allow specification of transformations to virtual control or virtual excitation channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Transformation
@@ -1081,6 +1159,9 @@ Matrices...</string>
              <layout class="QVBoxLayout" name="verticalLayout_22">
               <item>
                <widget class="QTableWidget" name="breakpoint_table">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Breakpoint Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table includes frequency breakpoints and SRS values for the specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="selectionMode">
                  <enum>QAbstractItemView::SingleSelection</enum>
                 </property>
@@ -1118,6 +1199,9 @@ Matrices...</string>
                 </item>
                 <item>
                  <widget class="QSpinBox" name="num_hits_spinbox">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Number of Hits&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies the number of hits at full level that should be applied to the test article.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="suffix">
                    <string> Hits</string>
                   </property>
@@ -1128,6 +1212,9 @@ Matrices...</string>
                 </item>
                 <item>
                  <widget class="QPushButton" name="add_breakpoint_button">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Add Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Adds a frequency breakpoint to the specification table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Add Frequency</string>
                   </property>
@@ -1135,6 +1222,9 @@ Matrices...</string>
                 </item>
                 <item>
                  <widget class="QPushButton" name="remove_breakpoint_button">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Frequency&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes the selected frequency breakpoint from the specification table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Remove Frequency</string>
                   </property>
@@ -1142,6 +1232,9 @@ Matrices...</string>
                 </item>
                 <item>
                  <widget class="QPushButton" name="load_breakpoints_button">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load Specification&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Loads specification data from a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Load Specification...</string>
                   </property>
@@ -1158,6 +1251,9 @@ Matrices...</string>
              <layout class="QVBoxLayout" name="verticalLayout_23">
               <item>
                <widget class="QTableWidget" name="lower_limit_table">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Lower Limit Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table specifies lower SRS limits at each breakpoint frequency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <row>
                  <property name="text">
                   <string>1</string>
@@ -1184,6 +1280,9 @@ Matrices...</string>
              <layout class="QVBoxLayout" name="verticalLayout_24">
               <item>
                <widget class="QTableWidget" name="upper_limit_table">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Upper Limit Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table specifies upper SRS limits at each breakpoint frequency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <row>
                  <property name="text">
                   <string>1</string>
@@ -1233,7 +1332,7 @@ Matrices...</string>
             <item>
              <widget class="QComboBox" name="specification_plot_selector">
               <property name="toolTip">
-               <string>Select the row of the CPSD matrix to visualize</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specification Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies which control channel to display on the Specification Plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="sizeAdjustPolicy">
                <enum>QComboBox::AdjustToContents</enum>
@@ -1243,7 +1342,11 @@ Matrices...</string>
            </layout>
           </item>
           <item>
-           <widget class="PlotWidget" name="specification_plot"/>
+           <widget class="PlotWidget" name="specification_plot">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specification Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This plot displays the specified SRS for the selected channel.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
           </item>
           <item>
            <layout class="QHBoxLayout" name="synthesize_layout">
@@ -1262,6 +1365,9 @@ Matrices...</string>
             </item>
             <item>
              <widget class="QPushButton" name="synthesize_button">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;SDS Synthesize&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Brings up a dialog box to allow the user to investigate synthesizing ideal data that matches the specified SRS.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>SDS Synthesize...</string>
               </property>
