@@ -1,9 +1,11 @@
 # Ranking bugs based on time/ease of fix
 Stuff to do in order
-[ ] Add in new ping alive events into lanxi intialize hardware
+[ ] Cut branch to prepare for pull request
 [ ] Make Unittests
 [ ] Clean up documentation
 [ ] Write guides
+
+[ ] Add in new ping alive events into lanxi intialize hardware
 
 Stuff for the future
 [ ] Clear jupyter notebooks automatically on push
@@ -12,6 +14,9 @@ Stuff for the future
 [ ] Write guide for building new environments
 
 ## Easy
+[ ] The validation functions for lanxi result in multiple copies of the same ip addresses.
+    [ ] Swap them to use ip address list with unique addresses
+
 [ ] Add in new ping alive events into lanxi intialize hardware
 
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
