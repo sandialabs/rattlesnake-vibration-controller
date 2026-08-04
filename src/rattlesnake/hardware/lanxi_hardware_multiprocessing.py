@@ -138,8 +138,7 @@ class LanXIMetadata(HardwareMetadata):
         # for validation purposes and add them to the ip addresses.
         for channel in self.channel_list:
             if channel.physical_device not in (
-                self.ipv4_addresses,
-                self.ipv6_addresses,
+                self.ipv4_addresses + self.ipv6_addresses
             ):
                 is_ipv4 = (
                     re.search(IPV4_PATTERN, str(channel.physical_device)) is not None
@@ -157,8 +156,7 @@ class LanXIMetadata(HardwareMetadata):
                 address.get_ip_from_host_name()
                 self.ip_addresses.append(address)
             if channel.feedback_device not in (
-                self.ipv4_addresses,
-                self.ipv6_addresses,
+                self.ipv4_addresses + self.ipv6_addresses
             ):
                 is_ipv4 = (
                     re.search(IPV4_PATTERN, str(channel.feedback_device)) is not None
@@ -341,7 +339,11 @@ class LanXIMetadata(HardwareMetadata):
         ipv4_list = []
         ipv6_list = []
         bknum_list = []
+        seen_ipv4 = set()
         for ip in sorted_devices:
+            if ip.ipv4_address in seen_ipv4:
+                continue
+            seen_ipv4.add(ip.ipv4_address)
             ipv4_list.append(ip.ipv4_address)
             ipv6_list.append(ip.ipv6_address)
 
@@ -357,7 +359,11 @@ class LanXIMetadata(HardwareMetadata):
         ipv4_list = []
         ipv6_list = []
         bknum_list = []
+        seen_ipv4 = set()
         for ip in sorted_devices:
+            if ip.ipv4_address in seen_ipv4:
+                continue
+            seen_ipv4.add(ip.ipv4_address)
             ipv4_list.append(ip.ipv4_address)
             ipv6_list.append(ip.ipv6_address)
 

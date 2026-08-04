@@ -14,12 +14,6 @@ Stuff for the future
 [ ] Write guide for building new environments
 
 ## Easy
-[ ] Rework log file locking behavior
-    [ ] log file locking is dependent on windows packages right now.
-
-[ ] The validation functions for lanxi result in multiple copies of the same ip addresses.
-    [ ] Swap them to use ip address list with unique addresses
-
 [ ] Add in new ping alive events into lanxi intialize hardware
 
 [ ] Make git repo clear all jupyter notebook outputs when pushing to repo
@@ -61,6 +55,11 @@ Stuff for the future
     [ ] This basically crashes the system identification process
 
 [ ] Some hardware files need time.sleeps to work at certain points in headless mode (LanXi)
+
+## Done
+[x] Rework log file locking behavior
+    [x] log file locking is dependent on windows packages right now.
+[x] The validation functions for lanxi result in multiple copies of the same ip addresses.
 
 ## Unit Tests/Documentation
 Test [ ] Test Documented [ ] Code [ ] Code Documented [ ]
