@@ -1289,7 +1289,7 @@ class ModalUI(EnvironmentUI):
         save_rattlesnake_to_netcdf(
             self.netcdf_handle,
             self.rattlesnake.hardware_metadata,
-            self.rattlesnake.environment_metadata,
+            {self.environment_name: self.environment_metadata},
         )  # This is scuffed but is an edge case
         group_handle = self.netcdf_handle.groups[self.environment_name]
         group_handle.createDimension("fft_lines", self.environment_metadata.fft_lines)
