@@ -7,6 +7,7 @@ from rattlesnake.testing.mock_user_interface import (
     launch_temporary_rattlesnake_ui_profile,
 )
 
+from rattlesnake.testing.mock_environment import IMPLEMENTED_ENVIRONMENT
 from rattlesnake.examples.headless_example import build_example_rattlesnake_object
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -18,13 +19,7 @@ from rattlesnake.process.streaming import StreamType
 @pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
 @pytest.mark.parametrize(
     "environment_type",
-    [
-        EnvironmentType.TIME,
-        EnvironmentType.MODAL,
-        EnvironmentType.SINE,
-        EnvironmentType.RANDOM,
-        EnvironmentType.TRANSIENT,
-    ],
+    IMPLEMENTED_ENVIRONMENT,
 )
 # @pytest.mark.parametrize("test_type", ["environment", "profile"])
 @pytest.mark.parametrize("test_type", ["environment"])
