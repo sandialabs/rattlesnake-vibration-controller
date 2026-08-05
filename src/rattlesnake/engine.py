@@ -323,7 +323,7 @@ class RattlesnakeController:
         self.profile_manager = ProfileManager(
             self.queue_container
         )  # Contains instructions/profile events
-        self._hardware_metadata = None
+        self.hardware_metadata = None
         # These are only used for UI to pull from if they have already been
         # set to the controller. These are not used for any logic in this
         # controller
@@ -644,14 +644,6 @@ class RattlesnakeController:
     # endregion
 
     # region Hardware
-    @property
-    def hardware_metadata(self):
-        return self._hardware_metadata
-
-    @hardware_metadata.setter
-    def hardware_metadata(self, value: HardwareMetadata):
-        self._hardware_metadata = value
-
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """Validates hardware_metadata and sends data to relevant processes"""
         # Validate Rattlesnake State
