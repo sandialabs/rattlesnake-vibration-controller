@@ -103,6 +103,7 @@ class RattlesnakeController:
         """
         # Shutdown behavior
         self._shutdown_complete = False
+        self._init_complete = False
         atexit.register(self.shutdown)
 
         # Initialize values for checking state
@@ -340,6 +341,8 @@ class RattlesnakeController:
             ]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
+
+        self._init_complete = True
 
     def __enter__(self):
         return self
@@ -1245,6 +1248,12 @@ class RattlesnakeController:
     # region Shutdown
     def shutdown(self):
         if self._shutdown_complete:
+            return
+        if not self._init_complete:
+            # __init__ raised before finishing, so attributes shutdown()
+            # depends on (queue_container, event_container, processes, etc.)
+            # may not exist. There is nothing coherent left to tear down.
+            self._shutdown_complete = True
             return
         print("Rattlesnake Shutting Down")
         if self.state in (
