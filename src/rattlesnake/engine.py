@@ -351,11 +351,11 @@ class RattlesnakeController:
         self.shutdown()
         return False
 
-    def __del__(self):
-        try:
-            self.shutdown()
-        except Exception:
-            pass
+    # def __del__(self):
+    #     try:
+    #         self.shutdown()
+    #     except Exception:
+    #         pass
 
     @property
     def state(self) -> RattlesnakeState:
