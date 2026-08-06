@@ -6,6 +6,8 @@ from rattlesnake.process.streaming import StreamMetadata
 from rattlesnake.testing.mock_hardware import MockHardwareMetadata
 from rattlesnake.testing.mock_environment import MockEnvironmentMetadata
 import pytest
+import queue as thqueue
+import threading
 from unittest import mock
 
 
@@ -19,6 +21,8 @@ from unittest import mock
         "non_threaded, non_blocking",
     ],
 )
+@mock.patch("rattlesnake.engine.mp.Queue", new=thqueue.Queue)
+@mock.patch("rattlesnake.engine.mp.Event", new=threading.Event)
 @mock.patch("rattlesnake.engine.mp.Process")
 @mock.patch("rattlesnake.engine.threading.Thread")
 @mock.patch("rattlesnake.engine.mp.Manager")
@@ -36,6 +40,8 @@ def rattlesnake_package(
 # region Rattlesnake
 @pytest.mark.parametrize("threaded", [True, False])
 @pytest.mark.parametrize("blocking", [True, False])
+@mock.patch("rattlesnake.engine.mp.Queue", new=thqueue.Queue)
+@mock.patch("rattlesnake.engine.mp.Event", new=threading.Event)
 @mock.patch("rattlesnake.engine.mp.Process")
 @mock.patch("rattlesnake.engine.threading.Thread")
 @mock.patch("rattlesnake.engine.mp.Manager")
