@@ -1,9 +1,9 @@
 {
-  "coverage": "28.6",
+  "coverage": "25.8",
   "color": "red",
   "pages_url": "https://sandialabs.github.io/rattlesnake-vibration-controller/dev/reports/coverage/",
   "workflow_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml",
-  "run_id": "30114038312",
-  "artifact_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/30114038312",
-  "timestamp": "2026-07-24T17:49:42Z"
+  "run_id": "31188923687",
+  "artifact_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/31188923687",
+  "timestamp": "2026-08-07T15:03:51Z"
 }
