@@ -44,6 +44,11 @@ import scipy.signal as sig
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
+
 # region Global
 # Define base directory
 this_path = os.path.split(__file__)[0]
@@ -53,25 +58,96 @@ else:
     DIRECTORY = this_path
 
 
-def log_file_task(queue: mp.Queue, shutdown_event):
-    """A multiprocessing function that collects logging data and writes to file
+def open_and_lock_file(lock_filename: str, encoding: str = "utf-8"):
+    """
+    Returns a new file if the filename is not a locked file. Returns None
+    if the file is in use by another program
+    """
+    lock_file = open(lock_filename, "a+", encoding=encoding)
+    lock_file.seek(0)
+
+    try:
+        if sys.platform == "win32":
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        lock_file.close()
+        return None
+
+    lock_file.truncate()
+    lock_file.write(f"pid={os.getpid()}\n")
+    lock_file.flush()
+
+    return lock_file
+
+
+def unlock_file(lock_file):
+    """
+    Releases the lock acquired by `open_and_lock_file` and closes the file.
+    """
+    try:
+        if sys.platform == "win32":
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    finally:
+        lock_file.close()
+
+
+def get_unique_log_filename():
+    base_filename = "Rattlesnake.log"
+    lock_filename = "Rattlesnake.log.lock"
+    lock = open_and_lock_file(lock_filename)
+    ind = 0
+    while lock is None:
+        base_filename = f"Rattlesnake_{ind}.log"
+        lock_filename = f"Rattlesnake_{ind}.log.lock"
+        lock = open_and_lock_file(lock_filename)
+        ind = ind + 1
+
+    return lock, base_filename
+
+
+def log_file_task(
+    log_queue: mp.Queue,
+    shutdown_event,
+):
+    """
+    A multiprocessing function that collects logging data and writes to file
 
     Parameters
     ----------
     queue : mp.queues.Queue
         The multiprocessing queue to collect logging messages from
     """
-    with open("Rattlesnake.log", "w", encoding="utf-8") as f:
-        while not shutdown_event.is_set():
-            output = queue.get()
-            if output == GlobalCommands.QUIT:
-                f.write("Program quitting, logging terminated.")
-                break
-            num_newlines = output.count("\n")
-            if num_newlines > 1:
-                output = output.replace("\n", "////", num_newlines - 1)
-            f.write(output)
-            f.flush()
+    lock, log_filename = get_unique_log_filename()
+
+    try:
+        with open(log_filename, "w", encoding="utf-8") as f:
+            while not shutdown_event.is_set():
+                try:
+                    output = log_queue.get(timeout=0.2)
+                except (mpqueue.Empty, thqueue.Empty):
+                    continue
+
+                if output == GlobalCommands.QUIT:
+                    f.write("Program quitting, logging terminated.\n")
+                    break
+
+                text = str(output)
+                if " ERROR" in text:
+                    print(text)
+
+                num_newlines = text.count("\n")
+                if num_newlines > 1:
+                    text = text.replace("\n", "////", num_newlines - 1)
+                f.write(text)
+                f.flush()
+
+    finally:
+        unlock_file(lock)
 
 
 class RattlesnakeError(Exception):
@@ -149,8 +225,11 @@ class VerboseMessageQueue:
     def log_name(self):
         """The name used to identify this queue in log messages"""
         if self.environment_name:
-            env = self.environment_name.value
-            return f"{self.base_name} | {env}" if env else self.base_name
+            try:
+                env = self.environment_name.value
+                return f"{self.base_name} | {env}" if env else self.base_name
+            except Exception:
+                return self.base_name
 
         return self.base_name
 
@@ -431,6 +510,23 @@ def flush_queue(queue, timeout=None):
             return data
 
 
+def gui_queue_cleanup(
+    gui_update_queue,
+    shutdown_event,
+    gui_active_check,
+    max_queue_size=500,
+    poll_interval=0.25,
+):
+    while not shutdown_event.wait(poll_interval):
+        if gui_active_check():
+            continue
+        try:
+            while gui_update_queue.qsize() > max_queue_size:
+                gui_update_queue.get_nowait()
+        except (thqueue.Empty, mpqueue.Empty):
+            continue
+
+
 _direction_map = {
     "X+": 1,
     "X": 1,
@@ -572,7 +668,7 @@ def find_lanxi_devices():
     results = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(test_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates}
+        futures = {executor.submit(check_lanxi_candidate, ipv4): ipv4 for ipv4 in candidates}
 
         for future in as_completed(futures):
             host_name, ipv4, info, sync, valid = future.result()
@@ -586,7 +682,7 @@ def find_lanxi_devices():
     return results
 
 
-def test_lanxi_candidate(ipv4_address):
+def check_lanxi_candidate(ipv4_address):
     """Queries a candidate IP address to check if it is a valid LAN-XI device
 
     Parameters
@@ -708,7 +804,7 @@ class IPAddress:
         if self.ipv6_address:
             host = "http://" + self.ipv6_address
         elif self.ipv4_address:
-            host = "http://" + self.ipv6_address
+            host = "http://" + self.ipv4_address
         else:
             self.valid_ip = False
             return
@@ -727,6 +823,79 @@ class IPAddress:
             self.valid_ip = True
         except Exception:
             self.valid_ip = False
+
+    def __eq__(self, other):
+        """
+        The equality of addresses takes priority of ipv6 > ipv4 > bknum. This order
+        is chosen based off the priority of validation as well as how reliable each
+        connection is.
+        """
+        if not isinstance(other, IPAddress):
+            return NotImplemented
+        if self.ipv6_address is not None and other.ipv6_address is not None:
+            return self.ipv6_address == other.ipv6_address
+        if self.ipv4_address is not None and other.ipv4_address is not None:
+            return self.ipv4_address == other.ipv4_address
+        if self.host_name is not None and other.host_name is not None:
+            return self.host_name == other.host_name
+        return False
+
+    # Equality is content-based on mutable fields, so instances are not safe
+    # to use as dict/set keys.
+    __hash__ = None
+
+    def merge(self, other):
+        """
+        Combines this address with another address that ``__eq__``
+        considers the same device, keeping whichever fields are filled in.
+        """
+        merged = IPAddress()
+        conflict = False
+        for attr in ("ipv6_address", "ipv4_address", "host_name"):
+            self_value = getattr(self, attr)
+            other_value = getattr(other, attr)
+            if self_value is not None and other_value is not None and self_value != other_value:
+                conflict = True
+            setattr(merged, attr, self_value if self_value is not None else other_value)
+
+        if conflict:
+            merged.valid_ip = False
+            merged.module_info = None
+            merged.sync_type = None
+        else:
+            merged.valid_ip = self.valid_ip or other.valid_ip
+            merged.module_info = self.module_info or other.module_info
+            merged.sync_type = self.sync_type or other.sync_type
+
+        return merged, conflict
+
+
+def add_unique_ip_address(unique_addresses, candidate):
+    """Adds ``candidate`` into ``unique_addresses`` in place, merging it into
+    an existing entry (per ``IPAddress.__eq__``/``merge``) instead of
+    appending a duplicate when an equivalent address is already present.
+
+    Parameters
+    ----------
+    unique_addresses : list[IPAddress]
+        The list to add to. Modified in place.
+    candidate : IPAddress
+        The address to add or merge.
+
+    Returns
+    -------
+    bool
+        True if the candidate was merged into an existing entry and that
+        merge disagreed on a field, meaning the merged entry needs to be
+        re-validated against the device.
+    """
+    for index, existing in enumerate(unique_addresses):
+        if existing == candidate:
+            merged, conflict = existing.merge(candidate)
+            unique_addresses[index] = merged
+            return conflict
+    unique_addresses.append(candidate)
+    return False
 
 
 # endregion
@@ -856,6 +1025,44 @@ def load_python_module(module_path):
     return module
 
 
+def worksheet_cell_str(value, default=""):
+    """
+    This is used to cleanse inputs before writing them to excel as
+    the GUI automatically converts everything to a string but the
+    headless mode will keep it as ints/floats/etc. which changes how
+    openpyxl stores the information to an excel sheet.
+    """
+    if value is None:
+        return default
+    if isinstance(value, str):
+        value = value.strip()
+        return value if value else default
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    return str(value)
+
+
+def worksheet_cell_str(value, default=""):
+    """
+    This is used to cleanse inputs before writing them to excel as
+    the GUI automatically converts everything to a string but the
+    headless mode will keep it as ints/floats/etc. which changes how
+    openpyxl stores the information to an excel sheet.
+    """
+    if value is None:
+        return default
+    if isinstance(value, str):
+        value = value.strip()
+        return value if value else default
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    return str(value)
+
+
 def read_transformation_matrix_from_worksheet(worksheet, start_row, num_rows, start_col):
     """Reads a numeric matrix from a block of cells in an Excel worksheet
 
@@ -880,7 +1087,7 @@ def read_transformation_matrix_from_worksheet(worksheet, start_row, num_rows, st
         blank or contains "none"
     """
     first_cell = worksheet.cell(start_row, start_col).value
-    if first_cell is None or (isinstance(first_cell, str) and first_cell.strip().lower() == "none"):
+    if first_cell is None or (str(first_cell).strip().lower() == "none"):
         return None
 
     matrix = []
@@ -902,6 +1109,49 @@ def read_transformation_matrix_from_worksheet(worksheet, start_row, num_rows, st
     if not matrix:
         return None
     return np.array(matrix, dtype=float)
+
+
+# This is really dumb but since modal environment saves netcdf
+# internally, this has to be in utilities instead of load_utilities
+# for circular import reasons
+def save_rattlesnake_to_netcdf(
+    netcdf_dataset,
+    hardware_metadata=None,
+    environment_metadata_dict=None,
+):
+    """Saves hardware and environment metadata to an open netCDF4 dataset
+
+    Parameters
+    ----------
+    netcdf_dataset : netCDF4.Dataset
+        An open, writable netCDF4 dataset to save the metadata to
+    hardware_metadata : HardwareMetadata, optional
+        The hardware metadata to save
+    environment_metadata_dict : dict, optional
+        A dictionary where the keys are environment names and the values are
+        the environment metadata objects to save, one per environment
+    """
+    if hardware_metadata:
+        hardware_metadata.save_metadata_to_netcdf(netcdf_dataset)
+        netcdf_dataset.createDimension("num_environments", len(environment_metadata_dict))
+    if environment_metadata_dict:
+        var = netcdf_dataset.createVariable("environment_names", str, ("num_environments",))
+        environment_booleans = []
+        for i, metadata in enumerate(environment_metadata_dict.values()):
+            var[i] = metadata.environment_name
+            environment_booleans.append(metadata.channel_list_bools)
+        var = netcdf_dataset.createVariable("environment_types", int, ("num_environments",))
+        for i, metadata in enumerate(environment_metadata_dict.values()):
+            var[i] = metadata.environment_type.value
+        var = netcdf_dataset.createVariable(
+            "environment_active_channels",
+            "i1",
+            ("response_channels", "num_environments"),
+        )
+        var[...] = np.array(environment_booleans, dtype="int8").T
+        for environment_metadata in environment_metadata_dict.values():
+            group_handle = netcdf_dataset.createGroup(environment_metadata.environment_name)
+            environment_metadata.save_metadata_to_netcdf(group_handle)
 
 
 # endregion
@@ -1161,10 +1411,13 @@ def trac(th_1, th_2=None):
     th_1_original_shape = th_1.shape
     th_1_flattened = th_1.reshape(-1, th_1.shape[-1])
     th_2_flattened = th_2.reshape(-1, th_2.shape[-1])
-    trac_val = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2 / (
-        (np.sum(th_1_flattened * th_1_flattened.conj(), axis=-1))
-        * np.sum(th_2_flattened * th_2_flattened.conj(), axis=-1)
+    numerator = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2
+    denominator = np.sum(th_1_flattened * th_1_flattened.conj(), axis=-1) * np.sum(
+        th_2_flattened * th_2_flattened.conj(), axis=-1
     )
+    with np.errstate(invalid="ignore", divide="ignore"):
+        trac_val = numerator / denominator
+    trac_val = np.where(denominator == 0, 1.0, trac_val)
     return trac_val.reshape(th_1_original_shape[:-1])
 
 
@@ -1356,10 +1609,11 @@ def align_signals(
         spec_fft = np.fft.rfft(specification, axis=-1)
         spec_portion_fft = np.fft.rfft(specification_portion, axis=-1)
 
-        # Compute phase angle differences for subpixel alignment
-        phase_difference = np.angle(spec_portion_fft / spec_fft)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            phase_difference = np.angle(spec_portion_fft / spec_fft)
+        phase_difference = np.where(spec_fft == 0, np.nan, phase_difference)
         phase_slope = phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
-        mean_phase_slope = np.median(
+        mean_phase_slope = np.nanmedian(
             phase_slope
         )  # Use Median to discard outliers due to potentially noisy phase
 

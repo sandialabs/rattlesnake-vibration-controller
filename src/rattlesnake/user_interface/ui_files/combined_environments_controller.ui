@@ -743,6 +743,13 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
            <number>0</number>
           </property>
           <item>
+           <widget class="QPushButton" name="load_environment_button">
+            <property name="text">
+             <string>Load Environment</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="initialize_environments_spacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>

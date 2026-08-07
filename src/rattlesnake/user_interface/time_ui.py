@@ -13,7 +13,11 @@ from rattlesnake.environment.time_environment import (
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
-from rattlesnake.user_interface.ui_utilities import multiline_plotter
+from rattlesnake.user_interface.ui_utilities import (
+    axis_label,
+    channel_unit_label,
+    multiline_plotter,
+)
 from rattlesnake.utilities import (
     DIRECTORY,
     load_time_history,
@@ -87,7 +91,6 @@ class TimeUI(EnvironmentUI):
         self.plot_data_items = {}
 
         # Map commands
-
         self.complete_ui()
         self.connect_callbacks()
 
@@ -104,14 +107,14 @@ class TimeUI(EnvironmentUI):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLabel("bottom", "Time (s)")
+            plot_item.setLabel("left", "Amplitude")
 
     def connect_callbacks(self):
         """Helper function to connect callbacks to functions in the class"""
         self.definition_widget.load_signal_button.clicked.connect(self.load_signal)
         self.run_widget.start_test_button.clicked.connect(self.start_environment)
         self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -187,6 +190,23 @@ class TimeUI(EnvironmentUI):
         self.definition_widget.signal_display_plot.getPlotItem().clear()
         self.run_widget.output_signal_plot.getPlotItem().clear()
         self.run_widget.response_signal_plot.getPlotItem().clear()
+
+        output_unit = channel_unit_label(
+            channel for channel in channels if channel.feedback_device
+        )
+        measurement_unit = channel_unit_label(
+            channel for channel in channels if channel.feedback_device is None
+        )
+        for plot in [
+            self.definition_widget.signal_display_plot,
+            self.run_widget.output_signal_plot,
+        ]:
+            plot.getPlotItem().setLabel(
+                "left", axis_label("amplitude", "Amplitude", output_unit)
+            )
+        self.run_widget.response_signal_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Response", measurement_unit)
+        )
 
         # Set initial lines
         self.plot_data_items["output_signal_definition"] = multiline_plotter(
@@ -306,16 +326,12 @@ class TimeUI(EnvironmentUI):
         for curve, this_data in zip(
             self.plot_data_items["response_signal_measurement"], response_data
         ):
-            x, y = curve.getData()
-            y = np.concatenate((y[this_data.size :], this_data[-x.size :]), axis=0)
-            curve.setData(x, y)
+            self.throttled_curves.roll(curve, this_data)
         # Display the data
         for curve, this_output in zip(
             self.plot_data_items["output_signal_measurement"], output_data
         ):
-            x, y = curve.getData()
-            y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
-            curve.setData(x, y)
+            self.throttled_curves.roll(curve, this_output)
 
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename
@@ -486,3 +502,6 @@ class TimeUI(EnvironmentUI):
                 print(f"Unknown Time UI Command {command}")
 
     # endregion
+
+
+# endregion

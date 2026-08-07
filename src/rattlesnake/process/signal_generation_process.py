@@ -445,6 +445,7 @@ def signal_generation_process(
     environment_command_queue: VerboseMessageQueue,
     log_file_queue: mp.queues.Queue,
     gui_update_queue: mp.queues.Queue,
+    shutdown_event: mp.synchronize.Event = None,
     process_name: str = None,
 ):
     """Signal generation process function called by multiprocessing
@@ -470,4 +471,4 @@ def signal_generation_process(
         environment_name,
     )
 
-    signal_generation_instance.run()
+    signal_generation_instance.run(shutdown_event)

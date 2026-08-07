@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import multiprocessing as mp
 import time
 from typing import List
+from collections import defaultdict
 
 import openpyxl
 import netCDF4 as nc4
@@ -36,10 +37,13 @@ from rattlesnake.hardware.abstract_hardware import (
 )
 from rattlesnake.utilities import (
     _direction_map,
+    _direction_inv_map,
     flush_queue,
     reduce_array_by_coordinate,
+    RattlesnakeError,
 )
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
 try:
     # cupy may not exist if correct modules aren't installed
@@ -75,12 +79,210 @@ class SDynPyFRFMetadata(HardwareMetadata):
             time_per_write,
         )
         self.hardware_file = hardware_file
-
-    # endregion
+        self._response_node_dict = None  # Dont set this
+        self._excitation_node_dict = None  # Dont set this
+        self._sdynpy_data = None  # Dont set this
+        self._function_type = None  # Dont set this
 
     # region Validation
     def validate(self):
-        return super().validate()
+        super().validate()
+        self.detect_devices()
+        self._validate_abscissa_and_sample_rate()
+
+        has_response_channel = False
+        for row, channel in enumerate(self.channel_list):
+            is_excitation = self._is_excitation_channel(channel)
+            node_dict = (
+                self.excitation_node_dict if is_excitation else self.response_node_dict
+            )
+            if str(channel.node_number) not in node_dict:
+                raise RattlesnakeError(
+                    f"Invalid node number in channel table row {row+1}"
+                )
+            if channel.node_direction not in self.valid_node_directions(channel):
+                raise RattlesnakeError(
+                    f"Invalid node direction in channel table row {row+1}"
+                )
+            if channel.physical_device not in self.valid_physical_device:
+                raise RattlesnakeError(
+                    f"Physical device should be 'Virtual' in channel table "
+                    f"row {row+1}"
+                )
+            if (
+                str(channel.channel_type).lower()
+                not in self.accepted_channel_type_strings
+            ):
+                raise RattlesnakeError(
+                    f"Invalid channel type in channel table row {row+1}. "
+                    "Valid channel types include 'Acceleration', 'Velocity', "
+                    "'Displacement', 'Force'"
+                )
+            if str(channel.channel_type).lower() == "force" and not is_excitation:
+                raise RattlesnakeError(
+                    "Force channel types require an 'Input' feedback device "
+                    f"in channel table row {row+1}"
+                )
+            if (
+                is_excitation
+                and channel.feedback_device not in self.valid_feedback_device
+            ):
+                raise RattlesnakeError(
+                    f"Invalid feedback device in channel table row {row+1}. "
+                    "Valid feedback devices include 'Input' or blank"
+                )
+            if not is_excitation:
+                has_response_channel = True
+
+        if not has_response_channel:
+            raise RattlesnakeError(
+                "SDynPy FRF channel table requires atleast 1 response channel "
+                "without an assigned feedback device"
+            )
+
+    def _validate_abscissa_and_sample_rate(self):
+        abscissa = self._sdynpy_data["abscissa"]
+        spacing = np.diff(abscissa, axis=-1)
+        mean_spacing = np.mean(spacing)
+        if not np.allclose(spacing, mean_spacing):
+            raise RattlesnakeError(
+                f"SDynPy FRF file {self.hardware_file} does not have evenly "
+                "spaced abscissa"
+            )
+
+        if self._function_type.item() == 4:
+            # TransferFunctionArray: dt is derived from the Nyquist frequency,
+            # matching SDynPyFRFAcquisition.create_response_channels
+            expected_dt = 1 / (2 * abscissa.max())
+        else:
+            # ImpulseResponseFunctionArray: abscissa is already a time vector
+            expected_dt = mean_spacing
+        if not np.isclose(self.sample_rate, 1 / expected_dt):
+            raise RattlesnakeError(
+                f"The transfer function sampling rate {1 / expected_dt:.6g} "
+                f"does not match the hardware sampling rate {self.sample_rate}"
+            )
+
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+        assist_mode_modules["node_number"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["node_direction"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["channel_type"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        if not self.response_node_dict or not self.excitation_node_dict:
+            self.detect_devices()
+
+        valid_dict["node_number"] = self.all_valid_node_numbers
+        valid_dict["node_direction"] = self.valid_node_directions(channel)
+        valid_dict["physical_device"] = self.valid_physical_device
+        valid_dict["channel_type"] = self.valid_channel_types
+        valid_dict["feedback_device"] = self.valid_feedback_device
+
+        return valid_dict
+
+    def detect_devices(self):
+        """
+        Builds the valid node/direction lookups from the SDynPy FRF file.
+        """
+        try:
+            sdynpy_data, function_type = np.load(self.hardware_file).values()
+            coordinate = sdynpy_data["coordinate"]
+        except:
+            raise RattlesnakeError("Invalid SDynPy FRF file")
+
+        if function_type.item() not in (4, 29):
+            raise RattlesnakeError(
+                f"SDynPy FRF file {self.hardware_file} must contain a "
+                "TransferFunctionArray or ImpulseResponseFunctionArray"
+            )
+        self._sdynpy_data = sdynpy_data
+        self._function_type = function_type
+
+        response_node_dict = defaultdict(set)
+        for row in range(coordinate.shape[0]):
+            node = int(coordinate[row, 0][0]["node"])
+            direction = abs(int(coordinate[row, 0][0]["direction"]))
+            response_node_dict[str(node)].add(_direction_inv_map[direction])
+            response_node_dict[str(node)].add(_direction_inv_map[-direction])
+
+        excitation_node_dict = defaultdict(set)
+        for col in range(coordinate.shape[1]):
+            node = int(coordinate[0, col][1]["node"])
+            direction = abs(int(coordinate[0, col][1]["direction"]))
+            excitation_node_dict[str(node)].add(_direction_inv_map[direction])
+            excitation_node_dict[str(node)].add(_direction_inv_map[-direction])
+
+        self._response_node_dict = response_node_dict
+        self._excitation_node_dict = excitation_node_dict
+
+    @property
+    def response_node_dict(self):
+        return self._response_node_dict
+
+    @property
+    def excitation_node_dict(self):
+        return self._excitation_node_dict
+
+    @staticmethod
+    def _is_excitation_channel(channel: Channel):
+        return channel.feedback_device is not None and channel.feedback_device != ""
+
+    def valid_node_numbers(self, channel: Channel = None):
+        node_dict = (
+            self.excitation_node_dict
+            if channel is not None and self._is_excitation_channel(channel)
+            else self.response_node_dict
+        )
+        node_numbers = list(node_dict.keys())
+        node_numbers.sort(key=int)
+        return node_numbers
+
+    @property
+    def all_valid_node_numbers(self):
+        node_numbers = set(self.response_node_dict) | set(self.excitation_node_dict)
+        return sorted(node_numbers, key=int)
+
+    def valid_node_directions(self, channel: Channel):
+        node_dict = (
+            self.excitation_node_dict
+            if self._is_excitation_channel(channel)
+            else self.response_node_dict
+        )
+        node_directions = list(node_dict.get(str(channel.node_number), []))
+        node_directions.sort()
+        return node_directions
+
+    @property
+    def valid_channel_types(self):
+        return ["Acceleration", "Velocity", "Displacement", "Force"]
+
+    @property
+    def accepted_channel_type_strings(self):
+        return [
+            "accel",
+            "acceleration",
+            "acc",
+            "force",
+            "vel",
+            "velocity",
+            "disp",
+            "displacement",
+        ]
+
+    @property
+    def valid_physical_device(self):
+        return ["Virtual"]
+
+    @property
+    def valid_feedback_device(self):
+        return ["Input"]
 
     # endregion
 
@@ -149,6 +351,8 @@ class SDynPyFRFMetadata(HardwareMetadata):
             time_per_write,
             hardware_file,
         )
+
+    # endregion
 
 
 # endregion

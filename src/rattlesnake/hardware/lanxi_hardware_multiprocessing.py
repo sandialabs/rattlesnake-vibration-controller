@@ -34,7 +34,11 @@ import openpyxl
 import numpy as np
 import requests
 
-from rattlesnake.utilities import IPAddress, autofill_single_ip_address
+from rattlesnake.utilities import (
+    IPAddress,
+    autofill_single_ip_address,
+    RattlesnakeError,
+)
 from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareOutput,
@@ -134,8 +138,7 @@ class LanXIMetadata(HardwareMetadata):
         # for validation purposes and add them to the ip addresses.
         for channel in self.channel_list:
             if channel.physical_device not in (
-                self.ipv4_addresses,
-                self.ipv6_addresses,
+                self.ipv4_addresses + self.ipv6_addresses
             ):
                 is_ipv4 = (
                     re.search(IPV4_PATTERN, str(channel.physical_device)) is not None
@@ -147,12 +150,13 @@ class LanXIMetadata(HardwareMetadata):
                     address = IPAddress(ipv4_address=channel.physical_device)
                 elif is_ipv6:
                     address = IPAddress(ipv6_address=channel.physical_device)
+                else:
+                    address = IPAddress()
                 address.get_host_name_from_ip()
                 address.get_ip_from_host_name()
                 self.ip_addresses.append(address)
             if channel.feedback_device not in (
-                self.ipv4_addresses,
-                self.ipv6_addresses,
+                self.ipv4_addresses + self.ipv6_addresses
             ):
                 is_ipv4 = (
                     re.search(IPV4_PATTERN, str(channel.feedback_device)) is not None
@@ -168,11 +172,92 @@ class LanXIMetadata(HardwareMetadata):
                 address.get_ip_from_host_name()
                 self.ip_addresses.append(address)
 
-    # endregion
-
     # region Validation
     def validate(self):
-        return super().validate()
+        super().validate()
+        for row, channel in enumerate(self.channel_list):
+            if channel.physical_device not in self.valid_physical_devices:
+                raise RattlesnakeError(
+                    f"Invalid physical device in channel table row {row+1}"
+                )
+            try:
+                physical_channel = int(channel.physical_channel)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid physical channel in channel table row {row+1}"
+                )
+            if str(physical_channel) not in self.valid_physical_channels(
+                channel.physical_device
+            ):
+                raise RattlesnakeError(
+                    f"Invalid physical channel in channel table row {row+1}"
+                )
+
+            try:
+                sensitivity = float(channel.sensitivity)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid sensitivity in channel table row {row+1}"
+                )
+            sensitivity_min, sensitivity_max = self.valid_sensitivity(
+                channel.channel_type
+            )
+            if not (sensitivity_min <= sensitivity <= sensitivity_max):
+                raise RattlesnakeError(
+                    f"Sensitivity out of range in channel table row {row+1}. Must "
+                    f"be between {sensitivity_min} and {sensitivity_max}"
+                )
+
+            valid_max_voltage = self.valid_max_voltage(
+                channel.physical_device, channel.feedback_device
+            )
+            if channel.maximum_value not in valid_max_voltage:
+                raise RattlesnakeError(
+                    f"Invalid maximum value in channel table row {row+1}. Valid "
+                    f"values include {valid_max_voltage}"
+                )
+
+            valid_coupling = self.valid_coupling(
+                channel.physical_device, channel.feedback_device
+            )
+            if channel.coupling is not None and channel.coupling not in valid_coupling:
+                raise RattlesnakeError(
+                    f"Invalid coupling in channel table row {row+1}. Valid "
+                    f"coupling options include {valid_coupling}"
+                )
+
+            excitation_source = (
+                ""
+                if channel.excitation_source is None
+                else str(channel.excitation_source).strip().lower()
+            )
+            if excitation_source not in ("", "ccld"):
+                raise RattlesnakeError(
+                    f"Invalid excitation source in channel table row {row+1}. "
+                    "Valid excitation sources include 'ccld' or blank"
+                )
+
+            feedback_device = channel.feedback_device
+            has_feedback = (
+                feedback_device is not None and str(feedback_device).strip() != ""
+            )
+            if has_feedback:
+                if feedback_device not in self.valid_feedback_devices:
+                    raise RattlesnakeError(
+                        f"Invalid feedback device in channel table row {row+1}"
+                    )
+                try:
+                    feedback_channel = int(channel.feedback_channel)
+                except (TypeError, ValueError):
+                    raise RattlesnakeError(
+                        f"Invalid feedback channel in channel table row {row+1}"
+                    )
+                if str(feedback_channel) not in self.valid_feedback_channels(
+                    feedback_device
+                ):
+                    raise RattlesnakeError(
+                        f"Invalid feedback channel in channel table row {row+1}"
+                    )
 
     @property
     def assist_mode_modules(self):
@@ -254,7 +339,11 @@ class LanXIMetadata(HardwareMetadata):
         ipv4_list = []
         ipv6_list = []
         bknum_list = []
+        seen_ipv4 = set()
         for ip in sorted_devices:
+            if ip.ipv4_address in seen_ipv4:
+                continue
+            seen_ipv4.add(ip.ipv4_address)
             ipv4_list.append(ip.ipv4_address)
             ipv6_list.append(ip.ipv6_address)
 
@@ -270,14 +359,18 @@ class LanXIMetadata(HardwareMetadata):
         ipv4_list = []
         ipv6_list = []
         bknum_list = []
+        seen_ipv4 = set()
         for ip in sorted_devices:
+            if ip.ipv4_address in seen_ipv4:
+                continue
+            seen_ipv4.add(ip.ipv4_address)
             ipv4_list.append(ip.ipv4_address)
             ipv6_list.append(ip.ipv6_address)
 
         return [*ipv4_list, *bknum_list, *ipv6_list]
 
     def valid_sensitivity(self, channel_type: str = ""):
-        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
+        if str(channel_type).lower() == "voltage":
             valid_sensitivity = [0, 1000]
         else:
             valid_sensitivity = [-1000000, 1000000]
@@ -439,6 +532,7 @@ class LanXIMetadata(HardwareMetadata):
 
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(6, 2, self.maximum_acquisition_processes)
+        hardware_worksheet.cell(7, 2, self.output_oversample)
 
     @classmethod
     def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
@@ -478,6 +572,9 @@ class LanXIMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 class LanXIError(Exception):
@@ -1220,6 +1317,7 @@ class LanXIOutput(HardwareOutput):
         self.buffer_size = 5
         self.ready_signal_factor = BUFFER_SIZE
         self.ping_alive_event = ping_alive_event
+        self.ipv4_lookup = {}
 
     def initialize_hardware(self, test_data: LanXIMetadata):
         self.maximum_processes = test_data.maximum_acquisition_processes
@@ -1247,6 +1345,10 @@ class LanXIOutput(HardwareOutput):
                 if not address == self.master_address
             ]
         )
+        self.ipv4_lookup = {
+            ipv6_address: ipv4_address
+            for ipv4_address, ipv6_address in test_data.ipv6_dict.items()
+        }
         print("\nInitial States:")
         self._get_states()
         self.ping_alive_event.set()
@@ -1671,22 +1773,10 @@ class LanXIOutput(HardwareOutput):
                 if generator_device not in self.sockets:
                     self.sockets[generator_device] = {}
 
-                is_ipv4 = re.search(IPV4_PATTERN, generator_device) is not None
-                is_ipv6 = re.search(IPV6_PATTERN, generator_device) is not None
-                if is_ipv4:
-                    self.sockets[generator_device][output["number"]] = socket.socket(
-                        socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
+                self.sockets[generator_device][output["number"]] = (
+                    self._connect_generator_socket(
+                        generator_device, output["inputs"][0]["port"]
                     )
-                elif is_ipv6:
-                    self.sockets[generator_device][output["number"]] = socket.socket(
-                        socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP
-                    )
-                else:  # This will crash but is fixed in overhaul version so...
-                    self.sockets[generator_device][output["number"]] = socket.socket(
-                        socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
-                    )
-                self.sockets[generator_device][output["number"]].connect(
-                    (generator_device, output["inputs"][0]["port"])
                 )
                 print(
                     f"Output Connected to Device {generator_device} Channel {output['number']} "
@@ -1698,6 +1788,77 @@ class LanXIOutput(HardwareOutput):
                     / self.sample_rate
                 )
             print(f"Output overampling factor: {self.oversample_factor}x")
+
+    def _connect_generator_socket(self, generator_device, port, attempts=5, delay=0.5):
+        """
+        Connects a TCP socket to a LAN-XI generator stream.
+
+        This defaults to IPv4 due to LAN-XI firware bugs which prevents IPv6 reconnect.
+        """
+        host = self._strip_ipv6_brackets(generator_device)
+        generator_socket, exc = self._try_connect_generator_socket(
+            host, port, attempts, delay
+        )
+        if generator_socket is not None:
+            return generator_socket
+
+        ipv4_device = self.ipv4_lookup.get(generator_device)
+        if ipv4_device is None or ipv4_device == generator_device:
+            raise LanXIError(
+                f"Could not connect to LAN-XI generator socket {generator_device}:"
+                f"{port} after {attempts} attempts: {exc}"
+            )
+
+        print(
+            f"Generator socket connect to {generator_device}:{port} failed "
+            f"({exc}); retrying over IPv4 address {ipv4_device}"
+        )
+        generator_socket, exc = self._try_connect_generator_socket(
+            ipv4_device, port, attempts, delay
+        )
+        if generator_socket is not None:
+            return generator_socket
+
+        raise LanXIError(
+            f"Could not connect to LAN-XI generator socket {generator_device}:{port} "
+            f"(IPv4 fallback {ipv4_device}:{port} also failed): {exc}"
+        )
+
+    @staticmethod
+    def _strip_ipv6_brackets(device):
+        """
+        LAN-XI REST calls use bracketed IPv6 literals like '[fe80::1%20]',
+        but socket.getaddrinfo/connect need the address without brackets.
+        """
+        device = device.strip()
+        if device.startswith("[") and device.endswith("]"):
+            return device[1:-1]
+        return device
+
+    def _try_connect_generator_socket(self, host, port, attempts, delay):
+        """
+        Attempts a getaddrinfo-resolved TCP connect, retrying on failure.
+        """
+        last_exc = None
+        for attempt in range(attempts):
+            try:
+                candidates = socket.getaddrinfo(
+                    host, port, socket.AF_UNSPEC, socket.SOCK_STREAM, socket.IPPROTO_TCP
+                )
+            except OSError as exc:
+                last_exc = exc
+                candidates = []
+            for family, socktype, proto, _, sockaddr in candidates:
+                generator_socket = socket.socket(family, socktype, proto)
+                try:
+                    generator_socket.connect(sockaddr)
+                    return generator_socket, None
+                except OSError as exc:
+                    generator_socket.close()
+                    last_exc = exc
+            if attempt < attempts - 1:
+                time.sleep(delay)
+        return None, last_exc
 
     def close(self, reboot=False):
         """Method to close down the hardware"""

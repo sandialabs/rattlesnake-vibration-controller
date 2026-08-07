@@ -18,21 +18,21 @@ from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeErr
 EXTRA_CLOSEOUT_TIME = 0.1  # Adds seconds to let the last profile event happen
 TASK_NAME = "Profile Manager"
 VALID_COMMANDS = {
-    "Global": (
+    "Global": [
         GlobalCommands.STOP_HARDWARE,
         GlobalCommands.START_STREAMING,
         GlobalCommands.STOP_STREAMING,
-    )
+    ]
 }
 for control_type, command_type in ENVIRONMENT_COMMANDS.items():
     VALID_COMMANDS.update(
         {
-            control_type: (
+            control_type: [
                 GlobalCommands.START_ENVIRONMENT,
                 GlobalCommands.STOP_ENVIRONMENT,
                 UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
                 *command_type.valid_profile_commands(),
-            )
+            ]
         }
     )
 

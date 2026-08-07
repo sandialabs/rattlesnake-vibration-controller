@@ -76,8 +76,6 @@ class SDynPySystemMetadata(HardwareMetadata):
         self.hardware_file = hardware_file
         self._node_dict = None  # Dont set this
 
-    # endregion
-
     # region Validation
     def validate(self):
         super().validate()
@@ -281,6 +279,9 @@ class SDynPySystemMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Acquisition
@@ -506,13 +507,13 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         for i, channel in enumerate(channel_data):
             if self.output_channels[i]:
                 continue
-            if channel.channel_type.lower() in ["disp", "displacement"]:
+            if str(channel.channel_type).lower() in ["disp", "displacement"]:
                 C_response.append(C_disp[response_index])
                 D_response.append(D_disp[response_index])
-            elif channel.channel_type.lower() in ["vel", "velocity"]:
+            elif str(channel.channel_type).lower() in ["vel", "velocity"]:
                 C_response.append(C_vel[response_index])
                 D_response.append(D_vel[response_index])
-            elif channel.channel_type.lower() in ["accel", "acceleration", "acc"]:
+            elif str(channel.channel_type).lower() in ["accel", "acceleration", "acc"]:
                 C_response.append(C_accel[response_index])
                 D_response.append(D_accel[response_index])
             else:
@@ -662,6 +663,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
+# endregion
+
+
 # region Output
 class SDynPySystemOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
@@ -739,3 +743,6 @@ class SDynPySystemOutput(HardwareOutput):
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()
+
+
+# endregion

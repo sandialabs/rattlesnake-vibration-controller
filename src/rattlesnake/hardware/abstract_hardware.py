@@ -28,7 +28,7 @@ import numpy as np
 import netCDF4 as nc4
 import openpyxl
 
-from rattlesnake.utilities import RattlesnakeError
+from rattlesnake.utilities import RattlesnakeError, worksheet_cell_str
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
@@ -89,8 +89,6 @@ class HardwareMetadata:
         """Property returning the output sample rate."""
         return self.sample_rate * self.output_oversample
 
-    # endregion
-
     # region Validation
     @abstractmethod
     def validate(self):
@@ -107,6 +105,12 @@ class HardwareMetadata:
         """
         if len(self.channel_list) != len(set(self.channel_list)):
             raise RattlesnakeError("Duplicate channels found in channel_list")
+
+        if (
+            not isinstance(self.output_oversample, (int, float))
+            or self.output_oversample <= 0
+        ):
+            raise RattlesnakeError(f"output_oversample must be a number greater than 0")
 
     @abstractmethod
     def valid_channel_dict(self, channel: Channel):
@@ -226,9 +230,8 @@ class HardwareMetadata:
         for row in worksheet.iter_rows(min_row=3, min_col=2, max_col=23):
             channel = Channel()
             for col, cell in enumerate(row):
-                value = cell.value
-                value = None if isinstance(value, str) and not value.strip() else value
-                setattr(channel, channel_attr_list[col], cell.value)
+                value = worksheet_cell_str(cell.value, default=None)
+                setattr(channel, channel_attr_list[col], value)
             if channel.is_empty:
                 break
             channel_list.append(channel)
@@ -467,6 +470,9 @@ class HardwareMetadata:
     # endregion
 
 
+# endregion
+
+
 # region Acquisition
 class HardwareAcquisition(ABC):
     """
@@ -552,12 +558,10 @@ class HardwareOutput(ABC):
             Hardware specific metdata class that defines the sampling properties
             and channel list for a given hardware.
         """
-        pass
 
     @abstractmethod
     def start(self) -> None:
         """Method to start outputting data to the hardware"""
-        pass
 
     @abstractmethod
     def write(self, data) -> None:
@@ -569,22 +573,18 @@ class HardwareOutput(ABC):
         data : np.ndarray :
         num_channels x buffer_size array to write to the output hardware
         """
-        pass
 
     @abstractmethod
     def stop(self) -> None:
         """Method to stop the output"""
-        pass
 
     @abstractmethod
     def close(self) -> None:
         """Method to close down the hardware"""
-        pass
 
     @abstractmethod
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal"""
-        pass
 
 
 # endregion

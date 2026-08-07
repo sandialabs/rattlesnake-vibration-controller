@@ -9,6 +9,7 @@ from rattlesnake.utilities import DIRECTORY, wrap
 from rattlesnake.environment.sine_sys_id_utilities import (
     SineSpecification,
     load_specification,
+    save_specification,
     digital_tracking_filter_generator,
     vold_kalman_filter_generator,
 )
@@ -16,6 +17,7 @@ from rattlesnake.user_interface.ui_utilities import (
     VaryingNumberOfLinePlot,
     AdaptiveNoWheelSpinBox,
     NoWheelComboBox,
+    axis_label,
 )
 
 
@@ -169,6 +171,14 @@ class FilterExplorer(QtWidgets.QDialog):
         self.order_amplitude_plotter = VaryingNumberOfLinePlot(
             self.order_amplitude_plot.getPlotItem()
         )
+        self.full_time_history_plot.getPlotItem().setLabel("bottom", "Time (s)")
+        self.full_time_history_plot.getPlotItem().setLabel("left", "Amplitude")
+        self.order_time_history_plot.getPlotItem().setLabel("bottom", "Time (s)")
+        self.order_time_history_plot.getPlotItem().setLabel("left", "Amplitude")
+        self.order_amplitude_plot.getPlotItem().setLabel("bottom", "Frequency (Hz)")
+        self.order_amplitude_plot.getPlotItem().setLabel("left", "Amplitude")
+        self.order_phase_plot.getPlotItem().setLabel("bottom", "Frequency (Hz)")
+        self.order_phase_plot.getPlotItem().setLabel("left", "Phase (deg)")
 
         self.filter_type_selector.setCurrentIndex(current_filter_type)
         self.tracking_filter_order_selector.setValue(current_tracking_filter_order)
@@ -479,6 +489,12 @@ class PlotSineWindow(QtWidgets.QDialog):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
+            plot_item.setLabel("bottom", "Frequency (Hz)")
+        amp_plot_item.setLabel(
+            "left",
+            axis_label("amplitude", "Amplitude", ui.initialized_control_unit(channel_index)),
+        )
+        phs_plot_item.setLabel("left", "Phase (deg)")
         amp_plot_item.plot(spec_frequency, spec_amplitude, pen={"color": "b", "width": 1})
         phs_plot_item.plot(spec_frequency, spec_phase, pen={"color": "b", "width": 1})
         amp_plot_item.plot(
@@ -582,6 +598,7 @@ class SineSweepTable:
         self.remove_function = remove_function
         self.control_names = control_names
         self.data_acquisition_parameters = data_acquisition_parameters
+        self.specification_filename = None
         self.widget = QtWidgets.QWidget()
         sine_sweep_table_ui_path = os.path.join(
             DIRECTORY, "user_interface", "ui_files", "sine_sweep_table.ui"
@@ -599,6 +616,7 @@ class SineSweepTable:
         self.widget.add_breakpoint_button.clicked.connect(self.add_breakpoint)
         self.widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
         self.widget.load_breakpoints_button.clicked.connect(self.load_specification)
+        self.widget.save_breakpoints_button.clicked.connect(self.save_specification)
         self.widget.name_editor.editingFinished.connect(self.update_name)
         self.widget.start_time_selector.valueChanged.connect(self.update_specification_function)
         self.widget.remove_tone_button.clicked.connect(self.remove_tone)
@@ -810,7 +828,24 @@ class SineSweepTable:
             start_time,
             name,
         )
+        self.specification_filename = filename
         self.update_specification_function()
+
+    def save_specification(self, clicked, filename=None):  # pylint: disable=unused-argument
+        """
+        Saves the current breakpoint table using a dialog or the specified filename
+        """
+        if filename is None:
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self.widget,
+                "Select Specification File",
+                filter="Numpy (*.npz);;Mat (*.mat)",
+            )
+            if filename == "":
+                return
+        spec = self.get_specification()
+        save_specification(filename, spec)
+        self.specification_filename = filename
 
     def clear_and_update_specification_table(
         self,

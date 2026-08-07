@@ -1,5 +1,6 @@
-"""Functions for loading and saving Rattlesnake hardware/environment/profile
-metadata to and from netCDF4 datasets and Excel workbooks."""
+import numpy as np
+import netCDF4 as nc4
+import openpyxl
 
 import numpy as np
 
@@ -105,44 +106,6 @@ def discover_environment_type_in_old_netcdf(environment_group):
         if hasattr(environment_group, attribute):
             return environment_type
     raise RattlesnakeError("Invalid netcdf4 file")
-
-
-def save_rattlesnake_to_netcdf(
-    netcdf_dataset,
-    hardware_metadata=None,
-    environment_metadata_dict=None,
-):
-    """Saves hardware and environment metadata to an open netCDF4 dataset
-
-    Parameters
-    ----------
-    netcdf_dataset : netCDF4.Dataset
-        An open, writable netCDF4 dataset to save the metadata to
-    hardware_metadata : HardwareMetadata, optional
-        The hardware metadata to save
-    environment_metadata_dict : dict, optional
-        A dictionary where the keys are environment names and the values are
-        the environment metadata objects to save, one per environment
-    """
-    hardware_metadata.save_metadata_to_netcdf(netcdf_dataset)
-    netcdf_dataset.createDimension("num_environments", len(environment_metadata_dict))
-    var = netcdf_dataset.createVariable("environment_names", str, ("num_environments",))
-    environment_booleans = []
-    for i, metadata in enumerate(environment_metadata_dict.values()):
-        var[i] = metadata.environment_name
-        environment_booleans.append(metadata.channel_list_bools)
-    var = netcdf_dataset.createVariable("environment_types", int, ("num_environments",))
-    for i, metadata in enumerate(environment_metadata_dict.values()):
-        var[i] = metadata.environment_type.value
-    var = netcdf_dataset.createVariable(
-        "environment_active_channels",
-        "i1",
-        ("response_channels", "num_environments"),
-    )
-    var[...] = np.array(environment_booleans, dtype="int8").T
-    for environment_metadata in environment_metadata_dict.values():
-        group_handle = netcdf_dataset.createGroup(environment_metadata.environment_name)
-        environment_metadata.save_metadata_to_netcdf(group_handle)
 
 
 def load_metadata_from_workbook(workbook):
@@ -258,12 +221,12 @@ def save_rattlesnake_to_workbook(
     # Open workbook and save to blank template
     channel_worksheet = workbook.active
     HardwareMetadata.save_blank_hardware_to_workbook(workbook)
-
     # Save hardware metadata values
-    hardware_metadata.save_metadata_to_workbook(workbook)
+    if hardware_metadata:
+        hardware_metadata.save_metadata_to_workbook(workbook)
 
-    # Save environment metadata values
     channel_worksheet.cell(row=1, column=24, value="Environments")
+    # Save environment metadata values
     if environment_metadata_dict:
         for col, (environment_name, environment_metadata) in enumerate(
             environment_metadata_dict.items()

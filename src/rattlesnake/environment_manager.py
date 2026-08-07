@@ -154,6 +154,15 @@ class EnvironmentManager:
 
         return sysid_active_list
 
+    @property
+    def environment_active_environments(self):
+        environment_active_list = []
+        for queue_name, environment_name in self.environment_names.items():
+            if self.environment_active_events[queue_name].is_set():
+                environment_active_list.append(environment_name)
+
+        return environment_active_list
+
     def clear_sysid_events(self):
         for queue_name in self.queue_names:
             self.environment_sysid_stored_events[queue_name].clear()
@@ -189,21 +198,25 @@ class EnvironmentManager:
         extra_metadata = []
         environment_metadata_dict = {}
 
-        # Check if there is an existing process that maps to this environment type
-        # If there is, hijack it and give it new metadata
+        # Check if there is an existing process with the same name
+        # If there is, give it the new metadata
+        existing_name_to_queue = {
+            name.casefold(): queue_name
+            for queue_name, name in self.environment_names.items()
+        }
 
         for metadata in metadata_list:
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
 
-            queue_name = next(
-                (
-                    name
-                    for name, env_type in self.environment_types.items()
-                    if env_type == environment_type and name not in mapped_queue_names
-                ),
-                None,
-            )
+            queue_name = existing_name_to_queue.get(environment_name.casefold())
+
+            # Shut down the environment if the name matches but the type does not
+            if (
+                queue_name is not None
+                and self.environment_types.get(queue_name) != environment_type
+            ):
+                queue_name = None
 
             if queue_name is None:
                 extra_metadata.append(metadata)
@@ -250,6 +263,31 @@ class EnvironmentManager:
 
         return environment_metadata_dict
 
+    def find_sysid_compatible_environments(self, environment_name: str):
+        try:
+            source_queue_name = self.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(f"No environments exist for {environment_name} name")
+
+        if self.environment_types[source_queue_name] not in SYSID_ENVIRONMENTS:
+            return []
+
+        source_metadata = self.environment_metadata[source_queue_name]
+
+        compatible_names = []
+        for target_queue_name, name in self.environment_names.items():
+            if target_queue_name == source_queue_name:
+                continue
+            if self.environment_types[target_queue_name] not in SYSID_ENVIRONMENTS:
+                continue
+            target_metadata = self.environment_metadata[target_queue_name]
+            if target_metadata is None:
+                continue
+            if source_metadata.sysid_shared(target_metadata):
+                compatible_names.append(name)
+
+        return compatible_names
+
     # endregion
 
     # region Validation
@@ -274,11 +312,14 @@ class EnvironmentManager:
                     "Rattlesnake.set_environment was given an object that "
                     "is not an EnvironmentMetadata class"
                 )
-            # Check for unique name
+            # Check for unique name (case-insensitive)
             environment_name = metadata.environment_name
-            if environment_name in environment_name_set:
-                raise RattlesnakeError("Environment names must be unique")
-            environment_name_set.add(environment_name)
+            normalized_name = environment_name.casefold()
+            if normalized_name in environment_name_set:
+                raise RattlesnakeError(
+                    "Environment names must be unique (case-insensitive)"
+                )
+            environment_name_set.add(normalized_name)
             # Validate metadata
             metadata.validate(hardware_metadata)
 
@@ -315,6 +356,13 @@ class EnvironmentManager:
         if self.environment_types[queue_name] not in SYSID_ENVIRONMENTS:
             raise RattlesnakeError(
                 f"{environment_name} is not a system identification environment"
+            )
+
+        if not isinstance(
+            self.environment_metadata[queue_name].sysid_metadata, SysIdMetadata
+        ):
+            raise RattlesnakeError(
+                f"{environment_name} does not have a system identification metadata object loaded to it."
             )
 
         if not isinstance(data_package, SysIdDataPackage):
@@ -564,3 +612,6 @@ class EnvironmentManager:
             self.queue_container.environment_command_queues[queue_name].flush(TASK_NAME)
 
     # endregion
+
+
+# endregion

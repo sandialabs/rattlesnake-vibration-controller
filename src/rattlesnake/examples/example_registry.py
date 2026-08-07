@@ -25,6 +25,28 @@ from rattlesnake.examples.hardware.stream_metadata import (
     stream_metadata_profile,
     stream_metadata_test_level,
 )
+from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
+    manual_skeleton_metadata,
+    netcdf_skeleton_metadata,
+    worksheet_skeleton_metadata,
+    skeleton_event_list,
+    worksheet_skeleton_event_list,
+    skeleton_instructions,
+)
+from rattlesnake.examples.environment.skeleton_sysid.skeleton_sysid_metadata import (
+    manual_skeleton_sysid_metadata,
+    netcdf_skeleton_sysid_metadata,
+    worksheet_skeleton_sysid_metadata,
+    skeleton_sysid_instructions,
+)
+from rattlesnake.examples.environment.read.read_metadata import (
+    manual_read_metadata,
+    netcdf_read_metadata,
+    worksheet_read_metadata,
+    read_instructions,
+    read_event_list,
+    worksheet_read_event_list,
+)
 from rattlesnake.examples.environment.time.time_metadata import (
     manual_time_metadata,
     netcdf_time_metadata,
@@ -75,6 +97,7 @@ from rattlesnake.examples.environment.transient.transient_metadata import (
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.streaming import StreamType
+import rattlesnake.examples.defaults as defaults
 
 # Hardware
 HARDWARE_DICT = {}
@@ -118,6 +141,21 @@ BLANK_ENVIRONMENT_DICT = {
     "netcdf": lambda x: None,
     "manual": lambda x: None,
 }
+SKELETON_DICT = {
+    "worksheet": worksheet_skeleton_metadata,
+    "netcdf": netcdf_skeleton_metadata,
+    "manual": manual_skeleton_metadata,
+}
+SKELETON_SYSID_DICT = {
+    "worksheet": worksheet_skeleton_sysid_metadata,
+    "netcdf": netcdf_skeleton_sysid_metadata,
+    "manual": manual_skeleton_sysid_metadata,
+}
+READ_DICT = {
+    "worksheet": worksheet_read_metadata,
+    "netcdf": netcdf_read_metadata,
+    "manual": manual_read_metadata,
+}
 TIME_DICT = {
     "worksheet": worksheet_time_metadata,
     "netcdf": netcdf_time_metadata,
@@ -144,11 +182,42 @@ TRANSIENT_DICT = {
     "netcdf": netcdf_transient_metadata,
 }
 ENVIRONMENT_DICT[EnvironmentType.NONE] = BLANK_ENVIRONMENT_DICT
+ENVIRONMENT_DICT[EnvironmentType.SKELETON] = SKELETON_DICT
+ENVIRONMENT_DICT[EnvironmentType.SYSID_SKELETON] = SKELETON_SYSID_DICT
+ENVIRONMENT_DICT[EnvironmentType.READ] = READ_DICT
 ENVIRONMENT_DICT[EnvironmentType.TIME] = TIME_DICT
 ENVIRONMENT_DICT[EnvironmentType.MODAL] = MODAL_DICT
 ENVIRONMENT_DICT[EnvironmentType.SINE] = SINE_DICT
 ENVIRONMENT_DICT[EnvironmentType.RANDOM] = RANDOM_DICT
 ENVIRONMENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_DICT
+
+# Example Files for Testing Suite
+EXAMPLE_NETCDF = {
+    EnvironmentType.SKELETON: defaults.DIRECTORY
+    + "/environment/skeleton/skeleton_v4.nc4",
+    EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
+    + "/environment/skeleton_sysid/skeleton_sysid_v4.nc4",
+    EnvironmentType.READ: defaults.DIRECTORY + "/environment/read/read_v4.nc4",
+    EnvironmentType.TIME: defaults.DIRECTORY + "/environment/time/time_v4.nc4",
+    EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/modal/modal_v4.nc4",
+    EnvironmentType.SINE: defaults.DIRECTORY + "/environment/sine/sine_v4.nc4",
+    EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/random/random_v4.nc4",
+    EnvironmentType.TRANSIENT: defaults.DIRECTORY
+    + "/environment/transient/transient_v4.nc4",
+}
+EXAMPLE_WORKSHEET = {
+    EnvironmentType.SKELETON: defaults.DIRECTORY
+    + "/environment/skeleton/skeleton_v4.xlsx",
+    EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
+    + "/environment/skeleton_sysid/skeleton_sysid_v4.xlsx",
+    EnvironmentType.READ: defaults.DIRECTORY + "/environment/read/read_v4.xlsx",
+    EnvironmentType.TIME: defaults.DIRECTORY + "/environment/time/time_v4.xlsx",
+    EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/modal/modal_v4.xlsx",
+    EnvironmentType.SINE: defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx",
+    EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/random/random_v4.xlsx",
+    EnvironmentType.TRANSIENT: defaults.DIRECTORY
+    + "/environment/transient/transient_v4.xlsx",
+}
 
 # System Identification
 SYSID_DICT = {
@@ -169,9 +238,24 @@ STREAM_DICT[StreamType.TEST_LEVEL] = stream_metadata_test_level
 # Event list
 EVENT_DICT = {}
 BLANK_EVENT_DICT = {
-    "worksheet": lambda x: None,
-    "netcdf": lambda x: None,
-    "manual": lambda x: None,
+    "worksheet": lambda: [],
+    "netcdf": lambda: [],
+    "manual": lambda: [],
+}
+SKELETON_EVENT_DICT = {
+    "manual": skeleton_event_list,
+    "netcdf": skeleton_event_list,
+    "worksheet": worksheet_skeleton_event_list,
+}
+SKELETON_SYSID_EVENT_DICT = {
+    "worksheet": lambda: [],
+    "netcdf": lambda: [],
+    "manual": lambda: [],
+}
+READ_EVENT_DICT = {
+    "manual": read_event_list,
+    "netcdf": read_event_list,
+    "worksheet": worksheet_read_event_list,
 }
 TIME_EVENT_DICT = {
     "manual": time_event_list,
@@ -199,6 +283,9 @@ TRANSIENT_EVENT_DICT = {
     "worksheet": worksheet_transient_event_list,
 }
 EVENT_DICT[EnvironmentType.NONE] = BLANK_EVENT_DICT
+EVENT_DICT[EnvironmentType.SKELETON] = SKELETON_EVENT_DICT
+EVENT_DICT[EnvironmentType.SYSID_SKELETON] = SKELETON_SYSID_EVENT_DICT
+EVENT_DICT[EnvironmentType.READ] = READ_EVENT_DICT
 EVENT_DICT[EnvironmentType.TIME] = TIME_EVENT_DICT
 EVENT_DICT[EnvironmentType.MODAL] = MODAL_EVENT_DICT
 EVENT_DICT[EnvironmentType.SINE] = SINE_EVENT_DICT
@@ -208,6 +295,9 @@ EVENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_EVENT_DICT
 # Instructions
 INSTRUCTIONS_DICT = {}
 INSTRUCTIONS_DICT[EnvironmentType.NONE] = lambda: None
+INSTRUCTIONS_DICT[EnvironmentType.SKELETON] = skeleton_instructions
+INSTRUCTIONS_DICT[EnvironmentType.SYSID_SKELETON] = skeleton_sysid_instructions
+INSTRUCTIONS_DICT[EnvironmentType.READ] = read_instructions
 INSTRUCTIONS_DICT[EnvironmentType.TIME] = time_instructions
 INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
 INSTRUCTIONS_DICT[EnvironmentType.SINE] = sine_instructions

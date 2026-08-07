@@ -10,7 +10,7 @@ import os
 # import time
 
 import numpy as np
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 from scipy.signal import windows
 from scipy.sparse import linalg
 from scipy import sparse
@@ -101,6 +101,35 @@ def load_specification(spec_path):
         start_time,
         name,
     )
+
+
+def save_specification(spec_path, spec):
+    """
+    Saves a sine specification to a .mat or .npz file
+    """
+    frequency = spec.breakpoint_table["frequency"]
+    amplitude = spec.breakpoint_table["amplitude"].T
+    phase = np.rad2deg(spec.breakpoint_table["phase"].T)
+    sweep_type = spec.breakpoint_table["sweep_type"][:-1]
+    sweep_rate = spec.breakpoint_table["sweep_rate"][:-1]
+    warning = np.transpose(spec.breakpoint_table["warning"], (1, 2, 3, 0))
+    abort = np.transpose(spec.breakpoint_table["abort"], (1, 2, 3, 0))
+    data = {
+        "frequency": frequency,
+        "amplitude": amplitude,
+        "phase": phase,
+        "sweep_type": sweep_type,
+        "sweep_rate": sweep_rate,
+        "warning": warning,
+        "abort": abort,
+        "start_time": spec.start_time,
+        "name": spec.name,
+    }
+    _, extension = os.path.splitext(spec_path)
+    if extension.lower() == ".mat":
+        savemat(spec_path, data)
+    else:
+        np.savez(spec_path, **data)
 
 
 def sine_sweep(

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>799</width>
-    <height>379</height>
+    <width>1134</width>
+    <height>491</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -152,48 +152,104 @@
          </layout>
         </item>
         <item>
-         <widget class="QTableWidget" name="device_table">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="window_size_label">
+            <property name="text">
+             <string>Window Size</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="window_size_spinbox">
+            <property name="minimum">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>1000000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.250000000000000</double>
+            </property>
+            <property name="value">
+             <double>5.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="channel_enable_table">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
           <column>
            <property name="text">
-            <string>Device</string>
+            <string>Channel</string>
            </property>
           </column>
           <column>
            <property name="text">
-            <string>Plot?</string>
+            <string/>
            </property>
           </column>
          </widget>
         </item>
+        <item>
+         <layout class="QGridLayout" name="check_button_grid">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="check_all_button">
+            <property name="toolTip">
+             <string>Checks all channels.</string>
+            </property>
+            <property name="text">
+             <string>Check All</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="uncheck_all_button">
+            <property name="toolTip">
+             <string>Unchecks all channels.</string>
+            </property>
+            <property name="text">
+             <string>Uncheck All</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="check_selected_button">
+            <property name="toolTip">
+             <string>Checks selected channels.</string>
+            </property>
+            <property name="text">
+             <string>Check Selected</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="uncheck_selected_button">
+            <property name="toolTip">
+             <string>Unchecks selected channels.</string>
+            </property>
+            <property name="text">
+             <string>Uncheck Selected</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QPushButton" name="add_device_button">
-         <property name="text">
-          <string>Add Device</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="remove_device_button">
-         <property name="text">
-          <string>Remove Device</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>

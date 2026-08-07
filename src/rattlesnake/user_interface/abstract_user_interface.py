@@ -12,7 +12,11 @@ from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.user_interface.ui_utilities import UICommands, EventWatcher
+from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
+    EventWatcher,
+    ThrottledCurve,
+)
 
 
 # region User Interface
@@ -40,8 +44,22 @@ class EnvironmentUI(ABC):
         self.run_widget = None
         self.event_thread = None
         self.event_watcher = None
+        self.throttled_curves = ThrottledCurve()
 
     # region State Sync
+    @property
+    def environment_command_queue(self):
+        """
+        This is so that interactive control laws can receive this data. The desired logic
+        around the environment_command_queue is to use rattlesnake.send_environment_command
+        so that there is some way to validate commands instead of putting directly.
+        """
+        queue_name = self.rattlesnake.environment_manager.queue_names_dict[
+            self.environment_name
+        ]
+
+        return self.rattlesnake.queue_container.environment_command_queues[queue_name]
+
     @property
     def active(self):
         try:
@@ -259,6 +277,8 @@ class EnvironmentUI(ABC):
         shut down. Needs to enable the user to start up the process again.
         """
 
+    # endregion
+
     # region Commands
     @property
     def log_file_queue(self) -> mp.Queue:
@@ -386,3 +406,8 @@ class EnvironmentUI(ABC):
                 (f"{self.log_name} Error", f"ERROR:\n\n{error_message}"),
             )
         )
+
+    # endregion
+
+
+# endregion

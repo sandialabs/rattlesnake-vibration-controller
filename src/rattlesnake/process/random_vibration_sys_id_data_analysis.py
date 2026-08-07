@@ -70,10 +70,10 @@ class RandomVibrationDataAnalysisUICommands(Enum):
 # endregion
 
 
+# region Data Analysis
 class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
 
-    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -139,17 +139,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         self.has_sent_interactive_control_transfer_function_results = False
         self.last_interactive_parameters = None
 
-    # endregion
-
     # region StateSync
-    def initialize_environment(self, data):
-        # This is a terrible way to do this. Basically, data is supposed to be just a str of
-        # environment name but in this case, the data analysis process requires knowledge of
-        # the original environment metadata so we are storing it here instead. Breaks chain
-        # of inheritance for this environment.
-        self.environment_metadata = data
-        super().initialize_environment(data.environment_name)
-
     def initialize_sysid_parameters(self, data: SysIdMetadata):
         self.parameters: SysIdMetadata
         super().initialize_sysid_parameters(data)  # This defines self.parameters
@@ -250,6 +240,8 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.control_function = getattr(
                 module, self.environment_metadata.control_python_function
             )
+
+    # endregion
 
     # region Commands
     def perform_control_prediction(self, data):  # pylint: disable=unused-argument
@@ -695,6 +687,8 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
         netcdf_dataset.close()
 
+    # endregion
+
 
 # endregion
 
@@ -709,6 +703,7 @@ def random_data_analysis_process(
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
     ping_alive_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event = None,
     process_name=None,
 ):
     """Process defining the random vibration control calculations and data analysis
@@ -745,4 +740,7 @@ def random_data_analysis_process(
         ping_alive_event,
     )
 
-    data_analysis_instance.run()
+    data_analysis_instance.run(shutdown_event)
+
+
+# endregion

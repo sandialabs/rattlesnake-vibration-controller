@@ -22,11 +22,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import copy
+import atexit
 import ctypes
 import multiprocessing as mp
 import os
 import re
+import signal
 import sys
 import time
 import traceback
@@ -49,6 +50,8 @@ from rattlesnake.load_utilities import (
     save_rattlesnake_to_workbook,
     save_profile_to_workbook,
     load_profile_from_workbook,
+    load_metadata_from_netcdf,
+    load_metadata_from_workbook,
 )
 from rattlesnake.profile_manager import VALID_COMMANDS, ProfileEvent
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
@@ -60,6 +63,7 @@ from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     UICommands,
+    TabIndices,
     EventWatcherError,
     EventWatcher,
     Updater,
@@ -70,6 +74,7 @@ from rattlesnake.user_interface.ui_utilities import (
     HardwareAssistModules,
     EditableCombobox,
     EditableSpinBox,
+    SysIdSharingDialog,
 )
 from rattlesnake.user_interface.ui_registry import (
     UI_HARDWARE_OPTIONS,
@@ -82,8 +87,12 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 # region Defaults
 # pyqtgraph.setConfigOption('leftButtonPan',False)
-pyqtgraph.setConfigOption("background", "w")
-pyqtgraph.setConfigOption("foreground", "k")
+PLOT_THEME_COLORS = {
+    "Light": ((255, 255, 255), (0, 0, 0)),
+    "Dark": ((32, 33, 36), (228, 231, 235)),
+}
+pyqtgraph.setConfigOption("background", PLOT_THEME_COLORS["Light"][0])
+pyqtgraph.setConfigOption("foreground", PLOT_THEME_COLORS["Light"][1])
 QtCore.QDir.addSearchPath("images", os.path.join(DIRECTORY, "user_interface", "themes", "images"))
 TASK_NAME = "UI"
 VERSION = "3.1.1"
@@ -92,13 +101,74 @@ RATTLESNAKE_UI_PATH = os.path.join(
 )
 BUFFER_ROWS = 10
 MIN_ROWS = 30
+THROTTLED_BUFFER = 1 / 20
+
+
+# endregion
+
+
+# region Launchers
+class RattlesnakeAppHandle:
+    def __init__(self, rattlesnake, rattlesnake_ui, app):
+        self.rattlesnake = rattlesnake
+        self.rattlesnake_ui = rattlesnake_ui
+        self.app = app
+
+    def __iter__(self):
+        return iter((self.rattlesnake, self.rattlesnake_ui, self.app))
+
+    def __enter__(self):
+        return self.rattlesnake, self.rattlesnake_ui, self.app
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.rattlesnake_ui.shutdown()
+        self.rattlesnake.shutdown()
+        return False
+
+
+def build_rattlesnake_app(
+    rattlesnake: RattlesnakeController,
+    *,
+    set_font_size: bool = True,
+    display_errors: bool = True,
+):
+    # Configure High DPI for UI scaling
+    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
+        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+
+    # Reuse an existing QApplication if one is already running
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(sys.argv)
+
+    # Set font size.
+    if set_font_size:
+        font_size = 10  # pt size
+        screen = app.primaryScreen()
+        dpi = screen.logicalDotsPerInch()
+        scale_factor = dpi / 96  # 96 DPI
+        font = app.font()
+        font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
+        app.setFont(font)
+
+    rattlesnake_ui = RattlesnakeUI(rattlesnake, display_errors=display_errors)
+
+    return RattlesnakeAppHandle(rattlesnake, rattlesnake_ui, app)
+
+
+# endregion
 
 
 # region User Interface
 class RattlesnakeUI(QtWidgets.QMainWindow):
     """Main user interface from which the rattlesnake controller object is controlled."""
 
-    def __init__(self, rattlesnake: RattlesnakeController):
+    def __init__(self, rattlesnake: RattlesnakeController, *, display_errors=True):
         """
         Initializes user interface from an existing rattlesnake controller object.
 
@@ -111,6 +181,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         rattlesnake : RattlesnakeController
             The rattlesnake controller object that the UI is going to represent.
         """
+        # Shutdown behavior
+        self._previous_sigint_handler = signal.signal(signal.SIGINT, self.on_keyboard_interrupt)
+        self._shutdown_complete = False
+        # atexit.register(self.shutdown)
+
         super(RattlesnakeUI, self).__init__()
 
         uic.loadUi(RATTLESNAKE_UI_PATH, self)
@@ -131,22 +206,29 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.threadpool.start(self.gui_updater)
         self.gui_updater.signals.update.connect(self.update_gui)
 
+        self.plot_flush_timer = QtCore.QTimer()
+        self.plot_flush_timer.timeout.connect(self.flush_environment_plots)
+        self.plot_flush_timer.start(int(THROTTLED_BUFFER * 1000))
+
         # Storage properties
         self.hardware_file = None
         self.lanxi_ip_addresses = []
+
+        # Debugging error
+        self._display_errors = display_errors
 
         # Complete UI layout
         self.connect_callbacks()
         self.complete_ui()
 
-        # Store any presets to the UI
+        # Store any presets within Rattlesnake to UI
         self.load_ui_from_rattlesnake()
 
-        # Show UI
-        self.show()
-
-        # Tell Rattlesnake it now has a gui
-        self.gui_update_queue.put((UICommands.GUI_SETUP_FINISHED, None))
+    def __del__(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
 
     def complete_ui(self):
         """
@@ -157,8 +239,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Disable all tabs except the first
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, False)
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -288,10 +370,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
         self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
         self.remove_environment_button.clicked.connect(self.remove_environment)
-        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(
-            self.rename_environment
-        )
         self.initialize_environments_button.clicked.connect(self.initialize_environments)
+        self.load_environment_button.clicked.connect(self.load_environment_from_file)
 
         # Acquisition
         self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
@@ -311,6 +391,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def change_color_theme(self, text: str):
         """Updates the color scheme of the UI"""
+        self.theme = text
+
+        background, foreground = PLOT_THEME_COLORS.get(text, PLOT_THEME_COLORS["Light"])
+        self.apply_plot_theme(background, foreground)
+        self.update_profile_plot()
+
         if text == "Light":
             self.setStyleSheet("")
         elif text == "Dark":
@@ -324,7 +410,33 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
 
-    # endregion
+    def apply_plot_theme(self, background, foreground):
+        """
+        This is very scuffed. Basically searches for plots and manually,
+        sets their color scheme based on the theme. This is done because
+        we use pyqtgraph.setConfigOption which overrides the default way
+        that pyqt deals with color themes.
+        """
+        pyqtgraph.setConfigOption("background", background)
+        pyqtgraph.setConfigOption("foreground", foreground)
+        for widget in QtWidgets.QApplication.instance().allWidgets():
+            if isinstance(widget, pyqtgraph.PlotWidget):
+                plot_items = [widget.getPlotItem()]
+            elif isinstance(widget, pyqtgraph.GraphicsLayoutWidget):
+                plot_items = [
+                    item for item in widget.ci.items if isinstance(item, pyqtgraph.PlotItem)
+                ]
+            else:
+                continue
+            widget.setBackground(background)
+            for plot_item in plot_items:
+                for axis_name in ("left", "right", "top", "bottom"):
+                    axis = plot_item.getAxis(axis_name)
+                    if axis is not None:
+                        axis.setPen(foreground)
+                        axis.setTextPen(foreground)
+                if plot_item.legend is not None:
+                    plot_item.legend.setLabelTextColor(foreground)
 
     # region Process
     @property
@@ -391,6 +503,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             timeout = self.timeout
 
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            # Disconnect before cancel(): the old watcher's queued signal can otherwise arrive after event_watcher is reassigned below and tear down the new watcher instead.
+            try:
+                self.event_watcher.ready.disconnect()
+                self.event_watcher.error.disconnect()
+            except TypeError:
+                pass
             self.event_watcher.cancel()
             self.cleanup_event_watcher()
         self.event_thread = QtCore.QThread()
@@ -414,6 +532,51 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.event_watcher.deleteLater()
             self.event_watcher = None
 
+    def recover_ui_after_crash(self):
+        self.cleanup_event_watcher()
+
+        self.initialize_hardware_button.setEnabled(True)
+        self.initialize_environments_button.setEnabled(True)
+        self.display_acquisition_ended()
+        if self.rattlesnake.state in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+        ):
+            self.display_acquisition_started()
+
+        self.recover_sysid_crash()
+        self.recover_environment_crash()
+
+        self.start_profile_button.setEnabled(True)
+        self.stop_profile_button.setEnabled(False)
+
+    def recover_sysid_crash(self):
+        sysid_active_environments = self.rattlesnake.environment_manager.sysid_active_environments
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_ui.environment_type not in SYSID_ENVIRONMENTS:
+                continue
+            if environment_name in sysid_active_environments:
+                environment_ui.display_system_id_started()
+            else:
+                environment_ui.display_system_id_ended()
+
+    def recover_environment_crash(self):
+        environment_active_environments = (
+            self.rattlesnake.environment_manager.environment_active_environments
+        )
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_name in environment_active_environments:
+                environment_ui.display_environment_started()
+            else:
+                environment_ui.display_environment_ended()
+
+    def flush_environment_plots(self):
+        """
+        Pushes buffered live-plot data into the plot widgets.
+        """
+        for environment_ui in self.environment_uis.values():
+            environment_ui.throttled_curves.flush()
+
     def update_gui(self, queue_data: tuple[UICommands, Any]):
         """Update the graphical interface for the main controller
 
@@ -432,16 +595,31 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         match command:
             case UICommands.ERROR:
                 dialog_title, error_message = data
-                error_message_qt(dialog_title, error_message)
+                self.recover_ui_after_crash()
+                if self._display_errors:
+                    error_message_qt(dialog_title, error_message)
             case UICommands.HARDWARE_STARTED:
                 self.display_acquisition_started()
             case UICommands.HARDWARE_ENDED:
                 self.display_acquisition_ended()
             case UICommands.COMPLETED_SYSTEM_ID:
-                environment, _ = data
+                environment, package = data
                 print(f"System Id Completed for {environment}")
-                self.rattlesnake_tabs.setTabEnabled(3, True)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+            case UICommands.SHARE_SYSTEM_ID:
+                environment, package = data
+                sysid_metadata, sysid_data_package = package
+                target_environments = self.check_sysid_package_sharing(environment)
+                if target_environments:
+                    for target in target_environments:
+                        try:
+                            self.rattlesnake.initialize_system_id(sysid_metadata, target)
+                            self.rattlesnake.load_system_id_from_package(
+                                target, sysid_data_package, ask_to_share=False
+                            )
+                        except Exception as e:
+                            self.display_error(e)
             case UICommands.MONITOR:
                 if self.channel_monitor_window is not None:
                     if not self.channel_monitor_window.isVisible():
@@ -461,8 +639,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.rattlesnake_tabs.setCurrentIndex(data)
             case UICommands.DISABLE_TAB:
                 self.rattlesnake_tabs.setTabEnabled(data, False)
-            case UICommands.GUI_SETUP_FINISHED:
+            case UICommands.GUI_OPENED:
                 self.rattlesnake.setup_gui()
+            case UICommands.GUI_CLOSED:
+                self.rattlesnake.close_gui()
             case _:
                 widget = getattr(self, command)
                 if isinstance(widget, QtWidgets.QDoubleSpinBox):
@@ -502,8 +682,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def load_ui_from_rattlesnake(self):
         """
-        Gets the current state of the rattlesnake object and formats
-        user interface to represent that state.
+        Gets the current state of the rattlesnake object and formats user
+        interface to represent that state.
+
+        This function does A LOT of heavy lifting when it comes to syncing
+        the user interface with the rattlesnake object. Most of the issues
+        with launching rattlesnake adaptively come from the UI determining
+        the ownership and visibility of it's own widgets. This means that
+        a lot of enabling/disabling will not happen when rattlesnake does
+        not have an active gui managing itself. This function must figure
+        out what logic went on before launching the gui and recreate the
+        missing pieces.
         """
         # Get rattlesnake state
         state = self.rattlesnake.state
@@ -513,8 +702,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Reset UI
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, False)
 
         environment_names = list(self.environment_uis.keys())
         for environment_name in environment_names:
@@ -534,14 +723,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_environments()
                 # Enable next tab (sysid/profile)
                 if self.has_system_id:
-                    # There is an edge case that helps us here: If the engine has had a system id loaded to it,
-                    # the abstract sys id data process will put the system id completed command to the ui gui
-                    # queue which is processed in order when the UI launches, therefore enabling the next tabs
-                    self.rattlesnake_tabs.setTabEnabled(2, True)
-                    self.rattlesnake_tabs.setCurrentIndex(2)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
+                    self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
+                    if any(self.rattlesnake.environment_manager.environment_sysid_stored_events):
+                        self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+                        self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
                 else:
-                    self.rattlesnake_tabs.setTabEnabled(4, True)
-                    self.rattlesnake_tabs.setCurrentIndex(4)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+                    self.rattlesnake_tabs.setCurrentIndex(TabIndices.PROFILE.value)
                 if has_profile:
                     self.load_ui_from_profile()
                     if not self.has_system_id:
@@ -552,8 +741,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 # Enable sys id tab
-                self.rattlesnake_tabs.setTabEnabled(2, True)
-                self.rattlesnake_tabs.setCurrentIndex(2)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
+                self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
                 if has_profile:
                     self.load_ui_from_profile()
                 if has_streamed:
@@ -562,30 +751,30 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 if self.has_system_id:
-                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
                 if self.has_test_pred:
-                    self.rattlesnake_tabs.setTabEnabled(3, True)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
                 if has_profile:
                     self.load_ui_from_profile()
                 self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
-                self.rattlesnake_tabs.setCurrentIndex(5)
+                self.rattlesnake_tabs.setCurrentIndex(TabIndices.RUN.value)
             case RattlesnakeState.ENVIRONMENT_ACTIVE:
                 self.load_ui_from_hardware()
                 self.load_ui_from_environments()
                 if self.has_system_id:
-                    self.rattlesnake_tabs.setTabEnabled(2, True)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
                 if self.has_test_pred:
-                    self.rattlesnake_tabs.setTabEnabled(3, True)
-                self.rattlesnake_tabs.setTabEnabled(4, True)
+                    self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+                self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
                 if has_profile:
                     self.load_ui_from_profile()
                 self.initialize_profile()
                 self.load_ui_from_stream_metadata()
                 self.display_acquisition_started()
-                self.rattlesnake_tabs.setCurrentIndex(5)
+                self.rattlesnake_tabs.setCurrentIndex(TabIndices.RUN.value)
                 # Display environment started for each active environment
                 for (
                     queue_name,
@@ -706,17 +895,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         hardware_metadata = self.rattlesnake.hardware_metadata
         environment_metadata_dict = self.rattlesnake.environment_metadata
 
-        for environment_idx, environment_metadata in enumerate(environment_metadata_dict.values()):
+        for environment_metadata in environment_metadata_dict.values():
             # Add environments
             environment_type = environment_metadata.environment_type
             environment_name = environment_metadata.environment_name
             self.add_environment(environment_type, environment_name)
-            # print(f"Adding environment with {environment_type=}")
-            # print(f"Environment name is {environment_name}")
-            if (
-                environment_name not in self.environment_uis.keys()
-            ):  # Dont rename if they were already using default name
-                self.rename_environment(environment_idx, environment_name)
 
             self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
             self.environment_uis[environment_name].set_environment_metadata(environment_metadata)
@@ -733,7 +916,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         streaming_environment_items = [""] + list(self.environment_uis.keys())
         self.streaming_environment_select_combobox.clear()
         self.streaming_environment_select_combobox.addItems(streaming_environment_items)
-        self.rattlesnake_tabs.setTabEnabled(1, True)
+        self.rattlesnake_tabs.setTabEnabled(TabIndices.ENVIRONMENT.value, True)
 
     def load_ui_from_profile(self):
         """
@@ -758,9 +941,20 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 timestamp_spinbox = self.profile_table.cellWidget(row, 0)
                 timestamp_spinbox.setValue(timestamp)
                 environment_combobox = self.profile_table.cellWidget(row, 1)
+                environment_combobox.blockSignals(True)
+                environment_combobox.clear()
+                environment_combobox.addItem(environment_name)
                 environment_combobox.setCurrentText(environment_name)
+                environment_combobox.blockSignals(False)
                 command_combobox = self.profile_table.cellWidget(row, 2)
+                command_combobox.blockSignals(True)
+                command_combobox.clear()
+                command_combobox.addItem(
+                    UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label,
+                    userData=UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
+                )
                 command_combobox.setCurrentText(UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label)
+                command_combobox.blockSignals(False)
                 data_item = QtWidgets.QTableWidgetItem("")
                 data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
                 self.profile_table.setItem(row, 3, data_item)
@@ -808,7 +1002,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         Saves an excel template from the current rattlesnake object state. Inputs
         current saved values into the template.
-        TODO implement blank environment template loading~
         """
         filepath, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
@@ -826,6 +1019,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             hardware_metadata.channel_list = channel_list
 
             # Environments
+            environment_channel_list = self.get_environment_channel_list()
             environment_metadata_dict = {}
             for environment_ui in self.environment_uis.values():
                 if environment_ui.hardware_metadata is None:
@@ -834,6 +1028,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         environment_ui.environment_type
                     )
                 else:
+                    # Resync the channel list from the environment channel table
+                    environment_ui.hardware_metadata.channel_list = environment_channel_list[
+                        environment_ui.environment_name
+                    ]
                     metadata = environment_ui.get_environment_metadata(channel_list)
                     environment_metadata_dict[environment_ui.environment_name] = metadata
 
@@ -866,6 +1064,35 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         except Exception as e:  # pylint: disable=broad-exception-caught
             self.display_error(e)
             return
+
+    def check_sysid_package_sharing(self, environment_name, parent=None):
+        # Check for other viable sysid environments
+        try:
+            targets = self.rattlesnake.environment_manager.find_sysid_compatible_environments(
+                environment_name
+            )
+        except RattlesnakeError:
+            return
+        if not targets:
+            return
+
+        # Ask user if they wish to share the data package
+        response = QtWidgets.QMessageBox.question(
+            self,
+            "Share Sysid Data",
+            "Would you like to apply this system identification to other environments?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if response != QtWidgets.QMessageBox.Yes:
+            return
+
+        # Pull up sharing dialog box
+        dialog = SysIdSharingDialog(targets, parent=parent)
+        if dialog.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        selected_targets = dialog.selected_targets()
+        return selected_targets
 
     # endregion
 
@@ -1175,37 +1402,28 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Creates an IP Lookup window"""
         ipv4_pattern = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
         ipv6_pattern = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
-        stored_addresses = self.lanxi_ip_addresses
 
-        bknum = []
-        ipv4 = []
-        ipv6 = []
-        for ip_address in stored_addresses:
-            bknum.append(ip_address.host_name)
-            ipv4.append(ip_address.ipv4_address)
-            ipv6.append(ip_address.ipv6_address)
+        # Copy so we don't touch self.lanxi_ip_addresses until the manager closes
+        candidate_addresses = list(self.lanxi_ip_addresses)
 
-        # Loop through table devices and append unique IP addresses
+        # Loop through table devices and append candidate IP addresses. The
+        # manager itself is responsible for deduplicating/merging these.
         for row in range(self.channel_table.rowCount()):
             table_item = self.channel_table.item(row, 10)
             if table_item is None:
                 table_text = ""
             else:
                 table_text = table_item.text()
+            if table_text == "":
+                continue
             if re.search(ipv4_pattern, table_text) is not None:
-                if table_text not in ipv4:
-                    stored_addresses.append(IPAddress(None, table_text, None))
-                    ipv4.append(table_text)
+                candidate_addresses.append(IPAddress(None, table_text, None))
             elif re.search(ipv6_pattern, table_text) is not None:
-                if table_text not in ipv6:
-                    stored_addresses.append(IPAddress(None, None, table_text))
-                    ipv6.append(table_text)
-            elif table_text != "":
-                if table_text not in bknum:
-                    stored_addresses.append(IPAddress(table_text, None, None))
-                    bknum.append(table_text)
+                candidate_addresses.append(IPAddress(None, None, table_text))
+            else:
+                candidate_addresses.append(IPAddress(table_text, None, None))
 
-        ip_manager = IPAddressManager(stored_addresses)
+        ip_manager = IPAddressManager(candidate_addresses)
         ip_manager.exec()
         self.lanxi_ip_addresses = ip_manager.ip_addresses
 
@@ -1247,7 +1465,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                             self.channel_table.setCellWidget(row, col, combobox)
                         case HardwareAssistModules.SPINBOX:
                             spinbox = EditableSpinBox(valid_values[0], valid_values[1], attr_value)
-                            spinbox.stringValueChanged.connect(
+                            spinbox.editingFinishedText.connect(
                                 lambda text, row=row, col=col: self.assist_channel_table_update(
                                     text, row, col
                                 )
@@ -1273,7 +1491,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                             self.channel_table.setCellWidget(row, col, combobox)
                         case HardwareAssistModules.SPINBOX:
                             spinbox = EditableSpinBox(valid_values[0], valid_values[1])
-                            spinbox.stringValueChanged.connect(
+                            spinbox.editingFinishedText.connect(
                                 lambda text, row=row, col=col: self.assist_channel_table_update(
                                     text, row, col
                                 )
@@ -1305,83 +1523,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.channel_table.setCellWidget(row, col, combobox)
                 case HardwareAssistModules.SPINBOX:
                     spinbox = EditableSpinBox(valid_values[0], valid_values[1], attr_value)
-                    spinbox.stringValueChanged.connect(
+                    spinbox.editingFinishedText.connect(
                         lambda text, row=row, col=col: self.assist_channel_table_update(
                             text, row, col
                         )
                     )
                     self.channel_table.setCellWidget(row, col, spinbox)
-
-    # def sample_rate_update(self):
-    #     """Updates the sample rate selector based on valid available rates"""
-    #     if self.hardware_selector.currentIndex() == 2:
-    #         current_value = self.sample_rate_selector.value()
-    #         valid_dp_sample_rates = np.array(
-    #             [
-    #                 16,
-    #                 20,
-    #                 25,
-    #                 32,
-    #                 40,
-    #                 50,
-    #                 64,
-    #                 80,
-    #                 100,
-    #                 128,
-    #                 160,
-    #                 200,
-    #                 256,
-    #                 320,
-    #                 400,
-    #                 512,
-    #                 640,
-    #                 800,
-    #                 1024,
-    #                 1280,
-    #                 1600,
-    #                 2048,
-    #                 2560,
-    #                 3200,
-    #                 4096,
-    #                 5120,
-    #                 6400,
-    #                 8192,
-    #                 10240,
-    #                 12800,
-    #                 20480,
-    #                 25600,
-    #                 40960,
-    #                 51200,
-    #                 102400,
-    #             ]
-    #         )
-    #         closest_index = np.argmin(abs(valid_dp_sample_rates - current_value))
-    #         closest_rate = valid_dp_sample_rates[closest_index]
-    #         # Check if it is either one above or one below a previous rate
-    #         if (
-    #             current_value - closest_rate == 1
-    #             and closest_index != len(valid_dp_sample_rates) - 1
-    #         ):
-    #             closest_index += 1
-    #             closest_rate = valid_dp_sample_rates[closest_index]
-    #         elif current_value - closest_rate == -1 and closest_index != 0:
-    #             closest_index -= 1
-    #             closest_rate = valid_dp_sample_rates[closest_index]
-    #         self.sample_rate_selector.blockSignals(True)
-    #         self.sample_rate_selector.setValue(closest_rate)
-    #         self.sample_rate_selector.blockSignals(False)
-
-    # def task_trigger_update(self):
-    #     """Updates task trigger widgets based on other widget's selections"""
-    #     if (
-    #         self.hardware_selector.currentIndex() == 0
-    #         and self.task_trigger_selector.currentIndex() == 2
-    #     ):
-    #         self.task_trigger_output_selector.show()
-    #         self.task_trigger_output_label.show()
-    #     else:
-    #         self.task_trigger_output_selector.hide()
-    #         self.task_trigger_output_label.hide()
 
     def select_hardware_file(self):
         filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
@@ -1453,10 +1600,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.update_environment_tabs()
         num_environments = len(self.environment_uis)
         if num_environments == 0:
-            self.rattlesnake_tabs.setTabEnabled(1, False)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.ENVIRONMENT.value, False)
         else:
-            self.rattlesnake_tabs.setTabEnabled(1, True)
-            self.rattlesnake_tabs.setCurrentIndex(1)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.ENVIRONMENT.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.ENVIRONMENT.value)
 
     def initialize_hardware_error(self, error_message):
         # Clear QThread
@@ -1650,24 +1797,24 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 )
 
         # System Identification tab
-        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, False)
         self.system_id_environment_tabs.setCurrentIndex(-1)
         self.system_id_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
             system_id_widget = environment_ui.system_id_widget
             if system_id_widget is not None:
                 self.system_id_environment_tabs.addTab(system_id_widget, environment_name)
-                self.rattlesnake_tabs.tabBar().setTabVisible(2, True)
+                self.rattlesnake_tabs.setTabVisible(TabIndices.SYSTEM_ID.value, True)
 
         # Prediction tab
-        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, False)
         self.test_prediction_environment_tabs.setCurrentIndex(-1)
         self.test_prediction_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
             prediction_widget = environment_ui.prediction_widget
             if prediction_widget is not None:
                 self.test_prediction_environment_tabs.addTab(prediction_widget, environment_name)
-                self.rattlesnake_tabs.tabBar().setTabVisible(3, True)
+                self.rattlesnake_tabs.setTabVisible(TabIndices.PREDICTION.value, True)
 
         # Run tab
         self.run_environment_tabs.setCurrentIndex(-1)
@@ -1682,7 +1829,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.run_environment_tabs.widget(i).setEnabled(False)
 
     def add_environment(
-        self, environment_type: str | EnvironmentType, environment_name: str = None
+        self,
+        environment_type: str | EnvironmentType,
+        environment_name: str = None,
     ):
         """Function used to add an environment"""
         # If comming from UI, environment_type will be text in combobox
@@ -1692,17 +1841,45 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if environment_type is None:
             return
 
+        # This has to be this way because excel is casefold stuff
+        existing_names_casefold = {name.casefold() for name in self.environment_uis.keys()}
+
         if environment_name is None:
             idx = 0
-            environment_name = f"{environment_type.name} {idx}"
-            while environment_name in self.environment_uis.keys():
+            suggested_name = f"{environment_type.name} {idx}"
+            while suggested_name.casefold() in existing_names_casefold:
                 idx += 1
-                environment_name = f"{environment_type.name} {idx}"
-        else:
-            if environment_name in self.environment_uis.keys():
-                raise RattlesnakeError(
-                    f"Environment name {environment_name} already exists.  Please use a unique name."
+                suggested_name = f"{environment_type.name} {idx}"
+
+            while True:
+                environment_name, ok_chosen = QtWidgets.QInputDialog.getText(
+                    self,
+                    "Add Environment",
+                    "Enter environment name:",
+                    text=suggested_name,
                 )
+                if not ok_chosen:
+                    self.add_environment_combobox.blockSignals(True)
+                    self.add_environment_combobox.setCurrentIndex(0)
+                    self.add_environment_combobox.blockSignals(False)
+                    return
+
+                environment_name = environment_name.strip()
+                if not environment_name:
+                    self.display_error("Environment name cannot be empty")
+                    continue
+                if environment_name.casefold() in existing_names_casefold:
+                    self.display_error(
+                        f"An environment named '{environment_name}' already "
+                        "exists (names are case-insensitive)."
+                    )
+                    continue
+                break
+        elif environment_name.casefold() in existing_names_casefold:
+            raise RattlesnakeError(
+                f"An environment named '{environment_name}' already exists "
+                "(names are case-insensitive)"
+            )
 
         environment_ui_class = ENVIRONMENT_UIS[environment_type]
         environment_ui = environment_ui_class(environment_name, self.rattlesnake)
@@ -1756,47 +1933,80 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if len(self.environment_uis) == 0:
             self.environment_channel_table.hide()
 
-    def rename_environment(self, col_idx: int, new_name: str = None):
-        """Function to rename an environment
-
-        Parameters
-        ----------
-        index : int :
-            The index of the environment to rename
+    def load_environment_from_file(self):
         """
-        print(f"Renaming UI {col_idx} to {new_name}")
-        # Pull header text from environment_channel_table
-        header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
-        current_name = header_item.text()
-
-        # If name not given, ask user for a name
-        if not new_name:
-            # Create dialog box to get a new name
-            new_name, ok_chosen = QtWidgets.QInputDialog.getText(
-                self, "Rename Tab", "Enter new tab name:", text=current_name
-            )
-            if not ok_chosen:
-                return
-            new_name = new_name.strip()
-            if not new_name:
-                return
-
-        # Make sure name does not already exist
-        if new_name in self.environment_uis:
-            self.display_error("The new name already exists. Please choose a different name.")
+        Loads environment metadata from a worksheet or netCDF file into the
+        currently selected tab on the Environment Definition tab.
+        """
+        current_index = self.environment_definition_environment_tabs.currentIndex()
+        if current_index < 0:
+            self.display_error("Please select an environment tab to load a file into")
             return
 
-        # Replace old name in dict with new name while keeping order
-        # This is scuffed but is very specific to this case
-        ordered_dict = {}
-        for environment_name, environment_ui in self.environment_uis.items():
-            if environment_name == current_name:
-                environment_ui.environment_name = new_name
-                ordered_dict[new_name] = environment_ui
+        environment_name = self.environment_definition_environment_tabs.tabText(current_index)
+        environment_ui = self.environment_uis[environment_name]
+
+        filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Load Environment",
+            filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+        )
+        if filepath == "":
+            return
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        _, filetype = os.path.splitext(filepath)
+
+        try:
+            match filetype:
+                case ".nc4":
+                    dataset = netCDF4.Dataset(filepath)
+                    _, environment_metadata_list = load_metadata_from_netcdf(dataset)
+                case ".xlsx":
+                    workbook = openpyxl.load_workbook(filepath, read_only=True)
+                    _, environment_metadata_list, _ = load_metadata_from_workbook(workbook)
+                case _:
+                    self.display_error(f"Unsupported file type: {filetype}")
+                    return
+
+            matching_metadata = [
+                metadata
+                for metadata in environment_metadata_list
+                if metadata.environment_type == environment_ui.environment_type
+            ]
+
+            if not matching_metadata:
+                self.display_error(
+                    f"No {environment_ui.environment_type.name} environments "
+                    f"were found in {filepath}"
+                )
+                return
+            elif len(matching_metadata) == 1:
+                environment_metadata = matching_metadata[0]
             else:
-                ordered_dict[environment_name] = environment_ui
-        self.environment_uis = ordered_dict
-        header_item.setText(new_name)
+                names = [metadata.environment_name for metadata in matching_metadata]
+                name, ok_chosen = QtWidgets.QInputDialog.getItem(
+                    self,
+                    "Select Environment",
+                    "Multiple matching environments were found in the file. "
+                    "Select the one to load:",
+                    names,
+                    editable=False,
+                )
+                if not ok_chosen:
+                    return
+                environment_metadata = matching_metadata[names.index(name)]
+
+            # Rename the loaded metadata so it applies to the currently open tab
+            environment_metadata.environment_name = environment_name
+
+            environment_ui.set_environment_metadata(environment_metadata)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
+            return
 
     def initialize_environments(self):
         self.log("Initializing Environment")
@@ -1812,18 +2022,21 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         try:
             # Build environment metadata list
-            environment_metadata_list = []
-            for environment_ui in self.environment_uis.values():
-                metadata = environment_ui.get_environment_metadata(
+            environment_metadata_list = [
+                environment_ui.get_environment_metadata(
                     self.rattlesnake.hardware_metadata.channel_list
                 )
-                environment_ui.initialize_environment(metadata)
-                environment_metadata_list.append(metadata)
+                for environment_ui in self.environment_uis.values()
+            ]
 
-            # Send hardware metadata to rattlesnake
             environment_metadata = self.rattlesnake.initialize_environments(
                 environment_metadata_list
             )
+
+            for environment_ui, metadata in zip(
+                self.environment_uis.values(), environment_metadata_list
+            ):
+                environment_ui.initialize_environment(metadata)
 
         except Exception as e:
             self.initialize_environments_error(e)
@@ -1857,14 +2070,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_environments_button.setEnabled(True)
 
         if self.has_system_id:
-            self.rattlesnake_tabs.setTabEnabled(2, True)
-            self.rattlesnake_tabs.setCurrentIndex(2)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.SYSTEM_ID.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.SYSTEM_ID.value)
         elif self.has_test_pred:
-            self.rattlesnake_tabs.setTabEnabled(3, True)
-            self.rattlesnake_tabs.setCurrentIndex(3)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.PREDICTION.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.PREDICTION.value)
         else:
-            self.rattlesnake_tabs.setTabEnabled(4, True)
-            self.rattlesnake_tabs.setCurrentIndex(4)
+            self.rattlesnake_tabs.setTabEnabled(TabIndices.PROFILE.value, True)
+            self.rattlesnake_tabs.setCurrentIndex(TabIndices.PROFILE.value)
 
     def initialize_environments_error(self, error_message):
         # Clear QThread
@@ -2172,13 +2385,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             lambda text, row=selected_row: self.update_profile_operations(text, row)
         )
 
-        operation_combobox = QtWidgets.QComboBox()
+        command_combobox = QtWidgets.QComboBox()
         valid_commands = VALID_COMMANDS["Global"]
         valid_operations = [command.label for command in valid_commands]
         for command, operation in zip(valid_commands, valid_operations):
-            operation_combobox.addItem(operation, userData=command)
-        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
-        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
+            command_combobox.addItem(operation, userData=command)
+        self.profile_table.setCellWidget(selected_row, 2, command_combobox)
+        command_combobox.currentIndexChanged.connect(self.update_profile_plot)
 
         data_item = QtWidgets.QTableWidgetItem()
         self.profile_table.setItem(selected_row, 3, data_item)
@@ -2207,7 +2420,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             environment_type = self.environment_uis[environment_name].environment_type
 
         # Find valid commands for that environment type
-        valid_commands = VALID_COMMANDS[environment_type]
+        valid_commands = VALID_COMMANDS[environment_type].copy()
+        valid_commands.remove(
+            UICommands.SET_ENVIRONMENT_INSTRUCTIONS
+        )  # Remove this from the user interface
         valid_operations = [command.label for command in valid_commands]
 
         # Set operation combobox to those commands
@@ -2227,6 +2443,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         plot_item.clear()
         plot_item.showGrid(True, True, 0.25)
         plot_item.disableAutoRange()
+        plot_item.setLabel("bottom", "Time (s)")
 
         if self.theme == "Light":
             text_color = (0, 0, 0)
@@ -2349,8 +2566,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.run_profile_widget.hide()
         else:
             self.run_profile_widget.show()
-        self.rattlesnake_tabs.setTabEnabled(5, True)
-        self.rattlesnake_tabs.setCurrentIndex(5)
+        self.rattlesnake_tabs.setTabEnabled(TabIndices.RUN.value, True)
+        self.rattlesnake_tabs.setCurrentIndex(TabIndices.RUN.value)
 
     def start_profile(self):
         """
@@ -2472,6 +2689,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.stop_profile_error(e)
             return
 
+        # This does not use an event watcher as the stop_acquisition
+        # function calls this which would overwrite it anyways.
+        if self.event_watcher is not None:
+            try:
+                self.event_watcher.ready.disconnect()
+                self.event_watcher.error.disconnect()
+            except TypeError:
+                pass
+            self.event_watcher.cancel()
+        self.profile_closed_out()
+
     def stop_profile_error(self, error):
         # Show error
         self.display_error(error)
@@ -2481,7 +2709,33 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     # endregion
 
-    # region Shutdown
+    # region PyQt Overrides
+    def show(self):
+        """
+        Refresh the UI from the current Rattlesnake controller state whenever
+        the window is shown.
+        """
+        try:
+            self.load_ui_from_rattlesnake()
+            # setup_gui has to happen after sysid commands are read so this has to go
+            # to the end of the queue
+            self.gui_update_queue.put((UICommands.GUI_OPENED, None))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.display_error(e)
+
+        super().show()
+
+    def on_keyboard_interrupt(self, signum, frame):
+        self.close()
+
+    def shutdown(self):
+        if self._shutdown_complete:
+            return
+        print("Rattlesnake UI Shutting Down")
+        self.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.threadpool.waitForDone()
+        self._shutdown_complete = True
+
     def closeEvent(self, event: QtGui.QCloseEvent):  # pylint: disable=invalid-name
         """
         Event triggered when closing the software to gracefully shut down.
@@ -2491,9 +2745,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         event : QtGui.QCloseEvent
             The close event, which is accepted.
         """
-        self.gui_update_queue.put((GlobalCommands.QUIT, None))
-        self.threadpool.waitForDone()
+        # Close event dialogs
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if widget is not self and isinstance(widget, QtWidgets.QDialog) and widget.isVisible():
+                widget.close()
 
+        self.gui_update_queue.put((UICommands.GUI_CLOSED, None))
         event.accept()
 
     # endregion
+
+
+# endregion

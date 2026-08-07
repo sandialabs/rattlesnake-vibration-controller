@@ -8,8 +8,11 @@ import netCDF4 as nc4
 from qtpy import QtWidgets, uic, QtCore
 
 from rattlesnake.engine import RattlesnakeController
-from rattlesnake.utilities import DIRECTORY, load_python_module
-from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
+from rattlesnake.utilities import (
+    DIRECTORY,
+    load_python_module,
+    save_rattlesnake_to_netcdf,
+)
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
@@ -1286,7 +1289,7 @@ class ModalUI(EnvironmentUI):
         save_rattlesnake_to_netcdf(
             self.netcdf_handle,
             self.rattlesnake.hardware_metadata,
-            self.rattlesnake.environment_metadata,
+            {self.environment_name: self.environment_metadata},
         )  # This is scuffed but is an edge case
         group_handle = self.netcdf_handle.groups[self.environment_name]
         group_handle.createDimension("fft_lines", self.environment_metadata.fft_lines)

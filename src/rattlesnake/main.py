@@ -27,7 +27,9 @@ from qtpy import QtWidgets, QtCore
 
 # from rattlesnake.process.streaming import streaming_process
 from rattlesnake.engine import RattlesnakeController
-from rattlesnake.user_interface.user_interface import RattlesnakeUI
+from rattlesnake.user_interface.user_interface import (
+    build_rattlesnake_app,
+)
 
 
 def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
@@ -40,33 +42,9 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     rattlesnake : RattlesnakeController
         The rattlesnake controller object that the UI is going to represent.
     """
-    # Fix to scale font for different size monitors
-    font_size = 10  # pt size
-    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):  # PyQt5 only
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
-        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
-
-    # Build app
-    app = QtWidgets.QApplication(sys.argv)
-
-    # Scale app to current monitor
-    screen = app.primaryScreen()
-    dpi = screen.logicalDotsPerInch()
-    scale_factor = dpi / 96  # 96 DPI
-    font = app.font()
-    font.setPointSizeF(font_size * scale_factor)  # base font is 12pt
-    app.setFont(font)
-
-    # Execute UI object
-    _ = RattlesnakeUI(rattlesnake)
-    app.exec_()
-
-    # Shutdown processes
-    rattlesnake.shutdown()
+    with build_rattlesnake_app(rattlesnake) as (rattlesnake, rattlesnake_ui, app):
+        rattlesnake_ui.show()
+        app.exec_()
 
 
 def main():

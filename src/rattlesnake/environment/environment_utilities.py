@@ -25,10 +25,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import Enum
 
 
-class ControlTypes(Enum):
-    pass
-
-
 class EnvironmentType(Enum):
     """Enumeration of the possible control types"""
 
@@ -37,7 +33,9 @@ class EnvironmentType(Enum):
     TRANSIENT = 2
     SINE = 3
     SDS = 4
-    TIME = 5
-    # NONLINEAR = 6
-    MODAL = 7
+    MODAL = 5
+    TIME = 6
+    SKELETON = 7
+    SYSID_SKELETON = 8
+    READ = 9
     # Add new environment types here

@@ -46,7 +46,9 @@ def netcdf_sine_metadata(hardware_metadata):
     return metadata
 
 
-def manual_sine_metadata(hardware_metadata):
+def manual_sine_metadata(hardware_metadata, **overrides):
+    """Builds a SineMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. samples_per_frame=100)."""
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     sample_rate = hardware_metadata.sample_rate
     samples_per_frame = 50
@@ -73,7 +75,7 @@ def manual_sine_metadata(hardware_metadata):
     response_transformation_matrix = None
     output_transformation_matrix = None
 
-    return SineMetadata(
+    kwargs = dict(
         environment_name=ENVIRONMENT_NAME,
         channel_list_bools=channel_list_bools,
         sample_rate=sample_rate,
@@ -101,6 +103,8 @@ def manual_sine_metadata(hardware_metadata):
         response_transformation_matrix=response_transformation_matrix,
         output_transformation_matrix=output_transformation_matrix,
     )
+    kwargs.update(overrides)
+    return SineMetadata(**kwargs)
 
 
 def create_sine_specification():

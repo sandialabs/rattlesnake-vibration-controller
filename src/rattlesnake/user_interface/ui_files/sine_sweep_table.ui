@@ -151,6 +151,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="save_breakpoints_button">
+           <property name="text">
+            <string>Save Specification...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="remove_tone_button">
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Tone&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes this entire sine tone from the test specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

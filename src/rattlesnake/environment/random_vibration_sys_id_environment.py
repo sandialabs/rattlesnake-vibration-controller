@@ -38,6 +38,7 @@ from typing import List
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
+import scipy.signal as sig
 
 from rattlesnake.environment.random_vibration_sys_id_utilities import (
     load_specification,
@@ -60,9 +61,11 @@ from rattlesnake.environment.abstract_sysid_environment import (
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.utilities import (
     GlobalCommands,
+    RattlesnakeError,
     VerboseMessageQueue,
     db2scale,
     load_python_module,
+    worksheet_cell_str,
     _direction_map,
 )
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
@@ -196,6 +199,14 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         self.specification_abort_matrix = specification_abort_matrix
         self.percent_lines_out = percent_lines_out
         self.allow_automatic_aborts = allow_automatic_aborts
+        self._specification_file = None  # This is only used for saving purposes
+
+    @property
+    def specification_file(self):
+        return self._specification_file
+
+    def set_file(self, filepath):
+        self._specification_file = filepath
 
     @property
     def sample_rate(self):
@@ -283,11 +294,185 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             )
         )
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata):
-        return super().validate(hardware_metadata)
+        super().validate(hardware_metadata)
+        self.sysid_metadata.validate(hardware_metadata)
+
+        if self.samples_per_frame <= 0:
+            raise RattlesnakeError("samples_per_frame must be greater than 0")
+
+        if not (0 <= self.cpsd_overlap < 1):
+            raise RattlesnakeError(
+                "CPSD overlap must be a percentage from 0 up to but not "
+                "including 100"
+            )
+
+        if not (0 <= self.cola_overlap < 1):
+            raise RattlesnakeError(
+                "COLA overlap must be a percentage from 0 up to but not "
+                "including 100"
+            )
+
+        if self.cola_window_exponent < 0:
+            raise RattlesnakeError(
+                "COLA window exponent must be greater than or equal to 0"
+            )
+
+        try:
+            sig.get_window(str(self.cola_window).lower(), 2)
+        except ValueError as e:
+            raise RattlesnakeError(
+                f"Invalid COLA window {self.cola_window}: {e}"
+            ) from e
+
+        if self.sigma_clip <= 0:
+            raise RattlesnakeError("Sigma clipping must be greater than 0")
+
+        if self.test_level_ramp_time < 0:
+            raise RattlesnakeError(
+                "Test level ramp time must be greater than or equal to 0"
+            )
+
+        if len(self.control_channel_indices) == 0:
+            raise RattlesnakeError(
+                "control_channel_indices must contain at least one channel"
+            )
+        for index in self.control_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"control_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if len(self.output_channel_indices) == 0:
+            raise RattlesnakeError(
+                "output_channel_indices must contain at least one channel"
+            )
+        for index in self.output_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"output_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if self.response_transformation_matrix is not None and (
+            self.response_transformation_matrix.ndim != 2
+            or self.response_transformation_matrix.shape[1]
+            != len(self.control_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "response_transformation_matrix must be 2D with a number of "
+                "columns matching the number of control channels "
+                f"({len(self.control_channel_indices)}), got shape "
+                f"{self.response_transformation_matrix.shape}"
+            )
+
+        if self.reference_transformation_matrix is not None and (
+            self.reference_transformation_matrix.ndim != 2
+            or self.reference_transformation_matrix.shape[1]
+            != len(self.output_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "reference_transformation_matrix must be 2D with a number of "
+                "columns matching the number of output channels "
+                f"({len(self.output_channel_indices)}), got shape "
+                f"{self.reference_transformation_matrix.shape}"
+            )
+
+        self._validate_specification()
+        self._validate_control_law()
+
+    def _validate_specification(self):
+        if (
+            self.specification_cpsd_matrix is None
+            or self.specification_warning_matrix is None
+            or self.specification_abort_matrix is None
+            or self.specification_frequency_lines is None
+        ):
+            raise RattlesnakeError(
+                f"{self.environment_name} has no specification loaded"
+            )
+
+        num_response_channels = self.num_response_channels
+        expected_cpsd_shape = (
+            self.fft_lines,
+            num_response_channels,
+            num_response_channels,
+        )
+        if self.specification_cpsd_matrix.shape != expected_cpsd_shape:
+            raise RattlesnakeError(
+                f"{self.environment_name} specification CPSD matrix has "
+                f"shape {self.specification_cpsd_matrix.shape}, expected "
+                f"{expected_cpsd_shape} for the current samples per frame "
+                "and control channels; reload the specification"
+            )
+
+        expected_limit_shape = (2, self.fft_lines, num_response_channels)
+        if self.specification_warning_matrix.shape != expected_limit_shape:
+            raise RattlesnakeError(
+                f"{self.environment_name} specification warning matrix has "
+                f"shape {self.specification_warning_matrix.shape}, expected "
+                f"{expected_limit_shape} for the current samples per frame "
+                "and control channels; reload the specification"
+            )
+        if self.specification_abort_matrix.shape != expected_limit_shape:
+            raise RattlesnakeError(
+                f"{self.environment_name} specification abort matrix has "
+                f"shape {self.specification_abort_matrix.shape}, expected "
+                f"{expected_limit_shape} for the current samples per frame "
+                "and control channels; reload the specification"
+            )
+
+    def _validate_control_law(self):
+        if not self.control_python_script:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_script set"
+            )
+        if not self.control_python_function:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_function set"
+            )
+
+        try:
+            module = load_python_module(self.control_python_script)
+        except Exception as e:
+            raise RattlesnakeError(
+                f"{self.environment_name} could not load control script "
+                f"{self.control_python_script}: {e}"
+            ) from e
+
+        function = getattr(module, self.control_python_function, None)
+        if function is None:
+            raise RattlesnakeError(
+                f"{self.environment_name} control script "
+                f"{self.control_python_script} has no function or class "
+                f"named {self.control_python_function}"
+            )
+
+        if inspect.isgeneratorfunction(function):
+            actual_type = 1
+        elif inspect.isclass(function) and issubclass(
+            function, AbstractControlLawComputation
+        ):
+            actual_type = 3
+        elif inspect.isclass(function):
+            actual_type = 2
+        else:
+            if not callable(function):
+                raise RattlesnakeError(
+                    f"{self.environment_name} control function "
+                    f"{self.control_python_function} is not callable"
+                )
+            actual_type = 0
+
+        if actual_type != self.control_python_function_type:
+            raise RattlesnakeError(
+                f"{self.environment_name} control_python_function_type "
+                f"({self.control_python_function_type}) does not match what "
+                f"{self.control_python_function} actually is (detected type "
+                f"{actual_type}); reload the control script"
+            )
 
     # endregion
 
@@ -587,7 +772,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(10, 1, "CPSD Overlap %:")
         worksheet.cell(10, 3, "# Overlap percentage for CPSD calculations")
         worksheet.cell(11, 1, "Percent Lines Out")
-        worksheet.cell(11, 3, "# asdf")
+        worksheet.cell(
+            11,
+            3,
+            "# The Percent of Frequency Lines that the Signal Must be Over for Warning/Abort Levels",
+        )
         worksheet.cell(12, 1, "Allow Automatic Aborts")
         worksheet.cell(
             12,
@@ -670,6 +859,8 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         if self.sigma_clip is not None:
             worksheet.cell(17, 2, self.sigma_clip)
         self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=18)
+        if self.specification_file:
+            worksheet.cell(34, 2, str(self.specification_file))
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
@@ -706,12 +897,16 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         cola_window = worksheet.cell(4, 2).value
         cola_overlap = float(worksheet.cell(5, 2).value)
         cola_window_exponent = float(worksheet.cell(6, 2).value)
-        update_tf_during_control = worksheet.cell(7, 2).value.upper() == "Y"
+        update_tf_during_control = (
+            worksheet_cell_str(worksheet.cell(7, 2).value).upper() == "Y"
+        )
         frames_in_cpsd = int(worksheet.cell(8, 2).value)
         cpsd_window = worksheet.cell(9, 2).value
         cpsd_overlap = float(worksheet.cell(10, 2).value)
         percent_lines_out = float(worksheet.cell(11, 2).value)
-        allow_automatic_aborts = worksheet.cell(12, 2).value.upper() == "Y"
+        allow_automatic_aborts = (
+            worksheet_cell_str(worksheet.cell(12, 2).value).upper() == "Y"
+        )
 
         control_python_script = (
             worksheet.cell(13, 2).value
@@ -762,9 +957,9 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             elif inspect.isclass(function) and issubclass(
                 function, AbstractControlLawComputation
             ):
-                control_python_function_type = 2
-            elif inspect.isclass(function):
                 control_python_function_type = 3
+            elif inspect.isclass(function):
+                control_python_function_type = 2
             else:
                 control_python_function_type = 0
         else:
@@ -777,12 +972,10 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             control_coordinate = np.array(
                 [
                     (
-                        hardware_metadata.channel_list[i].node_number,
-                        _direction_map[
-                            hardware_metadata.channel_list[i].node_direction
-                        ],
+                        environment_channel_list[i].node_number,
+                        _direction_map[environment_channel_list[i].node_direction],
                     )
-                    for i in output_channel_indices
+                    for i in control_channel_indices
                 ],
                 dtype=coord_dtype,
             )
@@ -833,8 +1026,14 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 metadata.frequency_spacing,
                 control_coordinate,
             )
+            metadata.set_file(specification_file)
 
         return metadata
+
+    # endregion
+
+
+# endregion
 
 
 # region Instructions
@@ -932,10 +1131,10 @@ from rattlesnake.process.random_vibration_sys_id_data_analysis import (  # noqa:
 )
 
 
+# region Environment
 class RandomVibrationEnvironment(SysIdEnvironment):
     """Random Environment class defining the interface with the controller"""
 
-    # region Environment
     def __init__(
         self,
         environment_name: str,
@@ -1010,8 +1209,6 @@ class RandomVibrationEnvironment(SysIdEnvironment):
 
         self.set_ready()
 
-    # endregion
-
     # region StateSync
     def initialize_hardware(self, hardware_metadata):
         super().initialize_hardware(hardware_metadata)
@@ -1019,17 +1216,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         self.set_ready()
 
     def initialize_environment(self, environment_metadata: RandomVibrationMetadata):
-        self.environment_name = environment_metadata.environment_name
-        self.environment_metadata = environment_metadata
-
-        # Set up the data analysis
-        self.queue_container.data_analysis_command_queue.put(
-            self.environment_name,
-            (
-                RandomVibrationDataAnalysisCommands.INITIALIZE_ENVIRONMENT,
-                self.environment_metadata,
-            ),
-        )
+        super().initialize_environment(environment_metadata)
 
         # Set up the collector
         self.queue_container.collector_command_queue.put(
@@ -1409,6 +1596,8 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             )
         )
 
+    # endregion
+
     # region Shutdown
     def check_for_control_shutdown(self, data):  # pylint: disable=unused-argument
         """Checks the different processes to see if the controller has shut down gracefully"""
@@ -1447,6 +1636,9 @@ class RandomVibrationEnvironment(SysIdEnvironment):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process
@@ -1521,6 +1713,7 @@ def random_vibration_process(
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
             queue_container.log_file_queue,
+            shutdown_event,
         ),
     )
     spectral_proc.start()
@@ -1535,6 +1728,7 @@ def random_vibration_process(
             queue_container.gui_update_queue,
             queue_container.log_file_queue,
             ping_alive_event,
+            shutdown_event,
         ),
     )
     analysis_proc.start()
@@ -1548,6 +1742,7 @@ def random_vibration_process(
             queue_container.environment_command_queue,
             queue_container.log_file_queue,
             queue_container.gui_update_queue,
+            shutdown_event,
         ),
     )
     siggen_proc.start()
@@ -1561,6 +1756,7 @@ def random_vibration_process(
             queue_container.environment_command_queue,
             queue_container.log_file_queue,
             queue_container.gui_update_queue,
+            shutdown_event,
         ),
     )
 

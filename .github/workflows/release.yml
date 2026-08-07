@@ -20,6 +20,8 @@ jobs:
   # 1. VALIDATE: Ensure the tag was created on main or dev
   validate_tag:
     runs-on: ubuntu-latest
+    outputs:
+      is_prerelease: ${{ steps.prerelease_check.outputs.is_prerelease }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -91,6 +93,21 @@ jobs:
           print(f"OK: '{new_tag}' ({new_version}) is newer than the latest existing tag '{latest_tag}' ({latest_version}).")
           EOF
 
+      - name: Determine prerelease status
+        # Version.is_prerelease is the single source of truth for whether this
+        # tag is a prerelease (a/b/rc/.dev segments) or a stable/.post release.
+        # github-release and the publish_testpypi/publish_pypi jobs below all
+        # read this one output instead of re-deriving it with their own
+        # substring checks, so the two can never disagree.
+        id: prerelease_check
+        run: |
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          from packaging.version import Version
+          tag = "${{ github.ref_name }}"
+          version = Version(tag.lstrip("v"))
+          print(f"is_prerelease={'true' if version.is_prerelease else 'false'}")
+          EOF
+
   # 2. TEST JOB: Runs Pytest
   test:
     needs: validate_tag
@@ -132,7 +149,7 @@ jobs:
 
   # 4. GITHUB RELEASE: Creates the release on GitHub and attaches the build files
   github-release:
-    needs: build
+    needs: [build, validate_tag] # validate_tag is already an ancestor via build -> test -> validate_tag; listed explicitly to access its is_prerelease output
     if: startsWith(github.ref, 'refs/tags/') # Only release on actual tags, redundant to on: push: tags: - 'v*', but safeguards against any other trigger that might be added later.
     runs-on: ubuntu-latest
     permissions:
@@ -151,16 +168,46 @@ jobs:
           files: dist/*
           generate_release_notes: true # Automatically generate release notes based on commits since the last release
           draft: false # Set to true if you want to create a draft release instead of publishing immediately
-          prerelease: ${{ contains(github.ref, 'rc') || contains(github.ref, 'dev') || contains(github.ref, 'a') || contains(github.ref, 'b') }} # Mark as pre-release if tag contains rc, dev, a, or b
+          prerelease: ${{ needs.validate_tag.outputs.is_prerelease == 'true' }} # Single source of truth, computed once in validate_tag
 
-  # 5. PUBLISH: Only runs if 'build' passes
-  publish:
-    name: Publish to PyPI or TestPyPI
-    needs: [build, github-release] # Ensure both build and GitHub release steps succeed before publishing
+  # 5a. PUBLISH (PRERELEASE): Only runs if 'build' passes and the tag is a prerelease
+  publish_testpypi:
+    name: "Publish: TestPyPI (prerelease)"
+    needs: [build, github-release, validate_tag] # validate_tag is already an ancestor; listed explicitly to access its is_prerelease output
+    if: needs.validate_tag.outputs.is_prerelease == 'true'
     runs-on: ubuntu-latest
-    # environment: pypi
-    # Set the environment based on the tag name
-    environment: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'testpypi' || 'pypi' }} # If the tag contains 'rc' or 'dev', use the 'testpypi' environment, otherwise use 'pypi'
+    environment: testpypi
+    # No approval gate configured on 'testpypi' — prereleases are low-risk by design.
+    permissions:
+      id-token: write # Needed for authentication with TestPyPI using GitHub Actions
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      - name: Trusted Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No password needed with Trusted Publishing configured on TestPyPI.
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Write summary
+        run: |
+          {
+            echo "🧪 Published \`${{ github.ref_name }}\` to **TestPyPI** (prerelease)"
+            echo
+            echo "https://test.pypi.org/project/rattlesnake-vibration-controller/"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # 5b. PUBLISH (RELEASE): Only runs if 'build' passes and the tag is a stable/post release
+  publish_pypi:
+    name: "Publish: PyPI (production release)"
+    needs: [build, github-release, validate_tag] # validate_tag is already an ancestor; listed explicitly to access its is_prerelease output
+    if: needs.validate_tag.outputs.is_prerelease == 'false'
+    runs-on: ubuntu-latest
+    environment: pypi
     # Manual approval gate is configured on the 'pypi' GitHub environment (Settings → Environments → pypi → Required reviewers)
     permissions:
       id-token: write # Needed for authentication with PyPI using GitHub Actions
@@ -171,9 +218,15 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Trusted Publish to TestPyPI or PyPI
+      - name: Trusted Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         # No password needed with Trusted Publishing configured on PyPI.
-        with:
-          # If the tag contains 'rc' or 'dev', use the TestPyPI URL; otherwise, use the default PyPI URL
-          repository-url: ${{ (contains(github.ref, 'rc') || contains(github.ref, 'dev')) && 'https://test.pypi.org/legacy/' || '' }}  # Production PyPI uses the default URL, so the empty string will cause it to default to the standard PyPI repository. TestPyPI will use the specified URL. 
+        # No repository-url: the action defaults to production PyPI.
+
+      - name: Write summary
+        run: |
+          {
+            echo "📦 Published \`${{ github.ref_name }}\` to **production PyPI**"
+            echo
+            echo "https://pypi.org/project/rattlesnake-vibration-controller/"
+          } >> "$GITHUB_STEP_SUMMARY"

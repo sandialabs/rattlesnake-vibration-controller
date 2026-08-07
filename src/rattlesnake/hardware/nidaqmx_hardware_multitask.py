@@ -34,6 +34,7 @@ import nidaqmx.stream_readers as ni_read
 import nidaqmx.stream_writers as ni_write
 import numpy as np
 
+from rattlesnake.utilities import RattlesnakeError
 from rattlesnake.hardware.abstract_hardware import (
     HardwareMetadata,
     HardwareAcquisition,
@@ -116,11 +117,152 @@ class NIDAQmxMetadata(HardwareMetadata):
         }
         self._coupling = {"Acceleration": ["AC"], "Force": ["AC"], "Voltage": ["DC"]}
 
-    # endregion
-
     # region Validation
     def validate(self):
-        return super().validate()
+        super().validate()
+        for row, channel in enumerate(self.channel_list):
+            if channel.physical_device not in self.valid_physical_devices:
+                raise RattlesnakeError(
+                    f"Invalid physical device in channel table row {row+1}"
+                )
+            if channel.physical_channel not in self.valid_input_channels(
+                channel.physical_device
+            ):
+                raise RattlesnakeError(
+                    f"Invalid physical channel in channel table row {row+1}"
+                )
+
+            channel_type = self.normalize_channel_type(channel.channel_type)
+            if channel_type is None:
+                raise RattlesnakeError(
+                    f"Invalid channel type in channel table row {row+1}. Valid "
+                    "channel types include 'Acceleration', 'Force', 'Voltage'"
+                )
+
+            unit = str(channel.unit).lower()
+            if channel_type == "Acceleration" and unit not in ("g", "gs"):
+                raise RattlesnakeError(
+                    f"Invalid unit in channel table row {row+1}. Acceleration "
+                    "channels must be in 'G'"
+                )
+            elif channel_type == "Force" and unit not in (
+                "lb",
+                "pound",
+                "pounds",
+                "lbf",
+                "lbs",
+                "lbfs",
+                "n",
+                "newton",
+                "newtons",
+                "ns",
+            ):
+                raise RattlesnakeError(
+                    f"Invalid unit in channel table row {row+1}. Force channels "
+                    "must be in 'lbs' or 'N'"
+                )
+
+            try:
+                sensitivity = float(channel.sensitivity)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid sensitivity in channel table row {row+1}"
+                )
+            sensitivity_min, sensitivity_max = self.valid_sensitivity(channel_type)
+            if not (sensitivity_min <= sensitivity <= sensitivity_max):
+                raise RattlesnakeError(
+                    f"Sensitivity out of range in channel table row {row+1}. Must "
+                    f"be between {sensitivity_min} and {sensitivity_max}"
+                )
+
+            try:
+                minimum_value = float(channel.minimum_value)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid minimum value in channel table row {row+1}"
+                )
+            try:
+                maximum_value = float(channel.maximum_value)
+            except (TypeError, ValueError):
+                raise RattlesnakeError(
+                    f"Invalid maximum value in channel table row {row+1}"
+                )
+            if minimum_value >= maximum_value:
+                raise RattlesnakeError(
+                    "Minimum value must be less than maximum value in channel "
+                    f"table row {row+1}"
+                )
+            device_min_voltage = float(
+                self.valid_min_voltage(
+                    channel.physical_device, channel.feedback_device
+                )[0]
+            )
+            device_max_voltage = float(
+                self.valid_max_voltage(
+                    channel.physical_device, channel.feedback_device
+                )[0]
+            )
+            if minimum_value < device_min_voltage or maximum_value > device_max_voltage:
+                raise RattlesnakeError(
+                    f"Minimum/maximum value out of range in channel table row "
+                    f"{row+1}. Must be between {device_min_voltage} and "
+                    f"{device_max_voltage} V"
+                )
+
+            if channel.coupling is not None and str(
+                channel.coupling
+            ).upper() not in self.valid_coupling(channel_type):
+                raise RattlesnakeError(
+                    f"Invalid coupling in channel table row {row+1}. Valid "
+                    f"coupling options include {self.valid_coupling(channel_type)}"
+                )
+
+            excitation_source = str(channel.excitation_source).strip().lower()
+            if excitation_source in ("", "none", "nan"):
+                excitation_source = "none"
+            elif excitation_source != "internal":
+                raise RattlesnakeError(
+                    f"Invalid excitation source in channel table row {row+1}. "
+                    "Valid excitation sources include 'Internal' or blank"
+                )
+            if excitation_source == "internal":
+                valid_excitation = self.valid_current_excitation(
+                    channel.physical_device, "Internal"
+                )
+                if str(channel.excitation) not in valid_excitation:
+                    raise RattlesnakeError(
+                        f"Invalid excitation current in channel table row "
+                        f"{row+1}. Valid values include {valid_excitation}"
+                    )
+
+            feedback_device = channel.feedback_device
+            has_feedback = (
+                feedback_device is not None
+                and str(feedback_device).strip() != ""
+                and not str(feedback_device).strip().startswith("#")
+            )
+            if has_feedback:
+                if feedback_device not in self.valid_physical_devices:
+                    raise RattlesnakeError(
+                        f"Invalid feedback device in channel table row {row+1}"
+                    )
+                if channel.feedback_channel not in self.valid_output_channels(
+                    feedback_device
+                ):
+                    raise RattlesnakeError(
+                        f"Invalid feedback channel in channel table row {row+1}"
+                    )
+
+    @staticmethod
+    def normalize_channel_type(channel_type):
+        channel_type_str = str(channel_type).strip().lower()
+        if channel_type_str in ("accelerometer", "acceleration", "accel"):
+            return "Acceleration"
+        elif channel_type_str == "force":
+            return "Force"
+        elif channel_type_str in ("voltage", "volt"):
+            return "Voltage"
+        return None
 
     @property
     def assist_mode_modules(self):
@@ -192,7 +334,7 @@ class NIDAQmxMetadata(HardwareMetadata):
         return valid_coupling
 
     def valid_sensitivity(self, channel_type: str = ""):
-        if isinstance(channel_type, str) and channel_type.lower() == "voltage":
+        if str(channel_type).lower() == "voltage":
             valid_sensitivity = [0, 1000]
         else:
             valid_sensitivity = [-1000000, 1000000]
@@ -357,6 +499,9 @@ class NIDAQmxMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Acqusition
@@ -658,21 +803,21 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 f"{channel_data.maximum_value} not a valid maximum value"
             ) from e
         # Channel Type and Units
-        if channel_data.channel_type.lower() in [
+        if str(channel_data.channel_type).lower() in [
             "accelerometer",
             "acceleration",
             "accel",
         ]:
             channel_type = nic.UsageTypeAI.ACCELERATION_ACCELEROMETER_CURRENT_INPUT
-            if channel_data.unit.lower() in ["g", "gs"]:
+            if str(channel_data.unit).lower() in ["g", "gs"]:
                 unit = nic.AccelUnits.G
             else:
                 raise ValueError(
                     f"Accelerometer units must be in G, not {channel_data.unit}"
                 )
-        elif channel_data.channel_type.lower() == "force":
+        elif str(channel_data.channel_type).lower() == "force":
             channel_type = nic.UsageTypeAI.FORCE_IEPE_SENSOR
-            if channel_data.unit.lower() in [
+            if str(channel_data.unit).lower() in [
                 "lb",
                 "pound",
                 "pounds",
@@ -681,11 +826,11 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 "lbfs",
             ]:
                 unit = nic.ForceUnits.POUNDS
-            elif channel_data.unit.lower() in ["n", "newton", "newtons", "ns"]:
+            elif str(channel_data.unit).lower() in ["n", "newton", "newtons", "ns"]:
                 unit = nic.ForceUnits.NEWTONS
             else:
                 raise ValueError(f"Unrecognized Force Unit {channel_data.unit}")
-        elif channel_data.channel_type.lower() in ["voltage", "volt"]:
+        elif str(channel_data.channel_type).lower() in ["voltage", "volt"]:
             channel_type = nic.UsageTypeAI.VOLTAGE
             unit = None
         else:
@@ -694,7 +839,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 'Must be one of ["acceleration","accelerometer","accel","force","voltage","volt"]'
             )
         # Excitation Source
-        if channel_data.excitation_source.lower() == "internal":
+        if str(channel_data.excitation_source).lower() == "internal":
             excitation_source = nic.ExcitationSource.INTERNAL
             try:
                 excitation = float(channel_data.excitation)
@@ -702,7 +847,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 raise ValueError(
                     f"{channel_data.excitation} not a valid excitation"
                 ) from e
-        elif channel_data.excitation_source.lower() == "none":
+        elif str(channel_data.excitation_source).lower() == "none":
             excitation_source = nic.ExcitationSource.NONE
             excitation = 0
         else:

@@ -31,7 +31,12 @@ import numpy as np
 
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
+from rattlesnake.utilities import (
+    GlobalCommands,
+    RattlesnakeError,
+    VerboseMessageQueue,
+    flush_queue,
+)
 
 
 # region Commands
@@ -141,11 +146,103 @@ class SysIdMetadata:
             )
         )
 
-    # endregion
-
     # region Validation
-    def validate(self):
-        return
+    def validate(self, hardware_metadata):
+        if self.sysid_frame_size <= 0:
+            raise RattlesnakeError("System ID samples per frame must be greater than 0")
+
+        if not (0 <= self.sysid_overlap < 1):
+            raise RattlesnakeError(
+                "System ID overlap must be a percentage from 0 up to but not "
+                "including 100"
+            )
+
+        if not (0 <= self.sysid_pretrigger < 1):
+            raise RattlesnakeError(
+                "System ID burst pretrigger must be a percentage from 0 up "
+                "to but not including 100"
+            )
+
+        if self.sysid_burst_ramp_fraction > 0.5:
+            raise RattlesnakeError(
+                "System ID ramp fraction must be no more than 50 percent for burst signal"
+            )
+
+        if self.sysid_signal_type == "Burst Random" and not (
+            0 < self.sysid_burst_on <= 1
+        ):
+            raise RattlesnakeError(
+                "System ID burst on percent must be greater than 0 and up " "to 100"
+            )
+
+        if self.sysid_averaging_type not in ("Linear", "Exponential"):
+            raise RattlesnakeError(
+                f"Invalid System ID Averaging Type: {self.sysid_averaging_type}"
+            )
+
+        if self.sysid_estimator not in ("H1", "H2", "H3", "Hv"):
+            raise RattlesnakeError(
+                f"Invalid System ID Estimator: {self.sysid_estimator}"
+            )
+
+        if self.sysid_signal_type not in (
+            "Random",
+            "Pseudorandom",
+            "Burst Random",
+            "Chirp",
+        ):
+            raise RattlesnakeError(
+                f"Invalid System ID Signal Type: {self.sysid_signal_type}"
+            )
+
+        if self.sysid_noise_averages <= 0:
+            raise RattlesnakeError("System ID noise averages must be greater than 0")
+
+        if self.sysid_averages <= 0:
+            raise RattlesnakeError("System ID averages must be greater than 0")
+
+        if not (0 < self.sysid_exponential_averaging_coefficient <= 1):
+            raise RattlesnakeError(
+                "System ID exponential averaging coefficient must be greater "
+                "than 0 and up to 1"
+            )
+
+        if self.sysid_level_ramp_time < 0:
+            raise RattlesnakeError(
+                "System ID ramp time must be greater than or equal to 0"
+            )
+
+        if self.sysid_level < 0:
+            raise RattlesnakeError("System ID level must be greater than or equal to 0")
+
+        nyquist_frequency = self.sample_rate / 2
+        if not (
+            0
+            <= self.sysid_low_frequency_cutoff
+            < self.sysid_high_frequency_cutoff
+            <= nyquist_frequency
+        ):
+            raise RattlesnakeError(
+                "System ID frequencies must satisfy 0 <= low bandwidth < "
+                f"high bandwidth <= nyquist frequency ({nyquist_frequency})"
+            )
+
+        if self.sysid_signal_type != "Chirp":
+            freq = np.fft.rfftfreq(
+                self.sysid_frame_size * hardware_metadata.output_oversample,
+                1 / (self.sample_rate * hardware_metadata.output_oversample),
+            )
+            if not np.any(
+                (freq >= self.sysid_low_frequency_cutoff)
+                & (freq <= self.sysid_high_frequency_cutoff)
+            ):
+                raise RattlesnakeError(
+                    "System ID frequency range "
+                    f"[{self.sysid_low_frequency_cutoff}, "
+                    f"{self.sysid_high_frequency_cutoff}] does not contain "
+                    "any frequency line at this sample rate and samples per "
+                    "frame"
+                )
 
     def __eq__(self, other):
         try:
@@ -450,8 +547,11 @@ class SysIdMetadata:
     # endregion
 
 
+# endregion
+
+
+# region Data Package
 class SysIdDataPackage:
-    # region Data Package
     def __init__(
         self,
         sysid_frames=None,
@@ -474,7 +574,6 @@ class SysIdDataPackage:
         self.sysid_response_noise = sysid_response_noise
         self.sysid_reference_noise = sysid_reference_noise
 
-    # endregion
     @property
     def num_response_channels(self):
         if self.sysid_frf is None:
@@ -647,7 +746,16 @@ class SysIdDataPackage:
 
     @classmethod
     def load_package_from_mat_field(cls, field_dict):
-        pass
+        for field in [
+            "frf_data",
+            "response_cpsd",
+            "reference_cpsd",
+            "coherence",
+            "response_noise_cpsd",
+            "reference_noise_cpsd",
+        ]:
+            field_dict[field] = np.moveaxis(field_dict[field], -1, 0)
+        return cls.load_package_from_numpy_field(field_dict)
 
     def save_package_to_numpy_field(self, field_dict):
         field_dict["frf_data"] = self.sysid_frf
@@ -687,25 +795,64 @@ class SysIdDataPackage:
         )
 
     @classmethod
-    def load_package_from_worksheet(cls, worksheet):
-        pass
-
-    @classmethod
     def load_package_from_sdynpy_frf(cls, field_dict):
-        pass
+        if field_dict["function_type"].item() != 4:
+            raise ValueError(
+                "File must contain a Sdynpy FrequencyResponseFunctionArray"
+            )
+        sysid_frames = 1
+        sysid_frf = np.moveaxis(np.array(field_dict["data"]["ordinate"]), -1, 0)
+        frequencies = np.array(field_dict["data"]["abscissa"][0][0])
+        sysid_coherence = np.zeros((0, sysid_frf.shape[1]))
+        sysid_condition = np.linalg.cond(sysid_frf)
+
+        return cls(
+            sysid_frames,
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            None,
+            None,
+            sysid_condition,
+            None,
+            None,
+        )
 
     @classmethod
     def load_package_from_forcefinder_spr(cls, field_dict):
-        pass
+        sysid_frames = 1
+        # training frf will generally be the one used for testing
+        sysid_frf = np.array(field_dict["training_frf"])
+        frequencies = np.array(field_dict["abscissa"])
+        sysid_coherence = np.zeros((0, sysid_frf.shape[1]))
+        sysid_condition = np.linalg.cond(sysid_frf)
+        sysid_response_cpsd = (
+            np.array(field_dict["buzz_cpsd"]) if "buzz_cpsd" in field_dict else None
+        )
+
+        return cls(
+            sysid_frames,
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            sysid_response_cpsd,
+            None,
+            sysid_condition,
+            None,
+            None,
+        )
 
     # endregion
 
 
+# endregion
+
+
+# region Data Analysis
 class SysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
     using system id"""
 
-    # region Data Analysis
     def __init__(
         self,
         process_name: str,
@@ -770,13 +917,22 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
         self.frames = None
         self.sysid_data = SysIdDataPackage()
         self.startup = True
+        self.environment_metadata = None
 
     def ping_alive(self):
         self._ping_alive_event.set()
 
     # region State Sync
-    def initialize_environment(self, data: str):
-        self.environment_name = data
+    def initialize_environment(self, data):
+        """
+        Parameters
+        ----------
+        data : SysIdEnvironmentMetadata
+            The full environment metadata object (not just the environment
+            name), so subclasses have access to it if needed.
+        """
+        self.environment_name = data.environment_name
+        self.environment_metadata = data
 
     def initialize_sysid_parameters(self, data: SysIdMetadata):
         """Stores parameters describing the system identification into the object
@@ -866,6 +1022,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                     ),
                 )
             )
+            self.ping_alive()
         if auto_shutdown and self.parameters.sysid_noise_averages == self.frames:
             self.environment_command_queue.put(
                 self.process_name,
@@ -880,7 +1037,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.command_queue.put(
                 self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown)
             )
-            self.ping_alive()
 
     def run_sysid_transfer_function(self, auto_shutdown):
         """Starts and runs the system identification
@@ -919,6 +1075,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                     ),
                 )
             )
+            self.ping_alive()
         if (
             auto_shutdown
             and self.parameters.sysid_averages == self.sysid_data.sysid_frames
@@ -940,7 +1097,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 self.process_name,
                 (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
             )
-            self.ping_alive()
 
     def stop_sysid(self, data):  # pylint: disable=unused-argument
         """Stops the currently running system identification phase
@@ -965,6 +1121,8 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None)
         )
 
+    # endregion
+
 
 # endregion
 
@@ -979,6 +1137,7 @@ def sysid_data_analysis_process(
     gui_update_queue: mp.queues.Queue,
     log_file_queue: mp.queues.Queue,
     ping_alive_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event = None,
     process_name=None,
 ):
     """An function called by multiprocessing to start up the system identification analysis
@@ -1019,4 +1178,7 @@ def sysid_data_analysis_process(
         ping_alive_event,
     )
 
-    data_analysis_instance.run()
+    data_analysis_instance.run(shutdown_event)
+
+
+# endregion

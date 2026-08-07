@@ -15,25 +15,21 @@ from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 from rattlesnake.process.streaming import StreamType
 
-from rattlesnake.testing.mock_user_interface import (
-    launch_temporary_rattlesnake_ui_environment,
-)
-
 """USER INPUTS"""
 THREADED = False
-TIMEOUT = 40
-IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
-HARDWARE_TYPE = HardwareType.NONE
-ENVIRONMENT_TYPE = EnvironmentType.SINE
+TIMEOUT = 20
+IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
+HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
+ENVIRONMENT_TYPE = EnvironmentType.MODAL
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
-RUN_SYSID = True
-START_HARDWARE = False
-START_ENVIRONMENT = False
+RUN_SYSID = False
+START_HARDWARE = True
+START_ENVIRONMENT = True
 RUN_PROFILE = False
 
 
-def build_rattlesnake_object(
+def build_example_rattlesnake_object(
     threaded=THREADED,
     timeout=TIMEOUT,
     import_method=IMPORT_METHOD,
@@ -46,7 +42,7 @@ def build_rattlesnake_object(
     start_environment=START_ENVIRONMENT,
     run_profile=RUN_PROFILE,
 ):
-    rattlesnake = RattlesnakeController(threaded=threaded)
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=timeout)
 
     # Initialize hardware
     if hardware_type is HardwareType.NONE:
@@ -94,7 +90,5 @@ def build_rattlesnake_object(
 if __name__ == "__main__":
     print("Loading Rattlesnake...")
 
-    rattlesnake = build_rattlesnake_object()
-
-    # launch_temporary_rattlesnake_ui_environment(rattlesnake, 60)
-    launch_rattlesnake_ui(rattlesnake)
+    with build_example_rattlesnake_object() as rattlesnake:
+        launch_rattlesnake_ui(rattlesnake)

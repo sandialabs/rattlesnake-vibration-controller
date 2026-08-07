@@ -91,6 +91,7 @@ class SystemIdCommands(Enum):
 class SysIdUICommands(Enum):
     SYSID_STARTED = 0
     SYSID_ENDED = 1
+    DISPLAY_METADATA = 2
 
     @property
     def label(self):
@@ -169,6 +170,26 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
     @abstractmethod
     def reference_transformation_matrix(self):
         """Gets the excitation transformation matrix"""
+
+    def sysid_shared(self, target_metadata):
+        for indices_attr, matrix_attr in (
+            ("response_channel_indices", "response_transformation_matrix"),
+            ("reference_channel_indices", "reference_transformation_matrix"),
+        ):
+            global_indices_a = [
+                self.channel_indices[i] for i in getattr(self, indices_attr)
+            ]
+            global_indices_b = [
+                target_metadata.channel_indices[i]
+                for i in getattr(target_metadata, indices_attr)
+            ]
+            if global_indices_a != global_indices_b:
+                return False
+            if not np.array_equal(
+                getattr(self, matrix_attr), getattr(target_metadata, matrix_attr)
+            ):
+                return False
+        return True
 
     # endregion
 
@@ -324,16 +345,16 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         response_row = start_row
         output_row = start_row + 1
         if response_matrix is not None:
-            worksheet.cell(start_row + 1, 1, None)
-            worksheet.cell(start_row + 1, 2, None)
+            worksheet.cell(start_row + 1, 1).value = None
+            worksheet.cell(start_row + 1, 2).value = None
             for i, row in enumerate(response_matrix):
                 for j, value in enumerate(row):
                     worksheet.cell(i + response_row, j + 2, value)
             # Shift output transfomation matrix down
-            output_row = i + 1
-            worksheet.cell(i + 1, 1, "Output Transformation Matrix:")
+            output_row = response_row + i + 1
+            worksheet.cell(output_row, 1, "Output Transformation Matrix:")
             worksheet.cell(
-                i + 1,
+                output_row,
                 2,
                 "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
                 "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
@@ -356,15 +377,12 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
     def load_sysid_matrix_from_worksheet(cls, worksheet, start_row):
         start_response_row = start_row
         num_response_row = 1
-        if (
-            isinstance(worksheet.cell(start_response_row, 2).value, str)
-            and worksheet.cell(start_response_row, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(start_response_row, 2).value).lower() == "none":
             response_transformation_matrix = None
-        elif isinstance(
-            worksheet.cell(start_response_row, 2).value, str
-        ) and worksheet.cell(start_response_row, 2).value.lower().startswith(
-            "# transformation matrix"
+        elif (
+            str(worksheet.cell(start_response_row, 2).value)
+            .lower()
+            .startswith("# transformation matrix")
         ):
             response_transformation_matrix = None
         else:
@@ -398,15 +416,12 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         # Output transformation matrix
         start_output_row = start_response_row + num_response_row
         num_output_row = 1
-        if (
-            isinstance(worksheet.cell(start_output_row, 2).value, str)
-            and worksheet.cell(start_output_row, 2).value.lower() == "none"
-        ):
+        if str(worksheet.cell(start_output_row, 2).value).lower() == "none":
             output_transformation_matrix = None
-        elif isinstance(
-            worksheet.cell(start_output_row, 2).value, str
-        ) and worksheet.cell(start_output_row, 2).value.lower().startswith(
-            "# transformation matrix"
+        elif (
+            str(worksheet.cell(start_output_row, 2).value)
+            .lower()
+            .startswith("# transformation matrix")
         ):
             output_transformation_matrix = None
         else:
@@ -541,9 +556,8 @@ class SysIdEnvironment(Environment):
         self.signal_generator_command_queue = signal_generator_command_queue
         self.spectral_processing_command_queue = spectral_processing_command_queue
         self.data_analysis_command_queue = data_analysis_command_queue
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.sysid_data = SysIdDataPackage()
+        self._sysid_loaded_from_share = False
         self.collector_shutdown_achieved = True
         self.spectral_shutdown_achieved = True
         self.siggen_shutdown_achieved = True
@@ -588,8 +602,7 @@ class SysIdEnvironment(Environment):
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """
-        self.hardware_metadata = hardware_metadata
-        self.set_ready()
+        super().initialize_hardware(hardware_metadata)
 
     @abstractmethod
     def initialize_environment(self, environment_metadata: SysIdEnvironmentMetadata):
@@ -607,9 +620,17 @@ class SysIdEnvironment(Environment):
         """
         self.data_analysis_command_queue.put(
             self.environment_name,
-            (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_name),
+            (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata),
         )
         super().initialize_environment(environment_metadata)
+
+        self.data_analysis_command_queue.put(
+            self.environment_name,
+            (
+                SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
+                environment_metadata.sysid_metadata,
+            ),
+        )
 
     @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
@@ -622,6 +643,9 @@ class SysIdEnvironment(Environment):
                 SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS,
                 sysid_metadata,
             ),
+        )
+        self.gui_update_queue.put(
+            (self.environment_name, (SysIdUICommands.DISPLAY_METADATA, sysid_metadata))
         )
         # self.set_ready() # Call this at the end of your function
 
@@ -848,9 +872,9 @@ class SysIdEnvironment(Environment):
 
         self.set_ready()
 
-    def load_system_id_from_package(self, data: SysIdDataPackage):
+    def load_system_id_from_package(self, data: tuple[SysIdDataPackage, bool]):
         # Store SystemIdDataPackage to data_analysis process and environment
-        sysid_data = data
+        sysid_data, ask_to_share = data
         self.data_analysis_command_queue.put(
             self.environment_name,
             (SysIdDataAnalysisCommands.LOAD_SYSTEM_ID, sysid_data),
@@ -876,8 +900,9 @@ class SysIdEnvironment(Environment):
         )
 
         # This seems counterintuitive but lots of environments overwrite the
-        # system_id_complete function so it is easier to do it this way
-        self.queue_container.environment_command_queue.put(
+        # system_id_complete function so it is easier to do it this way.
+        self._sysid_loaded_from_share = not ask_to_share
+        self.environment_command_queue.put(
             self.environment_name,
             (
                 SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
@@ -1178,8 +1203,26 @@ class SysIdEnvironment(Environment):
             )
         )
         self.gui_update_queue.put(
-            (UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data))
+            (
+                UICommands.COMPLETED_SYSTEM_ID,
+                (
+                    self.environment_name,
+                    (self.environment_metadata.sysid_metadata, self.sysid_data),
+                ),
+            )
         )  # Enable tabs
+        if self._sysid_loaded_from_share:
+            self._sysid_loaded_from_share = False
+        else:
+            self.gui_update_queue.put(
+                (
+                    UICommands.SHARE_SYSTEM_ID,
+                    (
+                        self.environment_name,
+                        (self.environment_metadata.sysid_metadata, self.sysid_data),
+                    ),
+                )
+            )
         self.set_sysid_stored()
 
     @abstractmethod

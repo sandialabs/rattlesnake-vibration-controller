@@ -117,8 +117,6 @@ class OutputProcess(AbstractMessageProcess):
         self._output_active_event = output_active_event
         # print('output setup')
 
-    # endregion
-
     # region State Sync
     @property
     def output_active(self):
@@ -487,6 +485,9 @@ class OutputProcess(AbstractMessageProcess):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process
