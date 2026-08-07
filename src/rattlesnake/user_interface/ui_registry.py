@@ -89,6 +89,9 @@ for hardware_type in HardwareType:
             UI_ASK_FOR_FILE.append(HardwareType.SDYNPY_FRF)
 
 
+# endregion
+
+
 # region Environments
 ENVIRONMENT_UIS = {}
 UI_ENVIRONMENT_OPTIONS = {"Add Environment": None}
@@ -97,6 +100,23 @@ for environment_type in EnvironmentType:
     if environment_type in UNIMPLEMENTED_ENVIRONMENT:
         continue
     match environment_type:
+        case EnvironmentType.SKELETON:
+            from rattlesnake.user_interface.skeleton_ui import SkeletonUI
+
+            ENVIRONMENT_UIS[EnvironmentType.SKELETON] = SkeletonUI
+            # UI_ENVIRONMENT_OPTIONS["Skeleton Environment"] = EnvironmentType.SKELETON
+        case EnvironmentType.SYSID_SKELETON:
+            from rattlesnake.user_interface.skeleton_sys_id_ui import SkeletonSysIdUI
+
+            ENVIRONMENT_UIS[EnvironmentType.SYSID_SKELETON] = SkeletonSysIdUI
+            # UI_ENVIRONMENT_OPTIONS["Skeleton SysId Environment"] = (
+            #     EnvironmentType.SYSID_SKELETON
+            # )
+        case EnvironmentType.READ:
+            from rattlesnake.user_interface.read_ui import ReadUI
+
+            ENVIRONMENT_UIS[EnvironmentType.READ] = ReadUI
+            UI_ENVIRONMENT_OPTIONS["Read Data"] = EnvironmentType.READ
         case EnvironmentType.TIME:
             from rattlesnake.user_interface.time_ui import TimeUI
 

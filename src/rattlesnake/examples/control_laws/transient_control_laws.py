@@ -33,6 +33,8 @@ def pseudoinverse_control(
     zero_impulse_after = None
     # Split it up into lines
     for entry in extra_parameters.split("\n"):
+        if not entry.strip():
+            continue
         try:
             # For each entry, split the key from the value using the colon
             field, value = entry.split(":")
@@ -136,6 +138,8 @@ def pseudoinverse_control_generator():
         rcond = 1e-15
         zero_impulse_after = None
         for entry in extra_parameters.split("\n"):
+            if not entry.strip():
+                continue
             field, value = entry.split(":")
             field = field.strip()
             if field == "rcond":
@@ -216,6 +220,8 @@ class pseudoinverse_control_class:
         self.rcond = 1e-15
         self.zero_impulse_after = None
         for entry in extra_parameters.split("\n"):
+            if not entry.strip():
+                continue
             field, value = entry.split(":")
             field = field.strip()
             if field == "rcond":

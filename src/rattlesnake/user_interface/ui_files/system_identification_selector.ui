@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>348</width>
-    <height>468</height>
+    <width>400</width>
+    <height>461</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,39 +17,17 @@
    <item>
     <widget class="QGroupBox" name="system_id_groupbox">
      <property name="title">
-      <string>System Identification Loading</string>
+      <string>System Identification Sharing</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <property name="topMargin">
-         <number>10</number>
-        </property>
-        <item>
-         <widget class="QTableWidget" name="file_table_widget">
-          <attribute name="horizontalHeaderDefaultSectionSize">
-           <number>150</number>
-          </attribute>
-          <column>
-           <property name="text">
-            <string>File Environments</string>
-           </property>
-          </column>
-         </widget>
-        </item>
-        <item>
-         <widget class="QTableWidget" name="current_table_widget">
-          <attribute name="horizontalHeaderDefaultSectionSize">
-           <number>150</number>
-          </attribute>
-          <column>
-           <property name="text">
-            <string>Current Environments</string>
-           </property>
-          </column>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QTableWidget" name="target_environment_table">
+        <column>
+         <property name="text">
+          <string>Environment</string>
+         </property>
+        </column>
+       </widget>
       </item>
      </layout>
     </widget>

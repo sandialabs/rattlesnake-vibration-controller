@@ -149,8 +149,6 @@ class TimeMetadata(EnvironmentMetadata):
     def set_file(self, filepath):
         self._signal_file = filepath
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata):
         # Prevent duplicate entries
@@ -167,6 +165,11 @@ class TimeMetadata(EnvironmentMetadata):
         if not isinstance(self.sample_rate, int) or self.sample_rate <= 0:
             raise RattlesnakeError(
                 f"{self.environment_name} sample_rate must be a number greater than 0"
+            )
+
+        if self.cancel_rampdown_samples < 1:
+            raise RattlesnakeError(
+                f"{self.environment_name} cancel_rampdown_time is too small"
             )
 
         if not isinstance(self.output_signal, np.ndarray):
@@ -189,6 +192,11 @@ class TimeMetadata(EnvironmentMetadata):
         num_output_channels = len(
             [channel for channel in environment_channels if channel.is_output_channel()]
         )
+        if num_output_channels == 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no output channels selected; at "
+                "least one channel with a feedback device is required"
+            )
         num_output = self.output_signal.shape[0]
         if num_output != num_output_channels:
             raise RattlesnakeError(
@@ -343,6 +351,9 @@ class TimeMetadata(EnvironmentMetadata):
     # endregion
 
 
+# endregion
+
+
 # region Instructions
 class TimeInstructions(EnvironmentInstructions):
     def __init__(self, environment_name, current_test_level: float, repeat: bool):
@@ -351,7 +362,21 @@ class TimeInstructions(EnvironmentInstructions):
         self.repeat = repeat
 
     def validate(self):
-        return super().validate()
+        super().validate()
+
+        # current_test_level is a dB value passed straight to db2scale() in
+        # run_environment/set_test_level, and repeat gates the concatenation
+        # logic there -- a non-numeric level or non-bool repeat would only
+        # surface as an obscure failure once the environment is running.
+        if isinstance(self.current_test_level, bool) or not isinstance(
+            self.current_test_level, (int, float)
+        ):
+            raise RattlesnakeError(
+                f"{self.environment_name} current_test_level must be a number"
+            )
+
+        if not isinstance(self.repeat, bool):
+            raise RattlesnakeError(f"{self.environment_name} repeat must be a boolean")
 
 
 # endregion
@@ -448,8 +473,6 @@ class TimeEnvironment(Environment):
         self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_no_repeat
         self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         # Persistent data
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.shutdown_flag = False
         self.current_test_level = 0.0
         self.target_test_level = 0.0
@@ -459,8 +482,6 @@ class TimeEnvironment(Environment):
         self.output_channels = None
         self.measurement_channels = None
         self.set_ready()
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -743,6 +764,9 @@ class TimeEnvironment(Environment):
     # endregion
 
 
+# endregion
+
+
 # region Process
 def time_process(
     environment_name: str,
@@ -808,3 +832,6 @@ def time_process(
         ready_event,
     )
     process_class.run(shutdown_event)
+
+
+# endregion

@@ -67,8 +67,6 @@ class DataPhysicsMetadata(HardwareMetadata):
         )
         self.hardware_file = hardware_file
 
-    # endregion
-
     # region Validation
     def validate(self):
         return super().validate()
@@ -142,6 +140,9 @@ class DataPhysicsMetadata(HardwareMetadata):
         )
 
     # endregion
+
+
+# endregion
 
 
 # region Acquisition
@@ -257,23 +258,23 @@ class DataPhysicsAcquisition(HardwareAcquisition):
             self.input_channel_order.append(channel_index)
 
             # Set the values in the arrays appropriately given the channel index
-            if channel.coupling.lower() in ["ac differential", "ac diff", "ac"]:
+            if str(channel.coupling).lower() in ["ac differential", "ac diff", "ac"]:
                 self.input_couplings[channel_index] = QuattroCoupling.AC_DIFFERENTIAL
-            elif channel.coupling.lower() in ["dc differential", "dc diff", "dc"]:
+            elif str(channel.coupling).lower() in ["dc differential", "dc diff", "dc"]:
                 self.input_couplings[channel_index] = QuattroCoupling.DC_DIFFERENTIAL
-            elif channel.coupling.lower() in [
+            elif str(channel.coupling).lower() in [
                 "ac single ended",
                 "ac single-ended",
                 "ac single",
             ]:
                 self.input_couplings[channel_index] = QuattroCoupling.AC_SINGLE_ENDED
-            elif channel.coupling.lower() in [
+            elif str(channel.coupling).lower() in [
                 "dc single ended",
                 "dc single-ended",
                 "dc single",
             ]:
                 self.input_couplings[channel_index] = QuattroCoupling.DC_SINGLE_ENDED
-            elif channel.coupling.lower() in ["iepe", "icp", "ac icp", "ccld"]:
+            elif str(channel.coupling).lower() in ["iepe", "icp", "ac icp", "ccld"]:
                 self.input_couplings[channel_index] = QuattroCoupling.AC_COUPLED_IEPE
             self.input_sensitivities[channel_index] = (
                 1.0 if is_output else float(channel.sensitivity) / 1000
@@ -435,6 +436,9 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         return
 
 
+# endregion
+
+
 # region Output
 class DataPhysicsOutput(HardwareOutput):
     """Abstract class defining the interface between the controller and output
@@ -499,3 +503,6 @@ class DataPhysicsOutput(HardwareOutput):
 
         Returns ``True`` if the data-passing queue is empty."""
         return self.queue.empty()
+
+
+# endregion

@@ -99,7 +99,9 @@ def cola(
     last_signal, current_signal = signals
     output = current_signal[:, :signal_samples] * window[:signal_samples]
     if end_samples > 0:
-        output[:, :end_samples] += np.array(last_signal)[:, -end_samples:] * window[-end_samples:]
+        output[:, :end_samples] += (
+            np.array(last_signal)[:, -end_samples:] * window[-end_samples:]
+        )
     return output
 
 
@@ -203,15 +205,19 @@ class RandomSignalGenerator(SignalGenerator):
         self.sample_rate = sample_rate
         self.num_samples = num_samples_per_frame
         self.num_signals = num_signals
-        self.low_frequency_cutoff = 0 if low_frequency_cutoff is None else low_frequency_cutoff
+        self.low_frequency_cutoff = (
+            0 if low_frequency_cutoff is None else low_frequency_cutoff
+        )
         self.high_frequency_cutoff = (
             sample_rate / 2 if high_frequency_cutoff is None else high_frequency_cutoff
         )
         self.cola_overlap = cola_overlap
-        self.cola_window = cola_window.lower()
+        self.cola_window = str(cola_window).lower()
         self.cola_exponent = cola_exponent
         self.output_oversample = output_oversample
-        self.cola_queue = np.zeros((2, self.num_signals, self.num_samples * self.output_oversample))
+        self.cola_queue = np.zeros(
+            (2, self.num_signals, self.num_samples * self.output_oversample)
+        )
 
         # Set up the queue the first time
         self.generate_frame()
@@ -239,7 +245,9 @@ class RandomSignalGenerator(SignalGenerator):
         )
         # Band limit it
         fft = np.fft.rfft(signal, axis=-1)
-        freq = np.fft.rfftfreq(signal.shape[-1], 1 / (self.sample_rate * self.output_oversample))
+        freq = np.fft.rfftfreq(
+            signal.shape[-1], 1 / (self.sample_rate * self.output_oversample)
+        )
         invalid_frequencies = (freq < self.low_frequency_cutoff) | (
             freq > self.high_frequency_cutoff
         )
@@ -280,11 +288,15 @@ class PseudorandomSignalGenerator(SignalGenerator):
             (num_signals, num_samples_per_frame * output_oversample // 2 + 1),
             dtype=complex,
         )
-        low_frequency_cutoff = 0 if low_frequency_cutoff is None else low_frequency_cutoff
+        low_frequency_cutoff = (
+            0 if low_frequency_cutoff is None else low_frequency_cutoff
+        )
         high_frequency_cutoff = (
             sample_rate / 2 if high_frequency_cutoff is None else high_frequency_cutoff
         )
-        valid_frequencies = (freq >= low_frequency_cutoff) & (freq <= high_frequency_cutoff)
+        valid_frequencies = (freq >= low_frequency_cutoff) & (
+            freq <= high_frequency_cutoff
+        )
         fft[..., valid_frequencies] = np.exp(
             1j * 2 * np.pi * np.random.rand(num_signals, valid_frequencies.sum())
         )
@@ -321,7 +333,9 @@ class BurstRandomSignalGenerator(SignalGenerator):
         self.sample_rate = sample_rate
         self.num_samples = num_samples_per_frame
         self.num_signals = num_signals
-        self.low_frequency_cutoff = 0 if low_frequency_cutoff is None else low_frequency_cutoff
+        self.low_frequency_cutoff = (
+            0 if low_frequency_cutoff is None else low_frequency_cutoff
+        )
         self.high_frequency_cutoff = (
             sample_rate / 2 if high_frequency_cutoff is None else high_frequency_cutoff
         )
@@ -335,21 +349,27 @@ class BurstRandomSignalGenerator(SignalGenerator):
         self.envelope[: self.ramp_samples] = np.linspace(0, 1, self.ramp_samples)
         self.envelope[self.ramp_samples : self.ramp_samples + self.on_samples] = 1
         self.envelope[
-            self.ramp_samples + self.on_samples : self.ramp_samples * 2 + self.on_samples
+            self.ramp_samples
+            + self.on_samples : self.ramp_samples * 2
+            + self.on_samples
         ] = np.linspace(1, 0, self.ramp_samples)
 
     @property
     def ramp_samples(self):
         """Property computing how many samples are in the ramp-up and ramp-down of the burst"""
         return int(
-            self.num_samples * self.output_oversample * self.on_fraction * self.ramp_fraction
+            self.num_samples
+            * self.output_oversample
+            * self.on_fraction
+            * self.ramp_fraction
         )
 
     @property
     def on_samples(self):
         """Property computing how many samples the burst is active for"""
         return int(
-            self.num_samples * self.output_oversample * self.on_fraction - 2 * self.ramp_samples
+            self.num_samples * self.output_oversample * self.on_fraction
+            - 2 * self.ramp_samples
         )
 
     @property
@@ -365,7 +385,9 @@ class BurstRandomSignalGenerator(SignalGenerator):
         )
         # Band limit it
         fft = np.fft.rfft(signal, axis=-1)
-        freq = np.fft.rfftfreq(signal.shape[-1], 1 / (self.sample_rate * self.output_oversample))
+        freq = np.fft.rfftfreq(
+            signal.shape[-1], 1 / (self.sample_rate * self.output_oversample)
+        )
         invalid_frequencies = (freq < self.low_frequency_cutoff) | (
             freq > self.high_frequency_cutoff
         )
@@ -473,7 +495,8 @@ class SineSignalGenerator(SignalGenerator):
     def generate_frame(self):
         """Generates a frame of sine data while tracking the phase change"""
         signal = self.level * np.sin(
-            2 * np.pi * self.frequency[..., np.newaxis] * self.times + self.phase[..., np.newaxis]
+            2 * np.pi * self.frequency[..., np.newaxis] * self.times
+            + self.phase[..., np.newaxis]
         )
         self.phase += self.phase_per_frame
         return signal, False
@@ -581,7 +604,9 @@ class CPSDSignalGenerator(SignalGenerator):
         if sigma_clip is None:
             self.sigma_clip = None
         elif isinstance(sigma_clip, np.ndarray):
-            self.sigma_clip = sigma_clip.squeeze()[:, np.newaxis]  # force to n x 1 array
+            self.sigma_clip = sigma_clip.squeeze()[
+                :, np.newaxis
+            ]  # force to n x 1 array
             if np.all(self.sigma_clip >= 5.0):
                 self.sigma_clip = None
         elif isinstance(sigma_clip, (int, float)):
@@ -590,10 +615,12 @@ class CPSDSignalGenerator(SignalGenerator):
                 self.sigma_clip = None
         self.update_parameters(cpsd_matrix)
         self.cola_overlap = cola_overlap
-        self.cola_window = cola_window.lower()
+        self.cola_window = str(cola_window).lower()
         self.cola_exponent = cola_exponent
         self.output_oversample = output_oversample
-        self.cola_queue = np.zeros((2, self.num_signals, self.num_samples * self.output_oversample))
+        self.cola_queue = np.zeros(
+            (2, self.num_signals, self.num_samples * self.output_oversample)
+        )
         self.cola_initialized = False
 
     @property
@@ -660,9 +687,9 @@ class CPSDSignalGenerator(SignalGenerator):
         # (this is the size needed to add to the cola queue)
         if threshold is None:
             return
-        oversample = np.max(size[0] + np.ceil((1 - norm.cdf(threshold)) * 100 * size[0])).astype(
-            int
-        )
+        oversample = np.max(
+            size[0] + np.ceil((1 - norm.cdf(threshold)) * 100 * size[0])
+        ).astype(int)
         # arr needs to be (n_channels x n_samples) (so that when we mask it,
         # it gets flattened in the right order)
         arr = np.random.randn(size[1], oversample)
@@ -676,7 +703,9 @@ class CPSDSignalGenerator(SignalGenerator):
         shifted_indices = (
             np.array([oversample * j for j in range(size[1])], dtype=int) - num_rejected
         )
-        indices = np.concatenate([np.arange(ind, ind + size[0]) for ind in shifted_indices])
+        indices = np.concatenate(
+            [np.arange(ind, ind + size[0]) for ind in shifted_indices]
+        )
         # pull out masked values, reshape in correct order, and swapaxes to match dims of `size`
         return arr[mask][indices].reshape((size[1], size[0], size[2])).swapaxes(0, 1)
 
@@ -692,12 +721,18 @@ class CPSDSignalGenerator(SignalGenerator):
         else:
             # Apply sigma clipping via rejection sampling
             # (apply correction factor to attempt to preserve rms levels)
-            real = self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
-            imag = self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
+            real = (
+                self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
+            )
+            imag = (
+                self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
+            )
         # print('after ', len(real), len(imag))
         # Compute Random Process
         W = np.sqrt(0.5) * (real + 1j * imag)  # pylint: disable=invalid-name
-        Xv = 1 / np.sqrt(self.frequency_spacing) * self.Lsvd @ W  # pylint: disable=invalid-name
+        Xv = (
+            1 / np.sqrt(self.frequency_spacing) * self.Lsvd @ W
+        )  # pylint: disable=invalid-name
         # Ensure that the signal is real by setting the nyquist and DC component to 0
         Xv[[0, -1], :, :] = 0
         # Compute the IFFT, using the real version makes it so you don't need negative frequencies
@@ -707,7 +742,9 @@ class CPSDSignalGenerator(SignalGenerator):
         )
         # ifft_start = time()
         xv = (
-            np.fft.irfft(np.concatenate((Xv, zero_padding), axis=0) / np.sqrt(2), axis=0)
+            np.fft.irfft(
+                np.concatenate((Xv, zero_padding), axis=0) / np.sqrt(2), axis=0
+            )
             * self.output_oversample
             * self.sample_rate
         )
@@ -730,7 +767,9 @@ class CPSDSignalGenerator(SignalGenerator):
         if self.sigma_clip is not None:
             mask = np.abs(output_signal) >= (self._rms * self.sigma_clip)
             if len(mask) > 0:
-                twosigma = np.sign(output_signal).real * self._rms.real * self.sigma_clip * 2
+                twosigma = (
+                    np.sign(output_signal).real * self._rms.real * self.sigma_clip * 2
+                )
                 output_signal[mask] *= -1
                 output_signal[mask] += twosigma[mask]
         return output_signal, False
@@ -772,9 +811,13 @@ class ContinuousTransientSignalGenerator(SignalGenerator):
             np.savez(
                 FILE_OUTPUT.format(num_files),
                 output_signal=output_signal,
-                last_signal=(self.no_more_signal_incoming and self.signal.shape[-1] == 0),
+                last_signal=(
+                    self.no_more_signal_incoming and self.signal.shape[-1] == 0
+                ),
             )
-        return output_signal, (self.no_more_signal_incoming and self.signal.shape[-1] == 0)
+        return output_signal, (
+            self.no_more_signal_incoming and self.signal.shape[-1] == 0
+        )
 
 
 class TransientSignalGenerator(SignalGenerator):

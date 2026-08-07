@@ -36,8 +36,10 @@ from rattlesnake.user_interface.ui_utilities import (
     PlotWindow,
     TransformationMatrixWindow,
     UICommands,
+    channel_unit_label,
     error_message_qt,
     multiline_plotter,
+    axis_label,
 )
 from rattlesnake.utilities import (
     _direction_map,
@@ -182,6 +184,24 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         for plot_widget in logscale_plot_widgets:
             plot_item = plot_widget.getPlotItem()
             plot_item.setLogMode(False, True)
+
+        for plot_widget in plot_widgets:
+            plot_widget.getPlotItem().setLabel("bottom", "Frequency (Hz)")
+        self.definition_widget.specification_single_plot.getPlotItem().setLabel(
+            "left", "CPSD"
+        )
+        self.definition_widget.specification_sum_asds_plot.getPlotItem().setLabel(
+            "left", "Sum of ASDs"
+        )
+        self.prediction_widget.excitation_display_plot.getPlotItem().setLabel(
+            "left", "Excitation PSD"
+        )
+        self.prediction_widget.response_display_plot.getPlotItem().setLabel(
+            "left", "Response PSD"
+        )
+        self.run_widget.global_test_performance_plot.getPlotItem().setLabel(
+            "left", "Response PSD"
+        )
 
         self.connect_callbacks()
 
@@ -334,7 +354,21 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 )
             ]
 
-    # endregion
+    def initialized_control_unit(self, control_index):
+        """Engineering unit of an initialized control channel, or None if unknown
+
+        Returns None for transformed control channels, since those don't
+        correspond to a single physical channel with a single unit.
+        """
+        if self.environment_metadata.response_transformation_matrix is not None:
+            return None
+        try:
+            channel_index = self.environment_metadata.control_channel_indices[
+                control_index
+            ]
+            return self.hardware_metadata.channel_list[channel_index].unit
+        except (IndexError, TypeError):
+            return None
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata):
@@ -455,6 +489,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.define_transformation_matrices(None, False)
+        # Set the default control law if needed
+        if not self.definition_widget.control_script_file_path_input.text():
+            control_law_path = os.path.join(
+                DIRECTORY, "examples", "control_laws", "control_laws.py"
+            )
+            self.select_python_module(clicked=False, filename=control_law_path)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
@@ -613,7 +653,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             control_function_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
-        return RandomVibrationMetadata(
+        metadata = RandomVibrationMetadata(
             environment_name=self.environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=self.definition_widget.sample_rate_display.value(),
@@ -648,6 +688,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             percent_lines_out=self.definition_widget.frequency_lines_out_spinbox.value(),
             allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
         )
+
+        specification_file = (
+            self.definition_widget.specification_file_name_display.text()
+        )
+        if specification_file:
+            metadata.set_file(specification_file)
+
+        return metadata
 
     def set_environment_metadata(self, metadata: RandomVibrationMetadata):
         self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
@@ -717,8 +765,13 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.specification_cpsd_matrix = metadata.specification_cpsd_matrix
         self.specification_warning_matrix = metadata.specification_warning_matrix
         self.specification_abort_matrix = metadata.specification_abort_matrix
+        self.definition_widget.specification_file_name_display.setText(
+            metadata.specification_file or ""
+        )
 
-        if np.all(np.isnan(self.specification_abort_matrix)):
+        if self.specification_abort_matrix is None or np.all(
+            np.isnan(self.specification_abort_matrix)
+        ):
             self.definition_widget.auto_abort_checkbox.setChecked(False)
             self.definition_widget.auto_abort_checkbox.setEnabled(False)
         else:
@@ -826,33 +879,40 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
             if filename == "":
                 return
-        self.python_control_module = load_python_module(filename)
-        functions = [
-            function
-            for function in inspect.getmembers(self.python_control_module)
-            if (
-                inspect.isfunction(function[1])
-                and len(inspect.signature(function[1]).parameters) >= 12
-            )
-            or inspect.isgeneratorfunction(function[1])
-            or (
-                inspect.isclass(function[1])
-                and all(
-                    [
-                        (
-                            method in function[1].__dict__
-                            and not (
-                                hasattr(
-                                    function[1].__dict__[method], "__isabstractmethod__"
-                                )
-                                and function[1].__dict__[method].__isabstractmethod__
-                            )
-                        )
-                        for method in ["system_id_update", "control"]
-                    ]
+        try:
+            self.python_control_module = load_python_module(filename)
+            functions = [
+                function
+                for function in inspect.getmembers(self.python_control_module)
+                if (
+                    inspect.isfunction(function[1])
+                    and len(inspect.signature(function[1]).parameters) >= 12
                 )
-            )
-        ]
+                or inspect.isgeneratorfunction(function[1])
+                or (
+                    inspect.isclass(function[1])
+                    and all(
+                        [
+                            (
+                                method in function[1].__dict__
+                                and not (
+                                    hasattr(
+                                        function[1].__dict__[method],
+                                        "__isabstractmethod__",
+                                    )
+                                    and function[1]
+                                    .__dict__[method]
+                                    .__isabstractmethod__
+                                )
+                            )
+                            for method in ["system_id_update", "control"]
+                        ]
+                    )
+                )
+            ]
+        except Exception as e:
+            self.display_error(e)
+            return
         self.log(
             f"Loaded module {self.python_control_module.__name__} with "
             f"functions {[function[0] for function in functions]}"
@@ -894,8 +954,37 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 0
             )
 
+    def specification_selector_unit(self, selector_index):
+        """Engineering unit of the control channel at a specification row/column index"""
+        if 0 <= selector_index < len(self.physical_control_indices):
+            channel_index = self.physical_control_indices[selector_index]
+            return self.hardware_metadata.channel_list[channel_index].unit
+        return None
+
+    def prediction_pair_unit(self, physical_indices, row_index, column_index):
+        """Engineering unit shared by a row/column pair of physical channels, if any"""
+        if not (0 <= row_index < len(physical_indices)) or not (
+            0 <= column_index < len(physical_indices)
+        ):
+            return None
+        row_unit = self.hardware_metadata.channel_list[physical_indices[row_index]].unit
+        column_unit = self.hardware_metadata.channel_list[
+            physical_indices[column_index]
+        ].unit
+        return row_unit if row_unit == column_unit else None
+
     def show_specification(self):
         """Show the specification on the GUI"""
+        row_unit = self.specification_selector_unit(
+            self.definition_widget.specification_row_selector.currentIndex()
+        )
+        column_unit = self.specification_selector_unit(
+            self.definition_widget.specification_column_selector.currentIndex()
+        )
+        self.definition_widget.specification_single_plot.getPlotItem().setLabel(
+            "left",
+            axis_label("psd", "CPSD", row_unit if row_unit == column_unit else None),
+        )
         if self.specification_cpsd_matrix is None:
             self.plot_data_items["specification_real"].setData(
                 np.array([0, self.definition_widget.sample_rate_display.value() / 2]),
@@ -1043,6 +1132,16 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
         self.definition_widget.specification_row_selector.blockSignals(False)
         self.definition_widget.specification_column_selector.blockSignals(False)
+        control_unit = channel_unit_label(
+            self.hardware_metadata.channel_list[i]
+            for i in self.physical_control_indices
+        )
+        self.definition_widget.specification_sum_asds_plot.getPlotItem().setLabel(
+            "left", axis_label("psd", "Sum of ASDs", control_unit)
+        )
+        self.run_widget.global_test_performance_plot.getPlotItem().setLabel(
+            "left", axis_label("psd", "Response PSD", control_unit)
+        )
         self.define_transformation_matrices(None, False)
         self.show_specification()
 
@@ -1194,6 +1293,16 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         excite_column_index = (
             self.prediction_widget.excitation_column_selector.currentIndex()
         )
+        excite_unit = (
+            None
+            if self.output_transformation_matrix is not None
+            else self.prediction_pair_unit(
+                self.physical_output_indices, excite_row_index, excite_column_index
+            )
+        )
+        self.prediction_widget.excitation_display_plot.getPlotItem().setLabel(
+            "left", axis_label("psd", "Excitation PSD", excite_unit)
+        )
         self.plot_data_items["excitation_prediction"][0].setData(
             self.sysid_data.frequencies,
             np.abs(
@@ -1204,6 +1313,16 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         row_index = self.prediction_widget.response_row_selector.currentIndex()
         column_index = self.prediction_widget.response_column_selector.currentIndex()
+        response_unit = (
+            None
+            if self.response_transformation_matrix is not None
+            else self.prediction_pair_unit(
+                self.physical_control_indices, row_index, column_index
+            )
+        )
+        self.prediction_widget.response_display_plot.getPlotItem().setLabel(
+            "left", axis_label("psd", "Response PSD", response_unit)
+        )
         self.plot_data_items["response_prediction"][0].setData(
             self.sysid_data.frequencies,
             np.abs(np.real(self.response_prediction[:, row_index, column_index])),
@@ -1434,6 +1553,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     if row_index == column_index and datatype_index == 0
                     else None
                 ),
+                self.initialized_control_unit(row_index),
+                self.initialized_control_unit(column_index),
             )
         )
 
@@ -1742,3 +1863,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 widget.setEnabled(False)
             case _:
                 print(f"Unknown Random UI Command {command}")
+
+    # endregion
+
+
+# endregion

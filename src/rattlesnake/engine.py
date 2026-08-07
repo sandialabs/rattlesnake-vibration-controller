@@ -1,3 +1,4 @@
+import atexit
 from datetime import datetime
 from enum import Enum
 import multiprocessing as mp
@@ -13,6 +14,7 @@ import netCDF4 as nc4
 from rattlesnake.utilities import (
     log_file_task,
     flush_queue,
+    gui_queue_cleanup,
     EventContainer,
     GlobalCommands,
     QueueContainer,
@@ -46,7 +48,11 @@ from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
-THREADING = False
+THREADING = False  # Decides whether to spin up multiple processes or threads
+GUI_QUEUE_MAX_SIZE = (
+    500  # Max size of gui_update_queue before it is trimmed in headless mode
+)
+GUI_QUEUE_POLL_INTERVAL = 0.25  # Seconds between gui_update_queue size checks
 
 
 # region State
@@ -58,6 +64,9 @@ class RattlesnakeState(Enum):
     HARDWARE_ACTIVE = 3  # Acquisition is running
     ENVIRONMENT_ACTIVE = 4  # Environment output is running
     SYS_ID_ACTIVE = 5  # System identification is being performed
+
+
+# endregion
 
 
 # region Rattlesnake
@@ -92,6 +101,11 @@ class RattlesnakeController:
             the previous state and require you to perform the command
             again.
         """
+        # Shutdown behavior
+        self._shutdown_complete = False
+        self._init_complete = False
+        atexit.register(self.shutdown)
+
         # Initialize values for checking state
         self._threaded = threaded
         self._blocking = True  # Wait for ready events?, True for IDE, False for UI
@@ -194,6 +208,21 @@ class RattlesnakeController:
         # Set up output queue
         gui_update_queue = new_queue()
 
+        # Bound the size of gui_update_queue while no GUI is attached
+        self.gui_queue_cleanup_close_event = threading.Event()
+        self.gui_queue_cleanup_thread = threading.Thread(
+            target=gui_queue_cleanup,
+            args=(
+                gui_update_queue,
+                self.gui_queue_cleanup_close_event,
+                lambda: self.has_gui,
+                GUI_QUEUE_MAX_SIZE,
+                GUI_QUEUE_POLL_INTERVAL,
+            ),
+            daemon=True,
+        )
+        self.gui_queue_cleanup_thread.start()
+
         # Event for telling engine to restart timeout
         ping_alive_event = new_event()
 
@@ -295,7 +324,7 @@ class RattlesnakeController:
         self.profile_manager = ProfileManager(
             self.queue_container
         )  # Contains instructions/profile events
-        self._hardware_metadata = None
+        self.hardware_metadata = None
         # These are only used for UI to pull from if they have already been
         # set to the controller. These are not used for any logic in this
         # controller
@@ -312,6 +341,21 @@ class RattlesnakeController:
             ]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
+
+        self._init_complete = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.shutdown()
+        return False
+
+    def __del__(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
 
     @property
     def state(self) -> RattlesnakeState:
@@ -447,12 +491,14 @@ class RattlesnakeController:
 
             time.sleep(0.25)
 
-    # endregion
-
     # region Loading
     def setup_gui(self):
         self.clear_blocking()
         self.has_gui = True
+
+    def close_gui(self):
+        self.set_blocking()
+        self.has_gui = False
 
     def load_rattlesnake_from_template(self, filepath: str):
         """
@@ -513,7 +559,8 @@ class RattlesnakeController:
                                 environment_metadata.sysid_metadata,
                                 environment_metadata.environment_name,
                             )
-                    self.initialize_profile_event_list(profile_event_list)
+                    if profile_event_list:
+                        self.initialize_profile_event_list(profile_event_list)
                     self.last_stream_metadata = None
         finally:
             if not initial_blocking:
@@ -571,7 +618,9 @@ class RattlesnakeController:
         active_event_list = []
         self.wait_for_events(ready_event_list, active_event_list)
 
-    def load_system_id_from_package(self, environment_name, sysid_package):
+    def load_system_id_from_package(
+        self, environment_name, sysid_package, ask_to_share=False
+    ):
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for loading system identification: {self.state}"
@@ -581,9 +630,12 @@ class RattlesnakeController:
             environment_name, sysid_package
         )
 
+        if not self.has_gui:
+            ask_to_share = False
+
         self.event_container.environment_sysid_stored_events[queue_name].clear()
         self.queue_container.environment_command_queues[queue_name].put(
-            TASK_NAME, (GlobalCommands.LOAD_SYSTEM_ID, sysid_package)
+            TASK_NAME, (GlobalCommands.LOAD_SYSTEM_ID, (sysid_package, ask_to_share))
         )
 
         ready_event_list = [
@@ -595,14 +647,6 @@ class RattlesnakeController:
     # endregion
 
     # region Hardware
-    @property
-    def hardware_metadata(self):
-        return self._hardware_metadata
-
-    @hardware_metadata.setter
-    def hardware_metadata(self, value: HardwareMetadata):
-        self._hardware_metadata = value
-
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """Validates hardware_metadata and sends data to relevant processes"""
         # Validate Rattlesnake State
@@ -1203,16 +1247,31 @@ class RattlesnakeController:
 
     # region Shutdown
     def shutdown(self):
+        if self._shutdown_complete:
+            return
+        if not self._init_complete:
+            # __init__ raised before finishing, so attributes shutdown()
+            # depends on (queue_container, event_container, processes, etc.)
+            # may not exist. There is nothing coherent left to tear down.
+            self._shutdown_complete = True
+            return
+        print("Rattlesnake Shutting Down")
         if self.state in (
             RattlesnakeState.HARDWARE_ACTIVE,
             RattlesnakeState.ENVIRONMENT_ACTIVE,
             RattlesnakeState.SYS_ID_ACTIVE,
         ):
-            self.stop_acquisition()
+            try:
+                self.set_blocking()
+                self.stop_acquisition()
+            except:
+                print("Failed Acquisition Shutdown")
         # Close out of acquisition, output, streaming process
         self.queue_container.log_file_queue.put(
             f"{datetime.now()}: Joining Controller Process\n"
         )
+        self.gui_queue_cleanup_close_event.set()
+        self.gui_queue_cleanup_thread.join(timeout=CLOSE_TIMEOUT)
         flush_queue(self.queue_container.gui_update_queue, timeout=CLOSE_TIMEOUT)
         self.queue_container.controller_command_queue.put(
             TASK_NAME, (GlobalCommands.QUIT, None)
@@ -1284,7 +1343,17 @@ class RattlesnakeController:
             "{:}: Joining Log File Process\n".format(datetime.now())
         )
         self.queue_container.log_file_queue.put(GlobalCommands.QUIT)
-        self.log_file_process.join()
+        self.log_file_process.join(timeout=CLOSE_TIMEOUT)
+        if self.log_file_process.is_alive():
+            self.log_file_process.terminate()
+            self.log_file_process.join()
+
+        try:
+            self.controller_queue_name_manager.shutdown()
+        except Exception:
+            print("Failed Manager Shutdown")
+
+        self._shutdown_complete = True
 
     def log(self, string):
         """Pass a message to the log_file_queue along with date/time and task name
@@ -1300,3 +1369,6 @@ class RattlesnakeController:
         )
 
     # endregion
+
+
+# endregion

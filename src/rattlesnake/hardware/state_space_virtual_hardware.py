@@ -38,8 +38,9 @@ from rattlesnake.hardware.abstract_hardware import (
     HardwareAcquisition,
     HardwareOutput,
 )
-from rattlesnake.utilities import flush_queue
+from rattlesnake.utilities import flush_queue, RattlesnakeError
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.user_interface.ui_utilities import HardwareAssistModules
 
 HARDWARE_TYPE = HardwareType.STATE_SPACE
 
@@ -65,11 +66,152 @@ class StateSpaceMetadata(HardwareMetadata):
         )
         self.hardware_file = hardware_file
 
-    # endregion
-
     # region Validation
     def validate(self):
-        return super().validate()
+        super().validate()
+        a_matrix, b_matrix, c_matrix, d_matrix = self._load_state_space_matrices()
+
+        if a_matrix.ndim != 2 or a_matrix.shape[0] != a_matrix.shape[1]:
+            raise RattlesnakeError(
+                f"State space matrix 'A' in {self.hardware_file} must be "
+                f"square, got shape {a_matrix.shape}"
+            )
+        n_states = a_matrix.shape[0]
+        if b_matrix.ndim != 2 or b_matrix.shape[0] != n_states:
+            raise RattlesnakeError(
+                f"State space matrix 'B' in {self.hardware_file} must have "
+                f"{n_states} rows to match 'A', got shape {b_matrix.shape}"
+            )
+        if c_matrix.ndim != 2 or c_matrix.shape[1] != n_states:
+            raise RattlesnakeError(
+                f"State space matrix 'C' in {self.hardware_file} must have "
+                f"{n_states} columns to match 'A', got shape {c_matrix.shape}"
+            )
+        n_outputs = c_matrix.shape[0]
+        n_inputs = b_matrix.shape[1]
+        if d_matrix.shape != (n_outputs, n_inputs):
+            raise RattlesnakeError(
+                f"State space matrix 'D' in {self.hardware_file} must have "
+                f"shape ({n_outputs}, {n_inputs}) to match 'B' and 'C', got "
+                f"shape {d_matrix.shape}"
+            )
+
+        for row, channel in enumerate(self.channel_list):
+            if channel.physical_device not in self.valid_physical_device:
+                raise RattlesnakeError(
+                    f"Physical device should be 'Virtual' in channel table "
+                    f"row {row+1}"
+                )
+            if (
+                str(channel.channel_type).lower()
+                not in self.accepted_channel_type_strings
+            ):
+                raise RattlesnakeError(
+                    f"Invalid channel type in channel table row {row+1}. "
+                    "Valid channel types include 'Acceleration', 'Force'"
+                )
+            if str(
+                channel.channel_type
+            ).lower() == "force" and not self._has_feedback_device(channel):
+                raise RattlesnakeError(
+                    "Force channel types require an 'Input' feedback device "
+                    f"in channel table row {row+1}"
+                )
+            if (
+                self._has_feedback_device(channel)
+                and channel.feedback_device not in self.valid_feedback_device
+            ):
+                raise RattlesnakeError(
+                    f"Invalid feedback device in channel table row {row+1}. "
+                    "Valid feedback devices include 'Input' or blank"
+                )
+
+        if len(self.channel_list) != n_outputs:
+            raise RattlesnakeError(
+                f"Channel table has {len(self.channel_list)} channels but "
+                f"the state space 'C'/'D' matrices in {self.hardware_file} "
+                f"define {n_outputs} outputs; they must match"
+            )
+
+        n_force_channels = sum(
+            1 for channel in self.channel_list if self._has_feedback_device(channel)
+        )
+        if n_force_channels != n_inputs:
+            raise RattlesnakeError(
+                f"Channel table has {n_force_channels} channels with a "
+                f"feedback device assigned but the state space 'B'/'D' "
+                f"matrices in {self.hardware_file} define {n_inputs} inputs; "
+                "they must match"
+            )
+
+    @staticmethod
+    def _has_feedback_device(channel: Channel):
+        return channel.feedback_device is not None and channel.feedback_device != ""
+
+    def _load_state_space_matrices(self):
+        """Loads the A, B, C, and D matrices from ``self.hardware_file``,
+        mirroring the loading logic in ``StateSpaceAcquisition.initialize_hardware``."""
+        _, extension = os.path.splitext(str(self.hardware_file))
+        if extension.lower() == ".npz":
+            try:
+                data = np.load(self.hardware_file)
+            except:
+                raise RattlesnakeError(f"Invalid state space file {self.hardware_file}")
+        elif extension.lower() == ".mat":
+            try:
+                data = loadmat(self.hardware_file)
+            except:
+                raise RattlesnakeError(f"Invalid state space file {self.hardware_file}")
+        else:
+            raise RattlesnakeError(
+                f"Unknown extension on state space file {self.hardware_file}, "
+                f"should be .npz or .mat, not {extension}"
+            )
+
+        try:
+            a_matrix = np.asarray(data["A"])
+            b_matrix = np.asarray(data["B"])
+            c_matrix = np.asarray(data["C"])
+            d_matrix = np.asarray(data["D"])
+        except KeyError as e:
+            raise RattlesnakeError(
+                f"State space file {self.hardware_file} is missing matrix {e}"
+            ) from e
+
+        return a_matrix, b_matrix, c_matrix, d_matrix
+
+    @property
+    def accepted_channel_type_strings(self):
+        return ["accel", "acceleration", "acc", "force"]
+
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+        assist_mode_modules["physical_device"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["channel_type"] = HardwareAssistModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareAssistModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = super().valid_channel_dict(channel)
+
+        valid_dict["physical_device"] = self.valid_physical_device
+        valid_dict["channel_type"] = self.valid_channel_types
+        valid_dict["feedback_device"] = self.valid_feedback_device
+
+        return valid_dict
+
+    @property
+    def valid_channel_types(self):
+        return ["Acceleration", "Force"]
+
+    @property
+    def valid_physical_device(self):
+        return ["Virtual"]
+
+    @property
+    def valid_feedback_device(self):
+        return ["Input"]
 
     # endregion
 
@@ -141,6 +283,8 @@ class StateSpaceMetadata(HardwareMetadata):
             output_oversample,
             hardware_file,
         )
+
+    # endregion
 
 
 # endregion

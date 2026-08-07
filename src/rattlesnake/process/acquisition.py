@@ -138,8 +138,6 @@ class AcquisitionProcess(AbstractMessageProcess):
         self._streaming_active_event = streaming_active_event
         # print('acquisition setup')
 
-    # endregion
-
     # region State Sync
     @property
     def acquisition_active(self):
@@ -264,6 +262,13 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_samples_remaining_to_read[data] = (
             self.hardware.get_acquisition_delay()
         )
+        if self.environment_first_data[data] is not None:
+            # This environment never found a valid input/output sync.
+            self.log(
+                f"Environment {data} was stopped before an input/output sync "
+                "was found; abandoning the sync search"
+            )
+            self.environment_first_data[data] = None
 
     def start_streaming(self, data):  # pylint: disable=unused-argument
         """Sets the flag to tell the acquisition to write data to disk
@@ -441,6 +446,14 @@ class AcquisitionProcess(AbstractMessageProcess):
             for environment in self.environment_list:
                 # Check to see if we're waiting for the first data for this environment
                 if self.environment_first_data[environment] is not None:
+                    if self.shutdown_flag and self.environment_last_data[environment]:
+                        # Shut down the environment in the case that the input/output never synced
+                        self.log(
+                            f"Abandoning input/output sync search for {environment} "
+                            "because acquisition is shutting down"
+                        )
+                        self.environment_first_data[environment] = None
+                        continue
                     if np.all(np.abs(self.environment_first_data[environment]) < 1e-10):
                         delay = -self.read_size
                     else:
@@ -598,6 +611,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

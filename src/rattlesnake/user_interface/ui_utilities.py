@@ -34,7 +34,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt
 from scipy.io import loadmat
-from enum import Enum
+from enum import Enum, IntEnum
 import openpyxl
 
 from rattlesnake.utilities import (
@@ -47,6 +47,7 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
     GlobalCommands,
     IPAddress,
+    add_unique_ip_address,
     autofill_single_ip_address,
     search_for_lanxi_devices,
 )
@@ -68,14 +69,26 @@ class UICommands(Enum):
     HARDWARE_ENDED = 8
     SET_ENVIRONMENT_INSTRUCTIONS = 9
     COMPLETED_SYSTEM_ID = 10
-    ENVIRONMENT_STARTED = 11
-    ENVIRONMENT_ENDED = 12
-    GUI_SETUP_FINISHED = 13
+    SHARE_SYSTEM_ID = 11
+    ENVIRONMENT_STARTED = 12
+    ENVIRONMENT_ENDED = 13
+    GUI_OPENED = 14
+    GUI_CLOSED = 15
 
     @property
     def label(self):
         """Used by UI as names for"""
         return self.name.replace("_", " ").title()
+
+
+class TabIndices(IntEnum):
+    HARDWARE = 0
+    ENVIRONMENT = 1
+    SYSTEM_ID = 2
+    PREDICTION = 3
+    PROFILE = 4
+    RUN = 5
+    INFO = 6
 
 
 def error_message_qt(title, message):
@@ -89,7 +102,6 @@ def error_message_qt(title, message):
         Error message that will be displayed.
 
     """
-    print(message)
     QtWidgets.QMessageBox.critical(None, title, message)
 
 
@@ -249,6 +261,47 @@ class Updater(QtCore.QRunnable):
         time.sleep(1)
 
 
+class ThrottledCurve:
+    """
+    Object that allows data to be rolled into a numpy array.
+
+    This is used to contain data that needs to be plotted on a pyqtgraph without
+    having the pyqtgraph render that data whenever it is added. Allows for the
+    plots within the user interface to be throttled to render at specific timings.
+    These curves
+    """
+
+    def __init__(self):
+        self._buffers = {}
+        self._dirty = set()
+
+    def roll(self, curve, new_data):
+        if curve not in self._buffers:
+            x0, y0 = curve.getData()
+            self._buffers[curve] = (x0, np.array(y0, copy=True))
+        x, y = self._buffers[curve]
+        self._buffers[curve] = (
+            x,
+            np.concatenate((y[new_data.size :], new_data[-y.size :]), axis=0),
+        )
+        self._dirty.add(curve)
+
+    def set(self, curve, x, y):
+        self._buffers[curve] = (x, y)
+        self._dirty.add(curve)
+
+    def get(self, curve):
+        if curve in self._buffers:
+            return self._buffers[curve]
+        return curve.getOriginalDataset()
+
+    def flush(self):
+        for curve in self._dirty:
+            x, y = self._buffers[curve]
+            curve.setData(x, y)
+        self._dirty.clear()
+
+
 class PlotWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
@@ -271,6 +324,8 @@ class PlotWindow(QtWidgets.QDialog):
         datatype_name,
         warning_matrix=None,
         abort_matrix=None,
+        row_unit=None,
+        column_unit=None,
     ):
         """
         Creates a window showing CPSD matrix information for a single channel.
@@ -294,6 +349,10 @@ class PlotWindow(QtWidgets.QDialog):
             Channel name for the column.
         datatype_name : str
             Name for the datatype.
+        row_unit : str
+            Engineering unit of the row channel. (Default value = None)
+        column_unit : str
+            Engineering unit of the column channel. (Default value = None)
 
 
         """
@@ -314,6 +373,14 @@ class PlotWindow(QtWidgets.QDialog):
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
+        plot_item.setLabel("bottom", "Frequency (Hz)")
+        common_unit = row_unit if row_unit == column_unit else None
+        if self.datatype in (0, 3, 4):  # Magnitude, Real, Imaginary
+            plot_item.setLabel("left", axis_label("psd", datatype_name, common_unit))
+        elif self.datatype == 2:  # Phase
+            plot_item.setLabel("left", f"{datatype_name} (rad)")
+        else:  # Coherence
+            plot_item.setLabel("left", datatype_name)
         if self.datatype == 0:
             plot_item.setLogMode(False, True)
         plot_item.plot(self.frequencies, self.spec_data, pen={"color": "b", "width": 1})
@@ -403,7 +470,9 @@ class PlotWindow(QtWidgets.QDialog):
 class PlotTimeWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
-    def __init__(self, parent, index, specification, sample_rate, index_name):
+    def __init__(
+        self, parent, index, specification, sample_rate, index_name, unit=None
+    ):
         """
         Creates a window showing time history information for a single channel.
 
@@ -419,6 +488,8 @@ class PlotTimeWindow(QtWidgets.QDialog):
             The sample rate of the time signal
         index_name : str
             Channel name for the row.
+        unit : str
+            Engineering unit of the channel. (Default value = None)
         """
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowFlags(self.windowFlags() & Qt.Tool)
@@ -436,12 +507,13 @@ class PlotTimeWindow(QtWidgets.QDialog):
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.plot(self.times, self.spec_data, pen={"color": "b", "width": 1})
+        plot_item.setLabel("bottom", "Time (s)")
         plot_item.setLabel("left", "TRAC: 0.0")
         self.plot_item = plot_item
         self.curve = plot_item.plot(
             self.times, self.data, pen={"color": "r", "width": 1}
         )
-        self.setWindowTitle(f"{index_name}")
+        self.setWindowTitle(f"{index_name}" + (f" ({unit})" if unit else ""))
         self.show()
 
     def reduce_matrix(self, matrix):
@@ -1422,6 +1494,36 @@ class EventWatcher(QtCore.QObject):
 
 
 # region Hardware
+def channel_unit_label(channel_list):
+    """
+    Returns the units from a channel list.
+    """
+    units = {
+        c.unit for c in channel_list if c is not None and c.unit not in (None, "", "-")
+    }
+    return units.pop() if len(units) == 1 else None
+
+
+def axis_label(type, base, unit=None):
+    """
+    Builds an axis label, appending the unit in parentheses if one is known.
+    """
+    match type:
+        case "amplitude":
+            return base if not unit else f"{base} ({unit})"
+        case "psd":
+            return base if not unit else f"{base} ({unit}²/Hz)"
+        case "ratio":
+            numerator, denominator = unit
+            return (
+                base
+                if not (numerator and denominator)
+                else f"{base} ({numerator}/{denominator})"
+            )
+        case _:
+            return base
+
+
 class HardwareAssistModules(Enum):
     NONE = 0
     COMBOBOX = 2
@@ -1446,6 +1548,7 @@ class IPAddressManager(QtWidgets.QDialog):
 
         self.ip_addresses = []
         self.unique_indices = []
+        self.needs_revalidation = False
         for address in ip_addresses:
             self.add_ip_address(ip_address=address)
         self.max_processes = 10
@@ -1455,6 +1558,11 @@ class IPAddressManager(QtWidgets.QDialog):
 
         self.refresh_ip_table()
         self.loading_bar.hide()
+
+        if self.needs_revalidation:
+            self.autofill_ip_addresses()
+            self.refresh_ip_table()
+            self.needs_revalidation = False
 
         self.connect_callbacks()
 
@@ -1550,6 +1658,11 @@ class IPAddressManager(QtWidgets.QDialog):
         # Find which IP addresses are valid
         for address in ip_addresses:
             self.add_ip_address(ip_address=address)
+
+        if self.needs_revalidation:
+            self.autofill_ip_addresses()
+            self.needs_revalidation = False
+
         self.refresh_ip_table()
 
     def clear_ip_addresses(self):
@@ -1568,12 +1681,31 @@ class IPAddressManager(QtWidgets.QDialog):
         clicked=None,
         ip_address=None,
     ):  # pylint: disable=unused-argument
-        """Adds a new IP address to the manager"""
+        """Adds a new IP address to the manager.
+
+        If ``ip_address`` is equivalent to one already in the manager (per
+        ``IPAddress.__eq__``, which matches on ipv6 > ipv4 > host name), it is
+        merged into that existing row instead of being appended as a
+        duplicate.
+        """
         if isinstance(ip_address, IPAddress):
-            new_ip = ip_address
+            previous_count = len(self.ip_addresses)
+            if add_unique_ip_address(self.ip_addresses, ip_address):
+                self.needs_revalidation = True
+            if len(self.ip_addresses) == previous_count:
+                # Merged into an existing row rather than being appended as
+                # a new one, so just refresh that row's displayed text.
+                merged_row = next(
+                    row
+                    for row, address in enumerate(self.ip_addresses)
+                    if address == ip_address
+                )
+                self.refresh_ip_table([merged_row])
+                return
+            new_ip = self.ip_addresses[-1]
         else:
             new_ip = IPAddress()
-        self.ip_addresses.append(new_ip)
+            self.ip_addresses.append(new_ip)
         unique_index = 0
         while unique_index in self.unique_indices:
             unique_index += 1
@@ -1822,6 +1954,10 @@ class IPAddressManager(QtWidgets.QDialog):
         for address in ip_addresses:
             self.add_ip_address(ip_address=address)
 
+        if self.needs_revalidation:
+            self.autofill_ip_addresses()
+            self.needs_revalidation = False
+
         self.refresh_ip_table()
 
     def closeEvent(self, event):  # pylint: disable=unused-argument,invalid-name
@@ -1862,8 +1998,9 @@ class EditableCombobox(QtWidgets.QComboBox):
 
 
 class EditableSpinBox(QtWidgets.QAbstractSpinBox):
-    stringValueChanged = QtCore.Signal(str)
-    intValueChanged = QtCore.Signal(object)  # int or None
+    stringValueChanged = QtCore.Signal(str)  # emitted on every keystroke
+    intValueChanged = QtCore.Signal(object)  # emitted on every keystroke, int or None
+    editingFinishedText = QtCore.Signal(str)  # emitted once editing completes
 
     def __init__(self, min_range=-1000000, max_range=1000000, text="", parent=None):
         super().__init__(parent)
@@ -1939,6 +2076,7 @@ class EditableSpinBox(QtWidgets.QAbstractSpinBox):
         self._text = self.lineEdit().text()
         self._recompute_value()
         self._emit_if_changed()
+        self.editingFinishedText.emit(self._text)
 
     def _recompute_value(self):
         try:
@@ -2010,6 +2148,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
         self.parent = parent
         self.channel_names = self.parent.channel_names
+        self.channel_list = getattr(self.parent, "channel_list", None)
         self.reference_names = np.array(
             [
                 self.parent.channel_names[i]
@@ -2232,9 +2371,118 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         )
         self.setWindowTitle(f"{signal_name} {response_name} {reference_name}")
 
+    def _channel_at(self, index):
+        """Returns the Channel at a physical channel_list index, or None if unknown"""
+        if self.channel_list is None or index is None:
+            return None
+        try:
+            return self.channel_list[index]
+        except (IndexError, TypeError):
+            return None
+
+    def selected_response_unit(self):
+        """Engineering unit of the currently selected response channel, or None"""
+        index = self.response_coordinate_selector.currentIndex()
+        if index < 0:
+            return None
+        current_signal = self.signal_selector.currentIndex()
+        if current_signal in (
+            0,
+            1,
+            2,
+            3,
+        ):  # Time, Windowed Time, Spectrum, Autospectrum
+            channel = self._channel_at(index)
+        elif current_signal == 7:  # Reciprocity
+            try:
+                response_index = self.reciprocal_responses[index]
+                channel = self._channel_at(
+                    self.parent.response_channel_indices[response_index]
+                )
+            except (IndexError, TypeError):
+                channel = None
+        else:  # FRF, FRF+Coherence, Coherence
+            try:
+                channel = self._channel_at(self.parent.response_channel_indices[index])
+            except (IndexError, TypeError):
+                channel = None
+        return None if channel is None else channel.unit
+
+    def selected_reference_unit(self):
+        """Engineering unit of the currently selected reference channel, or None"""
+        index = self.reference_coordinate_selector.currentIndex()
+        if index < 0:
+            return None
+        try:
+            channel = self._channel_at(self.parent.reference_channel_indices[index])
+        except (IndexError, TypeError):
+            channel = None
+        return None if channel is None else channel.unit
+
+    def update_axis_labels(self):
+        """Sets the primary/secondary/twin axis labels for the current display mode"""
+        current_signal = self.signal_selector.currentIndex()
+        response_unit = self.selected_response_unit()
+        if current_signal in (0, 1):  # Time, Windowed Time
+            self.primary_plotitem.setLabel("bottom", "Time (s)")
+            self.primary_plotitem.setLabel(
+                "left", axis_label("amplitude", "Response", response_unit)
+            )
+        elif current_signal == 2:  # Spectrum
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            self.primary_plotitem.setLabel(
+                "left", axis_label("amplitude", "Response", response_unit)
+            )
+        elif current_signal == 3:  # Autospectrum
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            self.primary_plotitem.setLabel(
+                "left", axis_label("psd", "Autospectrum", response_unit)
+            )
+        elif current_signal in (4, 6, 7):  # FRF, FRF+Coherence, Reciprocity
+            reference_unit = self.selected_reference_unit()
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            data_type = self.data_type_selector.currentIndex()
+            if data_type == 0:  # Magnitude
+                self.primary_plotitem.setLabel(
+                    "left",
+                    axis_label("ratio", "Magnitude", (response_unit, reference_unit)),
+                )
+            elif data_type == 1:  # Magnitude/Phase
+                self.primary_plotitem.setLabel("left", "Phase (rad)")
+                self.secondary_plotitem.setLabel(
+                    "left",
+                    axis_label("ratio", "Magnitude", (response_unit, reference_unit)),
+                )
+            elif data_type in (2, 3):  # Real, Imaginary
+                self.primary_plotitem.setLabel(
+                    "left",
+                    axis_label(
+                        "ratio",
+                        "Real" if data_type == 2 else "Imaginary",
+                        (
+                            response_unit,
+                            reference_unit,
+                        ),
+                    ),
+                )
+            elif data_type == 4:  # Real/Imaginary
+                self.primary_plotitem.setLabel(
+                    "left", axis_label("ratio", "Real", (response_unit, reference_unit))
+                )
+                self.secondary_plotitem.setLabel(
+                    "left",
+                    axis_label("ratio", "Imaginary", (response_unit, reference_unit)),
+                )
+            if current_signal == 6 and self.twinx_axis is not None:
+                self.twinx_axis.setLabel("Coherence")
+        elif current_signal == 5:  # Coherence
+            self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
+            self.primary_plotitem.setLabel("left", "Coherence")
+
     def update_data(self):
         """Updates the data in the plot"""
         self.set_window_title()
+        self.update_axis_labels()
         current_index = self.signal_selector.currentIndex()
         if current_index in [0, 1]:  # Time history
             if self.parent.last_frame is None:
@@ -2293,7 +2541,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
                 self.secondary_plotdataitem.setData(
                     self.parent.frequency_abscissa, np.imag(data)
                 )
-            if current_index == 6:
+            if current_index == 6 and self.parent.last_coh is not None:
                 data = self.parent.last_coh[
                     self.response_coordinate_selector.currentIndex()
                 ]
@@ -2307,6 +2555,8 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 7:  # FRF or FRF Coherence
             if self.parent.last_frf is None:
+                return
+            if any(val is None for val in self.reciprocal_responses):
                 return
             resp_ind = self.response_coordinate_selector.currentIndex()
             ref_ind = self.reference_coordinate_selector.currentIndex()
@@ -2375,6 +2625,38 @@ class ModalMDISubWindow(QtWidgets.QWidget):
 
 
 # region System Id
+class SysIdSharingDialog(QtWidgets.QDialog):
+    """Dialog offering to apply a just-loaded/completed SysIdDataPackage to
+    other environments that share the same control and response channels."""
+
+    def __init__(self, target_environments, parent=None):
+        super().__init__(parent)
+
+        ui_path = os.path.join(
+            DIRECTORY,
+            "user_interface",
+            "ui_files",
+            "system_identification_selector.ui",
+        )
+        uic.loadUi(ui_path, self)
+
+        self.target_environments = list(target_environments)
+
+        self.target_environment_table.setRowCount(len(self.target_environments))
+        for row, name in enumerate(self.target_environments):
+            item = QtWidgets.QTableWidgetItem(str(name))
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            self.target_environment_table.setItem(row, 0, item)
+
+    def selected_targets(self):
+        return [
+            self.target_environment_table.item(row, 0).text()
+            for row in range(self.target_environment_table.rowCount())
+            if self.target_environment_table.item(row, 0).checkState() == Qt.Checked
+        ]
+
+
 class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
     """Plot axis labels that can be rotated by some value"""
 
@@ -2496,3 +2778,6 @@ class SysIdSelector(QtWidgets.QDialog):
         load_to = [item.text() for item in current_items]
 
         return load_from, load_to
+
+
+# endregion

@@ -27,7 +27,8 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
 )
 from rattlesnake.user_interface.abstract_user_interface import EnvironmentUI
 from rattlesnake.user_interface.ui_utilities import (
-    error_message_qt,
+    axis_label,
+    channel_unit_label,
     RotatedAxisItem,
     SysIdSelector,
 )
@@ -80,7 +81,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         )
         uic.loadUi(system_identification_ui_path, self.system_id_widget)
         self.connect_sysid_callbacks()
-        self.complete_ui()
+        self.complete_sysid_ui()
 
         self.sysid_data = SysIdDataPackage()
         self.last_time_response = None
@@ -135,7 +136,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
             self.load_sysid_matrix_file
         )
 
-    def complete_ui(self):
+    def complete_sysid_ui(self):
         self.time_response_plot = (
             self.system_id_widget.time_data_graphicslayout.addPlot(row=0, column=0)
         )
@@ -161,7 +162,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 row=0, column=0
             )
         )
-        self.transfer_function_phase_plot.setLabel("left", "Phase")
+        self.transfer_function_phase_plot.setLabel("left", "Phase (deg)")
         self.transfer_function_phase_plot.setLabel("bottom", "Frequency (Hz)")
         self.transfer_function_magnitude_plot = (
             self.system_id_widget.transfer_function_graphics_layout.addPlot(
@@ -198,8 +199,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
         self.kurtosis_reference_plot = (
             self.system_id_widget.kurtosis_graphicslayout.addPlot(row=0, column=1)
         )
-        self.kurtosis_response_plot.setLabel("left", "Response")
-        self.kurtosis_reference_plot.setLabel("left", "Reference")
+        self.kurtosis_response_plot.setLabel("left", "Kurtosis")
+        self.kurtosis_reference_plot.setLabel("left", "Kurtosis")
         response_axis = RotatedAxisItem("bottom")
         reference_axis = RotatedAxisItem("bottom")
         response_axis.setAngle(-60)
@@ -241,8 +242,6 @@ class SysIdEnvironmentUI(EnvironmentUI):
             ].is_set()
         except:
             return False
-
-    # endregion
 
     # region State Sync
     @abstractmethod
@@ -634,7 +633,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         self.create_event_watcher(
             ready_event_list, active_event_list, active_event_check=True
         )
-        if type.lower() == "noise":
+        if str(type).lower() == "noise":
             self.event_watcher.ready.connect(self.run_system_id_noise)
         else:
             self.event_watcher.ready.connect(self.run_system_id_transfer)
@@ -669,6 +668,16 @@ class SysIdEnvironmentUI(EnvironmentUI):
         """This is used to refresh streaming when the sys_id_data_analysis process
         tells the UI to start up transfer function after noise has automatically
         shutdown"""
+        if self.rattlesnake.state not in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+            RattlesnakeState.SYS_ID_ACTIVE,
+        ):
+            # This is to prevent this from running in the case that the sysid was
+            # run headlessly.
+            self.display_system_id_ended()
+            return
+
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[
                 self.environment_name
@@ -695,6 +704,16 @@ class SysIdEnvironmentUI(EnvironmentUI):
 
     def run_system_id_transfer(self):
         self.clean_up_event_watcher()
+
+        if self.rattlesnake.state not in (
+            RattlesnakeState.HARDWARE_ACTIVE,
+            RattlesnakeState.ENVIRONMENT_ACTIVE,
+            RattlesnakeState.SYS_ID_ACTIVE,
+        ):
+            # Prevent from running in the case that the sysid was completed
+            # in headless mode
+            self.display_system_id_ended()
+            return
 
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[
@@ -863,18 +882,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
                     filename, "r", format="NETCDF4"
                 )
-                # the world is not ready for this right now
-                # source_environments = netcdf_dataset.variables["environment_names"][...]
-                # target_environments = (
-                #     self.rattlesnake.environment_manager.environment_names.values()
-                # )
-                # load_environment, save_environments = self.open_sysid_selector(
-                #     source_environments, target_environments
-                # )
-                # if not load_environment or not save_environments:
-                #     return
-
-                netcdf_handle = netcdf_dataset.groups[self.environment_name]
+                group_name = next(iter(netcdf_dataset.groups))
+                netcdf_handle = netcdf_dataset.groups[group_name]
                 sysid_metadata = SysIdMetadata().load_metadata_from_netcdf(
                     netcdf_handle, self.hardware_metadata
                 )
@@ -918,7 +927,7 @@ class SysIdEnvironmentUI(EnvironmentUI):
         try:
             self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
             self.rattlesnake.load_system_id_from_package(
-                self.environment_name, sysid_data
+                self.environment_name, sysid_data, ask_to_share=True
             )
         except Exception as e:
             self.display_error(e)
@@ -992,6 +1001,39 @@ class SysIdEnvironmentUI(EnvironmentUI):
         ]
         # print(response_indices)
         # print(reference_indices)
+        response_channels = [
+            self.hardware_metadata.channel_list[i]
+            for i in np.array(self.environment_metadata.response_channel_indices)[
+                response_indices
+            ]
+        ]
+        reference_channels = [
+            self.hardware_metadata.channel_list[i]
+            for i in np.array(self.environment_metadata.reference_channel_indices)[
+                reference_indices
+            ]
+        ]
+        response_unit = channel_unit_label(response_channels)
+        reference_unit = channel_unit_label(reference_channels)
+        self.time_response_plot.setLabel(
+            "left", axis_label("amplitude", "Response", response_unit)
+        )
+        self.time_reference_plot.setLabel(
+            "left", axis_label("amplitude", "Reference", reference_unit)
+        )
+        self.level_response_plot.setLabel(
+            "left", axis_label("psd", "Response PSD", response_unit)
+        )
+        self.level_reference_plot.setLabel(
+            "left", axis_label("psd", "Reference PSD", reference_unit)
+        )
+        self.transfer_function_magnitude_plot.setLabel(
+            "left", axis_label("ratio", "Amplitude", (response_unit, reference_unit))
+        )
+        self.impulse_response_plot.setLabel(
+            "left",
+            axis_label("ratio", "Impulse Response", (response_unit, reference_unit)),
+        )
         if update_time:
             self.time_response_plot.clear()
             self.time_reference_plot.clear()
@@ -1266,6 +1308,8 @@ class SysIdEnvironmentUI(EnvironmentUI):
                 self.display_system_id_started()
             case SysIdUICommands.SYSID_ENDED:
                 self.display_system_id_ended()
+            case SysIdUICommands.DISPLAY_METADATA:
+                self.set_sysid_metadata(data)
             case DataCollectorUICommands.TIME_FRAME:
                 self.last_time_response, accept = data
                 self.update_sysid_plots(
@@ -1338,3 +1382,6 @@ class SysIdEnvironmentUI(EnvironmentUI):
         return True
 
     # endregion
+
+
+# endregion

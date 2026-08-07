@@ -148,11 +148,9 @@ class EnvironmentMetadata(ABC):
         ]
         return environment_channel_list
 
-    # endregion
-
     # region Validation
     @abstractmethod
-    def validate(self, hardware_metadata):
+    def validate(self, hardware_metadata: HardwareMetadata):
         """
         Validate whether the metadata will work for that environment.
 
@@ -295,6 +293,9 @@ class EnvironmentMetadata(ABC):
         """
 
     # endregion
+
+
+# endregion
 
 
 # region Instructions
@@ -449,6 +450,8 @@ class Environment(ABC):
         }
         self._acquisition_active_event = acquisition_active_event
         self._output_active_event = output_active_event
+        self.hardware_metadata = None
+        self.environment_metadata = None
         # self.set_ready() # Call this at the end of your function
 
     # region Commands
@@ -523,6 +526,7 @@ class Environment(ABC):
             specific hardware metadata. Assume you are only getting
             the attributes in the base HardwareMetadata class.
         """
+        self.hardware_metadata = hardware_metadata
         # self.set_ready() # Call this at the end of your function
 
     @abstractmethod
@@ -621,6 +625,10 @@ class Environment(ABC):
                 )
             except (thqueue.Empty, mpqueue.Empty):
                 continue
+            except KeyboardInterrupt:
+                self.log("KeyboardInterrupt received")
+                self.quit(None)
+                break
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]
@@ -631,6 +639,10 @@ class Environment(ABC):
                 continue
             try:
                 halt_flag = function(data)
+            except KeyboardInterrupt:
+                self.log("KeyboardInterrupt received")
+                self.quit(None)
+                break
             except Exception:  # pylint: disable=broad-exception-caught
                 tb = traceback.format_exc()
                 self.log(f"ERROR\n\n {tb}")
@@ -700,6 +712,9 @@ class Environment(ABC):
         return True
 
     # endregion
+
+
+# endregion
 
 
 # region Process

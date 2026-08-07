@@ -29,7 +29,9 @@ def netcdf_sdynpy_frf_metadata():
     return metadata
 
 
-def manual_sdynpy_frf_metadata():
+def manual_sdynpy_frf_metadata(**overrides):
+    """Builds a SDynPyFRFMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. sample_rate=300000)."""
     directions = ["X+", "Y+", "Z+"]
     force_nodes = [13, 131, 135]
     excitation_nodes = [1004, 1020, 1065, 1049]
@@ -57,11 +59,12 @@ def manual_sdynpy_frf_metadata():
                 feedback_device="Input",
             )
             channel_list.append(channel)
-    metadata = SDynPyFRFMetadata(
+    kwargs = dict(
         channel_list=channel_list,
         sample_rate=defaults.SAMPLE_RATE,
         time_per_read=defaults.BUFFER_SIZE,
         time_per_write=defaults.BUFFER_SIZE,
         hardware_file=HARDWARE_FILE,
     )
-    return metadata
+    kwargs.update(overrides)
+    return SDynPyFRFMetadata(**kwargs)

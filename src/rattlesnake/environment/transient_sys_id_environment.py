@@ -40,6 +40,7 @@ import scipy.signal as sig
 
 from rattlesnake.utilities import (
     GlobalCommands,
+    RattlesnakeError,
     VerboseMessageQueue,
     db2scale,
     align_signals,
@@ -101,11 +102,11 @@ class TransientCommands(EnvironmentCommands):
     SET_REPEAT = 6
     SET_NO_REPEAT = 7
 
-    VALID_PROFILE_COMMANDS = {
+    VALID_PROFILE_COMMANDS = (
         SET_TEST_LEVEL,
         SET_REPEAT,
         SET_NO_REPEAT,
-    }
+    )
     VALID_DATA = {
         SET_TEST_LEVEL: int,
         SET_REPEAT: type(None),
@@ -123,10 +124,10 @@ class TransientUICommands(Enum):
 # endregion
 
 
+# region Metadata
 class TransientMetadata(SysIdEnvironmentMetadata):
     """Metadata required to define a transient control law in rattlesnake."""
 
-    # region Metadata
     def __init__(
         self,
         environment_name,
@@ -164,6 +165,14 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         self.output_channel_indices = output_channel_indices
         self.response_transformation_matrix = response_transformation_matrix
         self.reference_transformation_matrix = output_transformation_matrix
+        self._spec_filename = None  # This is only used for saving purposes
+
+    @property
+    def spec_filename(self):
+        return self._spec_filename
+
+    def set_file(self, filepath):
+        self._spec_filename = filepath
 
     @property
     def ramp_samples(self):
@@ -225,11 +234,153 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         """Gets the number of samples in the signal that is being controlled to"""
         return self.control_signal.shape[-1]
 
-    # endregion
-
     # region Validation
     def validate(self, hardware_metadata):
-        return super().validate(hardware_metadata)
+        super().validate(hardware_metadata)
+        self.sysid_metadata.validate(hardware_metadata)
+
+        if self.number_of_channels != sum(self.channel_list_bools):
+            raise RattlesnakeError(
+                f"{self.environment_name} number_of_channels "
+                f"({self.number_of_channels}) does not match the number of "
+                f"channels enabled for this environment "
+                f"({sum(self.channel_list_bools)})"
+            )
+
+        if self.test_level_ramp_time < 0:
+            raise RattlesnakeError(
+                "Test level ramp time must be greater than or equal to 0"
+            )
+
+        if len(self.control_channel_indices) == 0:
+            raise RattlesnakeError(
+                "control_channel_indices must contain at least one channel"
+            )
+        for index in self.control_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"control_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if len(self.output_channel_indices) == 0:
+            raise RattlesnakeError(
+                "output_channel_indices must contain at least one channel"
+            )
+        for index in self.output_channel_indices:
+            if not (0 <= index < self.number_of_channels):
+                raise RattlesnakeError(
+                    f"output_channel_indices contains invalid channel index "
+                    f"{index} (must be between 0 and {self.number_of_channels - 1})"
+                )
+
+        if self.response_transformation_matrix is not None and (
+            self.response_transformation_matrix.ndim != 2
+            or self.response_transformation_matrix.shape[1]
+            != len(self.control_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "response_transformation_matrix must be 2D with a number of "
+                "columns matching the number of control channels "
+                f"({len(self.control_channel_indices)}), got shape "
+                f"{self.response_transformation_matrix.shape}"
+            )
+
+        if self.reference_transformation_matrix is not None and (
+            self.reference_transformation_matrix.ndim != 2
+            or self.reference_transformation_matrix.shape[1]
+            != len(self.output_channel_indices)
+        ):
+            raise RattlesnakeError(
+                "reference_transformation_matrix must be 2D with a number of "
+                "columns matching the number of output channels "
+                f"({len(self.output_channel_indices)}), got shape "
+                f"{self.reference_transformation_matrix.shape}"
+            )
+
+        self._validate_control_signal()
+        self._validate_control_law()
+
+    def _validate_control_signal(self):
+        """
+        Validates the spec that is being initialized to the environment
+        """
+        if self.control_signal is None:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control signal loaded"
+            )
+
+        if self.control_signal.shape[-1] == 0:
+            raise RattlesnakeError(
+                f"{self.environment_name} control signal must have at least "
+                "one sample"
+            )
+
+        n_control_channels = (
+            len(self.control_channel_indices)
+            if self.response_transformation_matrix is None
+            else self.response_transformation_matrix.shape[0]
+        )
+        if self.control_signal.shape[0] != n_control_channels:
+            raise RattlesnakeError(
+                f"{self.environment_name} control signal has "
+                f"{self.control_signal.shape[0]} channels, expected "
+                f"{n_control_channels} for the current control channels; "
+                "reload the specification"
+            )
+
+    def _validate_control_law(self):
+        """
+        Validates the control law being initialized to the environment
+        """
+        if not self.control_python_script:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_script set"
+            )
+        if not self.control_python_function:
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_function set"
+            )
+
+        try:
+            module = load_python_module(self.control_python_script)
+        except Exception as e:
+            raise RattlesnakeError(
+                f"{self.environment_name} could not load control script "
+                f"{self.control_python_script}: {e}"
+            ) from e
+
+        function = getattr(module, self.control_python_function, None)
+        if function is None:
+            raise RattlesnakeError(
+                f"{self.environment_name} control script "
+                f"{self.control_python_script} has no function or class "
+                f"named {self.control_python_function}"
+            )
+
+        if inspect.isgeneratorfunction(function):
+            actual_type = 1
+        elif inspect.isclass(function) and issubclass(
+            function, AbstractControlLawComputation
+        ):
+            actual_type = 3
+        elif inspect.isclass(function):
+            actual_type = 2
+        else:
+            if not callable(function):
+                raise RattlesnakeError(
+                    f"{self.environment_name} control function "
+                    f"{self.control_python_function} is not callable"
+                )
+            actual_type = 0
+
+        if actual_type != self.control_python_function_type:
+            raise RattlesnakeError(
+                f"{self.environment_name} control_python_function_type "
+                f"({self.control_python_function_type}) does not match what "
+                f"{self.control_python_function} actually is (detected type "
+                f"{actual_type}); reload the control script"
+            )
 
     # endregion
 
@@ -330,10 +481,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             "control_channel_indices"
         ][:]
 
-        # Extract number of channels from group or hardware
-        number_of_channels = netcdf_group_handle.dimensions[
-            "specification_channels"
-        ].size
+        number_of_channels = sum(channel_list_bools)
 
         # Handle derived channel lists (matching your example pattern)
         environment_channel_list = [
@@ -430,6 +578,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         self, worksheet: openpyxl.worksheet.worksheet.Worksheet
     ):
         super().save_metadata_to_worksheet(worksheet)
+        if self.spec_filename:
+            worksheet.cell(2, 2, str(self.spec_filename))
         if self.test_level_ramp_time is not None:
             worksheet.cell(3, 2, self.test_level_ramp_time)
         if self.control_python_script is not None:
@@ -509,9 +659,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             elif inspect.isclass(function) and issubclass(
                 function, AbstractControlLawComputation
             ):
-                control_python_function_type = 2
-            elif inspect.isclass(function):
                 control_python_function_type = 3
+            elif inspect.isclass(function):
+                control_python_function_type = 2
             else:
                 control_python_function_type = 0
         else:
@@ -548,8 +698,11 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             metadata.control_signal = load_time_history(
                 spec_filename, hardware_metadata.sample_rate
             )
+            metadata.set_file(spec_filename)
 
         return metadata
+
+    # endregion
 
 
 # endregion
@@ -643,10 +796,13 @@ class TransientQueues:
         self.log_file_queue = log_file_queue
 
 
+# endregion
+
+
+# region Environment
 class TransientEnvironment(SysIdEnvironment):
     """Class defining calculations for the transient environment"""
 
-    # region Environment
     def __init__(
         self,
         environment_name: str,
@@ -694,8 +850,6 @@ class TransientEnvironment(SysIdEnvironment):
             ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
         )
         # Persistent data
-        self.hardware_metadata = None
-        self.environment_metadata = None
         self.queue_container = queue_container
         self.control_function_type = None
         self.extra_control_parameters = None
@@ -715,8 +869,6 @@ class TransientEnvironment(SysIdEnvironment):
         self.last_interactive_parameters = None
 
         self.set_ready()
-
-    # endregion
 
     # region State Sync
     def initialize_hardware(self, hardware_metadata):
@@ -1267,6 +1419,9 @@ class TransientEnvironment(SysIdEnvironment):
     # endregion
 
 
+# endregion
+
+
 # region Process
 def transient_process(
     environment_name: str,
@@ -1342,6 +1497,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
+                shutdown_event,
             ),
         )
         spectral_proc.start()
@@ -1356,6 +1512,7 @@ def transient_process(
                 queue_container.gui_update_queue,
                 queue_container.log_file_queue,
                 ping_alive_event,
+                shutdown_event,
             ),
         )
         analysis_proc.start()
@@ -1369,6 +1526,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.log_file_queue,
                 queue_container.gui_update_queue,
+                shutdown_event,
             ),
         )
         siggen_proc.start()
@@ -1382,6 +1540,7 @@ def transient_process(
                 queue_container.environment_command_queue,
                 queue_container.log_file_queue,
                 queue_container.gui_update_queue,
+                shutdown_event,
             ),
         )
         collection_proc.start()
