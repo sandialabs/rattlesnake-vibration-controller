@@ -56,7 +56,7 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     sum_decayed_sines_reconstruction,
     srs as srs_function,
 )
-from rattlesnake.load_utilities import save_rattlesnake_to_netcdf
+from rattlesnake.utilities import save_rattlesnake_to_netcdf
 
 from rattlesnake.hardware.abstract_hardware import (
     HardwareMetadata,
