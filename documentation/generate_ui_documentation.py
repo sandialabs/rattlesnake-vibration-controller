@@ -27,7 +27,7 @@ import os
 import re
 import sys
 from qtpy import QtWidgets, uic
-from qtpy.QtCore import QRect
+from qtpy.QtCore import QRect, QPoint
 from qtpy.QtGui import QPixmap, QPainter, QPen, QColor
 from ui_documentation_scenarios import UI_DOC_SCENARIOS
 
@@ -46,27 +46,27 @@ files = [
     dir_path + "/" + v
     for v in [
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_acquisition_window.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transformation_matrices.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_sweep_table.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_filter_explorer.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction_table.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run_table.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_shock_history.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_synthesize_dialog.ui",
@@ -367,6 +367,16 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 ).replace("\\", "/")
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
+                print(
+                    "Generating figure:",
+                    name,
+                    "objectName=",
+                    struct["widget"].objectName()
+                    if hasattr(struct["widget"], "objectName")
+                    else None,
+                    "type=",
+                    type(struct["widget"]),
+                )
                 px = self.generate_documentation_figure(struct["widget"])
                 px.save(figure_full_path)
 
@@ -383,6 +393,16 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 label, message = self.parse_tooltip(struct["tooltip"])
+                print(
+                    "Generating figure:",
+                    name,
+                    "objectName=",
+                    struct["widget"].objectName()
+                    if hasattr(struct["widget"], "objectName")
+                    else None,
+                    "type=",
+                    type(struct["widget"]),
+                )
                 px = self.generate_documentation_figure(struct["widget"])
                 px.save(figure_full_path)
 
@@ -402,15 +422,40 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
         return this_text_markdown, this_figure_markdown
 
-    def generate_documentation_figure(self, widget, padding=100, box_thickness=2, box_padding=5):
-        item_rect = widget.rect()
-        parent_window = widget.window()
-        position = widget.mapTo(parent_window, item_rect.topLeft())
-        height = item_rect.height()
-        width = item_rect.width()
-        widget_rect = QRect(position.x(), position.y(), width, height)
-        window_pixmap = parent_window.grab()
+    def generate_documentation_figure(self, widget, padding=40, box_thickness=2, box_padding=5):
+        QtWidgets.QApplication.processEvents()
 
+        # Use the analyzer's central widget as the capture root if possible,
+        # otherwise fall back to the widget itself.
+        capture_root = getattr(self, "central_widget", None)
+        if capture_root is None:
+            capture_root = widget
+
+        # If widget is not a descendant of capture_root, fall back to widget grab.
+        ancestor = widget
+        is_descendant = False
+        while ancestor is not None:
+            if ancestor is capture_root:
+                is_descendant = True
+                break
+            ancestor = ancestor.parentWidget()
+
+        if not is_descendant:
+            capture_root = widget
+
+        # Grab the capture root
+        root_pixmap = capture_root.grab()
+
+        # Map widget-local rect into capture-root coordinates
+        top_left_in_root = widget.mapTo(capture_root, QPoint(0, 0))
+        widget_rect = QRect(
+            top_left_in_root.x(),
+            top_left_in_root.y(),
+            widget.width(),
+            widget.height(),
+        )
+
+        # Expand box slightly so border doesn't intersect the widget edge
         box_rect = QRect(
             widget_rect.left() - box_padding,
             widget_rect.top() - box_padding,
@@ -418,18 +463,15 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             widget_rect.height() + 2 * box_padding,
         )
 
-        # Draw a red box around the widget's geometry within the cropped image
-        painter = QPainter(window_pixmap)
+        # Draw the red rectangle on the captured root pixmap
+        painter = QPainter(root_pixmap)
         pen = QPen(QColor("red"))
         pen.setWidth(box_thickness)
         painter.setPen(pen)
-
-        # Draw the rectangle
         painter.drawRect(box_rect)
         painter.end()
 
-        # return window_pixmap
-        # Calculate the expanded rectangle around the widget
+        # Expand crop region for surrounding context
         expanded_rect = QRect(
             widget_rect.left() - padding,
             widget_rect.top() - padding,
@@ -437,14 +479,10 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             widget_rect.height() + 2 * padding,
         )
 
-        # Ensure the expanded rectangle stays within the bounds of the window
-        expanded_rect = expanded_rect.intersected(parent_window.rect())
+        expanded_rect = expanded_rect.intersected(root_pixmap.rect())
 
-        # Crop the pixmap to the expanded rectangle
-        cropped_pixmap = window_pixmap.copy(expanded_rect)
-
+        cropped_pixmap = root_pixmap.copy(expanded_rect)
         return cropped_pixmap
-
 
 if __name__ == "__main__":
     for file in files:
