@@ -29,7 +29,7 @@ import sys
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import QRect, QPoint
 from qtpy.QtGui import QPixmap, QPainter, QPen, QColor
-from ui_documentation_scenarios import UI_DOC_SCENARIOS
+from ui_documentation_scenarios import ENVIRONMENT_SCENARIOS
 
 try:
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -79,18 +79,18 @@ files = [
 # "../src/rattlesnake/components/control_select.ui",
 
 UI_FILE_TO_SCENARIO = {
-    "random_vibration_definition.ui": ("random_definition", "definition"),
-    "random_vibration_prediction.ui": ("random_prediction", "prediction"),
-    "random_vibration_run.ui": ("random_run", "run"),
-    "transient_definition.ui": ("transient_definition", "definition"),
-    "transient_prediction.ui": ("transient_prediction", "prediction"),
-    "transient_run.ui": ("transient_run", "run"),
-    "sine_definition.ui": ("sine_definition", "definition"),
-    "sine_prediction.ui": ("sine_prediction", "prediction"),
-    "sine_run.ui": ("sine_run", "run"),
-    "srs_sds_definition.ui": ("sds_definition", "definition"),
-    "srs_sds_prediction.ui": ("sds_prediction", "prediction"),
-    "srs_sds_run.ui": ("sds_run", "run"),
+    "random_vibration_definition.ui": ("random", "definition"),
+    "random_vibration_prediction.ui": ("random", "prediction"),
+    "random_vibration_run.ui": ("random", "run"),
+    "transient_definition.ui": ("transient", "definition"),
+    "transient_prediction.ui": ("transient", "prediction"),
+    "transient_run.ui": ("transient", "run"),
+    "sine_definition.ui": ("sine", "definition"),
+    "sine_prediction.ui": ("sine", "prediction"),
+    "sine_run.ui": ("sine", "run"),
+    "srs_sds_definition.ui": ("sds", "definition"),
+    "srs_sds_prediction.ui": ("sds", "prediction"),
+    "srs_sds_run.ui": ("sds", "run"),
 }
 
 
@@ -485,39 +485,103 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         return cropped_pixmap
 
 if __name__ == "__main__":
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(sys.argv)
+
+    # Group files by environment scenario key
+    grouped_files = {}
+    static_files = []
+
     for file in files:
-        print(f"Analyzing {file}")
         basename = os.path.basename(file)
+        if basename in UI_FILE_TO_SCENARIO:
+            environment_key, widget_key = UI_FILE_TO_SCENARIO[basename]
+            grouped_files.setdefault(environment_key, []).append((file, widget_key))
+        else:
+            static_files.append(file)
 
-        scenario_result = None
-        live_widget = None
+    try:
+        # First process scenario-backed UI files one environment at a time
+        for environment_key, file_entries in grouped_files.items():
+            print(f"\n=== Building scenario for environment: {environment_key} ===")
+            scenario_builder = ENVIRONMENT_SCENARIOS[environment_key]
+            scenario_result = scenario_builder(display_errors=False)
 
-        try:
-            if basename in UI_FILE_TO_SCENARIO:
-                scenario_name, widget_key = UI_FILE_TO_SCENARIO[basename]
-                scenario_builder = UI_DOC_SCENARIOS[scenario_name]
-                print(f"  Using scenario: {scenario_name}")
-                scenario_result = scenario_builder(display_errors=False)
-                live_widget = scenario_result.widgets[widget_key]
+            try:
+                for file, widget_key in file_entries:
+                    print(f"Analyzing {file} using scenario {environment_key}:{widget_key}")
+                    basename = os.path.basename(file)
+                    live_widget = scenario_result.widgets[widget_key]
+
+                    # Switch to the correct top-level tab for the screenshot
+                    if widget_key == "definition":
+                        scenario_result.main_ui.rattlesnake_tabs.setCurrentIndex(1)
+                        env_tabs = scenario_result.main_ui.environment_definition_environment_tabs
+                    elif widget_key == "system_id":
+                        scenario_result.main_ui.rattlesnake_tabs.setCurrentIndex(2)
+                        env_tabs = scenario_result.main_ui.system_id_environment_tabs
+                    elif widget_key == "prediction":
+                        scenario_result.main_ui.rattlesnake_tabs.setCurrentIndex(3)
+                        env_tabs = scenario_result.main_ui.test_prediction_environment_tabs
+                    elif widget_key == "run":
+                        scenario_result.main_ui.rattlesnake_tabs.setCurrentIndex(5)
+                        env_tabs = scenario_result.main_ui.run_environment_tabs
+                    else:
+                        env_tabs = None
+
+                    # Select correct environment tab inside that page
+                    if env_tabs is not None:
+                        for i in range(env_tabs.count()):
+                            if (
+                                env_tabs.tabText(i)
+                                == scenario_result.environment_ui.environment_name
+                            ):
+                                env_tabs.setCurrentIndex(i)
+                                break
+
+                    QtWidgets.QApplication.processEvents()
+
+                    if live_widget is not None:
+                        live_widget.show()
+                        try:
+                            live_widget.raise_()
+                            live_widget.activateWindow()
+                        except Exception:
+                            pass
+                        QtWidgets.QApplication.processEvents()
+
+                    ui = UIAnalyzer(file, live_widget=live_widget)
+                    markdown_text = ui.generate_markdown()
+
+                    filename = os.path.splitext(os.path.split(file)[1])[0]
+                    output_md = os.path.join(
+                        dir_path, "book", "src", "_generated", f"{filename}_doc.md"
+                    )
+
+                    with open(output_md, "w", encoding="utf-8") as f:
+                        f.write(markdown_text)
+
+                    print(f"  Wrote markdown to {output_md}")
+
+            finally:
+                print(f"Cleaning up scenario {environment_key}")
+                scenario_result.cleanup()
                 QtWidgets.QApplication.processEvents()
 
-            if live_widget is not None:
-                live_widget.show()
-                live_widget.raise_()
-                QtWidgets.QApplication.processEvents()
-
-            ui = UIAnalyzer(file, live_widget=live_widget)
+        # Then process any plain static UI files that do not use scenarios
+        for file in static_files:
+            print(f"\n=== Analyzing static UI file: {file} ===")
+            ui = UIAnalyzer(file)
             markdown_text = ui.generate_markdown()
 
             filename = os.path.splitext(os.path.split(file)[1])[0]
-            with open(
-                dir_path + "/" + f"book/src/_generated/{filename}_doc.md",
-                "w",
-                encoding="utf-8",
-            ) as f:
+            output_md = os.path.join(dir_path, "book", "src", "_generated", f"{filename}_doc.md")
+
+            with open(output_md, "w", encoding="utf-8") as f:
                 f.write(markdown_text)
 
-        finally:
-            if scenario_result is not None:
-                scenario_result.cleanup()
-                QtWidgets.QApplication.processEvents()
+            print(f"  Wrote markdown to {output_md}")
+
+    finally:
+        QtWidgets.QApplication.processEvents()

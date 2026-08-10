@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Dict, Any
+from typing import Dict, Any
 
 from qtpy import QtWidgets
 
@@ -11,10 +11,6 @@ from rattlesnake.examples.frame_wing.mimo_sds import get_mimo_sds_ui
 
 @dataclass
 class UIDocScenarioResult:
-    """
-    Container returned by a UI documentation scenario builder.
-    """
-
     name: str
     handle: Any
     main_ui: Any
@@ -22,9 +18,6 @@ class UIDocScenarioResult:
     widgets: Dict[str, QtWidgets.QWidget]
 
     def cleanup(self):
-        """
-        Shut down the example cleanly.
-        """
         try:
             self.main_ui.shutdown()
         except Exception:
@@ -35,7 +28,7 @@ class UIDocScenarioResult:
             pass
 
 
-def _build_result(name, handle, environment_name, env_ui):
+def _build_result(name, handle, env_ui):
     return UIDocScenarioResult(
         name=name,
         handle=handle,
@@ -51,185 +44,33 @@ def _build_result(name, handle, environment_name, env_ui):
     )
 
 
-# -----------------------------------------------------------------------------
-# Random scenarios
-# -----------------------------------------------------------------------------
-def random_definition_scenario(display_errors=False):
+def random_environment_scenario(display_errors=False):
     handle, env_ui = get_mimo_random_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(1)  # Environment Definition
-    for i in range(handle.rattlesnake_ui.environment_definition_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.environment_definition_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.environment_definition_environment_tabs.setCurrentIndex(i)
-            break
     QtWidgets.QApplication.processEvents()
-    return _build_result("random_definition", handle, env_ui.environment_name, env_ui)
+    return _build_result("random", handle, env_ui)
 
 
-def random_prediction_scenario(display_errors=False):
-    handle, env_ui = get_mimo_random_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(3)  # Test Predictions
-    for i in range(handle.rattlesnake_ui.test_prediction_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.test_prediction_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.test_prediction_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("random_prediction", handle, env_ui.environment_name, env_ui)
-
-
-def random_run_scenario(display_errors=False):
-    handle, env_ui = get_mimo_random_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(5)  # Run Test
-    for i in range(handle.rattlesnake_ui.run_environment_tabs.count()):
-        if handle.rattlesnake_ui.run_environment_tabs.tabText(i) == env_ui.environment_name:
-            handle.rattlesnake_ui.run_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("random_run", handle, env_ui.environment_name, env_ui)
-
-
-# -----------------------------------------------------------------------------
-# Transient scenarios
-# -----------------------------------------------------------------------------
-def transient_definition_scenario(display_errors=False):
+def transient_environment_scenario(display_errors=False):
     handle, env_ui = get_mimo_transient_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(1)
-    for i in range(handle.rattlesnake_ui.environment_definition_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.environment_definition_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.environment_definition_environment_tabs.setCurrentIndex(i)
-            break
     QtWidgets.QApplication.processEvents()
-    return _build_result("transient_definition", handle, env_ui.environment_name, env_ui)
+    return _build_result("transient", handle, env_ui)
 
 
-def transient_prediction_scenario(display_errors=False):
-    handle, env_ui = get_mimo_transient_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(3)
-    for i in range(handle.rattlesnake_ui.test_prediction_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.test_prediction_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.test_prediction_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("transient_prediction", handle, env_ui.environment_name, env_ui)
-
-
-def transient_run_scenario(display_errors=False):
-    handle, env_ui = get_mimo_transient_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(5)
-    for i in range(handle.rattlesnake_ui.run_environment_tabs.count()):
-        if handle.rattlesnake_ui.run_environment_tabs.tabText(i) == env_ui.environment_name:
-            handle.rattlesnake_ui.run_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("transient_run", handle, env_ui.environment_name, env_ui)
-
-
-# -----------------------------------------------------------------------------
-# Sine scenarios
-# -----------------------------------------------------------------------------
-def sine_definition_scenario(display_errors=False):
+def sine_environment_scenario(display_errors=False):
     handle, env_ui = get_mimo_sine_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(1)
-    for i in range(handle.rattlesnake_ui.environment_definition_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.environment_definition_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.environment_definition_environment_tabs.setCurrentIndex(i)
-            break
     QtWidgets.QApplication.processEvents()
-    return _build_result("sine_definition", handle, env_ui.environment_name, env_ui)
+    return _build_result("sine", handle, env_ui)
 
 
-def sine_prediction_scenario(display_errors=False):
-    handle, env_ui = get_mimo_sine_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(3)
-    for i in range(handle.rattlesnake_ui.test_prediction_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.test_prediction_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.test_prediction_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("sine_prediction", handle, env_ui.environment_name, env_ui)
-
-
-def sine_run_scenario(display_errors=False):
-    handle, env_ui = get_mimo_sine_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(5)
-    for i in range(handle.rattlesnake_ui.run_environment_tabs.count()):
-        if handle.rattlesnake_ui.run_environment_tabs.tabText(i) == env_ui.environment_name:
-            handle.rattlesnake_ui.run_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("sine_run", handle, env_ui.environment_name, env_ui)
-
-
-# -----------------------------------------------------------------------------
-# SDS scenarios
-# -----------------------------------------------------------------------------
-def sds_definition_scenario(display_errors=False):
+def sds_environment_scenario(display_errors=False):
     handle, env_ui = get_mimo_sds_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(1)
-    for i in range(handle.rattlesnake_ui.environment_definition_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.environment_definition_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.environment_definition_environment_tabs.setCurrentIndex(i)
-            break
     QtWidgets.QApplication.processEvents()
-    return _build_result("sds_definition", handle, env_ui.environment_name, env_ui)
+    return _build_result("sds", handle, env_ui)
 
 
-def sds_prediction_scenario(display_errors=False):
-    handle, env_ui = get_mimo_sds_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(3)
-    for i in range(handle.rattlesnake_ui.test_prediction_environment_tabs.count()):
-        if (
-            handle.rattlesnake_ui.test_prediction_environment_tabs.tabText(i)
-            == env_ui.environment_name
-        ):
-            handle.rattlesnake_ui.test_prediction_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("sds_prediction", handle, env_ui.environment_name, env_ui)
-
-
-def sds_run_scenario(display_errors=False):
-    handle, env_ui = get_mimo_sds_ui(display_errors=display_errors)
-    handle.rattlesnake_ui.rattlesnake_tabs.setCurrentIndex(5)
-    for i in range(handle.rattlesnake_ui.run_environment_tabs.count()):
-        if handle.rattlesnake_ui.run_environment_tabs.tabText(i) == env_ui.environment_name:
-            handle.rattlesnake_ui.run_environment_tabs.setCurrentIndex(i)
-            break
-    QtWidgets.QApplication.processEvents()
-    return _build_result("sds_run", handle, env_ui.environment_name, env_ui)
-
-
-UI_DOC_SCENARIOS = {
-    "random_definition": random_definition_scenario,
-    "random_prediction": random_prediction_scenario,
-    "random_run": random_run_scenario,
-    "transient_definition": transient_definition_scenario,
-    "transient_prediction": transient_prediction_scenario,
-    "transient_run": transient_run_scenario,
-    "sine_definition": sine_definition_scenario,
-    "sine_prediction": sine_prediction_scenario,
-    "sine_run": sine_run_scenario,
-    "sds_definition": sds_definition_scenario,
-    "sds_prediction": sds_prediction_scenario,
-    "sds_run": sds_run_scenario,
+ENVIRONMENT_SCENARIOS = {
+    "random": random_environment_scenario,
+    "transient": transient_environment_scenario,
+    "sine": sine_environment_scenario,
+    "sds": sds_environment_scenario,
 }
