@@ -3,10 +3,10 @@ from typing import Callable, Dict, Any
 
 from qtpy import QtWidgets
 
-from rattlesnake.examples.mimo_random import get_mimo_random_ui
-from rattlesnake.examples.mimo_transient import get_mimo_transient_ui
-from rattlesnake.examples.mimo_sine import get_mimo_sine_ui
-from rattlesnake.examples.mimo_sds import get_mimo_sds_ui
+from rattlesnake.examples.frame_wing.mimo_random import get_mimo_random_ui
+from rattlesnake.examples.frame_wing.mimo_transient import get_mimo_transient_ui
+from rattlesnake.examples.frame_wing.mimo_sine import get_mimo_sine_ui
+from rattlesnake.examples.frame_wing.mimo_sds import get_mimo_sds_ui
 
 
 @dataclass

@@ -29,65 +29,89 @@ import sys
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import QRect
 from qtpy.QtGui import QPixmap, QPainter, QPen, QColor
-import pyqtgraph
-
-pyqtgraph.setConfigOption("background", "w")
-pyqtgraph.setConfigOption("foreground", "k")
+from ui_documentation_scenarios import UI_DOC_SCENARIOS
 
 try:
     dir_path = os.path.dirname(os.path.realpath(__file__))
 except NameError:
     dir_path = "."
 
+generated_dir = os.path.join(dir_path, "book", "src", "_generated")
+figures_dir = os.path.join(generated_dir, "figures")
+
+os.makedirs(generated_dir, exist_ok=True)
+os.makedirs(figures_dir, exist_ok=True)
+
 files = [
     dir_path + "/" + v
     for v in [
-        "../src/rattlesnake/components/random_vibration_prediction.ui",
-        "../src/rattlesnake/components/modal_run.ui",
-        "../src/rattlesnake/components/modal_definition.ui",
-        "../src/rattlesnake/components/modal_acquisition_window.ui",
-        "../src/rattlesnake/components/transient_run.ui",
-        "../src/rattlesnake/components/transient_prediction.ui",
-        "../src/rattlesnake/components/transient_definition.ui",
-        "../src/rattlesnake/components/transformation_matrices.ui",
-        "../src/rattlesnake/components/time_run.ui",
-        "../src/rattlesnake/components/time_definition.ui",
-        "../src/rattlesnake/components/system_identification.ui",
-        "../src/rattlesnake/components/sine_run.ui",
-        "../src/rattlesnake/components/sine_prediction.ui",
-        "../src/rattlesnake/components/random_vibration_definition.ui",
-        "../src/rattlesnake/components/sine_sweep_table.ui",
-        "../src/rattlesnake/components/sine_filter_explorer.ui",
-        "../src/rattlesnake/components/sine_definition.ui",
-        "../src/rattlesnake/components/random_vibration_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_acquisition_window.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transformation_matrices.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_sweep_table.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_filter_explorer.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction_table.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run_table.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_shock_history.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_synthesize_dialog.ui",
     ]
 ]
-
 
 # "../src/rattlesnake/components/ip_manager.ui",
 # "../src/rattlesnake/components/environment_selector.ui",
 # "../src/rattlesnake/components/combined_environments_controller.ui",
 # "../src/rattlesnake/components/control_select.ui",
 
+UI_FILE_TO_SCENARIO = {
+    "random_vibration_definition.ui": ("random_definition", "definition"),
+    "random_vibration_prediction.ui": ("random_prediction", "prediction"),
+    "random_vibration_run.ui": ("random_run", "run"),
+    "transient_definition.ui": ("transient_definition", "definition"),
+    "transient_prediction.ui": ("transient_prediction", "prediction"),
+    "transient_run.ui": ("transient_run", "run"),
+    "sine_definition.ui": ("sine_definition", "definition"),
+    "sine_prediction.ui": ("sine_prediction", "prediction"),
+    "sine_run.ui": ("sine_run", "run"),
+    "srs_sds_definition.ui": ("sds_definition", "definition"),
+    "srs_sds_prediction.ui": ("sds_prediction", "prediction"),
+    "srs_sds_run.ui": ("sds_run", "run"),
+}
+
 
 class UIAnalyzer(QtWidgets.QMainWindow):
     """A Class to analyze the contents of a .ui file and create a markdown file documenting it"""
 
-    def __init__(self, ui_file):
-        """Initializes the UI Analyzer object
-
-        Parameters
-        ----------
-        file : str
-            Path to a .ui file to analyze and document
-        """
+    def __init__(self, ui_file, live_widget=None):
         super().__init__()
         self.name = os.path.splitext(os.path.split(ui_file)[-1])[0]
-        self.load_ui(ui_file)
+        self.live_widget = live_widget
         self.print_depth = 0
         self.all_widgets = None
         self.all_layouts = None
-        self.resize(1800, 1000)
+
+        if self.live_widget is None:
+            self.load_ui(ui_file)
+            self.resize(1800, 1000)
+        else:
+            # Use the provided runtime widget for screenshots, but still keep the ui file path
+            self.central_widget = live_widget
+            self.base_class = type(live_widget)
 
     def load_ui(self, ui_file):
         """Loads in a ui file and shows it in a main window
@@ -115,18 +139,11 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         self.show()
 
     def export_structure(self):
-        """Creates a nested dictionary structure of the widgets and layouts in the user interface"""
-        # Start the recursive structure export from the central widget or self
-        if self.base_class == QtWidgets.QMainWindow:
-            self.all_widgets = self.findChildren(QtWidgets.QWidget)
-            self.all_layouts = self.findChildren(QtWidgets.QLayout)
-            self.all_widgets.append(self)
-            return self._get_widget_structure(self)
-        else:
-            self.all_widgets = self.central_widget.findChildren(QtWidgets.QWidget)
-            self.all_layouts = self.central_widget.findChildren(QtWidgets.QLayout)
-            self.all_widgets.append(self.central_widget)
-            return self._get_widget_structure(self.central_widget)
+        root = self.central_widget if hasattr(self, "central_widget") else self
+        self.all_widgets = root.findChildren(QtWidgets.QWidget)
+        self.all_layouts = root.findChildren(QtWidgets.QLayout)
+        self.all_widgets.append(root)
+        return self._get_widget_structure(root)
 
     def _get_widget_structure(self, item):
         try:
@@ -232,21 +249,14 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             structure_dictionary = {}
 
         if isinstance(full_structure["widget"], QtWidgets.QGroupBox):
-            structure_dictionary[full_structure["widget"].title()] = (
-                full_structure.copy()
-            )
+            structure_dictionary[full_structure["widget"].title()] = full_structure.copy()
             del structure_dictionary[full_structure["widget"].title()]["children"]
             structure_dictionary[full_structure["widget"].title()]["children"] = {}
-            children_dictionary = structure_dictionary[
-                full_structure["widget"].title()
-            ]["children"]
+            children_dictionary = structure_dictionary[full_structure["widget"].title()]["children"]
         else:
             children_dictionary = structure_dictionary
 
-        if (
-            full_structure["tooltip"] is not None
-            and full_structure["tooltip"].strip() != ""
-        ):
+        if full_structure["tooltip"] is not None and full_structure["tooltip"].strip() != "":
             label, message = self.parse_tooltip(full_structure["tooltip"])
             structure_dictionary[label] = full_structure.copy()
             del structure_dictionary[label]["children"]
@@ -350,15 +360,12 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         this_figure_markdown = ""
 
         for name, struct in reduced_structure.items():
-
             if isinstance(struct["widget"], QtWidgets.QGroupBox):
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(
                     "book", "src", "_generated", "figures", figure_file_name
                 ).replace("\\", "/")
-                figure_rel_path = os.path.join("figures", figure_file_name).replace(
-                    "\\", "/"
-                )
+                figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 px = self.generate_documentation_figure(struct["widget"])
                 px.save(figure_full_path)
@@ -373,9 +380,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 figure_full_path = os.path.join(
                     "book", "src", "_generated", "figures", figure_file_name
                 ).replace("\\", "/")
-                figure_rel_path = os.path.join("figures", figure_file_name).replace(
-                    "\\", "/"
-                )
+                figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 label, message = self.parse_tooltip(struct["tooltip"])
                 px = self.generate_documentation_figure(struct["widget"])
@@ -383,15 +388,12 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
                 this_figure_markdown += f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n **{label}** {message}\n:::"
                 this_text_markdown = (
-                    this_text_markdown
-                    + f"\n* [**{label}**](#{figure_ref_name}) {message}"
+                    this_text_markdown + f"\n* [**{label}**](#{figure_ref_name}) {message}"
                 )
 
             # Go through its children
             if "children" in struct:
-                child_text, child_figure = self._generate_item_markdown(
-                    struct["children"]
-                )
+                child_text, child_figure = self._generate_item_markdown(struct["children"])
                 this_text_markdown = this_text_markdown + child_text
                 this_figure_markdown = this_figure_markdown + child_figure
 
@@ -400,9 +402,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
         return this_text_markdown, this_figure_markdown
 
-    def generate_documentation_figure(
-        self, widget, padding=100, box_thickness=2, box_padding=5
-    ):
+    def generate_documentation_figure(self, widget, padding=100, box_thickness=2, box_padding=5):
         item_rect = widget.rect()
         parent_window = widget.window()
         position = widget.mapTo(parent_window, item_rect.topLeft())
@@ -446,14 +446,40 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         return cropped_pixmap
 
 
-app = QtWidgets.QApplication(sys.argv)
+if __name__ == "__main__":
+    for file in files:
+        print(f"Analyzing {file}")
+        basename = os.path.basename(file)
 
-for file in files:
-    print(f"Analyzing {file}")
-    ui = UIAnalyzer(file)
-    markdown_text = ui.generate_markdown()
-    filename = os.path.splitext(os.path.split(file)[1])[0]
-    with open(
-        dir_path + "/" + f"book/src/_generated/{filename}_doc.md", "w", encoding="utf-8"
-    ) as f:
-        f.write(markdown_text)
+        scenario_result = None
+        live_widget = None
+
+        try:
+            if basename in UI_FILE_TO_SCENARIO:
+                scenario_name, widget_key = UI_FILE_TO_SCENARIO[basename]
+                scenario_builder = UI_DOC_SCENARIOS[scenario_name]
+                print(f"  Using scenario: {scenario_name}")
+                scenario_result = scenario_builder(display_errors=False)
+                live_widget = scenario_result.widgets[widget_key]
+                QtWidgets.QApplication.processEvents()
+
+            if live_widget is not None:
+                live_widget.show()
+                live_widget.raise_()
+                QtWidgets.QApplication.processEvents()
+
+            ui = UIAnalyzer(file, live_widget=live_widget)
+            markdown_text = ui.generate_markdown()
+
+            filename = os.path.splitext(os.path.split(file)[1])[0]
+            with open(
+                dir_path + "/" + f"book/src/_generated/{filename}_doc.md",
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write(markdown_text)
+
+        finally:
+            if scenario_result is not None:
+                scenario_result.cleanup()
+                QtWidgets.QApplication.processEvents()
