@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import re
 import sys
-from qtpy import QtWidgets, uic
+from qtpy import QtWidgets, uic, QtTest, QtCore
 from qtpy.QtCore import QRect, QPoint
 from qtpy.QtGui import QPixmap, QPainter, QPen, QColor
 from ui_documentation_scenarios import ENVIRONMENT_SCENARIOS
@@ -93,6 +93,26 @@ UI_FILE_TO_SCENARIO = {
     "srs_sds_run.ui": ("sds", "run"),
 }
 
+def force_render(widget, delay_ms=500):
+    """
+    Force a Qt widget to become visible and painted before grabbing screenshots.
+    """
+    widget.show()
+    try:
+        widget.raise_()
+        widget.activateWindow()
+    except Exception:
+        pass
+
+    QtWidgets.QApplication.processEvents()
+
+    loop = QtCore.QEventLoop()
+    QtCore.QTimer.singleShot(delay_ms, loop.quit)
+    loop.exec_()
+
+    QtWidgets.QApplication.processEvents()
+    widget.repaint()
+    QtWidgets.QApplication.processEvents()
 
 class UIAnalyzer(QtWidgets.QMainWindow):
     """A Class to analyze the contents of a .ui file and create a markdown file documenting it"""
@@ -362,9 +382,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         for name, struct in reduced_structure.items():
             if isinstance(struct["widget"], QtWidgets.QGroupBox):
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
-                figure_full_path = os.path.join(
-                    "book", "src", "_generated", "figures", figure_file_name
-                ).replace("\\", "/")
+                figure_full_path = os.path.join(figures_dir, figure_file_name)
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 print(
@@ -387,9 +405,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             if struct["tooltip"] is not None and struct["tooltip"].strip() != "":
                 # This means we would like to build documentation with this widget
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
-                figure_full_path = os.path.join(
-                    "book", "src", "_generated", "figures", figure_file_name
-                ).replace("\\", "/")
+                figure_full_path = os.path.join(figures_dir, figure_file_name)
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 label, message = self.parse_tooltip(struct["tooltip"])
@@ -404,7 +420,12 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                     type(struct["widget"]),
                 )
                 px = self.generate_documentation_figure(struct["widget"])
-                px.save(figure_full_path)
+                print(
+                    f"Pixmap info for {struct['name']}: "
+                    f"isNull={px.isNull()}, size=({px.width()} x {px.height()})"
+                )
+                saved = px.save(figure_full_path)
+                print(f"Save returned {saved} for {figure_full_path}")
 
                 this_figure_markdown += f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n **{label}** {message}\n:::"
                 this_text_markdown = (
@@ -422,7 +443,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
         return this_text_markdown, this_figure_markdown
 
-    def generate_documentation_figure(self, widget, padding=40, box_thickness=2, box_padding=5):
+    def generate_documentation_figure(self, widget, padding=120, box_thickness=2, box_padding=5):
         QtWidgets.QApplication.processEvents()
 
         # Use the analyzer's central widget as the capture root if possible,
@@ -444,6 +465,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             capture_root = widget
 
         # Grab the capture root
+        force_render(widget, delay_ms=200)
         root_pixmap = capture_root.grab()
 
         # Map widget-local rect into capture-root coordinates
@@ -543,13 +565,8 @@ if __name__ == "__main__":
                     QtWidgets.QApplication.processEvents()
 
                     if live_widget is not None:
-                        live_widget.show()
-                        try:
-                            live_widget.raise_()
-                            live_widget.activateWindow()
-                        except Exception:
-                            pass
-                        QtWidgets.QApplication.processEvents()
+                        force_render(scenario_result.main_ui, delay_ms=400)
+                        force_render(live_widget, delay_ms=400)
 
                     ui = UIAnalyzer(file, live_widget=live_widget)
                     markdown_text = ui.generate_markdown()
