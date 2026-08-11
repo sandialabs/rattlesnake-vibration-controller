@@ -112,6 +112,7 @@ class SineUI(SysIdEnvironmentUI):
         self.achieved_excitation_arguments = None
         self.achieved_excitation_amplitudes = None
         self.achieved_excitation_phases = None
+        self.filter_explorer_dialog = None
         self.plot_downsample = None
         self.specification_signals_combined = None
         self.specification_signals = None
@@ -1054,8 +1055,17 @@ class SineUI(SysIdEnvironmentUI):
         # Return the length of the specification
         return max(max(abscissa) for abscissa in all_abscissa)
 
-    def explore_filter_settings(self):
-        """Brings up a dialog box to explore filter settings"""
+    def explore_filter_settings(self, blocking=True):
+        """
+        Open the filter explorer dialog.
+
+        Parameters
+        ----------
+        blocking : bool, optional
+            If True, run the dialog modally and apply accepted values back into
+            the main UI. If False, create/show the dialog non-modally and return
+            it for documentation or testing purposes.
+        """
         control_names = (
             self.physical_control_names
             if self.response_transformation_matrix is None
@@ -1069,16 +1079,9 @@ class SineUI(SysIdEnvironmentUI):
             for i in range(self.definition_widget.sine_table_tab_widget.count() - 1)
         ]
         specs = self.collect_specification()
-        (
-            result,
-            filter_type,
-            dtf_cutoff,
-            dtf_order,
-            vk_order,
-            vk_bandwidth,
-            vk_blocksize,
-            vk_overlap,
-        ) = FilterExplorer.explore_filter_settings(
+
+        dialog = FilterExplorer(
+            self.definition_widget,
             control_names,
             order_names,
             specs,
@@ -1092,18 +1095,35 @@ class SineUI(SysIdEnvironmentUI):
             self.hardware_metadata.sample_rate,
             self.definition_widget.ramp_time_spinbox.value(),
             self.hardware_metadata.samples_per_read,
-            self.definition_widget,
         )
+
+        if not blocking:
+            self.filter_explorer_dialog = dialog
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+            return dialog
+
+        result = dialog.exec_() == QtWidgets.QDialog.Accepted
         if result:
+            filter_type = dialog.filter_type_selector.currentIndex()
+            dtf_cutoff = dialog.tracking_filter_cutoff_selector.value()
+            dtf_order = dialog.tracking_filter_order_selector.value()
+            vk_order = dialog.filter_order_selector.currentIndex() + 1
+            vk_bandwidth = dialog.filter_bandwidth_selector.value()
+            vk_blocksize = dialog.filter_block_size_selector.value()
+            vk_overlap = dialog.filter_block_overlap_selector.value()
+
             self.definition_widget.filter_type_selector.setCurrentIndex(filter_type)
             self.definition_widget.tracking_filter_cutoff_selector.setValue(dtf_cutoff)
             self.definition_widget.tracking_filter_order_selector.setValue(dtf_order)
-            self.definition_widget.vk_filter_order_selector.setCurrentIndex(
-                vk_order - 1
-            )
+            self.definition_widget.vk_filter_order_selector.setCurrentIndex(vk_order - 1)
             self.definition_widget.vk_filter_bandwidth_selector.setValue(vk_bandwidth)
             self.definition_widget.vk_filter_block_size_selector.setValue(vk_blocksize)
             self.definition_widget.vk_filter_block_overlap_selector.setValue(vk_overlap)
+
+        self.filter_explorer_dialog = None
+        return result
 
     def select_python_module(
         self, clicked, filename=None
