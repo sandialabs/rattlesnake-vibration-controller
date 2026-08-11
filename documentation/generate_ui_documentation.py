@@ -45,27 +45,27 @@ os.makedirs(figures_dir, exist_ok=True)
 files = [
     dir_path + "/" + v
     for v in [
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_acquisition_window.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transformation_matrices.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_sweep_table.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_filter_explorer.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction_table.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run_table.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_shock_history.ui",
@@ -93,6 +93,223 @@ UI_FILE_TO_SCENARIO = {
     "srs_sds_run.ui": ("sds", "run"),
 }
 
+PAGE_STATES = {
+    "sine_definition.ui": {
+        "states": [
+            {
+                "name": "tracking_filter",
+                "actions": [
+                    {"action": "set_current_index", "widget": "filter_type_selector", "value": 0},
+                ],
+                "widgets": [
+                    "tracking_filter_cutoff_label",
+                    "tracking_filter_cutoff_selector",
+                    "tracking_filter_order_label",
+                    "tracking_filter_order_selector",
+                ],
+            },
+            {
+                "name": "vold_kalman_filter",
+                "actions": [
+                    {"action": "set_current_index", "widget": "filter_type_selector", "value": 1},
+                ],
+                "widgets": [
+                    "vk_filter_order_label",
+                    "vk_filter_order_selector",
+                    "vk_filter_bandwidth_label",
+                    "vk_filter_bandwidth_selector",
+                    "vk_filter_block_size_label",
+                    "vk_filter_block_size_selector",
+                    "vk_filter_block_overlap_label",
+                    "vk_filter_block_overlap_selector",
+                ],
+            },
+            {
+                "name": "filter_explorer_dialog",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: (
+                            scenario.environment_ui.explore_filter_settings(blocking=False)
+                        ),
+                    },
+                ],
+                "widgets": [
+                    "channel_selector",
+                    "filter_type_selector",
+                    "compute_button",
+                    "full_time_history_plot",
+                    "order_time_history_plot",
+                    "order_amplitude_plot",
+                    "order_phase_plot",
+                    "accept_button",
+                    "reject_button",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.filter_explorer_dialog,
+                "teardown": [
+                    {"action": "close_root"},
+                ],
+            },
+        ]
+    },
+    "srs_sds_definition.ui": {
+        "states": [
+            {
+                "name": "from_spec_tones",
+                "actions": [
+                    {"action": "set_checked", "widget": "from_spec_button", "value": True},
+                ],
+                "widgets": [
+                    "tone_table",
+                ],
+            },
+            {
+                "name": "octave_tones",
+                "actions": [
+                    {"action": "set_checked", "widget": "octave_button", "value": True},
+                ],
+                "widgets": [
+                    "min_frequency_label",
+                    "min_frequency_selector",
+                    "max_frequency_label",
+                    "max_frequency_selector",
+                    "tones_per_octave_label",
+                    "tones_per_octave_selector",
+                ],
+            },
+            {
+                "name": "manual_tones",
+                "actions": [
+                    {"action": "set_checked", "widget": "manual_button", "value": True},
+                ],
+                "widgets": [
+                    "tone_table",
+                    "add_tone_button",
+                    "remove_tone_button",
+                ],
+            },
+            {
+                "name": "common_decay",
+                "actions": [
+                    {"action": "set_checked", "widget": "common_decay_checkbox", "value": True},
+                ],
+                "widgets": [
+                    "decay_value_selector",
+                ],
+            },
+            {
+                "name": "per_tone_decay",
+                "actions": [
+                    {"action": "set_checked", "widget": "common_decay_checkbox", "value": False},
+                ],
+                "widgets": [
+                    "tone_table",
+                ],
+            },
+        ]
+    },
+    "srs_sds_run.ui": {
+        "states": [
+            {
+                "name": "run_table_dialog",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: scenario.environment_ui.show_run_table(),
+                    },
+                ],
+                "widgets": [
+                    "save_table_button",
+                    "load_table_button",
+                    "allow_manual_updates_checkbox",
+                    "allow_automatic_updates_checkbox",
+                    "sds_table",
+                    "excitation_voltage_list",
+                    "response_error_list",
+                    "excitation_display_plot",
+                    "response_display_plot",
+                    "response_srs_plot",
+                    "excitation_selector",
+                    "response_selector",
+                    "maximum_error_button",
+                    "minimum_error_button",
+                    "maximum_voltage_button",
+                    "minimum_voltage_button",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.run_table_dialog,
+                "teardown": [
+                    {"action": "close_root"},
+                ],
+            },
+            {
+                "name": "shock_history_dialog",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: scenario.environment_ui.show_shock_history(),
+                    },
+                ],
+                "widgets": [
+                    "summary_groupbox",
+                    "hits_by_level_plot",
+                    "shock_timeline_plot",
+                    "show_history_table_checkbox",
+                    "close_button",
+                    "total_hits_display",
+                    "target_hits_display",
+                    "distinct_levels_display",
+                    "hits_at_target_display",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.shock_history_dialog,
+                "teardown": [
+                    {"action": "close_root"},
+                ],
+            },
+            {
+                "name": "shock_history_dialog_with_table",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: scenario.environment_ui.show_shock_history(),
+                    },
+                    {
+                        "action": "set_checked",
+                        "widget": "show_history_table_checkbox",
+                        "value": True,
+                    },
+                ],
+                "widgets": [
+                    "history_table_groupbox",
+                    "history_table",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.shock_history_dialog,
+                "teardown": [
+                    {"action": "close_root"},
+                ],
+            },
+        ]
+    },
+}
+
+
+def get_named_widget(root_widget, widget_name):
+    """
+    Find a widget or QObject by objectName starting from the provided root.
+    """
+    if root_widget is None:
+        return None
+
+    if hasattr(root_widget, widget_name):
+        return getattr(root_widget, widget_name)
+
+    found = root_widget.findChild(QtWidgets.QWidget, widget_name)
+    if found is not None:
+        return found
+
+    found = root_widget.findChild(QtCore.QObject, widget_name)
+    return found
+
+
 def force_render(widget, delay_ms=500):
     """
     Force a Qt widget to become visible and painted before grabbing screenshots.
@@ -113,6 +330,170 @@ def force_render(widget, delay_ms=500):
     QtWidgets.QApplication.processEvents()
     widget.repaint()
     QtWidgets.QApplication.processEvents()
+
+def apply_state_actions(root_widget, scenario_result, actions):
+    """
+    Apply a sequence of UI actions to enter a valid documentation state.
+
+    Returns
+    -------
+    action_root : QWidget | None
+        If one of the actions creates/returns a dialog or alternate root widget,
+        that object is returned and becomes the active root for subsequent actions.
+    """
+    action_root = root_widget
+
+    for action in actions:
+        action_type = action["action"]
+
+        if action_type == "call":
+            result = action["callable"](scenario_result)
+            if isinstance(result, QtWidgets.QWidget):
+                action_root = result
+            QtWidgets.QApplication.processEvents()
+            continue
+
+        if action_type == "close_root":
+            if action_root is not None:
+                action_root.close()
+                QtWidgets.QApplication.processEvents()
+            continue
+
+        widget_name = action.get("widget")
+        widget = get_named_widget(action_root, widget_name)
+
+        if widget is None:
+            raise RuntimeError(
+                f"Could not find widget '{widget_name}' while applying state action."
+            )
+
+        if action_type == "set_checked":
+            widget.setChecked(bool(action["value"]))
+        elif action_type == "set_current_index":
+            widget.setCurrentIndex(int(action["value"]))
+        elif action_type == "set_value":
+            widget.setValue(action["value"])
+        elif action_type == "set_text":
+            widget.setText(str(action["value"]))
+        elif action_type == "click":
+            widget.click()
+        else:
+            raise RuntimeError(f"Unknown action type '{action_type}'")
+
+        QtWidgets.QApplication.processEvents()
+
+    QtWidgets.QApplication.processEvents()
+    return action_root
+
+
+def collect_reduced_widget_names(reduced_structure):
+    names = set()
+    for _, struct in reduced_structure.items():
+        names.add(struct["name"])
+        children = struct.get("children", {})
+        if children:
+            names.update(collect_reduced_widget_names(children))
+    return names
+
+
+def collect_state_widget_names(page_state_spec):
+    names = set()
+    for state in page_state_spec.get("states", []):
+        for widget_name in state.get("widgets", []):
+            names.add(widget_name)
+    return names
+
+
+def filter_reduced_structure_by_widget_names(reduced_structure, allowed_names):
+    filtered = {}
+
+    for key, struct in reduced_structure.items():
+        include_self = struct["name"] in allowed_names
+        children = struct.get("children", {})
+        filtered_children = (
+            filter_reduced_structure_by_widget_names(children, allowed_names) if children else {}
+        )
+
+        if include_self or filtered_children:
+            new_struct = struct.copy()
+            if "children" in new_struct:
+                new_struct["children"] = filtered_children
+            filtered[key] = new_struct
+
+    return filtered
+
+
+def compute_default_reduced_structure(ui_file, reduced_structure):
+    basename = os.path.basename(ui_file)
+    page_state_spec = PAGE_STATES.get(basename)
+
+    if page_state_spec is None:
+        return reduced_structure
+
+    all_widget_names = collect_reduced_widget_names(reduced_structure)
+    state_widget_names = collect_state_widget_names(page_state_spec)
+    default_widget_names = all_widget_names - state_widget_names
+
+    return filter_reduced_structure_by_widget_names(
+        reduced_structure,
+        default_widget_names,
+    )
+
+
+def generate_state_markdown(ui_analyzer, scenario_result, ui_file, reduced_structure):
+    basename = os.path.basename(ui_file)
+    page_state_spec = PAGE_STATES.get(basename)
+    if page_state_spec is None:
+        return ""
+
+    state_markdown_blocks = []
+
+    for state in page_state_spec.get("states", []):
+        print(f"  Rendering state: {state['name']}")
+
+        action_root = getattr(ui_analyzer, "central_widget", None)
+
+        action_root = apply_state_actions(
+            action_root,
+            scenario_result,
+            state.get("actions", []),
+        )
+        QtWidgets.QApplication.processEvents()
+
+        capture_root = action_root
+        if "root_getter" in state:
+            capture_root = state["root_getter"](scenario_result)
+
+        if capture_root is None:
+            raise RuntimeError(f"State '{state['name']}' did not produce a valid capture root.")
+
+        force_render(capture_root, delay_ms=400)
+
+        allowed_names = set(state.get("widgets", []))
+        state_reduced = filter_reduced_structure_by_widget_names(
+            reduced_structure,
+            allowed_names,
+        )
+
+        state_text, state_figures = ui_analyzer._generate_item_markdown(
+            state_reduced,
+            capture_root=capture_root,
+        )
+
+        block = ""
+        if state_text.strip():
+            block += "\n\n" + state_text
+        if state_figures.strip():
+            block += "\n\n" + state_figures
+
+        state_markdown_blocks.append(block)
+
+        if "teardown" in state:
+            apply_state_actions(capture_root, scenario_result, state["teardown"])
+            QtWidgets.QApplication.processEvents()
+
+    return "".join(state_markdown_blocks)
+
 
 class UIAnalyzer(QtWidgets.QMainWindow):
     """A Class to analyze the contents of a .ui file and create a markdown file documenting it"""
@@ -358,24 +739,36 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         ]
         return tooltip_data
 
-    def generate_markdown(self):
-        """Generates a string of markdown text describing the user interface
+    def generate_markdown(self, scenario_result=None, ui_file=None):
+        reduced = self.reduced_structure()
 
-        Returns
-        -------
-        str
-            A string containing markdown text that can be included into the main documentation.
-        """
-        struct = self.reduced_structure()
-        markdown_text, markdown_figures = self._generate_item_markdown(struct)
+        if ui_file is None:
+            ui_file = self.name + ".ui"
+
+        default_reduced = compute_default_reduced_structure(ui_file, reduced)
+        default_capture_root = getattr(self, "central_widget", None)
+        markdown_text, markdown_figures = self._generate_item_markdown(
+            default_reduced,
+            capture_root=default_capture_root,
+        )
+
+        state_markdown = ""
+        if scenario_result is not None and ui_file is not None:
+            state_markdown = generate_state_markdown(
+                self,
+                scenario_result,
+                ui_file,
+                reduced,
+            )
+
         return (
             f"---\nnumbering:\n  figure: false\n---\n# {self.name}\n\n"
             + markdown_text
-            + "\n\n"
-            + markdown_figures
+            + ("\n\n" + markdown_figures if markdown_figures.strip() else "")
+            + ("\n\n" + state_markdown if state_markdown.strip() else "")
         )
 
-    def _generate_item_markdown(self, reduced_structure):
+    def _generate_item_markdown(self, reduced_structure, capture_root=None):
         this_text_markdown = ""
         this_figure_markdown = ""
 
@@ -395,7 +788,10 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                     "type=",
                     type(struct["widget"]),
                 )
-                px = self.generate_documentation_figure(struct["widget"])
+                px = self.generate_documentation_figure(
+                    struct["widget"],
+                    capture_root=capture_root,
+                )
                 px.save(figure_full_path)
 
                 block_label = "sec:" + self.name + ":" + struct["name"]
@@ -419,7 +815,10 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                     "type=",
                     type(struct["widget"]),
                 )
-                px = self.generate_documentation_figure(struct["widget"])
+                px = self.generate_documentation_figure(
+                    struct["widget"],
+                    capture_root=capture_root,
+                )
                 print(
                     f"Pixmap info for {struct['name']}: "
                     f"isNull={px.isNull()}, size=({px.width()} x {px.height()})"
@@ -434,7 +833,9 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
             # Go through its children
             if "children" in struct:
-                child_text, child_figure = self._generate_item_markdown(struct["children"])
+                child_text, child_figure = self._generate_item_markdown(
+                    struct["children"], capture_root=capture_root
+                )
                 this_text_markdown = this_text_markdown + child_text
                 this_figure_markdown = this_figure_markdown + child_figure
 
@@ -443,12 +844,18 @@ class UIAnalyzer(QtWidgets.QMainWindow):
 
         return this_text_markdown, this_figure_markdown
 
-    def generate_documentation_figure(self, widget, padding=120, box_thickness=2, box_padding=5):
+    def generate_documentation_figure(
+        self,
+        widget,
+        capture_root=None,
+        padding=120,
+        box_thickness=2,
+        box_padding=5,
+    ):
         QtWidgets.QApplication.processEvents()
 
-        # Use the analyzer's central widget as the capture root if possible,
-        # otherwise fall back to the widget itself.
-        capture_root = getattr(self, "central_widget", None)
+        if capture_root is None:
+            capture_root = getattr(self, "central_widget", None)
         if capture_root is None:
             capture_root = widget
 
@@ -464,8 +871,9 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         if not is_descendant:
             capture_root = widget
 
-        # Grab the capture root
-        force_render(widget, delay_ms=200)
+        force_render(capture_root, delay_ms=500)
+        if widget is not capture_root:
+            force_render(widget, delay_ms=200)
         root_pixmap = capture_root.grab()
 
         # Map widget-local rect into capture-root coordinates
@@ -569,7 +977,10 @@ if __name__ == "__main__":
                         force_render(live_widget, delay_ms=400)
 
                     ui = UIAnalyzer(file, live_widget=live_widget)
-                    markdown_text = ui.generate_markdown()
+                    markdown_text = ui.generate_markdown(
+                        scenario_result=scenario_result,
+                        ui_file=file,
+                    )
 
                     filename = os.path.splitext(os.path.split(file)[1])[0]
                     output_md = os.path.join(
@@ -590,7 +1001,10 @@ if __name__ == "__main__":
         for file in static_files:
             print(f"\n=== Analyzing static UI file: {file} ===")
             ui = UIAnalyzer(file)
-            markdown_text = ui.generate_markdown()
+            markdown_text = ui.generate_markdown(
+                scenario_result=None,
+                ui_file=file,
+            )
 
             filename = os.path.splitext(os.path.split(file)[1])[0]
             output_md = os.path.join(dir_path, "book", "src", "_generated", f"{filename}_doc.md")
