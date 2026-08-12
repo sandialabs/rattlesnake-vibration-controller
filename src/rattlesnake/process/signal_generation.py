@@ -26,6 +26,11 @@ import numpy as np
 import scipy.signal as sig
 from scipy.stats import norm
 
+try:
+    trapezoid_func = np.trapezoid
+except AttributeError:
+    trapezoid_func = np.trapz
+
 
 class SignalTypes(Enum):
     """Enumeration of valid types of signals we can generate"""
@@ -659,7 +664,7 @@ class CPSDSignalGenerator(SignalGenerator):
         # Determine rms and rescaling factors for sigma clipping (rescale factors used to
         # maintain rms levels when using low clipping thresholds)
         self._rms = (
-            np.trapezoid(  # TODO: This is deprecated, fix to use Trapezoid
+            trapezoid_func(  # TODO: This is deprecated, fix to use Trapezoid
                 self.cpsd_matrix.diagonal(axis1=1, axis2=2),
                 np.arange(self.cpsd_matrix.shape[0]) * self.frequency_spacing,
                 axis=0,
