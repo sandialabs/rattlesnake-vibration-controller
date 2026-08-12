@@ -1099,6 +1099,7 @@ class SineUI(SysIdEnvironmentUI):
 
         if not blocking:
             self.filter_explorer_dialog = dialog
+            dialog.compute_filter()
             dialog.show()
             dialog.raise_()
             dialog.activateWindow()
