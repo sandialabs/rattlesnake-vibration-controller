@@ -150,6 +150,81 @@ PAGE_STATES = {
                     {"action": "close_root"},
                 ],
             },
+            {
+                "name": "sine_table_breakpoint_tab",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: (
+                            scenario.environment_ui.definition_widget.sine_table_tab_widget.setCurrentIndex(
+                                0
+                            )
+                        ),
+                    },
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: scenario.environment_ui.sine_tables[
+                            0
+                        ].widget.tabWidget.setCurrentIndex(0),
+                    },
+                ],
+                "widgets": [
+                    "breakpoint_table",
+                    "name_editor",
+                    "start_time_selector",
+                    "add_breakpoint_button",
+                    "remove_breakpoint_button",
+                    "load_breakpoints_button",
+                    "remove_tone_button",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.sine_tables[0].widget,
+            },
+            {
+                "name": "sine_table_warning_tab",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: (
+                            scenario.environment_ui.definition_widget.sine_table_tab_widget.setCurrentIndex(
+                                0
+                            )
+                        ),
+                    },
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: scenario.environment_ui.sine_tables[
+                            0
+                        ].widget.tabWidget.setCurrentIndex(1),
+                    },
+                ],
+                "widgets": [
+                    "warning_table",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.sine_tables[0].widget,
+            },
+            {
+                "name": "sine_table_abort_tab",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: (
+                            scenario.environment_ui.definition_widget.sine_table_tab_widget.setCurrentIndex(
+                                0
+                            )
+                        ),
+                    },
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: scenario.environment_ui.sine_tables[
+                            0
+                        ].widget.tabWidget.setCurrentIndex(2),
+                    },
+                ],
+                "widgets": [
+                    "abort_table",
+                ],
+                "root_getter": lambda scenario: scenario.environment_ui.sine_tables[0].widget,
+            },
         ]
     },
     "srs_sds_definition.ui": {
@@ -469,15 +544,26 @@ def generate_state_markdown(ui_analyzer, scenario_result, ui_file, reduced_struc
 
         force_render(capture_root, delay_ms=400)
 
+        # IMPORTANT:
+        # Build reduced structure from the correct root widget for this state.
+        if capture_root is getattr(ui_analyzer, "central_widget", None):
+            working_reduced_structure = reduced_structure
+        else:
+            dialog_analyzer = UIAnalyzer(ui_file, live_widget=capture_root)
+            working_reduced_structure = dialog_analyzer.reduced_structure()
+
         allowed_names = set(state.get("widgets", []))
         state_reduced = filter_reduced_structure_by_widget_names(
-            reduced_structure,
+            working_reduced_structure,
             allowed_names,
         )
+
+        state_name_prefix = f"{ui_analyzer.name}__{state['name']}"
 
         state_text, state_figures = ui_analyzer._generate_item_markdown(
             state_reduced,
             capture_root=capture_root,
+            name_prefix=state_name_prefix,
         )
 
         block = ""
@@ -768,16 +854,20 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             + ("\n\n" + state_markdown if state_markdown.strip() else "")
         )
 
-    def _generate_item_markdown(self, reduced_structure, capture_root=None):
+    def _generate_item_markdown(self, reduced_structure, capture_root=None, name_prefix=None):
+        if name_prefix is None:
+            name_prefix = self.name
+
         this_text_markdown = ""
         this_figure_markdown = ""
 
         for name, struct in reduced_structure.items():
             if isinstance(struct["widget"], QtWidgets.QGroupBox):
-                figure_file_name = self.name + "__" + struct["name"] + ".png"
+                figure_file_name = name_prefix + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(figures_dir, figure_file_name)
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
-                figure_ref_name = "fig:" + self.name + ":" + struct["name"]
+                figure_ref_name = "fig:" + name_prefix + ":" + struct["name"]
+
                 print(
                     "Generating figure:",
                     name,
@@ -788,23 +878,30 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                     "type=",
                     type(struct["widget"]),
                 )
+
                 px = self.generate_documentation_figure(
                     struct["widget"],
                     capture_root=capture_root,
                 )
-                px.save(figure_full_path)
+                saved = px.save(figure_full_path)
+                print(f"Save returned {saved} for {figure_full_path}")
 
-                block_label = "sec:" + self.name + ":" + struct["name"]
+                block_label = "sec:" + name_prefix + ":" + struct["name"]
                 this_text_markdown = this_text_markdown + f"\n\n({block_label})="
-                this_figure_markdown += f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n {name} Settings\n:::"
+                this_figure_markdown += (
+                    f"\n\n:::{{figure}} {figure_rel_path}\n"
+                    f":label: {figure_ref_name}\n"
+                    f" {name} Settings\n:::"
+                )
 
             if struct["tooltip"] is not None and struct["tooltip"].strip() != "":
-                # This means we would like to build documentation with this widget
-                figure_file_name = self.name + "__" + struct["name"] + ".png"
+                figure_file_name = name_prefix + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(figures_dir, figure_file_name)
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
-                figure_ref_name = "fig:" + self.name + ":" + struct["name"]
+                figure_ref_name = "fig:" + name_prefix + ":" + struct["name"]
+
                 label, message = self.parse_tooltip(struct["tooltip"])
+
                 print(
                     "Generating figure:",
                     name,
@@ -815,6 +912,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                     "type=",
                     type(struct["widget"]),
                 )
+
                 px = self.generate_documentation_figure(
                     struct["widget"],
                     capture_root=capture_root,
@@ -826,15 +924,20 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 saved = px.save(figure_full_path)
                 print(f"Save returned {saved} for {figure_full_path}")
 
-                this_figure_markdown += f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n **{label}** {message}\n:::"
+                this_figure_markdown += (
+                    f"\n\n:::{{figure}} {figure_rel_path}\n"
+                    f":label: {figure_ref_name}\n"
+                    f" **{label}** {message}\n:::"
+                )
                 this_text_markdown = (
                     this_text_markdown + f"\n* [**{label}**](#{figure_ref_name}) {message}"
                 )
 
-            # Go through its children
             if "children" in struct:
                 child_text, child_figure = self._generate_item_markdown(
-                    struct["children"], capture_root=capture_root
+                    struct["children"],
+                    capture_root=capture_root,
+                    name_prefix=name_prefix,
                 )
                 this_text_markdown = this_text_markdown + child_text
                 this_figure_markdown = this_figure_markdown + child_figure
