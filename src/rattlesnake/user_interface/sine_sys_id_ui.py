@@ -1055,7 +1055,7 @@ class SineUI(SysIdEnvironmentUI):
         # Return the length of the specification
         return max(max(abscissa) for abscissa in all_abscissa)
 
-    def explore_filter_settings(self, blocking=True):
+    def explore_filter_settings(self, clicked=None, blocking=True):
         """
         Open the filter explorer dialog.
 

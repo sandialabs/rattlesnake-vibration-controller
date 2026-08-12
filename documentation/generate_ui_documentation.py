@@ -45,30 +45,25 @@ os.makedirs(figures_dir, exist_ok=True)
 files = [
     dir_path + "/" + v
     for v in [
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
     ]
 ]
-
-# "../src/rattlesnake/components/ip_manager.ui",
-# "../src/rattlesnake/components/environment_selector.ui",
-# "../src/rattlesnake/components/combined_environments_controller.ui",
-# "../src/rattlesnake/components/control_select.ui",
 
 UI_FILE_TO_SCENARIO = {
     "random_vibration_definition.ui": ("random", "definition"),
@@ -91,6 +86,49 @@ UI_FILE_TO_SCENARIO = {
 }
 
 PAGE_STATES = {
+    "random_vibration_definition.ui": {
+        "states": [
+            {
+                "name": "transformation_matrix_dialog",
+                "actions": [
+                    {
+                        "action": "call",
+                        "callable": lambda scenario: (
+                            scenario.environment_ui.define_transformation_matrices(blocking=False)
+                        ),
+                    },
+                ],
+                "widgets": [
+                    "response_transformation_label",
+                    "response_transformation_add_row_button",
+                    "response_transformation_remove_row_button",
+                    "response_transformation_save_matrix_button",
+                    "response_transformation_load_matrix_button",
+                    "response_transformation_identity_button",
+                    "response_transformation_6dof_kinematic_button",
+                    "response_transformation_reversed_6dof_kinematic_button",
+                    "response_transformation_matrix",
+                    "output_transformation_label",
+                    "output_transformation_add_row_button",
+                    "output_transformation_remove_row_button",
+                    "output_transformation_save_matrix_button",
+                    "output_transformation_load_matrix_button",
+                    "output_transformation_identity_button",
+                    "output_transformation_6dof_kinematic_button",
+                    "output_transformation_reversed_6dof_kinematic_button",
+                    "output_transformation_matrix",
+                    "ok_button",
+                    "cancel_button",
+                ],
+                "root_getter": lambda scenario: (
+                    scenario.environment_ui.transformation_matrix_dialog
+                ),
+                "teardown": [
+                    {"action": "close_root"},
+                ],
+            },
+        ]
+    },
     "sine_definition.ui": {
         "states": [
             {

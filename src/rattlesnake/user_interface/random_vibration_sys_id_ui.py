@@ -127,6 +127,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.run_timer = QTimer()
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
+        self.transformation_matrix_dialog = None
         self.python_control_module = None
         self.specification_frequency_lines = None
         self.specification_cpsd_matrix = None
@@ -1145,11 +1146,40 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.define_transformation_matrices(None, False)
         self.show_specification()
 
-    def define_transformation_matrices(
-        self, clicked, dialog=True
-    ):  # pylint: disable=unused-argument
-        """Defines the transformation matrices using the dialog box"""
-        if dialog:
+    def define_transformation_matrices(self, clicked=None, dialog=True, blocking=True):
+        """Defines the transformation matrices using the dialog box.
+
+        Parameters
+        ----------
+        clicked :
+            Callback argument from button press; ignored.
+        dialog : bool
+            If False, skip building a dialog and just refresh selector widgets
+            using current transformation matrices.
+        blocking : bool
+            If True, run the dialog modally and apply accepted values.
+            If False, create/show the dialog non-modally and return it for
+            documentation/testing use.
+        """
+        if not dialog:
+            response_transformation = self.response_transformation_matrix
+            output_transformation = self.output_transformation_matrix
+            result = True
+
+        else:
+            if not blocking:
+                self.transformation_matrix_dialog = TransformationMatrixWindow(
+                    self.definition_widget,
+                    self.response_transformation_matrix,
+                    self.definition_widget.control_channels_display.value(),
+                    self.output_transformation_matrix,
+                    self.definition_widget.output_channels_display.value(),
+                )
+                self.transformation_matrix_dialog.show()
+                self.transformation_matrix_dialog.raise_()
+                self.transformation_matrix_dialog.activateWindow()
+                return self.transformation_matrix_dialog
+
             response_transformation, output_transformation, result = (
                 TransformationMatrixWindow.define_transformation_matrices(
                     self.response_transformation_matrix,
@@ -1159,10 +1189,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     self.definition_widget,
                 )
             )
-        else:
-            response_transformation = self.response_transformation_matrix
-            output_transformation = self.output_transformation_matrix
-            result = True
+
         if result:
             # Update the control names
             for widget in self.control_selector_widgets:
@@ -1184,6 +1211,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 )
             for widget in self.control_selector_widgets:
                 widget.blockSignals(False)
+
             # Update the output names
             for widget in self.output_selector_widgets:
                 widget.blockSignals(True)
@@ -1208,6 +1236,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.response_transformation_matrix = response_transformation
             self.output_transformation_matrix = output_transformation
             self.update_parameters_and_clear_spec()
+
+        if blocking:
+            self.transformation_matrix_dialog = None
 
     def update_parameters(self):
         """Recompute derived parameters from updated sampling parameters"""
