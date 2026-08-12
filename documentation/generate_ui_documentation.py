@@ -847,6 +847,32 @@ def generate_state_markdown(ui_analyzer, scenario_result, ui_file, reduced_struc
 
     return "".join(state_markdown_blocks)
 
+def groupbox_has_direct_documentation(struct):
+    """
+    Return True if a QGroupBox contributes direct documentation content.
+
+    A groupbox is considered to have direct documentation if:
+      - it has its own tooltip text, or
+      - one of its immediate children is a non-groupbox widget with tooltip text
+
+    If it only contains nested groupboxes and no direct widget documentation,
+    then it is treated as a structural container and should not emit its own
+    empty section label.
+    """
+    tooltip = struct.get("tooltip", None)
+    if tooltip is not None and tooltip.strip() != "":
+        return True
+
+    children = struct.get("children", {})
+    for _, child in children.items():
+        child_widget = child["widget"]
+        child_tooltip = child.get("tooltip", None)
+
+        if not isinstance(child_widget, QtWidgets.QGroupBox):
+            if child_tooltip is not None and child_tooltip.strip() != "":
+                return True
+
+    return False
 
 class UIAnalyzer(QtWidgets.QMainWindow):
     """A Class to analyze the contents of a .ui file and create a markdown file documenting it"""
@@ -1129,7 +1155,14 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         this_figure_markdown = ""
 
         for name, struct in reduced_structure.items():
-            if isinstance(struct["widget"], QtWidgets.QGroupBox):
+            is_groupbox = isinstance(struct["widget"], QtWidgets.QGroupBox)
+
+            emit_groupbox_section = False
+            if is_groupbox:
+                emit_groupbox_section = groupbox_has_direct_documentation(struct)
+
+            # Emit a groupbox figure regardless, since it may still be useful visually
+            if is_groupbox:
                 figure_file_name = name_prefix + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(figures_dir, figure_file_name)
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
@@ -1153,14 +1186,18 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 saved = px.save(figure_full_path)
                 print(f"Save returned {saved} for {figure_full_path}")
 
-                block_label = "sec:" + name_prefix + ":" + struct["name"]
-                this_text_markdown = this_text_markdown + f"\n\n({block_label})="
                 this_figure_markdown += (
                     f"\n\n:::{{figure}} {figure_rel_path}\n"
                     f":label: {figure_ref_name}\n"
                     f" {name} Settings\n:::"
                 )
 
+                # Only emit a section anchor if this groupbox has real direct content
+                if emit_groupbox_section:
+                    block_label = "sec:" + name_prefix + ":" + struct["name"]
+                    this_text_markdown += f"\n\n({block_label})="
+
+            # Emit tooltip-based documentation for widgets
             if struct["tooltip"] is not None and struct["tooltip"].strip() != "":
                 figure_file_name = name_prefix + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(figures_dir, figure_file_name)
@@ -1196,21 +1233,20 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                     f":label: {figure_ref_name}\n"
                     f" **{label}** {message}\n:::"
                 )
-                this_text_markdown = (
-                    this_text_markdown + f"\n* [**{label}**](#{figure_ref_name}) {message}"
-                )
+                this_text_markdown += f"\n* [**{label}**](#{figure_ref_name}) {message}"
 
+            # Recurse into children
             if "children" in struct:
                 child_text, child_figure = self._generate_item_markdown(
                     struct["children"],
                     capture_root=capture_root,
                     name_prefix=name_prefix,
                 )
-                this_text_markdown = this_text_markdown + child_text
-                this_figure_markdown = this_figure_markdown + child_figure
+                this_text_markdown += child_text
+                this_figure_markdown += child_figure
 
-            if isinstance(struct["widget"], QtWidgets.QGroupBox):
-                this_text_markdown = this_text_markdown + "\n"
+            if is_groupbox and emit_groupbox_section:
+                this_text_markdown += "\n"
 
         return this_text_markdown, this_figure_markdown
 
