@@ -50,26 +50,18 @@ files = [
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_acquisition_window.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transformation_matrices.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
+        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_sweep_table.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_filter_explorer.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
         # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction_table.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run_table.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_shock_history.ui",
-        # "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_synthesize_dialog.ui",
     ]
 ]
 
@@ -82,6 +74,7 @@ UI_FILE_TO_SCENARIO = {
     "random_vibration_definition.ui": ("random", "definition"),
     "random_vibration_prediction.ui": ("random", "prediction"),
     "random_vibration_run.ui": ("random", "run"),
+    "system_identification.ui": ("random", "system_id"),
     "transient_definition.ui": ("transient", "definition"),
     "transient_prediction.ui": ("transient", "prediction"),
     "transient_run.ui": ("transient", "run"),
@@ -91,6 +84,10 @@ UI_FILE_TO_SCENARIO = {
     "srs_sds_definition.ui": ("sds", "definition"),
     "srs_sds_prediction.ui": ("sds", "prediction"),
     "srs_sds_run.ui": ("sds", "run"),
+    "modal_definition.ui": ("modal", "definition"),
+    "modal_run.ui": ("modal", "run"),
+    "time_definition.ui": ("time", "definition"),
+    "time_run.ui": ("time", "run"),
 }
 
 PAGE_STATES = {
@@ -281,6 +278,49 @@ PAGE_STATES = {
                     "tone_table",
                 ],
             },
+            {
+                "name": "spec_breakpoint_tab",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "specification_tabwidget",
+                        "value": 0,
+                    },
+                ],
+                "widgets": [
+                    "breakpoint_table",
+                    "num_hits_spinbox",
+                    "add_breakpoint_button",
+                    "remove_breakpoint_button",
+                    "load_breakpoints_button",
+                ],
+            },
+            {
+                "name": "spec_lower_limit_tab",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "specification_tabwidget",
+                        "value": 1,
+                    },
+                ],
+                "widgets": [
+                    "lower_limit_table",
+                ],
+            },
+            {
+                "name": "spec_upper_limit_tab",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "specification_tabwidget",
+                        "value": 2,
+                    },
+                ],
+                "widgets": [
+                    "upper_limit_table",
+                ],
+            },
         ]
     },
     "srs_sds_run.ui": {
@@ -360,6 +400,195 @@ PAGE_STATES = {
                 "root_getter": lambda scenario: scenario.environment_ui.shock_history_dialog,
                 "teardown": [
                     {"action": "close_root"},
+                ],
+            },
+        ]
+    },
+    "system_identification.ui": {
+        "states": [
+            {
+                "name": "impulse_response",
+                "actions": [
+                    {"action": "set_checked", "widget": "impulse_checkbox", "value": True},
+                    {"action": "set_checked", "widget": "coherence_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "levels_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "kurtosis_checkbox", "value": False},
+                ],
+                "widgets": [
+                    "impulse_groupbox",
+                    "impulse_graphicslayout",
+                ],
+            },
+            {
+                "name": "coherence_conditioning",
+                "actions": [
+                    {"action": "set_checked", "widget": "impulse_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "coherence_checkbox", "value": True},
+                    {"action": "set_checked", "widget": "levels_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "kurtosis_checkbox", "value": False},
+                ],
+                "widgets": [
+                    "coherence_groupbox",
+                    "coherence_graphicslayout",
+                ],
+            },
+            {
+                "name": "levels",
+                "actions": [
+                    {"action": "set_checked", "widget": "impulse_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "coherence_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "levels_checkbox", "value": True},
+                    {"action": "set_checked", "widget": "kurtosis_checkbox", "value": False},
+                ],
+                "widgets": [
+                    "levels_groupbox",
+                    "levels_graphicslayout",
+                ],
+            },
+            {
+                "name": "kurtosis",
+                "actions": [
+                    {"action": "set_checked", "widget": "impulse_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "coherence_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "levels_checkbox", "value": False},
+                    {"action": "set_checked", "widget": "kurtosis_checkbox", "value": True},
+                ],
+                "widgets": [
+                    "kurtosis_groupbox",
+                    "kurtosis_graphicslayout",
+                ],
+            },
+        ]
+    },
+    "modal_definition.ui": {
+        "states": [
+            {
+                "name": "signal_generator_none",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 0,
+                    },
+                ],
+                "widgets": [
+                    "no_excitation_label",
+                ],
+            },
+            {
+                "name": "signal_generator_random",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 1,
+                    },
+                ],
+                "widgets": [
+                    "random_rms_label",
+                    "random_rms_selector",
+                    "random_rms_selector_label",
+                    "random_frequency_range_label",
+                    "random_min_frequency_selector",
+                    "random_frequency_range_selector_label",
+                    "random_max_frequency_selector",
+                ],
+            },
+            {
+                "name": "signal_generator_burst",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 2,
+                    },
+                ],
+                "widgets": [
+                    "burst_rms_label",
+                    "burst_rms_selector",
+                    "burst_rms_selector_label",
+                    "burst_frequency_range_label",
+                    "burst_min_frequency_selector",
+                    "burst_frequency_range_selector_label",
+                    "burst_max_frequency_selector",
+                    "burst_on_percentage_label",
+                    "burst_on_percentage_selector",
+                ],
+            },
+            {
+                "name": "signal_generator_pseudorandom",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 3,
+                    },
+                ],
+                "widgets": [
+                    "pseudorandom_rms_label",
+                    "pseudorandom_rms_selector",
+                    "pseudorandom_rms_selector_label",
+                    "pseudorandom_frequency_range_label",
+                    "pseudorandom_min_frequency_selector",
+                    "pseudorandom_frequency_range_selector_label",
+                    "pseudorandom_max_frequency_selector",
+                ],
+            },
+            {
+                "name": "signal_generator_chirp",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 4,
+                    },
+                ],
+                "widgets": [
+                    "chirp_level_label",
+                    "chirp_level_selector",
+                    "chirp_level_selector_label",
+                    "chirp_frequency_label",
+                    "chirp_min_frequency_selector",
+                    "chirp_frequency_range_selector_label",
+                    "chirp_max_frequency_selector",
+                ],
+            },
+            {
+                "name": "signal_generator_square",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 5,
+                    },
+                ],
+                "widgets": [
+                    "square_level_label",
+                    "square_level_selector",
+                    "square_level_selector_label",
+                    "square_frequency_label",
+                    "square_frequency_selector",
+                    "square_frequency_selector_label",
+                    "square_percent_on_label",
+                    "square_percent_on_selector",
+                ],
+            },
+            {
+                "name": "signal_generator_sine",
+                "actions": [
+                    {
+                        "action": "set_current_index",
+                        "widget": "signal_generator_selector",
+                        "value": 6,
+                    },
+                ],
+                "widgets": [
+                    "sine_level_label",
+                    "sine_level_selector",
+                    "sine_level_selector_label",
+                    "sine_frequency_label",
+                    "sine_frequency_selector",
+                    "sine_frequency_selector_label",
                 ],
             },
         ]
