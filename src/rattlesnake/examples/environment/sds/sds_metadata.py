@@ -17,7 +17,8 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SRSDisplacementType,
     SDSParameters,
     ControlParameters,
-    ControlLawType
+    ControlLawType,
+    SpecParameters,
 )
 from rattlesnake.environment.sds_sys_id_environment import SDSEnvironment
 from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
@@ -67,6 +68,9 @@ def manual_sds_metadata(hardware_metadata, **overrides):
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     response_transformation_matrix = None
     excitation_transformation_matrix = None
+    n_freq = int(sample_rate / 2) + 1
+
+    specification_data = SpecParameters(frequencies=np.arange(0, n_freq, 1), srs_spec=np.ones((n_freq, 3, 3)), srs_lower_limit=np.ones((n_freq, 3, 3)), srs_upper_limit=np.ones((n_freq, 3, 3)))
 
     kwargs = dict(
         environment_name=ENVIRONMENT_NAME,

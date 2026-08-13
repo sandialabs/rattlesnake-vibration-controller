@@ -71,6 +71,7 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SDSParameters,
     ControlParameters,
     ControlLawType,
+    SpecParameters,
 )
 from rattlesnake.environment.sds_sys_id_environment import SDSCommands
 from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
@@ -146,6 +147,7 @@ __all__ = [
     "SDSParameters",
     "ControlParameters",
     "ControlLawType",
+    "SpecParameters",
     "SDSInstructions",
     # Process
     "StreamType",
