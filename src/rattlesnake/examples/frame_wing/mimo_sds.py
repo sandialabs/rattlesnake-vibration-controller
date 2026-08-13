@@ -36,7 +36,7 @@ def build_mimo_sds_controller(threaded=False):
         Controller with hardware, environment, system identification, and
         acquisition initialized.
     """
-    rattlesnake = RattlesnakeController(threaded=threaded, timeout=500)
+    rattlesnake = RattlesnakeController(threaded=threaded, timeout=1000)
 
     channel_list = HardwareMetadata.load_channel_table_from_workbook(
         opxl.load_workbook(rattlesnake_directory + "/frame_wing/data/channel_table.xlsx")

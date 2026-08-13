@@ -145,7 +145,7 @@ def sine_environment_scenario(display_errors=False):
         handle,
         env_ui,
         manual_stop_after_seconds=None,
-        completion_timeout=120.0,
+        completion_timeout=600,
     )
 
     return _build_result("sine", handle, env_ui)
@@ -159,7 +159,7 @@ def sds_environment_scenario(display_errors=False):
         handle,
         env_ui,
         manual_stop_after_seconds=None,
-        completion_timeout=180.0,
+        completion_timeout=600,
     )
 
     return _build_result("sds", handle, env_ui)
@@ -232,8 +232,8 @@ def modal_environment_scenario(display_errors=False):
 
     QtWidgets.QApplication.processEvents()
 
-    # 30 averages x 2 second frames = ~60 s, give some margin.
-    QtTest.QTest.qWait(35000)
+    # 15 averages x 2 second frames = ~30 s, give some margin.
+    QtTest.QTest.qWait(40000)
     QtWidgets.QApplication.processEvents()
 
     env_ui.stop_environment()
