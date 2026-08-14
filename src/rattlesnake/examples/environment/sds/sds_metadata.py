@@ -24,6 +24,7 @@ from rattlesnake.environment.sds_sys_id_environment import SDSEnvironment
 from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.utilities import DIRECTORY
 
 ENVIRONMENT_NAME = "SDS 0"
 
@@ -59,10 +60,10 @@ def manual_sds_metadata(hardware_metadata, **overrides):
         error_tolerance=5,
     )
     control_script_data = ControlParameters(
-        control_script=defaults.DIRECTORY + "environment/sds_sys_id_control_law.py",
+        control_script=DIRECTORY + r"\environment\sds_sys_id_control_law.py",
         control_object="default_control_law",
-        control_type=ControlLawType.FUNCTION
-        control_parameters="round=1e-10\naccuracy_weight=100\ninput_weight=1"
+        control_type=ControlLawType.FUNCTION,
+        control_parameters="round=1e-10\naccuracy_weight=100\ninput_weight=1",
     )
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
@@ -70,7 +71,13 @@ def manual_sds_metadata(hardware_metadata, **overrides):
     excitation_transformation_matrix = None
     n_freq = int(sample_rate / 2) + 1
 
-    specification_data = SpecParameters(frequencies=np.arange(0, n_freq, 1), srs_spec=np.ones((n_freq, 3, 3)), srs_lower_limit=np.ones((n_freq, 3, 3)), srs_upper_limit=np.ones((n_freq, 3, 3)))
+    specification_data = SpecParameters(
+        frequencies=np.arange(0, n_freq, 1),
+        srs_spec=np.ones((n_freq, 3, 3)),
+        srs_lower_limit=np.ones((n_freq, 3, 3)) * 0.5,
+        srs_upper_limit=np.ones((n_freq, 3, 3)) * 1.5,
+        num_hits=10,
+    )
 
     kwargs = dict(
         environment_name=ENVIRONMENT_NAME,
@@ -108,7 +115,7 @@ def sds_instructions():
 
 
 def sds_event_list():
-    pass
+    return []
 
 
 def worksheet_sds_event_list():

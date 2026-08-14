@@ -18,9 +18,9 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 TIMEOUT = 20
-IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
+IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.NONE
+ENVIRONMENT_TYPE = EnvironmentType.SDS
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False
