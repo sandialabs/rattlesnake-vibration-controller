@@ -16,89 +16,183 @@ numbering:
 (sec:acquiring_and_running_rattlesnake)=
 # Acquiring and Running Rattlesnake
 
-Two methods are provided to acquire the Rattlesnake software.  The software can be downloaded as an executable and run directly with no other dependencies.  Alternatively, the software can be downloaded in its Python script form and run using a Python interpreter.  The former approach is simpler, but results in a larger file size and longer software loading time due to the necessity to pack the Python ecosystem into the executable for distribution and unpack it prior to execution.  The latter approach is more suited to users who wish to utilize the full functionality of the Rattlesnake framework, which would include activities such as coding up custom control laws.  In this case, it will be advantageous to have a Python ecosystem installed on the user's computer, so simply downloading the source code and executing it similarly to other Python scripts will potentially be easier than the executable approach.
+Rattlesnake can now be acquired in several ways depending on how a user intends to use the software:
 
-## Running from an Executable
+1. **Install from PyPI** as a Python package
+2. **Clone the GitHub repository** and install from source
+3. **Download a standalone executable** from the GitHub Releases page  
+   *(coming soon)*
 
-Python code can be compiled into a single executable file, which makes it easier to distribute Python code.  The user need not have a Python distribution installed on their computer to simply run the executable, as the executable will contain the required Python interpreter and libraries compiled within it.  The executable approach has a few disadvantages.  The file size of the executable will generally be larger than the raw source code.  Additionally, the executable will generally be slower to start due to the necessary unpacking of the Python ecosystem from it.  Still, if a user is not familiar with Python, the executable will be the easiest approach to run the software.
+The best choice depends on whether the user simply wants to run the software or also wants to inspect, modify, or extend the codebase.
 
-### Downloading the Executable
+## Acquiring the Software
 
-Executables for Rattlesnake are generally stored in the [GitHub Project](https://github.com/sandialabs/rattlesnake-vibration-controller) on the [GitHub Releases page](https://github.com/sandialabs/rattlesnake-vibration-controller/releases).  A user can simply download the executable corresponding to the user's operating system and save it to their computer.  No installation is necessary to run this executable.
+### Installing from PyPI
 
-### Running the Executable
+Rattlesnake is published on PyPI under the package name:
 
-Running Rattlesnake from an executable is as simple as running any other program.  Simply double click on the executable (or otherwise execute it) and the program will run.  Note that there may be a significant delay between executing the executable and the program appearing, as the executable will unpack a Python distribution into the user's temporary space in order to run the included Python code.
-
-As with any other executable program, users may create links to the program to put on the desktop or in the start menu to make accessing the program easier.
-
-It may be beneficial to run the executable through the command terminal, as otherwise if an error occurs in the program, the program may simply disappear without the user being aware of any errors.  When running through the command terminal, the user will be able to view any error messages if the program unexpectedly exits, which will be useful in diagnosing the issue if submitted to the issue tracker in the [GitHub Issues](https://github.com/sandialabs/rattlesnake-vibration-controller/issues) (See @sec:obtaining_support for more information).
-
-## Running from the Python script
-
-The alternative to running the Rattlesnake as an executable is to run it as a Python script, which users familiar with the Python programming language should be accustomed to.  This approach provides the user the ability to modify code directly without needing to recompile an executable.  Additionally, if the user plans on developing custom control laws for the Rattlesnake (see, e.g., @sec:rattlesnake_environments_custom_control_law for more information), they will generally require a Python ecosystem installed on their computer, so the running of the code as a script is not a great burden.
-
-### Setting up a Python Ecosystem
-
-The first step to running Rattlesnake from its Python script is to install Python.  This can be done in multiple ways.  Python can be downloaded and installed from the [Python website](https://www.python.org/) directly.  When installed this way, Python will not include any of the numeric or scientific libraries such as [NumPy](https://numpy.org) or [SciPy](https://scipy.org).  For this reason, many users will prefer to download a scientific Python distribution which contains many numeric or scientific libraries.  [Anaconda](https://www.anaconda.com/) or [WinPython](https://winpython.github.io/) are popular distributions.
-
-### Virtual Enrivonment
-
-It is a best practice to install Rattlesnake within a virtual environment.  A virtual environment is a self-contained directory that contains a specific Python installation, along with additional packages.  It allows users to create an isolated environment, ensuring that dependicies and libraries do not interfere with each other.
-
-Create a virtual environment with either `pip` or `uv`. `pip` is already included with Python, whereas `uv` must be [installed](https://docs.astral.sh/uv/getting-started/installation/) separately. `uv` is significantly faster than `pip` (often 10–100x) and is recommended, though not required.
-
+```text
+rattlesnake-vibration-controller
 ```
-# Option 1: pip method
+
+The simplest installation method is therefore:
+
+```sh
+pip install rattlesnake-vibration-controller
+```
+
+This is the recommended option for users who:
+
+- already have a Python installation available,
+- want the easiest Python-based installation route, and
+- do not need to modify the Rattlesnake source code directly.
+
+If desired, other Python package managers may also be used as long as they can install from PyPI. For example, users of `uv` may prefer:
+
+```sh
+uv pip install rattlesnake-vibration-controller
+```
+
+Once installed, the package exposes a console entry point named:
+
+```text
+rattlesnake
+```
+
+which launches the main application.
+
+### Installing from a GitHub Clone
+
+Users who intend to inspect the source, contribute changes, or develop custom control laws may prefer installing from a clone of the repository.
+
+The source code is hosted at https://github.com/sandialabs/rattlesnake-vibration-controller
+
+Clone it with Git:
+
+```sh
+git clone https://github.com/sandialabs/rattlesnake-vibration-controller.git
+cd rattlesnake-vibration-controller
+```
+
+Then install it from the repository directory:
+
+```sh
+pip install .
+```
+
+This installs the package and its dependencies from the local checkout.
+
+#### Editable Installation
+
+For development work, it is often preferable to install in **editable mode**:
+
+```sh
+pip install -e .
+```
+
+The `-e` flag tells Python to install the package in a way that points back to the source tree rather than copying the files into site-packages. This means:
+
+- edits to the source code take effect immediately,
+- reinstalling after every small code change is unnecessary,
+- local development and debugging are much more convenient.
+
+If developer tools are also needed, such as `pytest`, `pylint`, or documentation tooling, the optional development dependencies can be installed with:
+
+```sh
+pip install -e .[dev]
+```
+
+or with `uv`:
+
+```sh
+uv pip install -e .[dev]
+```
+
+This is the recommended setup for developers and advanced users.
+
+### Downloading a Standalone Executable
+
+A standalone executable distribution is planned for future releases, to support users who do not wish to install Python or manage package dependencies manually.
+
+When available, executables will be distributed through the GitHub Releases page https://github.com/sandialabs/rattlesnake-vibration-controller/releases.
+
+This is intended to be the most accessible option for non-Python users.
+
+## Setting Up a Python Environment
+
+When using the Python-package or source-install approaches, it is strongly recommended to use a **virtual environment**.
+
+A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer. This helps avoid version conflicts and makes upgrades or removal easier.
+
+Examples:
+
+```sh
+# Option 1: standard library venv
 python -m venv .venv
 
-# Option 2: uv method
+# Option 2: uv-managed venv
 uv venv
+```
 
-# For both methods, prior to installation, activate the environment, depending on which shell is in use:
+Activate the environment before installing:
 
+```sh
 source .venv/bin/activate       # bash / zsh
 source .venv/bin/activate.fish  # fish shell
-.\.venv\Scripts\activate        # Windows (PowerShell/CMD)
+.\.venv\Scripts\activate        # Windows PowerShell / CMD
 ```
 
-### Installation
+## Running the Software
 
-Regardless of the distribution and virtual environment generation method selected, users will need to install the dependencies
-required by Rattlesnake.  The project uses a `pyproject.toml` file to manage its
-environment.  Install the package and its dependencies directly using `pip`:
+### Running via Standard Python Execution
 
-* For **standard users:** `pip install .`
-* For **developers** (includes tools like `pytest` defined in the `dev` extra): 
-  * `pip install -e .[dev]` or
-  * `uv pip install -e .[dev]`
-
-The `-e` flag installs the project in *editable mode*, ensuring that any changes you make
-to the source code are reflected immediately in the environment.
-
-If running through a corporate or university firewall, the proxy may need to be specified in `pip`.  Additionally, on some networks the Python package repositories must be added as trusted hosts.  Such a command may look like
+If Rattlesnake has been cloned from GitHub and the user wishes to run it directly from the source tree without using the installed entry point, the main application can be launched with:
 
 ```sh
-pip --proxy <proxy_address> install --trusted-host pypi.org --trusted-host files.pythonhosted.org
+python src/rattlesnake/main.py
 ```
 
-where `<proxy_address>` is the address of the proxy.
+This is especially useful for development and debugging from a source checkout.
 
-### Downloading the Python Code
+### Running via the Installed Console Script
 
-With Python installed the Rattlesnake code can be downloaded from the [GitHub project](https://github.com/sandialabs/rattlesnake-vibration-controller) repository.  For users who aim to develop the Rattlesnake software, the preferred approach to acquire the software is to use Git to clone the repository.  For users who only wish to use the software, the code can be [downloaded](https://github.com/sandialabs/rattlesnake-vibration-controller/releases) in a `zip` file or other archive format and extracted to the user's computer. 
+When installed through `pip install` or `pip install -e`, Rattlesnake exposes the console script:
 
-### Running Rattlesnake
+```text
+rattlesnake
+```
 
-If Python is on the user's path, the user can simply call
+So in an activated environment, the application can typically be started simply with:
 
 ```sh
-python rattlesnake.py
+rattlesnake
 ```
 
-from a command line in the directory in which Rattlesnake was downloaded to execute the software.  If Python is not on the user's path, it will be necessary to provide the command line the full path to the Python executable.
+On Windows, a corresponding executable wrapper is placed into the Python environment’s `Scripts` directory. On Unix-like platforms, the script is installed into the environment’s `bin` directory.
 
-Many users will find it more comfortable to forgo the command line and launch Rattlesnake directly from their favorite integrated development environment (IDE).  Note that the Rattlesnake uses the `multiprocessing` Python package to spawn several processes, and these processes sometimes do not play nice with IDE consoles.  Therefore if running from an IDE, the IDE should be instructed to run the `rattlesnake.py` script from an external system terminal rather than a terminal inside the `IDE`.  When executing in an external terminal, it is again useful to keep the terminal active after execution in case of errors occurring.  The error message and traceback displayed in the terminal will be instrumental in debugging the source of the error.  In Spyder, this can be configured per file from the `Run` menu, so the run settings for `rattlesnake.py` should be set as shown in @fig:spyder_configuration.
+If the environment is activated, this command should already be on the path. If not, it may still be launched directly from the environment’s script directory.
+
+### Running Rattlesnake Without a User Interface
+
+Advanced users wishing to automate workflows may wish to run Rattlesnake without a user interface and instead only use code to control the software.  In this case, Rattlesnake can be imported like any other Python module.  **NEED A BRIEF DESCRIPTION HERE THAT POINTS TO THE API DOC MODULES**
+
+### Running a Standalone Executable
+
+Once standalone executables are available on the Releases page, users will be able to launch Rattlesnake just like any other desktop application by executing the downloaded file.
+
+## Notes on Execution from IDEs
+
+Many users may prefer launching Rattlesnake from an integrated development environment (IDE) rather than from a command shell.
+
+Because Rattlesnake uses multiprocessing and multiple cooperating subprocesses, IDE-integrated consoles do not always behave well. In general, if launching from an IDE:
+
+- prefer using an **external system terminal** rather than an embedded console,
+- keep the terminal open after execution,
+- and inspect traceback output there if the application exits unexpectedly.
+
+If an error occurs, the command terminal is often the easiest place to capture useful diagnostics for troubleshooting or for reporting issues.  If the terminal immediately closes after an unexpected exit, this diagnostic information is lost.
+
+As before, Spyder users may find it helpful to configure execution through an external system terminal, as illustrated in @fig:spyder_configuration.
 
 :::{figure} figures/spyder_run_configuration.png
 :label: fig:spyder_configuration
@@ -109,13 +203,62 @@ Spyder run configuration showing execution in an external system terminal as wel
 
 ## Computational Requirements
 
-Rattlesnake is a process-heavy software; it spawns processes for each environment, as well as for various portions of the controller that should operate in parallel.  In general, the core controller utilizes 2-3 full processes.  Various environments will also utilize multiple processes; for example, the MIMO Random Vibration uses 3 main processes to compute spectral quantities (FRFs, CPSDs, etc.), perform control calculations, and generate time histories simultaneously.  If running virtual control, keep in mind that acquisition processes will be more fully subscribed due to the need to integrate the equations of motion rather than just read data off the data acquisition hardware.
-   
-While the exact computational requirements will depend on the channel count of the test and size of the control computations, the authors have had success using a 6-core processor with 32 GB RAM for multi-environment control approximately 20 control channels and 4 outputs.  For a 200 acquisition channel test with 50 control channels and 8 outputs, the authors needed to upgrade to a 16 core, 32 GB RAM computer.
+Rattlesnake is process-heavy software. It spawns multiple cooperating processes for:
+
+- controller management,
+- acquisition,
+- output,
+- streaming,
+- environment execution,
+- and, for many environments, additional subprocesses for signal generation, spectral processing, and data analysis.
+
+The exact computational requirements depend on:
+
+- the number of acquisition channels,
+- the number of control channels,
+- the number of outputs,
+- the type of environment being used,
+- whether system identification is required,
+- and whether virtual hardware is being used.
+
+Virtual hardware can be especially demanding, because the acquisition process may need to simulate the structural response rather than simply read measured data from hardware.
+
+As a rough guideline:
+
+- a 6-core CPU with 32 GB RAM has been more than sufficient for moderate multi-environment testing with roughly 20 control channels and 4 outputs,
+- a test with 200 acquisition channels, 50 control channels, and 8 outputs, have benefited from moving to something closer to a 16-core CPU with 32 GB RAM.
+
+The @sec:mimo_sine environment is particularly memory-intensive, so users running long sine sweeps over multiple channels may need to have a large amount of RAM available.
+
+Users planning to run large MIMO tests or detailed virtual-hardware simulations should expect computational performance to matter.
+
+:::{warning}
+If computational requirements are insufficient for a given test, the user may encounter many issues including the UI becoming unresponsive, control loop updating cycles becoming longer, or in the worst case scenario, the output task running out of samples to send to the data acquisition system.  This last issue will generally result in a "hard stop" of any shaker system running the test, which could damage both the test article or the test equipment.
+
+Before any high consequence test, it is recommended to perform checkouts to ensure that the computer can handle the required computation.  A good practice is to run the test at a very low level where a hard stop or other issue within Rattlesnake would not result in damage to equipment.  Most Rattlesnake environments allow the user to modify the test level on the fly; starting at -12 or -6 dB can provide confidence that the full level test will execute successfully.
+:::   
 
 (sec:obtaining_support)=
 ## Obtaining Support
 
-Rattlesnake was developed by a small team as a research tool, and as such will not be as polished as commercial vibration software.  Therefore, it should be expected that bugs and errors will occur from time to time.  If a bug occurs, please report it by creating a new issue in the [GitHub issues board](https://github.com/sandialabs/rattlesnake-vibration-controller/issues).  This will notify the development team of the issue and they can work to solve it.  If users have a feature request, these can also be submitted to the [GitHub issues board](https://github.com/sandialabs/rattlesnake-vibration-controller/issues).
+Rattlesnake is developed by a relatively small team and continues to evolve. As with any active research or engineering software, users should expect that bugs, rough edges, or incomplete features may still exist.
 
-The issue tracker provides templates for Bugs, Feature Requests, and Questions.  The more thoroughly that these can be filled out, the greater the chance that the development team can solve the issue.  For bug reports, files can also be attached to the issue, so the users can include the `Rattlesnake.log` file that is generated for each run of the Rattlesnake, as well as any screenshot of error messages that get shown in dialog boxes or the command window.  The question template can be used for basic support questions, which will be answered by the developers as their time permits.  Users should certainly consult this User's Manual and the Rattlesnake Source Code first to ensure their question is not covered by it.
+If an issue is encountered, support requests and bug reports should be submitted through the GitHub Issues page https://github.com/sandialabs/rattlesnake-vibration-controller/issues
+
+The issue tracker supports different report types, including:
+
+- bug reports,
+- feature requests,
+- and user questions.
+
+When reporting a bug, it is very helpful to include as much detail as possible, such as:
+
+- the operating system,
+- the installation method used,
+- any relevant input files,
+- screenshots of error dialogs,
+- and the `Rattlesnake.log` file produced during the run.
+
+Clear reproduction steps greatly improve the chance that the issue can be diagnosed and fixed quickly.
+
+Users are encouraged to consult both this documentation and the source repository before filing a question, but the issue tracker remains the primary place to request support or report problems.

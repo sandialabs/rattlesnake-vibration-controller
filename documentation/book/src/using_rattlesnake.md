@@ -16,27 +16,27 @@ numbering:
 (sec:using_rattlesnake)=
 # Using Rattlesnake
 
-This chapter will describe how to use Rattlesnake through its graphical user interface (GUI).  Rattlesnake is capable of running several different types of control, therefore the GUI may look different for different tests.  In general, the GUI consists of a tabbed interface across the top of the main window, and users must complete each tab before proceeding to the next.  The tabs that exist in a given test will depend on which control type is being run.  For example, in a combined environments test (see @sec:combined_environments) such as the one shown in @fig:rattlesnake_main_gui_combined_environments), there is a `Test Profile` tab that allows the user to define a testing timeline.  Additionally, environments such as the MIMO Random Vibration environment (see @sec:mimo_random) require a system identification phase where the controller identifies relationships between the output signals and the control degrees of freedom.  Therefore, tests using the MIMO Random Vibration environment will also have a `System Identification` and `Test Predictions` tab.  @fig:rattlesnake_main_gui_time_generation, on the other hand, shows the GUI for a test that only utilizes the Time History environment (see @sec:mimo_time) so these optional tabs are not displayed.
+This chapter will describe how to use Rattlesnake through its user interface (UI).  Rattlesnake is capable of running several different types of control, therefore the UI may look different for different tests.  In general, the UI consists of a tabbed interface across the top of the main window, and users must complete each tab before proceeding to the next.  The tabs that exist in a given test will depend on which control type is being run.  For example, in a combined environments test (see @sec:combined_environments) such as the one shown in @fig:rattlesnake_main_gui_combined_environments), there is a `Test Profile` tab that allows the user to define a testing timeline.  Additionally, environments such as the MIMO Random Vibration environment (see @sec:mimo_random) require a system identification phase where the controller identifies relationships between the output signals and the control degrees of freedom.  Therefore, tests using the MIMO Random Vibration environment will also have a `System Identification` and `Test Predictions` tab.  @fig:rattlesnake_main_gui_time_generation, on the other hand, shows the UI for a test that only utilizes the Time History environment (see @sec:mimo_time) so these optional tabs are not displayed.
 
 :::{figure} figures/Rattlesnake_Main_GUI_Combined_Environments.png
 :label: fig:rattlesnake_main_gui_combined_environments
 :align: center
-Rattlesnake GUI tabs when running a combined environments test with an environment that requires a system identification.
+Rattlesnake UI tabs when running a combined environments test with an environment that requires a system identification.
 :::
 
 :::{figure} figures/Rattlesnake_Main_GUI_Time_Generation.png
 :label: fig:rattlesnake_main_gui_time_generation
 :align: center
-Rattlesnake GUI tabs when running a single environment with no system identification phase.
+Rattlesnake UI tabs when running a single environment with no system identification phase.
 :::
 
-Users of Rattlesnake must be aware that depending on their test configuration, their GUI may not appear identical to images shown in this User's Manual.  Additionally, users should be aware that the GUI library used by this software will inherit stylistic features from the operating system.  There may therefore be cosmetic differences between the images of the GUI shown in this document and the GUI seen by the user.  All images in this document were created using Microsoft Windows 10 or Windows 11 operating systems, so users with Mac or Linux operating systems will note a difference in GUI appearance.
+Users of Rattlesnake must be aware that depending on their test configuration, their UI may not appear identical to images shown in this User's Manual.  Additionally, users should be aware that the UI library used by this software will inherit stylistic features from the operating system.  There may therefore be cosmetic differences between the images of the UI shown in this document and the UI seen by the user.  All images in this document were created using Microsoft Windows 10 or Windows 11 operating systems, so users with Mac or Linux operating systems will note a difference in UI appearance.
 
-Note that the Rattlesnake enforces an order to operations when defining a particular test by enabling and disabling tabs in the GUI.  Initially, only the first tab will be enabled.  As the users complete each tab, the next tab will become available.  In @fig:rattlesnake_main_gui_combined_environments and @fig:rattlesnake_main_gui_time_generation, it can be seen that only the initial tab is enabled, and subsequent tabs are disabled.
+Note that the Rattlesnake enforces an order to operations when defining a particular test by enabling and disabling tabs in the UI.  Initially, only the first tab will be enabled.  As the users complete each tab, the next tab will become available.  In @fig:rattlesnake_main_gui_combined_environments and @fig:rattlesnake_main_gui_time_generation, it can be seen that only the initial tab is enabled, and subsequent tabs are disabled.
 
 ## Environment Selection
 
-When Rattlesnake is opened, the first GUI window that the user will see allows the user to select the environment that they will run (@fig:environment_selection).  Users can select a single environment, or alternatively select a combined environments test (see @sec:combined_environments).  The selection made in this dialog box will determine which tabs are set up in the main GUI.
+When Rattlesnake is opened, the first UI window that the user will see allows the user to select the environment that they will run (@fig:environment_selection).  Users can select a single environment, or alternatively select a combined environments test (see @sec:combined_environments).  The selection made in this dialog box will determine which tabs are set up in the main UI.
 
 :::{figure} figures/environment_selection.png
 :label: fig:environment_selection
@@ -46,7 +46,7 @@ Initial Rattlesnake dialog to select the type of control that will be run.
 
 ## Global Data Acquisition Settings
 
-The `Data Acquisition Setup` tab of the Rattlesnake GUI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  @fig:data_acquisition_setup. shows this.
+The `Data Acquisition Setup` tab of the Rattlesnake UI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  @fig:data_acquisition_setup. shows this.
 
 
 
@@ -95,13 +95,13 @@ The required data input into the channel table varies with the physical or virtu
 * **Warning Level** A warning level can be implemented for each channel.  The warning level is specified in the same units as the Engineering Unit column.  When a channel hits the warning limit, it will be flagged as Yellow in the Channel Monitor (see @sec:channel_monitor).  The warning level can be left blank if no warning is desired.
 * **Abort Level** An abort level can be implemented for each channel.  The abort level is specified in the same units as the Engineering Unit column.  When a channel hits the abort limit, it will be flagged as Red in the Channel Monitor (see @sec:channel_monitor).  The controller will also shut down if an abort level is reached.  The abort level can be left blank if no abort is desired.
 
-To limit the tediousness of inputting channel table information into the GUI by hand, the channel table can be loaded from an Excel spreadsheet or Comma-separated-value file.  A channel table can be loaded by clicking the `Load Channel Table` button under the channel table, which will bring up a file selection dialog, enabling the user to select a file to load.  For convenience, a template Excel spreadsheet is attached to this page:
+To limit the tediousness of inputting channel table information into the UI by hand, the channel table can be loaded from an Excel spreadsheet or Comma-separated-value file.  A channel table can be loaded by clicking the `Load Channel Table` button under the channel table, which will bring up a file selection dialog, enabling the user to select a file to load.  For convenience, a template Excel spreadsheet is attached to this page:
 
 :::{note} Template Channel Table Download
 {download}`attachments/channel_table_template.xlsx`
 :::
 
-A template Excel file can also be generated by creating a test in Rattlesnake and saving the empty channel table by clicking the `Save Channel Table` button under the channel table.  If a channel table is filled out in Rattlesnake's GUI, its contents will be saved to the file as well.
+A template Excel file can also be generated by creating a test in Rattlesnake and saving the empty channel table by clicking the `Save Channel Table` button under the channel table.  If a channel table is filled out in Rattlesnake's UI, its contents will be saved to the file as well.
 
 A complete test can be loaded by clicking the `Load Test from File` button.  See @sec:loading_rattlesnake_tests for more details.
 
@@ -126,7 +126,7 @@ The final portion of `Data Acquisition Setup` tab specifies data acquisition par
 
 ### Initialize Data Acquisition
 
-With the Data Acquisition Settings specified in the GUI, the Data Acquisition can be initialized by pressing the `Initialize Data Acquisition` button.  At this point, the controller will go through and create the programming interfaces to the hardware device, specify the sampling parameters, and create the channels on the devices.  The software will then proceed to the next tab.
+With the Data Acquisition Settings specified in the UI, the Data Acquisition can be initialized by pressing the `Initialize Data Acquisition` button.  At this point, the controller will go through and create the programming interfaces to the hardware device, specify the sampling parameters, and create the channels on the devices.  The software will then proceed to the next tab.
 
 @fig:data_acquisition_setup_tab shows a completed `Data Acquisition Setup` tab with three response channels and one output channel for a test with two environments `A` and `B`.  The first response and output channels are used by both environments, while the second response channel is used only by environment `A` and the third response channel is used only by environment `B`.
 
@@ -299,7 +299,7 @@ Run Test Tab.
 (sec:using_rattlesnake_output_files)=
 ## Rattlesnake Output Files <!--Section 3.8-->
 
-After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file [@unidata2019_netcdf], which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the GUI is stored to the netCDF file.
+After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file [@unidata2019_netcdf], which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the UI is stored to the netCDF file.
 
 A full description of the netCDF file format is out of this document's scope, but the important points are briefly described here.  NetCDF files have a number of data structures.  Variables are multi-dimensional arrays of data.  Dimensions describe the axes of the variable arrays.  Attributes are used to store small data such as scalars or 1D arrays.  NetCDF files can be separated into different groups, and each group can have its own variables, dimensions, and attributes.
 
@@ -580,7 +580,7 @@ The second way to load in an entire test is by using the Test Profile functional
 (sec:channel_monitor)=
 ## Channel Monitor <!-- Section 3.10-->
 
-To aid with understanding the test levels and headroom available for the sensors in the test, a Channel Monitor is available where the levels are shown for each channel.  The channel monitor is displayed by clicking on the `Channel Monitor` button on the lower left side of the GUI.  The display shows both an instantaneous level (green) as well as a running historical maximum (blue).  If a channel reaches the Warning or Abort level, it will be flagged with a yellow or red tint, respectively.  These warnings "latch"; once the level is reached, it will stay highlighted in the channel monitor until the `Clear Alerts` button is clicked.  @fig:channel_monitor shows an example channel monitor.
+To aid with understanding the test levels and headroom available for the sensors in the test, a Channel Monitor is available where the levels are shown for each channel.  The channel monitor is displayed by clicking on the `Channel Monitor` button on the lower left side of the UI.  The display shows both an instantaneous level (green) as well as a running historical maximum (blue).  If a channel reaches the Warning or Abort level, it will be flagged with a yellow or red tint, respectively.  These warnings "latch"; once the level is reached, it will stay highlighted in the channel monitor until the `Clear Alerts` button is clicked.  @fig:channel_monitor shows an example channel monitor.
 
 :::{figure} figures/channel_monitor.png
 :label: fig:channel_monitor

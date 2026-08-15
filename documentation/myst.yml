@@ -112,6 +112,7 @@ project:
     IP: Internet Protocol
     JSON: Javascript Object Notation
     MIMO: Multiple Input, Multiple Output
+    PyPI: Python Package Index
     ReST: Representational State Transfer
     RMS: Root-Mean-Square
     SVD: Singular Value Decomposition
