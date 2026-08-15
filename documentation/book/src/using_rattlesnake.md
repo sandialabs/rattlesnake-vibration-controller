@@ -32,22 +32,13 @@ Rattlesnake UI tabs when running a single environment with no system identificat
 
 Users of Rattlesnake must be aware that depending on their test configuration, their UI may not appear identical to images shown in this User's Manual.  Additionally, users should be aware that the UI library used by this software will inherit stylistic features from the operating system.  There may therefore be cosmetic differences between the images of the UI shown in this document and the UI seen by the user.  All images in this document were created using Microsoft Windows 10 or Windows 11 operating systems, so users with Mac or Linux operating systems will note a difference in UI appearance.
 
-Note that the Rattlesnake enforces an order to operations when defining a particular test by enabling and disabling tabs in the UI.  Initially, only the first tab will be enabled.  As the users complete each tab, the next tab will become available.  In @fig:rattlesnake_main_gui_combined_environments and @fig:rattlesnake_main_gui_time_generation, it can be seen that only the initial tab is enabled, and subsequent tabs are disabled.
+Note that the Rattlesnake enforces an order to operations when defining a particular test by enabling and disabling tabs in the UI.  Initially, only the first tab will be enabled.  As the users complete each tab, the next tab will become available.  In @fig:rattlesnake_main_gui_combined_environments and @fig:rattlesnake_main_gui_time_generation, it can be seen that only the initial tabs are enabled, and subsequent tabs are disabled.
 
-## Environment Selection
-
-When Rattlesnake is opened, the first UI window that the user will see allows the user to select the environment that they will run (@fig:environment_selection).  Users can select a single environment, or alternatively select a combined environments test (see @sec:combined_environments).  The selection made in this dialog box will determine which tabs are set up in the main UI.
-
-:::{figure} figures/environment_selection.png
-:label: fig:environment_selection
-:align: center
-Initial Rattlesnake dialog to select the type of control that will be run.
-:::
+Once all tabs are enabled, Rattlesnake continues to employ a state tracking paradigm which will not allow users to perform an invalid operation.  For example if users are actively running a test and return to the Environment Definition tab, trying to re-initialize environments will result in a state error.
 
 ## Global Data Acquisition Settings
 
-The `Data Acquisition Setup` tab of the Rattlesnake UI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  @fig:data_acquisition_setup. shows this.
-
+The `Data Acquisition Setup` tab of the Rattlesnake UI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  @fig:data_acquisition_setup shows this.
 
 
 :::{figure} figures/data_acquisition_setup.png
