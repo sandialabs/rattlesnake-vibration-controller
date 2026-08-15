@@ -153,7 +153,7 @@
                  <string>Node Number</string>
                 </property>
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Node Number&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines the instrumentation position on the test article. While not used directly by the controller except to label plots, it is important for book-keeping and test documentation. The node number will generally correspond to a node in a test geometry or FEM.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Node Number&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines the instrumentation position on the test article. The node number will generally correspond to a node in a test geometry or FEM. While not used directly by the controller for most environments except to label plots, it is important for book-keeping and test documentation. The modal environment does use this value when identifying drive point measurements.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -161,7 +161,7 @@
                  <string>Node Direction</string>
                 </property>
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Node Direction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines the instrumentation direction on the test article at the position specified by the Node Number.  This is not used directly by the controller except to label plots, but it is important for book-keeping. The Node Direction will generally correspond to the node’s local coordinate system if one exists in the test geometry.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Node Direction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines the instrumentation direction on the test article at the position specified by the Node Number. The Node Direction will generally correspond to the node’s local coordinate system if one exists in the test geometry. While not used directly by the controller for most environments except to label plots, it is important for book-keeping and test documentation. The modal environment does use this value when identifying drive point measurements.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -169,7 +169,7 @@
                  <string>Comment</string>
                 </property>
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Comment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Provides space for additional information about a channel that may not be captured by the Node Number and Node Direction. Be aware that the comment field of the first channel is used to specify the modal damping for virtual tests using Exodus files.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Comment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Provides space for additional information about a channel that may not be captured by the Node Number and Node Direction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
