@@ -245,7 +245,7 @@ The plots that can be shown are:
 
 ## Test Predictions
 
-Once the system identification phase completes, the controller will compute a prediction for each environment where system identification was completed.  This prediction will be based on the measured transfer functions between output signals and measured responses, as well as the environment parameters specified on the `Environment Definition` tab.  Predictions will be made both for outputs required as well as response accuracy.  These predictions will be displayed on the `Test Predictions` tab.
+Once the system identification phase completes, the controller will compute a prediction for each environment where system identification was completed.  This prediction will be based on the measured transfer functions between output signals and measured responses, as well as the environment parameters specified on the `Environment Definition` tab.  Predictions will typically be made both for excitation signals required as well as response accuracy, allowing the user to understand if the predicted control will satisfactorily meet the specification, as well as understanding if the test equipment will be able to handle the excitation signals that will be delivered.  These predictions will be displayed on the `Test Predictions` tab.
 
 (sec:using_rattlesnake_test_profiles)=
 ## Test Profiles
