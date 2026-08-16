@@ -8,6 +8,8 @@ from rattlesnake.hardware.state_space_virtual_hardware import StateSpaceMetadata
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
+    RandomVibrationInstructions,
+    RandomVibrationCommands,
 )
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
@@ -24,10 +26,14 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     ControlLawType,
     SpecParameters,
 )
+from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions, SDSCommands
 from rattlesnake.environment.random_vibration_sys_id_utilities import load_specification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.utilities import GlobalCommands
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+
 
 
 def build_combined_controller(threaded=False):
@@ -228,7 +234,59 @@ def build_combined_controller(threaded=False):
     rattlesnake.initialize_system_id(sysid_parameters, sds_environment_metadata.environment_name)
     rattlesnake.run_system_id(sysid_parameters, sds_environment_metadata.environment_name)
 
-    rattlesnake.initialize_profile_event_list([])
+    profile_event_list = []
+    timestamp = 0
+    command = RandomVibrationCommands.ADJUST_TEST_LEVEL
+    data = -6
+    profile_event_list.append(
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+    )
+
+    timestamp = 0
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = RandomVibrationInstructions(
+        random_environment_metadata.environment_name, control_test_level=-6
+    )
+    profile_event_list.append(
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, instructions)
+    )
+
+    timestamp = 5
+    command = RandomVibrationCommands.ADJUST_TEST_LEVEL
+    data = -3
+    profile_event_list.append(
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+    )
+
+    timestamp = 10
+    command = RandomVibrationCommands.ADJUST_TEST_LEVEL
+    data = 0
+    profile_event_list.append(
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+    )
+
+    timestamp = 20
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = SDSInstructions(
+        sds_environment_metadata.environment_name,
+        control_test_level=0,
+        target_hits_at_level=5,
+        automatic_hits=True,
+        automatic_interval=1,
+        sds_table=None,
+        allow_automatic_updates=False,
+    )
+    profile_event_list.append(
+        ProfileEvent(timestamp, sds_environment_metadata.environment_name, command, instructions)
+    )
+
+    timestamp = 40
+    command = GlobalCommands.STOP_ENVIRONMENT
+    profile_event_list.append(
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command)
+    )
+
+    rattlesnake.initialize_profile_event_list(profile_event_list)
 
     stream_metadata = StreamMetadata(StreamType.NO_STREAM, stream_file=None)
     rattlesnake.start_acquisition(stream_metadata)

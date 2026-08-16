@@ -219,7 +219,7 @@ In the @fig:system_identification:responses_groupbox:
 ```{embed} #sec:system_identification:responses_groupbox
 ```
 
-In the @fig:system_identification:references_groupbox
+In the @fig:system_identification:references_groupbox:
 ```{embed} #sec:system_identification:references_groupbox
 ```
 
@@ -245,14 +245,22 @@ The plots that can be shown are:
 
 ## Test Predictions
 
-Once the system identification phase completes, the controller will compute a prediction for each environment where system identification was completed.  This prediction will be based on the measured transfer functions between output signals and measured responses, as well as the environment parameters specified on the `Environment Definition` tab.  Predictions will typically be made both for excitation signals required as well as response accuracy, allowing the user to understand if the predicted control will satisfactorily meet the specification, as well as understanding if the test equipment will be able to handle the excitation signals that will be delivered.  These predictions will be displayed on the `Test Predictions` tab.
+Once the system identification for each environment completes, the controller will compute a prediction for that environment.  This prediction will be based on the measured transfer functions between output signals and measured responses, as well as the environment parameters specified on the `Environment Definition` tab.  Predictions will typically be made both for excitation signals required as well as response accuracy, allowing the user to understand if the predicted control will satisfactorily meet the specification, as well as understanding if the test equipment will be able to handle the excitation signals that will be delivered.  These predictions will be displayed on the `Test Predictions` tab.  An example of this tab is shown in @fig:test_predictions.
+
+:::{figure} figures/test_predictions.png
+:label: fig:test_predictions
+:align: center
+Test prediction tab showing the prediction for each environment on a separate subtab.
+:::
+
+The `Test Prediction` tab will again have a subtab for each environment containing the test predictions for that environment.  The prediction presented will vary with environment type, as each environment will generally compare predicted response back to the specification.  A @sec:mimo_random environment will therefore make comparisons to a CPSD matrix while a @sec:mimo_transient will make comparisons to time data.  See the chapters in @sec:rattlesnake_environments for prediction specifics for each environment.
 
 (sec:using_rattlesnake_test_profiles)=
 ## Test Profiles
 
 The `Test Profile` tab gives the user the ability to set up a test timeline for complex combined environments tests.  The user can add a list of events that will be executed at certain times during the test.  The tab will also display a graphical representation of the test timeline.
 
-Events can be added or removed from the test timeline by clicking the `Add Event` or `Remove Event` buttons.  Users can also load a series of events from an Excel spreadsheet.
+Events can be added or removed from the test timeline by clicking the `Add Event` or `Remove Event` buttons.  Users can also load a series of events from or save a series of events to an Excel spreadsheet or CSV file.
 
 For each event, the following parameters are defined:
 
@@ -261,12 +269,12 @@ For each event, the following parameters are defined:
 * **Operation** The operation that will occur to the event.  Each environment defines its own set of operations that can be executed through the test profile interface.
 * **Data** Any additional data that the operation requires.  For example, if a "Set Test Level" event is chosen, the Data field should specify the value that the test level is set to.
 
-@fig:test_profile shows an example of a test profile that ramps up the test level of environment `A` from -6 to 0 dB, and then subsequently starts environment `B`.
+@fig:test_profile shows an example of a test profile that ramps up the test level of environment `Random` from -6 to 0 dB, and then subsequently starts environment `Shock`.
 
 :::{figure} figures/test_profile.png
 :label: fig:test_profile
 :align: center
-Example test profile showing a ramp up of test level for environment `A` and subsequently starting environment `B`.
+Example test profile showing a ramp up of test level for environment `Random` and subsequently starting environment `Shock`.
 :::
 
 (sec:using_rattlesnake_run_test)=
@@ -297,7 +305,7 @@ Run Test Tab.
 :::
 
 (sec:using_rattlesnake_output_files)=
-## Rattlesnake Output Files <!--Section 3.8-->
+## Rattlesnake Output Files
 
 After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file [@unidata2019_netcdf], which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the UI is stored to the netCDF file.
 
@@ -310,7 +318,7 @@ The Rattlesnake output files contain the following data members:
 * **`response_channels`** The number of response channels in a given test
 * **`output_channels`** The number of output channels in a given test
 * **`time_samples`** The number of time samples measured in the file, this dimension can expand as more data is acquired.
-* **`time_samples_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_samples` name with an underscore and appended number (e.g. `time_samples_1`, `time_samples_2`)
+* **`time_samples_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_samples` name with an underscore and appended number (e.g. `time_samples_1`, `time_samples_2`).  This also occurs when streaming system identification data; the noise measurement is stored in a variable with dimension `time_samples` and the system identification data is stored in a variable with dimension `time_samples_1`.
 * **`num_environments`** The total number of environments in the test
 
 ### NetCDF Attributes <!--Subsection 3.8.2-->
