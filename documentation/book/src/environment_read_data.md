@@ -13,5 +13,5 @@ numbering:
 ---
 # Read Data
 
-(sec:mimo_sine)=
+(sec:read_data)=
 # Read Data
