@@ -1,15 +1,15 @@
 ---
 numbering:
   heading_2:
-    start: 16
+    start: 19
   figure:
-    enumerator: 16.%s
+    enumerator: 19.%s
   table:
-    enumerator: 16.%s
+    enumerator: 19.%s
   equation:
-    enumerator: 16.%s
+    enumerator: 19.%s
   code:
-    enumerator: 16.%s
+    enumerator: 19.%s
 ---
 # Combined Environments
 

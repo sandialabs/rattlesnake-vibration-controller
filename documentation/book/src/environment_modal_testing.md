@@ -1,15 +1,15 @@
 ---
 numbering:
   heading_2:
-    start: 15
+    start: 16
   figure:
-    enumerator: 15.%s
+    enumerator: 16.%s
   table:
-    enumerator: 15.%s
+    enumerator: 16.%s
   equation:
-    enumerator: 15.%s
+    enumerator: 16.%s
   code:
-    enumerator: 15.%s
+    enumerator: 16.%s
 ---
 # Modal Testing
 

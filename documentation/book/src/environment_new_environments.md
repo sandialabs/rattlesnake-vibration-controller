@@ -1,15 +1,15 @@
 ---
 numbering:
   heading_2:
-    start: 17
+    start: 20
   figure:
-    enumerator: 17.%s
+    enumerator: 20.%s
   table:
-    enumerator: 17.%s
+    enumerator: 20.%s
   equation:
-    enumerator: 17.%s
+    enumerator: 20.%s
   code:
-    enumerator: 17.%s
+    enumerator: 20.%s
 ---
 # Implementing New Environment Types
 

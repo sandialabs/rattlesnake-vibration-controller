@@ -51,8 +51,10 @@ project:
       children:
         - file: book/src/environment_mimo_random.md
         - file: book/src/environment_mimo_transient.md
-        - file: book/src/environment_time_history_generator.md
+        - file: book/src/environment_mimo_sine.md
+        - file: book/src/environment_mimo_shock.md
         - file: book/src/environment_modal_testing.md
+        - file: book/src/environment_time_history_generator.md
         - file: book/src/environment_combined_environments.md
         - file: book/src/environment_new_environments.md
     - file: book/src/examples.md
