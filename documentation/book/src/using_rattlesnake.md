@@ -307,9 +307,13 @@ Run Test Tab.
 (sec:using_rattlesnake_output_files)=
 ## Rattlesnake Output Files
 
-After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file [@unidata2019_netcdf], which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the UI is stored to the netCDF file.
+After streaming data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake streams data to a self-documenting netCDF file [@unidata2019_netcdf], which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the UI is stored to the netCDF file.
 
-A full description of the netCDF file format is out of this document's scope, but the important points are briefly described here.  NetCDF files have a number of data structures.  Variables are multi-dimensional arrays of data.  Dimensions describe the axes of the variable arrays.  Attributes are used to store small data such as scalars or 1D arrays.  NetCDF files can be separated into different groups, and each group can have its own variables, dimensions, and attributes.
+A full description of the netCDF file format is out of this document's scope, but the important points are briefly described here.  NetCDF files have a number of data structures.
+  * **Variables** are multi-dimensional arrays of data.
+  * **Dimensions** describe the axes of the variable arrays.
+  * **Attributes** are used to store small data such as scalars or 1D arrays.
+  * The NetCDF file content can be separated into different **Groups**, and each group can have its own variables, dimensions, and attributes.
 
 The Rattlesnake output files contain the following data members:
 
@@ -323,6 +327,7 @@ The Rattlesnake output files contain the following data members:
 
 ### NetCDF Attributes <!--Subsection 3.8.2-->
 
+* **`file_version`** A version number of the software that the file was written for.
 * **`sample_rate`** The global sample rate of the data acquisition system
 * **`time_per_write`** The amount of data put to the output hardware per write operation, in seconds
 * **`time_to_read`** The amount of data read from the acquisition hardware per read operation, in seconds
@@ -335,13 +340,12 @@ The Rattlesnake output files contain the following data members:
   * 5 -- Virtual Control defined by State Space Matrices
   * 6 -- Virtual Control defined with a SDynPy System
 * **`hardware_file`** The path to the file used to define the Virtual test article, or the path to the external code library used by the data acquisition hardware.  Otherwise, it will be `None`
-* **`maximum_acquisition_processes`** The maximum number of processes that the LAN-XI hardware can use for acquisition
 * **`output_oversample`** The oversample used either due to sample rate restrictions on the data acquisition system, or due to oversampling the integration
 
 ### NetCDF Variables <!--Subsection 3.8.3-->
 
 * **`time_data`** The measured data from the test. Type: 64-bit float; Dimensions: `response_channels` by `time_samples`
-* **`time_data_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_data` name with an underscore and appended number (e.g. `time_data_1`, `time_data_2`)
+* **`time_data_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_data` name with an underscore and appended number (e.g. `time_data_1`, `time_data_2`).  This also occurs when streaming system identification data; the noise measurement is stored in a variable `time_data` and the system identification data is stored in a variable `time_data_1`; Dimensions: `response_channels` by `time_samples_X`
 * **`environment_names`** The name of each environment. Type: string; Dimensions: `num_environments`
 * **`environment_active_channels`** The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: `response_channels` $\times$ `num_environments`
 
@@ -374,7 +378,7 @@ The netCDF files from Rattlesnake store all channel information into a separate 
 
 ### Environment Groups <!--Subsection 3.8.5-->
 
-Environment-specific attributes, dimensions, and variables are also stored within a group corresponding to each environment.  For example, in the case where there were two environments "A" and "B", parameters specific to environment "A" would be stored within the group "A" in the netCDF file, and similarly for "B".  See @sec:rattlesnake_environments for more information on environment-specific parameters.
+Environment-specific attributes, dimensions, and variables are also stored within a group corresponding to each environment.  For example, in the case where there were two environments "Random" and "Shock", parameters specific to environment "Random" would be stored within the group "Random" in the netCDF file, and similarly for "Shock".  See the chapters in @sec:rattlesnake_environments for more information on environment-specific parameters.
 
 ### Reading Rattlesnake Output Files using Python <!-- Subsection 3.8.6-->
 
@@ -394,24 +398,26 @@ Attribute names can be queried using the `dataset.ncattrs()` function and the at
 
 ```python
 >>> dataset.ncattrs()
-['sample_rate',
-'samples_per_write',
-'samples_per_read',
-'hardware',
-'hardware_file']
+['file_version',
+ 'sample_rate',
+ 'time_per_write',
+ 'time_per_read',
+ 'hardware',
+ 'output_oversample',
+ 'hardware_file']
 
 >>> dataset.sample_rate
-2048
+8192
 ```
 
 Dimensions can be accessed using the `dataset.dimensions` property, which gives a Python `dict` where the keys are the dimension names and the values are references to the dimension.  The size of the dimension can be accessed using the `size` parameter in each dimension object.
 
 ```python
 >>> dataset.dimensions
-{'response_channels': <class 'netCDF4._netCDF4.Dimension'>: name = 'response_channels', size = 30,
-'output_channels': <class 'netCDF4._netCDF4.Dimension'>: name = 'output_channels', size = 3,
-'time_samples': <class 'netCDF4._netCDF4.Dimension'> (unlimited): name = 'time_samples', size = 31745,
-'num_environments': <class 'netCDF4._netCDF4.Dimension'>: name = 'num_environments', size = 2}
+{'response_channels': "<class 'netCDF4.Dimension'>": name = 'response_channels', size = 26,
+ 'output_channels': "<class 'netCDF4.Dimension'>": name = 'output_channels', size = 3,
+ 'time_samples': "<class 'netCDF4.Dimension'>" (unlimited): name = 'time_samples', size = 342016,
+ 'num_environments': "<class 'netCDF4.Dimension'>": name = 'num_environments', size = 2}
 
 >>> dataset.dimensions['response_channels'].size
 30
@@ -421,21 +427,26 @@ Variables can be accessed similarly to dimensions using the `dataset.variables` 
 
 ```python
 >>> dataset.variables
-{'time_data': <class 'netCDF4._netCDF4.Variable'>
-float64 time_data(response_channels, time_samples)
-unlimited dimensions: time_samples
-current shape = (30, 31745)
-filling on, default _FillValue of 9.969209968386869e+36 used,
-'environment_names': <class 'netCDF4._netCDF4.Variable'>
-vlen environment_names(num_environments)
-vlen data type: <class 'str'>
-unlimited dimensions: 
-current shape = (2,),
-'environment_active_channels': <class 'netCDF4._netCDF4.Variable'>
-int8 environment_active_channels(response_channels, num_environments)
-unlimited dimensions: 
-current shape = (30, 2)
-filling on, default _FillValue of -127 ignored}
+{'time_data': <class 'netCDF4.Variable'>
+ float64 time_data(response_channels, time_samples)
+ unlimited dimensions: time_samples
+ current shape = (26, 342016)
+ filling on, default _FillValue of 9.969209968386869e+36 used,
+ 'environment_names': <class 'netCDF4.Variable'>
+ vlen environment_names(num_environments)
+ vlen data type: <class 'str'>
+ unlimited dimensions: 
+ current shape = (2,),
+ 'environment_types': <class 'netCDF4.Variable'>
+ int64 environment_types(num_environments)
+ unlimited dimensions: 
+ current shape = (2,)
+ filling on, default _FillValue of -9223372036854775806 used,
+ 'environment_active_channels': <class 'netCDF4.Variable'>
+ int8 environment_active_channels(response_channels, num_environments)
+ unlimited dimensions: 
+ current shape = (26, 2)
+ filling on, default _FillValue of -127 ignored}
 
 # Get the dimensions used by the variable
 >>> dataset.variables['time_data'].dimensions
@@ -443,41 +454,42 @@ filling on, default _FillValue of -127 ignored}
 
 # Get the shape of the variable
 >>> dataset.variables['time_data'].shape
-(30, 31745)
+(26, 342016)
 
 # Access via slice returns a masked array
 >>> dataset.variables['time_data'][0,0]
-masked_array(data=-0.00312098,
-mask=False,
-fill_value=1e+20)
+masked_array(data=0.,
+             mask=False,
+       fill_value=1e+20)
 
 # Can pass directly to a numpy array to get the full variable data
 >>> np.array(dataset.variables['time_data'])
-array([[-3.12098493e-03,  4.26820006e-03,  3.77395182e-03, ...,
-         2.00690958e-01,  3.38505511e-01,  0.00000000e+00],
-        [-6.10438702e-03,  1.50628999e-02, -1.50619535e-02, ...,
-         2.67639515e-01,  5.50047023e-01,  0.00000000e+00],
-        [-3.42732089e-03,  7.76593927e-03, -2.66239267e-03, ...,
-         2.05434816e-01,  3.21815820e-01,  0.00000000e+00],
-         ...,
-        [ 3.71743658e-06, -8.77497995e-08, -8.80558595e-06, ...,
-         -5.26559214e-06,  0.00000000e+00,  0.00000000e+00],
-        [-1.32020650e-05,  2.74453772e-05, -2.01551409e-05, ...,
-         -1.02501347e-05,  0.00000000e+00,  0.00000000e+00],
-        [-5.96816619e-07, -1.47868461e-05, -5.24157875e-05, ...,
-         -1.61722666e-05,  0.00000000e+00,  0.00000000e+00]])
+array([[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00, ...,
+        -9.34897708e-09, -3.00422105e-09,  4.85883640e-09],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00, ...,
+        -1.12773608e-08, -3.25183298e-09,  6.64041130e-09],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00, ...,
+         4.32735251e-08,  3.73648821e-08,  2.12970606e-08],
+       ...,
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00, ...,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00, ...,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00, ...,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00]],
+      shape=(26, 342016))
 ```
 
 Group names in the netCDF dataset can be queried using `dataset.groups`, which returns a dictionary similar to the dimensions and variables.  Groups can also be accessed by indexing the dataset directly with the group name.  A group object can be treated exactly the same as the root-level dataset, and will have its own set of attributes, dimensions, and variables.
 
 ```python
 >>> dataset['channels'].variables['node_number']
-<class 'netCDF4._netCDF4.Variable'>
-vlen control(response_channels)
+<class 'netCDF4.Variable'>
+vlen node_number(response_channels)
 vlen data type: <class 'str'>
 path = /channels
 unlimited dimensions: 
-current shape = (30,)
+current shape = (26,)
 ```
 
 ### Reading Rattlesnake Output Files using Matlab <!-- Subsection 3.8.7-->
@@ -491,36 +503,42 @@ Source:
 Format:
            netcdf4
 Global Attributes:
-           sample_rate       = 2048
-           samples_per_write = 512
-           samples_per_read  = 512
-           hardware          = 2
-           hardware_file     = 'path/to/hardware/file.exo'
+           file_version      = '3.0.0'
+           sample_rate       = 8192
+           time_per_write    = 0.25
+           time_per_read     = 0.25
+           hardware          = 5
+           output_oversample = 10
+           hardware_file     = 'path/to/hardware/file.npz'
 Dimensions:
-           response_channels = 30
+           response_channels = 26
            output_channels   = 3
-           time_samples      = 31745 (UNLIMITED)
+           time_samples      = 342016 (UNLIMITED)
            num_environments  = 2
 Variables:
     time_data                  
-           Size:       31745x30
+           Size:       342016x26
            Dimensions: time_samples,response_channels
            Datatype:   double
     environment_names          
            Size:       2x1
            Dimensions: num_environments
-           Datatype:   UNSUPPORTED DATATYPE
+           Datatype:   string
+    environment_types          
+           Size:       2x1
+           Dimensions: num_environments
+           Datatype:   int64
     environment_active_channels
-           Size:       2x30
+           Size:       2x26
            Dimensions: num_environments,response_channels
            Datatype:   int8
 Groups:
     /channels/
         Variables:
             node_number      
-                   Size:       30x1
+                   Size:       26x1
                    Dimensions: /response_channels
-                   Datatype:   UNSUPPORTED DATATYPE
+                   Datatype:   string
        .            
        .
        .
@@ -528,20 +546,21 @@ Groups:
 
 Attributes, dimensions, and other metadata can be read into Matlab using the `ncinfo` function.  Variables information must be read using the `ncread` function.
 
-```matlap
+```matlab
 >>> finfo = ncinfo('path/to/netcdf/file.nc4')
 
 finfo = 
 
   struct with fields:
 
-      Filename: 'C:\Users\dprohe\Documents\Local_Respositories\Combined_Environments_Controller\test_data\BARC_Exodus_Test\barc_combined.nc4'
+      Filename: 'C:\Users\dprohe\Documents\Local_Repositories\Rattlesnake_External\src\rattlesnake\examples\frame_wing\data\streaming_example.nc4'
           Name: '/'
-    Dimensions: [1x4 struct]
-     Variables: [1x3 struct]
-    Attributes: [1x5 struct]
-        Groups: [1x3 struct]
+    Dimensions: [1×4 struct]
+     Variables: [1×4 struct]
+    Attributes: [1×7 struct]
+        Groups: [1×3 struct]
         Format: 'netcdf4'
+     Datatypes: []
         
 >>> finfo.Dimensions(1)
 
@@ -550,16 +569,38 @@ ans =
   struct with fields:
 
          Name: 'response_channels'
-       Length: 30
+       Length: 26
     Unlimited: 0
     
 >>> time_data = ncread('path/to/netcdf/file.nc4','time_data')
 ```
 
-One issue with the Matlab interface is that string variables are unsupported.  This means that the majority of the channel information cannot be read through the Matlab netCDF interface.  However, they can be read using the lower level `h5read` function.
+Variables within groups can be read by concatenating the group name with the variable name, similar to a file system.
 
 ```matlab
->>> ncread(file,'channels/node_number')
+>>> ncread('path/to/netcdf/file.nc4','channels/node_number')
+
+ans = 
+
+  26×1 string array
+
+    "101"
+    "102"
+    "103"
+    "104"
+    "105"
+    "106"
+    "107"
+    "101"
+    .
+    .
+    .
+```
+
+In older versions of Matlab, one issue that may be encountered is that string variables are unsupported.  This means that the majority of the channel information cannot be read through the Matlab netCDF interface in these versions of Matlab.  However, they can be read using the lower level `h5read` function.  Recent versions of Matlab do not have this issue.
+
+```matlab
+>>> ncread('path/to/netcdf/file.nc4','channels/node_number')
 Error using netcdf.getVar (line 137)
 12 is not a recognized netCDF datatype.
 
@@ -573,17 +614,23 @@ vardata = ncObj.read(varName, varargin{:});
 
 ans =
 
-  30x1 cell array
+  26x1 cell array
 ```
 
 (sec:loading_rattlesnake_tests)=
-## Loading Rattlesnake Tests
+## Saving and Loading Rattlesnake Tests
 
-It can be tedious to set up a test from scratch each time a test is to be run, so Rattlesnake offers two ways to load test settings from files.
-    
-On the `Data Acquisition Setup` page, selecting the `Load Test From File` button allows the user to load in a netCDF data file that was output from Rattlesnake.  As all the test metadata is stored to this file, Rattlesnake can read the file and set itself up accordingly to reproduce a given test.  Note that difficulties may arise using this approach if parameters specified by file paths are no longer valid.  For example, if the control law is read from a given file on one computer, but the file is in a different place on a separate computer, Rattlesnake will not be able to find the file.
-    
-The second way to load in an entire test is by using the Test Profile functionality in the Combined Environments mode.  While this capability was designed to make it easier to load in complex multi-environment test setups, it can be used just as effectively for single environment tests.  See @sec:combined_environments for more information.
+It can be tedious to set up a test from scratch each time a test is to be run, so Rattlesnake offers two ways to load test settings from files.  Both of these approaches can be accessed by clicking the `Load Template` button on the main Rattlesnake UI, shown in @fig:save_load_template.
+
+The first approach to loading a Rattlesnake test is to load in any output Rattlesnake netCDF file.  Because Rattlesnake stores all of the metadata associated with a test to this file, Rattlesnake can simply load the metadata from the file to reconstruct that test.  One must be careful with various file paths to ensure they are consistent if loading tests from a different computer or file system.  For example, the path to a control law on one computer may not be the same path to that file on a different computer.
+
+The second way to load a test is to load in an Excel spreadsheet "template" file.  This file will include a worksheet for the channel table, the hardware, each environment, and the test profile.  The template can be created by clicking the `Save Template` button on the main Rattlesnake UI, shown in @fig:save_load_template.  Saving the template will populate it as much as possible with the content from the UI.  Commonly missing in environments is the path to the specification file that should be loaded, as some environments do not save this data, and it would be tedious to enter a multidimensional array into a spreadsheeet.  Once completed, this file can be loaded by clicking the `Load Template` button.
+
+:::{figure} figures/save_load_template.png
+:label: fig:save_load_template
+:align: center
+View of the Channel Monitor dialog box showing several channels that have reached the "warning" level (highlighted yellow) and one channel that has reached the "abort" level (highlighted red).
+:::
 
 (sec:channel_monitor)=
 ## Channel Monitor <!-- Section 3.10-->
@@ -597,3 +644,7 @@ View of the Channel Monitor dialog box showing several channels that have reache
 :::
 
 The aspect ratio of the Channel Monitor can be customized to different sizes modifying the `Channels per Row`.
+
+## Example Problems
+
+Learning to use Rattlesnake by reading the User's Manual cover-to-cover is likely not the best way to start using Rattlesnake.  The best way to learn how to use Rattlesnake is to start using it, and then to reference the User's Manual when clarification is needed.  This user's manual contains multiple example problems in the chapters of @sec:examples.  New users are suggested to start with these example problems to gain experience and context with MIMO testing.

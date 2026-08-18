@@ -288,7 +288,11 @@ def build_combined_controller(threaded=False):
 
     rattlesnake.initialize_profile_event_list(profile_event_list)
 
-    stream_metadata = StreamMetadata(StreamType.NO_STREAM, stream_file=None)
+    stream_metadata = StreamMetadata(
+        # StreamType.IMMEDIATELY,
+        StreamType.NO_STREAM,
+        stream_file=rattlesnake_directory + "/frame_wing/data/streaming_example.nc4",
+    )
     rattlesnake.start_acquisition(stream_metadata)
 
     return rattlesnake
