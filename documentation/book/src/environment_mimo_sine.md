@@ -226,7 +226,7 @@ The Sine environment then uses those transfer function to compute initial drive 
 
 ## Test Predictions for the MIMO Sine Environment
 
-Once the system identification is available, the Sine environment can use that information in conjunction with the defined control law to compute initial excitation signals and resulting control responses. The control responses are computed by convolving the excitation signals with the impulse response (the inverse fast Fourier transform of the transfer functions).  These predictions appear on the `Test Predictions` tab, shown conceptually in @fig:mimo_sine_prediction.
+Once the system identification is available, the Sine environment can use that information in conjunction with the defined control law to compute initial excitation signals and resulting control responses. The control responses are computed by convolving the excitation signals with the impulse response (the inverse fast Fourier transform of the transfer functions).  The specified tracking filters are then used to extract the sine tone amplitudes and phases from the signals.  These predictions appear on the `Test Predictions` tab, shown conceptually in @fig:mimo_sine_prediction.
 
 :::{figure} figures/sine_prediction.png
 :label: fig:mimo_sine_prediction
@@ -237,33 +237,209 @@ Prediction UI used by the MIMO Sine environment.
 
 The prediction UI allows the user to inspect:
 
-- predicted excitation time histories, amplitudes, or phases,
-- predicted response time histories, amplitudes, or phases,
+- predicted excitation time histories, amplitudes, or phases over time or frequency,
+- predicted filter success in extracting amplitude and phase information from response time histories,
+- predicted response time histories, amplitudes, or phases over time or frequency,
 - predicted peak drive voltages,
 - predicted response errors,
 - warning and abort threshold comparisons.
 
-The predicted response is compared directly against the specification. Channels that are predicted to violate warning or abort limits are highlighted in the response error matrix.
+The predicted response amplitudes and phases are compared directly against the specification. If time histories are compared, they are compared against time histories synthesized from the specification.  Channels that are predicted to violate warning or abort limits are highlighted in the response error matrix.
 
-### Excitation prediction
+### Excitation Prediction
 
-The excitation display allows a user to choose:
+The excitation display on the top portion of the window contains the following displays:
 
-- which excitation channel to inspect,
-- which tone to inspect,
-- and which representation to display:
-  - time history,
-  - amplitude vs. time,
-  - phase vs. time,
-  - amplitude vs. frequency,
-  - phase vs. frequency.
+```{embed} #sec:sine_prediction:excitation_voltage_groupbox
+```
+```{embed} #sec:sine_prediction:auto_1
+```
 
-### Response prediction
+Users can plot drive signals, amplitude, and phase quantities over time or frequency.  Certain quantities must be plotted on a tone-by-tone basis, while others can be plotted as a superposition of all tones.
 
-Similarly, the response prediction display allows a user to inspect:
+### Response Prediction
 
-- which control channel to inspect,
-- which tone to inspect,
-- and which representation to display.
+Similarly, the response prediction display on the bottom of the window contains the following displays:
 
-The prediction plot compares the predicted response against the specification.
+```{embed} #sec:sine_prediction:response_error_groupbox
+```
+```{embed} #sec:sine_prediction:auto_2
+```
+
+## Running the MIMO Sine Environment
+
+The `Run Test` tab is used to actually run the environment after system identification and prediction are complete.
+
+A typical run page is shown in @fig:mimo_sine_run.
+
+:::{figure} figures/sine_run.png
+:label: fig:mimo_sine_run
+:align: center
+
+Run GUI used by the MIMO Sine environment.
+:::
+
+The run page allows the user to:
+
+- select test level,
+- optionally run a partial environment with certain sine tones or certain portions of the sweep time,
+- monitor achieved response amplitudes and phases,
+- observe drive updates from the control law,
+- open plots for individual tones and channels,
+- and save control data.
+
+### Drive Updates
+
+The @fig:sine_run:control_updates_groupbox shows the updates that the controller is applying to the open-loop drive signal based on error correction.  It is plotted as a complex amplitude, so the phase is encoded as the angle to the $x$-axis, and the amplitude is the distance from the origin.  A history of previous drive updates is plotted with lightening colors, so users can identify if the drive updates are diverging.
+
+```{embed} #sec:sine_run:control_updates_groupbox
+```
+
+### Environment Control
+
+The @fig:sine_run:environment_control_groupbox allows the user to define how the Sine environment will be run.  It contains the following controls:
+
+```{embed} #sec:sine_run:environment_control_groupbox
+```
+
+
+
+### Response Amplitude and Phase
+
+The @fig:sine_run:amplitude_groupbox and @fig:sine_run:phase_groupbox portions of the controller show the amplitude and phase extracted from the channel (column) and sine tone (row) selected in the Response Signal Selector.
+
+```{embed} #sec:sine_run:amplitude_groupbox
+```
+```{embed} #sec:sine_run:phase_groupbox
+```
+
+### Response and Drive Channel Selection
+
+The @fig:sine_run:channel_selector_groupbox and @fig:sine_run:groupBox allow the user to visualize the response amplitude error (in dB) and the drive update amplitude (in dB) respectively.  Clicking on a cell in either table will display the data for that sine tone (row) and control or drive channel (column).
+
+```{embed} #sec:sine_run:channel_selector_groupbox
+```
+```{embed} #sec:sine_run:groupBox
+```
+
+### Individual Tone/Channel Displays
+
+The @fig:sine_run:data_display_groupbox portion of the Run Test tab allows the user to create new windows showing specific sine tones and channels.
+
+```{embed} #sec:sine_run:data_display_groupbox
+```
+
+An example window is shown in @fig:sine_channel_window.
+
+:::{figure} figures/sine_channel_window.png
+:label: fig:sine_channel_window
+:align: center
+
+A window displaying the amplitude and phase response compared to the specification.
+:::
+
+## Tracking Amplitude and Phase
+
+A key challenge in sine control is accurately extracting the instantaneous amplitude and phase of the response which can then be compared to the specification.
+
+Rattlesnake currently supports two main tracking approaches, the Digital Tracking Filter and the Vold-Kalman filter.
+
+### Digital Tracking Filter (DTF)
+
+The digital tracking filter multiplies the signal by reference sine/cosine signals and low-pass filters the result to extract:
+
+- instantaneous in-phase content,
+- instantaneous quadrature content,
+- amplitude,
+- phase.
+
+This is useful for many swept-sine applications and is relatively lightweight.
+
+### Vold-Kalman Filter (VK)
+
+The Vold-Kalman filter provides a more selective order-tracking approach that can be especially useful when sinusoidal components are close together or when more refined tracking is required.
+
+The tradeoff is increased computational cost and additional configuration parameters such as:
+
+- filter order,
+- bandwidth,
+- block size,
+- overlap.
+
+Rattlesnake provides a filter explorer dialog to visualize the effects of the filter settings on representative specification data.
+
+## Prediction and Control Signal Construction
+
+After system identification, the Sine control law computes a set of complex excitation values over time/frequency that should reproduce the desired response.
+
+The initial drive is often referred to as a **preshaped drive**.
+
+Internally, the environment computes:
+
+- predicted drive amplitudes,
+- predicted drive phases,
+- predicted response amplitudes,
+- predicted response phases,
+- and reconstructed time-domain drive signals.
+
+During control, measured response amplitudes and phases are compared against the target values, and a correction is applied to the complex drive signals. The current implementation maintains complex drive corrections over tones and channels and updates future signal blocks accordingly.
+
+This allows closed-loop correction without needing to reconstruct the entire test from scratch at every timestep.
+
+
+## Saving Control Data
+
+The Sine environment allows saving current control data from the run tab.
+
+This typically includes:
+
+- achieved response signals,
+- achieved amplitudes,
+- achieved phases,
+- drive modifications,
+- frequencies and arguments over time,
+- target amplitudes and phases.
+
+This data is useful for:
+- debugging,
+- offline analysis,
+- reporting,
+- or future control-law development.
+
+## Using Transformation Matrices
+Transformation matrices in the Sine environment behave identically to the the Random Vibration environment.  See @sec:rattlesnake_environments_transformation_matrices for more information.
+
+## Writing a Custom Sine Control Law
+
+The Sine environment supports custom control laws, typically as Python classes. These classes are expected to expose methods such as:
+
+- `system_id_update(...)`
+- `initialize_control(...)`
+- `update_control(...)`
+- `generate_signal(...)`
+- `finalize_control(...)`
+
+The control law is provided with:
+
+- the sine specification,
+- the transfer functions from system identification,
+- the measured response amplitudes and phases,
+- and any extra control parameters.
+
+Because the Sine environment is deterministic and time-evolving, custom control laws are typically stateful and class-based rather than simple one-shot functions.
+
+The default sine control law is implemented in `sine_sys_id_utilities.py` and is a good starting point for understanding the expected behavior and data flow.
+
+## Output Files and Saved Data
+
+The Sine environment uses the same broader Rattlesnake save/load infrastructure as the other environments:
+
+- hardware and environment metadata may be written to workbook templates or netCDF files,
+- system identification data may be saved and reused,
+- control data may be saved from the run tab.
+
+Unlike Random, the Sine environment is not primarily defined by CPSD matrices on the run side; instead it emphasizes:
+
+- tone definitions,
+- amplitude and phase targets,
+- time-varying drive and response signals.
