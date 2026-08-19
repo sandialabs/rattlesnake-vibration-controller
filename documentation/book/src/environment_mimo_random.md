@@ -61,7 +61,7 @@ In addition to the specification, there are a number of signal processing parame
 :::{figure} figures/random_vibration_environment_definition.png
 :label: fig:randomvibrationenvironmentdefinition
 :align: center
-GUI used to define a MIMO Random Vibration environment.
+UI used to define a MIMO Random Vibration environment.
 :::
 
 ### Sampling Parameters
@@ -135,7 +135,7 @@ MIMO Random Vibration requires a system identification phase to compute the matr
 :::{figure} figures/random_vibration_environment_system_identification.png
 :label: fig:randomvibrationenvironmentsystemidentification
 :align: center
-System identification GUI used by the MIMO Random Vibration environment.
+System identification UI used by the MIMO Random Vibration environment.
 :::
 
 Rattlesnake's system identification phase will start with a noise floor check, where the data acquisition records data on all the channels without specifying an output signal.  After the noise floor is computed, the system identification phase will play out the specified signals to the excitation devices, and transfer functions will be computed using the responses of the control channels to those excitation signals.  @sec:using_rattlesnake_system_identification describes the System Identification tab and its various parameters and capabilities.
