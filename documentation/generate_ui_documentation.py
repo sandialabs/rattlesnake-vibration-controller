@@ -45,6 +45,9 @@ os.makedirs(figures_dir, exist_ok=True)
 files = [
     dir_path + "/" + v
     for v in [
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
@@ -56,9 +59,6 @@ files = [
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
         "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
@@ -781,6 +781,31 @@ def compute_default_reduced_structure(ui_file, reduced_structure):
         default_widget_names,
     )
 
+def ensure_section_label(markdown_text: str, section_label: str) -> str:
+    """
+    Ensure a block of markdown begins with a section label.
+
+    If the block already contains a leading MyST label like:
+        (sec:...)=
+    then it is returned unchanged.
+
+    Otherwise, if the block contains any non-whitespace content, a synthetic
+    label is prepended.
+    """
+    if markdown_text is None:
+        return ""
+
+    stripped = markdown_text.lstrip()
+
+    # Already has an explicit section label at the start
+    if stripped.startswith("(sec:"):
+        return markdown_text
+
+    # If there is actual content, prepend a label
+    if stripped != "":
+        return f"\n\n({section_label})=\n" + stripped
+
+    return markdown_text
 
 def generate_state_markdown(ui_analyzer, scenario_result, ui_file, reduced_structure):
     basename = os.path.basename(ui_file)
@@ -832,6 +857,12 @@ def generate_state_markdown(ui_analyzer, scenario_result, ui_file, reduced_struc
             capture_root=capture_root,
             name_prefix=state_name_prefix,
         )
+
+        # If this state generated widget documentation text but no enclosing
+        # groupbox section label, create a synthetic one so the block can be
+        # embedded from other documentation pages.
+        synthetic_section_label = f"sec:{state_name_prefix}:auto"
+        state_text = ensure_section_label(state_text, synthetic_section_label)
 
         block = ""
         if state_text.strip():
