@@ -858,11 +858,10 @@ def generate_state_markdown(ui_analyzer, scenario_result, ui_file, reduced_struc
             name_prefix=state_name_prefix,
         )
 
-        # If this state generated widget documentation text but no enclosing
-        # groupbox section label, create a synthetic one so the block can be
-        # embedded from other documentation pages.
-        synthetic_section_label = f"sec:{state_name_prefix}:auto"
-        state_text = ensure_section_label(state_text, synthetic_section_label)
+        state_text = add_synthetic_section_labels(
+            state_text,
+            f"sec:{state_name_prefix}",
+        )
 
         block = ""
         if state_text.strip():
@@ -904,6 +903,66 @@ def groupbox_has_direct_documentation(struct):
                 return True
 
     return False
+
+def add_synthetic_section_labels(markdown_text: str, section_prefix: str) -> str:
+    """
+    Add unique synthetic section labels to bullet-list blocks that are not already
+    preceded by an explicit section label.
+
+    Parameters
+    ----------
+    markdown_text : str
+        Markdown text generated from UI documentation.
+    section_prefix : str
+        Prefix for synthetic labels, e.g. "sec:sine_prediction".
+
+    Returns
+    -------
+    str
+        Markdown text with unlabeled bullet blocks wrapped in unique synthetic
+        labels like (sec:sine_prediction:auto_1)=
+    """
+    if markdown_text is None or markdown_text.strip() == "":
+        return markdown_text
+
+    lines = markdown_text.splitlines()
+    output_lines = []
+
+    auto_index = 1
+    in_unlabeled_bullet_block = False
+    current_block_has_label = False
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+
+        # Detect an explicit section label
+        if stripped.startswith("(sec:") and stripped.endswith(")="):
+            current_block_has_label = True
+            in_unlabeled_bullet_block = False
+            output_lines.append(line)
+            continue
+
+        # Detect start of a bullet block
+        if stripped.startswith("* "):
+            if not current_block_has_label and not in_unlabeled_bullet_block:
+                output_lines.append(f"({section_prefix}:auto_{auto_index})=")
+                auto_index += 1
+                in_unlabeled_bullet_block = True
+            output_lines.append(line)
+            continue
+
+        # Blank lines reset the explicit-label context, but keep bullet grouping simple
+        if stripped == "":
+            output_lines.append(line)
+            current_block_has_label = False
+            in_unlabeled_bullet_block = False
+            continue
+
+        # Any other content just passes through
+        output_lines.append(line)
+
+    return "\n".join(output_lines)
+
 
 class UIAnalyzer(QtWidgets.QMainWindow):
     """A Class to analyze the contents of a .ui file and create a markdown file documenting it"""
@@ -1162,6 +1221,11 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             capture_root=default_capture_root,
         )
 
+        markdown_text = add_synthetic_section_labels(
+            markdown_text,
+            f"sec:{self.name}",
+        )
+
         state_markdown = ""
         if scenario_result is not None and ui_file is not None:
             state_markdown = generate_state_markdown(
@@ -1218,9 +1282,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 print(f"Save returned {saved} for {figure_full_path}")
 
                 this_figure_markdown += (
-                    f"\n\n:::{{figure}} {figure_rel_path}\n"
-                    f":label: {figure_ref_name}\n"
-                    f" {name} Settings\n:::"
+                    f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n {name}\n:::"
                 )
 
                 # Only emit a section anchor if this groupbox has real direct content
