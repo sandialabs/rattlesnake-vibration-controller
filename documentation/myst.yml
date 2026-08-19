@@ -65,6 +65,9 @@ project:
         - file: book/src/example_state_space.md
     - file: book/src/notation.md
     - file: book/src/contributing.md
+    - title: Developer's Guide
+      children:
+        - file: book/src/code_overview.md
     - file: book/src/ui_documentation.md
       children:
         - file: book/src/_generated/random_vibration_definition_doc.md
