@@ -171,7 +171,8 @@ PAGE_STATES = {
                 ],
                 "widgets": [
                     "channel_selector",
-                    "filter_type_selector",
+                    "noise_selector",
+                    "plot_separate_frames_selector",
                     "compute_button",
                     "full_time_history_plot",
                     "order_time_history_plot",

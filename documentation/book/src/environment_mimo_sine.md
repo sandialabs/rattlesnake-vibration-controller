@@ -139,6 +139,7 @@ The @fig:sine_definition:signal_generation_groupbox section of the MIMO Sine def
 ```{embed} #sec:sine_definition:signal_generation_groupbox
 ```
 
+(sec:sine_tracking_filter_parameters)=
 ### Tracking Filter Parameters
 The @fig:sine_definition:tracking_filter_groupbox section of the MIMO Sine definition sub-tab consists of properties used to specify the tracking filter, which is used to extract sine-tone information from the measured time histories.  Depending on which filter type is selected, different parameters will be made available to the user.
 
@@ -340,52 +341,576 @@ A window displaying the amplitude and phase response compared to the specificati
 
 ## Tracking Amplitude and Phase
 
-A key challenge in sine control is accurately extracting the instantaneous amplitude and phase of the response which can then be compared to the specification.
+A central task in the MIMO Sine environment is the extraction of the instantaneous amplitude and instantaneous phase of the measured response for each control channel and each active sine tone. These extracted quantities are used for:
 
-Rattlesnake currently supports two main tracking approaches, the Digital Tracking Filter and the Vold-Kalman filter.
+- comparing the achieved response to the specification,
+- computing warning and abort status,
+- plotting the achieved response in the Run Test tab,
+- and updating the complex drive signals during closed-loop control.
 
-### Digital Tracking Filter (DTF)
+Because the Sine environment is deterministic rather than stationary, Rattlesnake does not primarily control to averaged random quantities such as CPSD matrices during a run. Instead, it estimates the response of each active tone directly in the time domain and expresses that response as an amplitude and phase evolving over time.
 
-The digital tracking filter multiplies the signal by reference sine/cosine signals and low-pass filters the result to extract:
+At a conceptual level, each tracked response component is modeled as
 
-- instantaneous in-phase content,
-- instantaneous quadrature content,
-- amplitude,
-- phase.
+\begin{equation}
+y(t) \approx A(t)\cos\!\bigl(\theta(t)+\phi(t)\bigr)
+\end{equation}
 
-This is useful for many swept-sine applications and is relatively lightweight.
+where:
 
-### Vold-Kalman Filter (VK)
+- $A(t)$ is the instantaneous amplitude,
+- $\theta(t)$ is the known sinusoidal argument from the frequency breakpoint specification,
+- $\phi(t)$ is the phase correction required to match the measured response.
 
-The Vold-Kalman filter provides a more selective order-tracking approach that can be especially useful when sinusoidal components are close together or when more refined tracking is required.
+The primary filtering problem is therefore to recover $A(t)$ and $\phi(t)$ from the measured response $y(t)$, given the known excitation or response reference phase history.
 
-The tradeoff is increased computational cost and additional configuration parameters such as:
+Rattlesnake currently supports two approaches for this task:
 
-- filter order,
-- bandwidth,
-- block size,
-- overlap.
+1. a Digital Tracking Filter (DTF), and
+2. an Overlapped Vold-Kalman (VK) Filter.
 
-Rattlesnake provides a filter explorer dialog to visualize the effects of the filter settings on representative specification data.
+The DTF is computationally faster and relatively intuitive. The VK filter is more mathematically sophisticated and can provide better discrimination between nearby or crossing sine tones, at the cost of additional computational expense.
 
-## Prediction and Control Signal Construction
+### Digital Tracking Filter
 
-After system identification, the Sine control law computes a set of complex excitation values over time/frequency that should reproduce the desired response.
+The digital tracking filter operates by demodulating the signal against a known sinusoidal reference and then low-pass filtering the demodulated components.
 
-The initial drive is often referred to as a **preshaped drive**.
+Suppose the measured signal contains a component of interest whose known instantaneous argument is $\theta(t)$. Then the measured signal may be projected onto in-phase and quadrature reference signals:
 
-Internally, the environment computes:
+\begin{equation}
+y_0(t) = y(t)\cos\theta(t)
+\end{equation}
 
-- predicted drive amplitudes,
-- predicted drive phases,
-- predicted response amplitudes,
-- predicted response phases,
-- and reconstructed time-domain drive signals.
+\begin{equation}
+y_{90}(t) = -y(t)\sin\theta(t)
+\end{equation}
 
-During control, measured response amplitudes and phases are compared against the target values, and a correction is applied to the complex drive signals. The current implementation maintains complex drive corrections over tones and channels and updates future signal blocks accordingly.
+These two signals contain a slowly varying baseband component associated with the desired sine tone, along with higher-frequency content that is rejected by low-pass filtering.
 
-This allows closed-loop correction without needing to reconstruct the entire test from scratch at every timestep.
+After low-pass filtering, Rattlesnake obtains filtered in-phase and quadrature estimates, which may be denoted $x_0(t)$ and $x_{90}(t)$. From these, the instantaneous amplitude and phase are reconstructed as
 
+\begin{equation}
+A(t) = 2\sqrt{x_0(t)^2 + x_{90}(t)^2}
+\end{equation}
+
+\begin{equation}
+\phi(t) = \operatorname{atan2}\!\bigl(x_{90}(t), x_0(t)\bigr)
+\end{equation}
+
+This is exactly the logic implemented in the digital tracking filter generator used by the Sine environment.
+
+The DTF therefore behaves like a classical synchronous detector followed by a low-pass filter:
+
+- the multiplication by sine/cosine translates the tone of interest to baseband,
+- the low-pass filter removes the higher-frequency terms,
+- and the baseband complex envelope is converted back to amplitude and phase.
+
+#### Tracking Filter Cutoff
+
+The Tracking Filter Cutoff parameter sets the low-pass cutoff as a fraction of the instantaneous tone frequency.
+
+A higher cutoff:
+
+- allows faster changes in amplitude and phase to be tracked
+- rejects noise and neighboring tones less effectively
+
+A lower cutoff:
+
+- provides smoother amplitude and phase estimates
+- responds more slowly to rapid signal changes
+
+#### Tracking Filter Order
+
+The Tracking Filter Order parameter sets the order of the Butterworth low-pass filter used after demodulation. Higher-order filters roll off more sharply, which can improve rejection of unwanted content, but may introduce a slower or more oscillatory transient response.
+
+#### Digital Tracking Filter Summary
+
+The DTF is generally a good choice when:
+
+- tones are well separated,
+- computational cost must be low,
+- and rapid online execution is important.
+
+### Vold-Kalman Filter
+
+The Vold-Kalman Filter is a more advanced order tracking method, and includes the method to track multiple sine tones simultaneously.  The basic formulation of the VK filter is as follows.
+
+For a given discretely-sampled signal $y(n)$ containing primarily a harmonic component, the equation for $y(n)$ can be written as
+
+\begin{equation}
+\label{eq:vk_data_equation}
+y(n) = x(n)\exp(j\Theta(n)) + \eta(n)
+\end{equation}
+
+Here $x(n)$ is the instantaneous complex amplitude of the sine tone, and $\Theta(n)$ is the instantaneous phase or argument of the sine tone.  $\eta(n)$ represents an error term.  To use the VK filter, we therefore need to know the argument $\Theta(n)$ of the sine tone over time; because we can analytically construct the sine sweep frequencies from the breakpoint table in the specification, we can solve for this quantity as the integral of frequency over time.  The solution of the VK filter is therefore concerned with the identification of the complex amplitude $x(n)$ at each sample for the sine tone, as this will contain instantaneous amplitude and phase of that sine tone, which will be compared to the specified amplitudes and phases to judge test accuracy and perform closed-loop control.
+
+In addition to the data equation @eq:vk_data_equation, the VK filter also contains structural equations which describes the mathematical characteristics of the sine tone to be extracted.  The goal in this case is that the complex envelope varies slowly over time, at least in comparison to the frequency of the sine tones themselves.  Therefore, we can write the structural equation in terms of finite difference operations on the envelope.  For first-order, second-order, and third-order filters, these equations are:
+
+\begin{equation}
+\label{eq:vk_first_order}
+\nabla x(n) = x(n) - x(n+1) = \varepsilon(n)
+\end{equation}
+\begin{equation}
+\label{eq:vk_second_order}
+\nabla^2 x(n) = x(n) - 2x(n+1) + x(n+2) = \varepsilon(n)
+\end{equation}
+\begin{equation}
+\label{eq:vk_third_order}
+\nabla^3 x(n) = x(n) - 3x(n+1) + 3x(n+2) - x(n+3) = \varepsilon(n)
+\end{equation}
+
+In these equations the value $\varepsilon(n)$ represents a small term that allows for the slow modulation of the envelope.
+
+All discrete variables from these equations can be arranged into vectors of length $N$ where $N$ is the total number of samples.
+
+\begin{equation}
+\mathbf{y} = \left[y(1), y(2), \dots, y(N)\right]^T
+\end{equation}
+\begin{equation}
+\mathbf{x} = \left[x(1), x(2), \dots, x(N)\right]^T
+\end{equation}
+\begin{equation}
+\mathbf{\eta} = \left[\eta(1), \eta(2), \dots, \eta(N)\right]^T
+\end{equation}
+\begin{equation}
+\mathbf{\varepsilon} = \left[\varepsilon(1), \varepsilon(2), \dots, \varepsilon(N)\right]^T
+\end{equation}
+
+We can then set up matrix forms for the structural equations @eq:vk_structural_matrix and data equations @eq:vk_data_matrix.
+
+\begin{equation}
+\label{eq:vk_structural_matrix}
+\mathbf{A}\mathbf{x} = \mathbf{\varepsilon}
+\end{equation}
+
+\begin{equation}
+\label{eq:vk_data_matrix}
+\mathbf{y}-\mathbf{C}\mathbf{x} = \mathbf{\eta}
+\end{equation}
+
+where the coefficient matrix $\mathbf{A}$ is
+
+\begin{equation}
+\mathbf{A} = \begin{bmatrix}
+1      & -1     &  0     & \cdots & 0 & 0 \\
+0      & 1      & -1     & \cdots & 0 & 0  \\
+0      & 0      &  1     & \cdots & 0 & 0  \\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
+0      & 0      &      0 & \cdots & 1 & -1
+\end{bmatrix}
+\end{equation}
+
+for the first-order filter or 
+
+\begin{equation}
+\mathbf{A} = \begin{bmatrix}
+1      & -2     &  1     & \cdots & 0 & 0 & 0 \\
+0      & 1      & -2     & \cdots & 0 & 0 & 0 \\
+0      & 0      &  1     & \cdots & 0 & 0 & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots & \vdots\\
+0      & 0      &      0 & \cdots & 1 & -2 & 1
+\end{bmatrix}
+\end{equation}
+
+for the second-order filter, etc.  And, the coefficient matrix $\mathbf{C}$ is a diagonal matrix consisting of the complex argument phasors at each sample in time.
+
+\begin{equation}
+\mathbf{C} = \begin{bmatrix}
+\exp(j\Theta(1)) & 0 & 0 & \cdots & 0 \\
+0 & \exp(j\Theta(2)) & 0 & \cdots & 0 \\
+0 & 0 & \exp(j\Theta(3)) & \cdots & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & \cdots & \exp(j\Theta(N)) \\
+\end{bmatrix}
+\end{equation}
+
+The goal is to minimize the values $\mathbf{\varepsilon}$ and $\mathbf{\eta}$, so we can represent the vectors as a scalar product.
+
+\begin{equation}
+\mathbf{\varepsilon}^T\mathbf{\varepsilon} = \mathbf{x}^T\mathbf{A}^T\mathbf{A}\mathbf{x}
+\end{equation}
+
+\begin{equation}
+\mathbf{\eta}^H\mathbf{\eta} = \left(\mathbf{y}^T - \mathbf{x}^H\mathbf{C}^H\right)\left(\mathbf{y} - \mathbf{x}\mathbf{C}\right)
+\end{equation}
+
+The weighted sum of these parameters form the loss function
+
+\begin{equation}
+\label{eq:vk_loss_function}
+J = r^2\mathbf{\varepsilon}^T\mathbf{\varepsilon} + \mathbf{\eta}^H\mathbf{\eta}
+\end{equation}
+
+where $r$ is a weighting parameter that determines how heavily the structural equations are weighted compared to the data equations.
+
+The derivative of this function with respect to $x$ set to zero gives the minimum of this function.
+
+\begin{equation}
+\frac{\partial J}{\partial x} = 2r^2\mathbf{A}^T\mathbf{A}\mathbf{x} + 2\left(\mathbf{x}-\mathbf{C}^H\mathbf{y}\right) = \mathbf{0}
+\end{equation}
+
+The solution is then
+
+\begin{equation}
+\mathbf{x} = \left(r^2\mathbf{A}^T\mathbf{A}+\mathbf{E}\right)^{-1}\mathbf{C}^H\mathbf{y}
+\end{equation}
+
+The above equations are satisfactory for a single tone.  However, when multiple tones are simultaneously present in a given signal, we can solve for all tones simultaneously.  In this case, the equation for $y(n)$ becomes
+
+\begin{equation}
+\label{eq:vk_data_equation_multitone}
+y(n) = \sum_{k=1}^{P} x_k(n)\exp(j\Theta_k(n)) + \eta(n)
+\end{equation}
+
+where now there is a separate complex amplitude $x_k(n)$ and argument $\Theta_k(n)$ for each of the $P$ sine tones in the signal.
+
+Following the same logic as above, the function to minimize becomes
+
+\begin{equation}
+J = \sum_{k=1}^{P} r^2{\mathbf{\varepsilon}_k}^T\mathbf{\varepsilon}_k + \mathbf{\eta}^H\mathbf{\eta} \\
+  = \sum_{k=1}^{P} r^2{\mathbf{x}_k}^H\mathbf{A}^T\mathbf{A}\mathbf{x}_k + \left( \mathbf{y}^T - \sum_{k=1}^{P} {\mathbf{x}_k}^H{\mathbf{C}_k}^H \right)\left( \mathbf{y} - \sum_{k=1}^{P} {\mathbf{C}_k}{\mathbf{x}_k} \right)
+\end{equation}
+
+The solution is then the $\mathbf{x}_k$ for each of the $P$ sine tones that minimize this equation.  Setting the derivatives to zero gives:
+
+\begin{equation}
+\frac{\partial J}{\partial \mathbf{x}_i^H} = \mathbf{B}_i \mathbf{x}_i + \mathbf{C}_i^H + \sum_{k=1, k\ne i}^P \mathbf{C}_k\mathbf{x}_k - \mathbf{C}_i^H\mathbf{y}=\mathbf{0}
+\end{equation}
+
+where $\mathbf{B}_i = r^2\mathbf{A}^T\mathbf{A} + \mathbf{I}$ and $\mathbf{I}$ is the identity matrix.  We also note that $\mathbf{C}_i^H\mathbf{C}_i=\mathbf{I}$ due to the phases of the Hermetian diagonal phasor matrices cancelling out when multiplied.
+
+We can assemble this into a large system of equations of the form $\mathbf{B} \mathbf{x} = \mathbf{b}$ with
+
+\begin{equation}
+\mathbf{B} = \begin{bmatrix}
+\mathbf{B}_1 & \mathbf{C}_1^H\mathbf{C}_2 & \cdots & \mathbf{C}_1^H\mathbf{C}_P \\
+\mathbf{C}_2^H\mathbf{C}_1 & \mathbf{B}_2 & \cdots & \mathbf{C}_2^H\mathbf{C}_P \\
+\vdots & \vdots & \ddots & \vdots \\
+\mathbf{C}_P^H\mathbf{C}_1 & \mathbf{C}_P^H\mathbf{C}_2 & \cdots & \mathbf{B}_P \\
+\end{bmatrix}
+\end{equation}
+
+\begin{equation}
+\mathbf{x} = \begin{bmatrix}
+\mathbf{x}_1 \\ \mathbf{x}_2 \\ \vdots \\ \mathbf{x}_P
+\end{bmatrix}
+\end{equation}
+
+\begin{equation}
+\mathbf{b} = \begin{bmatrix}
+\mathbf{C}_1^H\mathbf{y} \\
+\mathbf{C}_2^H\mathbf{y} \\
+\vdots \\ 
+\mathbf{C}_P^H\mathbf{y} \\
+\end{bmatrix}
+\end{equation}
+
+As the $\mathbf{B}$ matrix has a sparse, banded form, the equation is solved using the sparse solvers in SciPy's `linalg` package.  Once the envelope $\mathbf{x}$ is found, it can be split out into the individual complex amplitudes for each sine tone.  From these complex amplitudes, the amplitude and phase of the individual sine tones can be derived.
+
+The complex envelope contains the information of interest:
+
+\begin{equation}
+A(n) = |x(n)|
+\end{equation}
+
+\begin{equation}
+\phi(n) = \angle x(n)
+\end{equation}
+
+There are a few parameters that can be selected when setting up the VK filter.
+
+#### Filter order in the Vold-Kalman method
+
+The **Vold-Kalman Filter Order** parameter controls the order of the finite-difference smoothness constraint.
+
+Conceptually:
+
+- **1st order** penalizes first differences and favors slowly changing envelopes, using @eq:vk_first_order for the structural equation,
+- **2nd order** penalizes curvature and often gives smoother practical behavior, using @eq:vk_second_order for the structural equation,
+- **3rd order** penalizes higher-order variation and can provide still stronger smoothing, using @eq:vk_third_order for the structural equation.
+
+Higher order generally increases filter selectivity and mathematical smoothness of the solution at the expense of additional computation.
+
+#### Bandwidth in the Vold-Kalman method
+
+The **Vold-Kalman Filter Bandwidth** controls how narrowly the filter tracks the desired tone.
+
+A smaller bandwidth gives a more selective filter and improves rejection of neighboring tones and broadband noise, but it can make the response slower and may distort rapidly changing amplitude modulation.  A larger bandwidth allows faster tracking of amplitude or phase changes but reduces selectivity and can admit contamination from other content.  The bandwidth parameter is closely related to the weighting parameter $r$ in @eq:vk_loss_function, as it controls the tradeoff between smoothness of the solution and matching of the data.
+
+#### Multiple simultaneous tones
+
+One of the major advantages of the Vold-Kalman formulation is that multiple sinusoidal components can be solved simultaneously. This is especially important when multiple sine tones exist in the signal and is absolutely necessary if the sine tones cross in frequency.
+
+In these cases, a simple tracking filter may struggle to separate the contributions of the different tones, while the VK formulation can solve for them together as a coupled estimation problem.  This is one of the main reasons the Sine environment offers the VK filter as an alternative to the DTF.
+
+#### Online and Overlapped Vold-Kalman Filtering
+
+The classical Vold-Kalman filter is most naturally formulated over a full signal block. However, Rattlesnake must use it in an online control environment, where the signal is still being acquired and the control law must update in a timely way.
+
+To make this possible, Rattlesnake implements the VK filter in an overlapped blockwise form.
+
+A blockwise VK solution can exhibit startup and ending transients on each analysis block. If consecutive blocks were simply stitched together end-to-end, these edge effects would become visible in the extracted amplitudes and phases.
+
+To mitigate this, Rattlesnake:
+
+1. divides the signal into overlapping blocks,
+2. solves the VK problem on each block,
+3. rejects the responses in the overlapped regions, keeping only the "center" portion of each block where the transients are minimal
+
+The **Vold-Kalman Filter Block Size** sets the number of samples used in each VK solve.
+
+A larger block size generally gives the filter more information, which can remove the effects of startup and ending transients.  However, this increases computational cost and decreases controller responsiveness, as the control must acquire more data prior to making a control decision.
+
+The **Vold-Kalman Filter Block Overlap** sets the overlap fraction between consecutive blocks.
+
+This overlap is used to reduce discontinuities between blocks and to suppress the effect of the VK startup/end transients. In practice, too little overlap can leave visible stitching artifacts due to the startup and ending transients.  Increasing overlap improves continuity between blocks; however, it increases redundant computation.
+
+### Practical Filter Tradeoffs
+
+From a practical standpoint, the DTF and VK filters represent a tradeoff between:
+
+- computational cost,
+- noise rejection,
+- separation of nearby tones,
+- transient fidelity,
+- and robustness for large MIMO tests.
+
+Digital Tracking Filter is often preferable when:
+
+- only one tone or well-separated tones are active,
+- computational budget is limited,
+- the controller must remain very responsive,
+- and modest noise rejection is sufficient.
+
+Vold-Kalman Filter is often preferable when:
+
+- tones overlap or cross,
+- better selectivity is required,
+- the measured response contains significant other-content or noise,
+- or the user needs more reliable extraction of individual components from a crowded signal.
+
+The DTF is relatively cheap computationally.  The VK filter can become expensive, especially because in the Sine environment the filter is applied separately for each control channel. Thus, the total computational burden scales with:
+
+- number of control channels,
+- number of simultaneously active tones,
+- selected VK block size,
+- selected overlap,
+- selected filter order.
+
+For that reason, a filter configuration that is acceptable for a single-channel example may become too expensive for a large multi-channel test.
+
+This is why the filter explorer described in @sec:sine_filter_explorer is important: it gives the user the ability to investigate not only the quality of the extracted amplitude and phase, but also the practical computational behavior of the chosen filter.
+
+(sec:sine_filter_explorer)=
+### Using the Filter Explorer
+
+The Filter Explorer is accessed by clicking the [**Explore...**](#fig:sine_definition:explore_filter_button) button on the `Environment Definition` tab.  This brings up the Filter Explorer dialog box, which is shown in @fig:sine_filter_explorer.  The Filter Explorer dialog will take the defined specification and generate a time signal that exactly matches the amplitudes and phases defined for each sine tone in the specification for the selected channel.  Noise can also be added to this perfect specification realization to represent realistic test conditions that the filter should reject.  The user can then select from filter parameters mirroring those found on the `Environment Definition` tab described in @sec:sine_tracking_filter_parameters.  The filter explorer will then attempt to filter the known signal from the specification, extract amplitude and phase information, and present those data in comparison to the known data from the specification.  This allows the user to investigate filter choices prior to running a test.
+
+:::{figure} figures/sine_filter_explorer.png
+:label: fig:sine_filter_explorer
+The Filter Explorer dialog box that allows users to understand the effect of their tracking filter choices.
+:::
+
+Descriptions of the filter selection parameters are found in @sec:sine_tracking_filter_parameters.  Additional widgets and displays on the Filter Explorer dialog box include:
+
+```{embed} #sec:sine_definition__filter_explorer_dialog:auto_1
+```
+
+## Output NetCDF File Structure
+
+Like the other environments in Rattlesnake, the MIMO Sine environment stores its metadata in a netCDF group whose name matches the environment name. This group contains the parameters needed to reconstruct the environment definition, including the sine specifications, the control law configuration, the tracking filter settings, and any transformation matrices.
+
+The root netCDF dataset also contains the global hardware metadata and channel table information described elsewhere in the documentation. The material in this section focuses only on the additional data stored inside the Sine environment’s group.
+
+### NetCDF Dimensions
+
+The Sine environment creates the following dimensions in its netCDF group.
+
+- **`control_channels`** — the number of physical control channels used by the environment.
+- **`response_transformation_rows`** — the number of rows in the response transformation matrix, if one is defined.
+- **`response_transformation_cols`** — the number of columns in the response transformation matrix, if one is defined.
+- **`reference_transformation_rows`** — the number of rows in the excitation/output transformation matrix, if one is defined.
+- **`reference_transformation_cols`** — the number of columns in the excitation/output transformation matrix, if one is defined.
+
+In addition, the `specifications` subgroup contains one subgroup per sine tone, and each tone subgroup defines:
+
+- **`num_breakpoints`** — the number of frequency breakpoints in that sine tone.
+- **`specification_channels`** — the number of control channels represented in that tone specification.
+- **`two`** — a helper dimension of size 2 used for warning and abort matrices.
+
+### NetCDF Attributes
+
+The following attributes are stored directly on the Sine environment’s netCDF group.
+
+- **`sample_rate`** — the sample rate of the environment in samples per second.
+- **`samples_per_frame`** — the number of samples acquired per frame during the run.
+- **`ramp_time`** — the time in seconds used to ramp the environment up from zero or back down to zero.
+- **`number_of_channels`** — the total number of channels in the environment.
+- **`update_drives_after_environment`** — 1 if the open-loop drives should be updated after the environment finishes, 0 otherwise.
+- **`phase_fit`** — 1 if phase fitting is enabled, 0 otherwise.
+- **`control_convergence`** — the scale factor used for the on-line control correction.
+- **`allow_automatic_aborts`** — 1 if the environment is allowed to stop automatically on abort, 0 otherwise.
+- **`control_python_script`** — the path to the Python script containing the custom control law, if one is used.
+- **`control_python_class`** — the class name in the Python script used for the control law, if one is used.
+- **`control_python_parameters`** — additional text parameters passed to the custom control law.
+- **`tracking_filter_type`** — the selected tracking filter type (0 for digital tracking filter, 1 for Vold-Kalman filter).
+- **`tracking_filter_cutoff`** — the cutoff ratio used by the digital tracking filter.
+- **`tracking_filter_order`** — the order of the digital tracking filter.
+- **`vk_filter_order`** — the order of the Vold-Kalman filter.
+- **`vk_filter_bandwidth`** — the bandwidth parameter of the Vold-Kalman filter.
+- **`vk_filter_blocksize`** — the block size used by the Vold-Kalman filter.
+- **`vk_filter_overlap`** — the overlap fraction used in the blockwise Vold-Kalman implementation.
+- **`buffer_blocks`** — the number of signal-generation blocks to keep buffered during control.
+
+In addition to these environment-specific attributes, the base `SysIdEnvironmentMetadata` also stores the system identification settings through its `sysid_metadata` object.
+
+### NetCDF Variables
+
+The following variables are stored directly on the Sine environment’s netCDF group.
+
+#### Control channel indices
+
+- **`control_channel_indices`** — the indices of the physical control channels in the environment.  
+  Type: 32-bit integer  
+  Dimensions: `control_channels`
+
+These indices correspond to the physical channels that define the control degrees of freedom before any response transformation is applied.
+
+#### Response transformation matrix
+
+- **`response_transformation_matrix`** — the response transformation matrix applied to the physical control channels.  
+  Type: 64-bit float  
+  Dimensions: `response_transformation_rows` × `response_transformation_cols`
+
+This variable is only present if a response transformation matrix is defined.
+
+#### Reference transformation matrix
+
+- **`reference_transformation_matrix`** — the output/excitation transformation matrix applied to the physical drive channels.  
+  Type: 64-bit float  
+  Dimensions: `reference_transformation_rows` × `reference_transformation_cols`
+
+This variable is only present if an excitation/output transformation matrix is defined.
+
+### The `specifications` Group
+
+A subgroup named:
+
+```text
+specifications
+```
+
+is created inside the environment group. Within this group, one subgroup is created for each sine tone in the environment. The subgroup name is the name of the tone as shown in the UI.
+
+For each sine tone subgroup, the following attribute is stored:
+
+- **`start_time`** — the start time of that tone in seconds relative to the overall environment.
+
+Each tone subgroup also stores the following variables.
+
+#### Frequency breakpoints
+
+- **`spec_frequency`** — the frequency breakpoints for the tone.  
+  Type: 64-bit float  
+  Dimensions: `num_breakpoints`
+
+#### Amplitude breakpoints
+
+- **`spec_amplitude`** — the specified amplitude at each breakpoint for each control channel.  
+  Type: 64-bit float  
+  Dimensions: `num_breakpoints` × `specification_channels`
+
+This is stored internally in frequency-major form.
+
+#### Phase breakpoints
+
+- **`spec_phase`** — the specified phase at each breakpoint for each control channel.  
+  Type: 64-bit float  
+  Dimensions: `num_breakpoints` × `specification_channels`
+
+These phase values are stored in **radians** in the netCDF file, even though the external `.npz` or `.mat` sine specification files store phase in degrees.
+
+#### Sweep type
+
+- **`spec_sweep_type`** — the sweep type between adjacent breakpoints.  
+  Type: 8-bit integer  
+  Dimensions: `num_breakpoints`
+
+The values correspond to the internal sweep-type representation used by the Sine environment:
+
+- `0` = linear sweep
+- `1` = logarithmic sweep
+
+The last breakpoint’s stored sweep type is kept for consistency with the full breakpoint table, even though there is no following segment beyond the final breakpoint.
+
+#### Sweep rate
+
+- **`spec_sweep_rate`** — the sweep rate associated with each breakpoint segment.  
+  Type: 64-bit float  
+  Dimensions: `num_breakpoints`
+
+As with the sweep type, the final row is retained so the saved data matches the internal breakpoint table representation.
+
+#### Warning thresholds
+
+- **`spec_warning`** — the warning thresholds defined at each breakpoint for each control channel.  
+  Type: 64-bit float  
+  Dimensions: `num_breakpoints` × `two` × `two` × `specification_channels`
+
+The meaning of the dimensions is:
+
+- first `two` index:
+  - `0` = lower warning limit
+  - `1` = upper warning limit
+
+- second `two` index:
+  - `0` = left side of the breakpoint
+  - `1` = right side of the breakpoint
+
+- last index:
+  - control channel
+
+This structure allows the warning threshold to change discontinuously across a breakpoint.
+
+#### Abort thresholds
+
+- **`spec_abort`** — the abort thresholds defined at each breakpoint for each control channel.  
+  Type: 64-bit float  
+  Dimensions: `num_breakpoints` × `two` × `two` × `specification_channels`
+
+Its indexing convention matches that of `spec_warning`.
+
+### Interpretation of Stored Specification Data
+
+The Sine environment stores the specification in the same logical form as used internally during the run:
+
+- frequency-major arrays,
+- amplitude and phase per control channel,
+- sweep metadata,
+- warning and abort breakpoint information,
+- one subgroup per sine tone.
+
+This is slightly different from the external `*.mat` and `*.npz` sine specification files used when loading individual tones, which are designed to be convenient for exchange with MATLAB or NumPy workflows. In particular:
+
+- external specification files store phase in **degrees**,
+- internal/netCDF storage uses **radians**,
+- and the warning/abort breakpoint arrays are transposed into the controller’s preferred breakpoint-major form.
+
+### Saved Control Data During a Run
+
+In addition to metadata, the Sine environment can save control-run data through the `Save Control Data` action on the Run Test tab.
+
+This save operation currently writes a NumPy file containing quantities such as:
+
+- achieved response signals,
+- achieved response amplitudes,
+- achieved response phases,
+- drive modifications,
+- target amplitudes and phases,
+- frequencies and arguments over time,
+- and the sample rate / output oversample used in the run.
+
+These saved control-data files are distinct from the environment-definition netCDF metadata described above. The environment-definition netCDF file captures the configuration of the environment, while the saved control-data files capture the results of a particular run.
 
 ## Saving Control Data
 
@@ -409,6 +934,7 @@ This data is useful for:
 ## Using Transformation Matrices
 Transformation matrices in the Sine environment behave identically to the the Random Vibration environment.  See @sec:rattlesnake_environments_transformation_matrices for more information.
 
+(sec:sine_custom_control_law)=
 ## Writing a Custom Sine Control Law
 
 The Sine environment supports custom control laws, typically as Python classes. These classes are expected to expose methods such as:

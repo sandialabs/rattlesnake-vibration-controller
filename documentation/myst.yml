@@ -107,6 +107,7 @@ project:
     CCLD: Constant Current Line Drive
     COLA: Constant Overlap and Add
     CPSD: Cross-Power Spectral Density
+    DTF: Digital Tracking Filter
     FEM: Finite Element Model
     FFT: Fast Fourier Transform
     FRF: Frequency Response Function
@@ -124,6 +125,7 @@ project:
     SVD: Singular Value Decomposition
     TRAC: Time Response Assurance Criterion
     UI: User Interface
+    VK: Vold-Kalman (Filter)
   bibliography:
     - book/bibliography.bib
 site:
