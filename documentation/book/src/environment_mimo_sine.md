@@ -718,171 +718,110 @@ Descriptions of the filter selection parameters are found in @sec:sine_tracking_
 
 ## Output NetCDF File Structure
 
-Like the other environments in Rattlesnake, the MIMO Sine environment stores its metadata in a netCDF group whose name matches the environment name. This group contains the parameters needed to reconstruct the environment definition, including the sine specifications, the control law configuration, the tracking filter settings, and any transformation matrices.
+Like the other environments in Rattlesnake, the MIMO Sine environment stores its metadata in a netCDF group whose name matches the environment name. This group contains the parameters needed to reconstruct the environment definition, including the sine specifications, the control law configuration, the tracking filter settings, the shared system identification settings, and any transformation matrices.
 
-The root netCDF dataset also contains the global hardware metadata and channel table information described elsewhere in the documentation. The material in this section focuses only on the additional data stored inside the Sine environment’s group.
+The root netCDF dataset also contains the global hardware metadata and channel table information described is @sec:using_rattlesnake_output_files. The material in this section focuses only on the additional data stored inside the Sine environment’s group.
+
+Because the Sine environment derives from the shared system-identification environment infrastructure, its netCDF group contains both sine-specific fields and shared system-identification fields.
 
 ### NetCDF Dimensions
 
 The Sine environment creates the following dimensions in its netCDF group.
 
-- **`control_channels`** — the number of physical control channels used by the environment.
-- **`response_transformation_rows`** — the number of rows in the response transformation matrix, if one is defined.
-- **`response_transformation_cols`** — the number of columns in the response transformation matrix, if one is defined.
-- **`reference_transformation_rows`** — the number of rows in the excitation/output transformation matrix, if one is defined.
-- **`reference_transformation_cols`** — the number of columns in the excitation/output transformation matrix, if one is defined.
-
-In addition, the `specifications` subgroup contains one subgroup per sine tone, and each tone subgroup defines:
-
-- **`num_breakpoints`** — the number of frequency breakpoints in that sine tone.
-- **`specification_channels`** — the number of control channels represented in that tone specification.
-- **`two`** — a helper dimension of size 2 used for warning and abort matrices.
+- **control_channels** — the number of physical control channels used by the environment.
+- **response_transformation_rows** — the number of rows in the response transformation matrix, if one is defined.
+- **response_transformation_cols** — the number of columns in the response transformation matrix, if one is defined.
+- **reference_transformation_rows** — the number of rows in the excitation/output transformation matrix, if one is defined.
+- **reference_transformation_cols** — the number of columns in the excitation/output transformation matrix, if one is defined.
 
 ### NetCDF Attributes
 
 The following attributes are stored directly on the Sine environment’s netCDF group.
 
-- **`sample_rate`** — the sample rate of the environment in samples per second.
-- **`samples_per_frame`** — the number of samples acquired per frame during the run.
-- **`ramp_time`** — the time in seconds used to ramp the environment up from zero or back down to zero.
-- **`number_of_channels`** — the total number of channels in the environment.
-- **`update_drives_after_environment`** — 1 if the open-loop drives should be updated after the environment finishes, 0 otherwise.
-- **`phase_fit`** — 1 if phase fitting is enabled, 0 otherwise.
-- **`control_convergence`** — the scale factor used for the on-line control correction.
-- **`allow_automatic_aborts`** — 1 if the environment is allowed to stop automatically on abort, 0 otherwise.
-- **`control_python_script`** — the path to the Python script containing the custom control law, if one is used.
-- **`control_python_class`** — the class name in the Python script used for the control law, if one is used.
-- **`control_python_parameters`** — additional text parameters passed to the custom control law.
-- **`tracking_filter_type`** — the selected tracking filter type (0 for digital tracking filter, 1 for Vold-Kalman filter).
-- **`tracking_filter_cutoff`** — the cutoff ratio used by the digital tracking filter.
-- **`tracking_filter_order`** — the order of the digital tracking filter.
-- **`vk_filter_order`** — the order of the Vold-Kalman filter.
-- **`vk_filter_bandwidth`** — the bandwidth parameter of the Vold-Kalman filter.
-- **`vk_filter_blocksize`** — the block size used by the Vold-Kalman filter.
-- **`vk_filter_overlap`** — the overlap fraction used in the blockwise Vold-Kalman implementation.
-- **`buffer_blocks`** — the number of signal-generation blocks to keep buffered during control.
+- **sysid_sample_rate** — the sample rate used during system identification.
+- **sysid_frame_size** — the number of samples per frame used during system identification.
+- **sysid_averaging_type** — the averaging scheme used in the system identification (`Linear` or `Exponential`).
+- **sysid_noise_averages** — the number of frames used in the noise-floor characterization.
+- **sysid_averages** — the number of frames used in the transfer-function measurement.
+- **sysid_exponential_averaging_coefficient** — the exponential averaging coefficient when exponential averaging is selected.
+- **sysid_estimator** — the estimator used for FRF computation, such as H1, H2, H3, or Hv.
+- **sysid_level** — the excitation level used during system identification.
+- **sysid_level_ramp_time** — the ramp time used to transition into and out of the system identification level.
+- **sysid_signal_type** — the signal type used during system identification.
+- **sysid_window** — the window applied to the time frames during system identification.
+- **sysid_overlap** — the overlap fraction used during system identification.
+- **sysid_burst_on** — the fraction of the burst-random frame that is “on,” if burst random is used.
+- **sysid_pretrigger** — the fraction of the frame used as pretrigger for burst-random system identification.
+- **sysid_burst_ramp_fraction** — the fraction of the burst-random “on” interval used to ramp the burst up and down.
+- **sysid_low_frequency_cutoff** — the low-frequency cutoff used during system identification.
+- **sysid_high_frequency_cutoff** — the high-frequency cutoff used during system identification.
+- **sample_rate** — the sample rate of the environment in samples per second.
+- **samples_per_frame** — the number of samples acquired per frame during the run.
+- **ramp_time** — the time in seconds used to ramp the environment up from zero or back down to zero.
+- **number_of_channels** — the total number of channels in the environment.
+- **update_drives_after_environment** — 1 if the open-loop drives should be updated after the environment finishes, 0 otherwise.
+- **phase_fit** — 1 if phase fitting is enabled, 0 otherwise.
+- **control_convergence** — the scale factor used for the on-line control correction.
+- **allow_automatic_aborts** — 1 if the environment is allowed to stop automatically on abort, 0 otherwise.
+- **control_python_script** — the path to the Python script containing the custom control law, if one is used.
+- **control_python_class** — the class name in the Python script used for the control law, if one is used.
+- **control_python_parameters** — additional text parameters passed to the custom control law.
+- **tracking_filter_type** — the selected tracking filter type (0 for digital tracking filter, 1 for Vold-Kalman filter).
+- **tracking_filter_cutoff** — the cutoff ratio used by the digital tracking filter.
+- **tracking_filter_order** — the order of the digital tracking filter.
+- **vk_filter_order** — the order of the Vold-Kalman filter.
+- **vk_filter_bandwidth** — the bandwidth parameter of the Vold-Kalman filter.
+- **vk_filter_blocksize** — the block size used by the blockwise Vold-Kalman implementation.
+- **vk_filter_overlap** — the overlap fraction used in the blockwise Vold-Kalman implementation.
+- **buffer_blocks** — the number of signal-generation blocks to keep buffered during control.
 
-In addition to these environment-specific attributes, the base `SysIdEnvironmentMetadata` also stores the system identification settings through its `sysid_metadata` object.
 
 ### NetCDF Variables
 
 The following variables are stored directly on the Sine environment’s netCDF group.
 
-#### Control channel indices
-
-- **`control_channel_indices`** — the indices of the physical control channels in the environment.  
-  Type: 32-bit integer  
-  Dimensions: `control_channels`
-
-These indices correspond to the physical channels that define the control degrees of freedom before any response transformation is applied.
-
-#### Response transformation matrix
-
-- **`response_transformation_matrix`** — the response transformation matrix applied to the physical control channels.  
-  Type: 64-bit float  
-  Dimensions: `response_transformation_rows` × `response_transformation_cols`
-
-This variable is only present if a response transformation matrix is defined.
-
-#### Reference transformation matrix
-
-- **`reference_transformation_matrix`** — the output/excitation transformation matrix applied to the physical drive channels.  
-  Type: 64-bit float  
-  Dimensions: `reference_transformation_rows` × `reference_transformation_cols`
-
-This variable is only present if an excitation/output transformation matrix is defined.
+- **control_channel_indices** — the indices of the physical control channels in the environment.  These indices correspond to the physical channels that define the control degrees of freedom before any response transformation is applied.  Type: 32-bit integer; Dimensions: `control_channels`
+- **response_transformation_matrix** — the response transformation matrix applied to the physical control channels. This variable is only present if a response transformation matrix is defined.  Type: 64-bit float; Dimensions: `response_transformation_rows` × `response_transformation_cols`
+- **reference_transformation_matrix** — the output/excitation transformation matrix applied to the physical drive channels.  This variable is only present if an excitation/output transformation matrix is defined.  Type: 64-bit float; Dimensions: `reference_transformation_rows` × `reference_transformation_cols`
 
 ### The `specifications` Group
 
-A subgroup named:
+A subgroup named `specifications` is created inside the environment group. Within this group, one subgroup is created for each sine tone in the environment. The subgroup name is the name of the tone as shown in the UI.
 
-```text
-specifications
-```
+For each tone subgroup, the following dimensions are defined:
 
-is created inside the environment group. Within this group, one subgroup is created for each sine tone in the environment. The subgroup name is the name of the tone as shown in the UI.
+- **num_breakpoints** — the number of frequency breakpoints in that sine tone.
+- **specification_channels** — the number of control channels represented in that tone specification.
+- **two** — a helper dimension of size 2 used for warning and abort matrices.
 
 For each sine tone subgroup, the following attribute is stored:
 
-- **`start_time`** — the start time of that tone in seconds relative to the overall environment.
+- **start_time** — the start time of that tone in seconds relative to the overall environment.
 
-Each tone subgroup also stores the following variables.
+Each tone subgroup also stores the following variables:
 
-#### Frequency breakpoints
+- **spec_frequency** — the frequency breakpoints for the tone.  Type: 64-bit float;  Dimensions: `num_breakpoints`
+- **spec_amplitude** — the specified amplitude at each breakpoint for each control channel.  Type: 64-bit float; Dimensions: `num_breakpoints` × `specification_channels`
+- **spec_phase** — the specified phase at each breakpoint for each control channel.  These phase values are stored in **radians** in the netCDF file, even though the external `.npz` or `.mat` sine specification files store phase in degrees.  Type: 64-bit float; Dimensions: `num_breakpoints` × `specification_channels`
+- **spec_sweep_type** — the sweep type between adjacent breakpoints.  The values correspond to the internal sweep-type representation used by the Sine environment, with `0` representing a linear sweep and `1` representing a logarithmic sweep.  The last breakpoint’s stored sweep type is kept for consistency with the full breakpoint table, even though there is no following segment beyond the final breakpoint; this value is effectively ignored.  Type: 8-bit integer;  Dimensions: `num_breakpoints`
+- **spec_sweep_rate** — the sweep rate associated with each breakpoint segment.  As with the sweep type, the final row is retained so the saved data matches the internal breakpoint table representation; the value is effectively ignored.  Sweep rates are stored in Hz/s for linear sweeps and octaves per minute for logarithmic sweeps.  Type: 64-bit float;  Dimensions: `num_breakpoints`
+- **spec_warning** — the warning thresholds defined at each breakpoint for each control channel.  Type: 64-bit float; Dimensions: `num_breakpoints` × `two` × `two` × `specification_channels`
+- **spec_abort** — the abort thresholds defined at each breakpoint for each control channel.  Type: 64-bit float; Dimensions: `num_breakpoints` × `two` × `two` × `specification_channels`
 
-- **`spec_frequency`** — the frequency breakpoints for the tone.  
-  Type: 64-bit float  
-  Dimensions: `num_breakpoints`
+For the warning and abort limits, the meanings of the dimensions are:
 
-#### Amplitude breakpoints
-
-- **`spec_amplitude`** — the specified amplitude at each breakpoint for each control channel.  
-  Type: 64-bit float  
-  Dimensions: `num_breakpoints` × `specification_channels`
-
-This is stored internally in frequency-major form.
-
-#### Phase breakpoints
-
-- **`spec_phase`** — the specified phase at each breakpoint for each control channel.  
-  Type: 64-bit float  
-  Dimensions: `num_breakpoints` × `specification_channels`
-
-These phase values are stored in **radians** in the netCDF file, even though the external `.npz` or `.mat` sine specification files store phase in degrees.
-
-#### Sweep type
-
-- **`spec_sweep_type`** — the sweep type between adjacent breakpoints.  
-  Type: 8-bit integer  
-  Dimensions: `num_breakpoints`
-
-The values correspond to the internal sweep-type representation used by the Sine environment:
-
-- `0` = linear sweep
-- `1` = logarithmic sweep
-
-The last breakpoint’s stored sweep type is kept for consistency with the full breakpoint table, even though there is no following segment beyond the final breakpoint.
-
-#### Sweep rate
-
-- **`spec_sweep_rate`** — the sweep rate associated with each breakpoint segment.  
-  Type: 64-bit float  
-  Dimensions: `num_breakpoints`
-
-As with the sweep type, the final row is retained so the saved data matches the internal breakpoint table representation.
-
-#### Warning thresholds
-
-- **`spec_warning`** — the warning thresholds defined at each breakpoint for each control channel.  
-  Type: 64-bit float  
-  Dimensions: `num_breakpoints` × `two` × `two` × `specification_channels`
-
-The meaning of the dimensions is:
-
-- first `two` index:
+- first **two** index:
   - `0` = lower warning limit
   - `1` = upper warning limit
 
-- second `two` index:
+- second **two** index:
   - `0` = left side of the breakpoint
   - `1` = right side of the breakpoint
 
-- last index:
-  - control channel
-
-This structure allows the warning threshold to change discontinuously across a breakpoint.
-
-#### Abort thresholds
-
-- **`spec_abort`** — the abort thresholds defined at each breakpoint for each control channel.  
-  Type: 64-bit float  
-  Dimensions: `num_breakpoints` × `two` × `two` × `specification_channels`
-
-Its indexing convention matches that of `spec_warning`.
 
 ### Interpretation of Stored Specification Data
 
-The Sine environment stores the specification in the same logical form as used internally during the run:
+The Sine environment stores the specification in the netCDF4 file in the same logical form as used internally during the run:
 
 - frequency-major arrays,
 - amplitude and phase per control channel,
@@ -890,31 +829,17 @@ The Sine environment stores the specification in the same logical form as used i
 - warning and abort breakpoint information,
 - one subgroup per sine tone.
 
-This is slightly different from the external `*.mat` and `*.npz` sine specification files used when loading individual tones, which are designed to be convenient for exchange with MATLAB or NumPy workflows. In particular:
+This is slightly different from the external `.mat` and `.npz` sine specification files used when loading individual tones, which are designed to be convenient for exchange with MATLAB or NumPy workflows. In particular:
 
 - external specification files store phase in **degrees**,
 - internal/netCDF storage uses **radians**,
 - and the warning/abort breakpoint arrays are transposed into the controller’s preferred breakpoint-major form.
 
-### Saved Control Data During a Run
-
-In addition to metadata, the Sine environment can save control-run data through the `Save Control Data` action on the Run Test tab.
-
-This save operation currently writes a NumPy file containing quantities such as:
-
-- achieved response signals,
-- achieved response amplitudes,
-- achieved response phases,
-- drive modifications,
-- target amplitudes and phases,
-- frequencies and arguments over time,
-- and the sample rate / output oversample used in the run.
-
-These saved control-data files are distinct from the environment-definition netCDF metadata described above. The environment-definition netCDF file captures the configuration of the environment, while the saved control-data files capture the results of a particular run.
-
 ## Saving Control Data
 
-The Sine environment allows saving current control data from the run tab.
+The Sine environment allows saving current control data from the run tab.  This occurs when the user clicks the [**Save Control Data**](#fig:sine_run:save_control_data_button) button.
+
+Data is stored to a NumPy Archive (`*.npz`) file.
 
 This typically includes:
 
@@ -955,17 +880,3 @@ The control law is provided with:
 Because the Sine environment is deterministic and time-evolving, custom control laws are typically stateful and class-based rather than simple one-shot functions.
 
 The default sine control law is implemented in `sine_sys_id_utilities.py` and is a good starting point for understanding the expected behavior and data flow.
-
-## Output Files and Saved Data
-
-The Sine environment uses the same broader Rattlesnake save/load infrastructure as the other environments:
-
-- hardware and environment metadata may be written to workbook templates or netCDF files,
-- system identification data may be saved and reused,
-- control data may be saved from the run tab.
-
-Unlike Random, the Sine environment is not primarily defined by CPSD matrices on the run side; instead it emphasizes:
-
-- tone definitions,
-- amplitude and phase targets,
-- time-varying drive and response signals.
