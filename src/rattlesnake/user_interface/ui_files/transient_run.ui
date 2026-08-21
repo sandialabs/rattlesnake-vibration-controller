@@ -31,7 +31,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Time Response Assurance Criterion between the measured and desired signals.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Error (TRAC)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Time Response Assurance Criterion between the measured and desired signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -71,7 +71,7 @@
           <item>
            <widget class="QSpinBox" name="test_level_selector">
             <property name="toolTip">
-             <string>Scale factor applied to the test</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Level&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A scale factor applied to the target signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="keyboardTracking">
              <bool>false</bool>
@@ -102,7 +102,7 @@
         <item>
          <widget class="QCheckBox" name="repeat_signal_checkbox">
           <property name="toolTip">
-           <string>If checked, the signal will continually repeat</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Repeat Signal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, the signal will continually repeat until manually stopped.  If unchecked, the environment will automatically stop when the signal is done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Repeat Signal</string>
@@ -162,7 +162,7 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>Start the environment to control to the desired transient signal</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Start the environment to control to the desired transient signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Start Environment</string>
@@ -223,7 +223,7 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>Stop the environment</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Stop the environment manually.  The signal will ramp down using the Ramp Time specified on the Environment Definition tab to prevent a hard stop that could potentially damage test equipment or articles.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Stop Environment</string>
@@ -235,7 +235,7 @@
         <item>
          <widget class="QPushButton" name="save_current_control_data_button">
           <property name="toolTip">
-           <string>Save current control data from the test</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Current Control Data&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to save the current control data to a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Save Current Control Data</string>
@@ -262,7 +262,11 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="PlotWidget" name="output_signal_plot"/>
+         <widget class="PlotWidget" name="output_signal_plot">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Outputs Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the recently acquired output signals.  For long transients, displaying too much data on the screen at once can cause performance issues, so the amount of data plotted can be specified with the Display Duration selector.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -280,7 +284,11 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="PlotWidget" name="response_signal_plot"/>
+         <widget class="PlotWidget" name="response_signal_plot">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Responses Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the recently acquired control signals.  For long transients, displaying too much data on the screen at once can cause performance issues, so the amount of data plotted can be specified with the Display Duration selector.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -305,7 +313,7 @@
         <item>
          <widget class="QSpinBox" name="display_duration_spinbox">
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Maximum length of x-axis in seconds.&lt;/p&gt;&lt;p&gt;Set to zero for unlimited length&lt;/p&gt;&lt;p&gt;(reducing this value may improve performance)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Display Duration&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the maximum amount of data that will be displayed on the plot to improve performance for long transients.  Setting this value to zero will display the entirety of the signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="suffix">
            <string>s</string>
@@ -337,14 +345,14 @@
       <item>
        <widget class="QComboBox" name="control_channel_selector">
         <property name="toolTip">
-         <string>Select an individual channel to visualize</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects an individual response channel to visualize.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="create_window_button">
         <property name="toolTip">
-         <string>Create a window to show the signal specified by Control Channel</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Create Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Create a window to show the signal specified by the Control Channel selector&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Create Window</string>
@@ -361,7 +369,7 @@
       <item>
        <widget class="QPushButton" name="show_all_channels_button">
         <property name="toolTip">
-         <string>Create a window for each control channel</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All Control Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Creates a new window for all control channels so each control channel can be visualized independently against the specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Show All
@@ -386,7 +394,7 @@ Control Channels</string>
       <item>
        <widget class="QPushButton" name="tile_windows_button">
         <property name="toolTip">
-         <string>Tile all windows across the main monitor</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tile All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Tiles all visualization windows across the main monitor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Tile All
@@ -397,7 +405,7 @@ Windows</string>
       <item>
        <widget class="QPushButton" name="close_windows_button">
         <property name="toolTip">
-         <string>Closes all existing visualization windows</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Close All Windows&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Closes all existing visualization windows&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Close All

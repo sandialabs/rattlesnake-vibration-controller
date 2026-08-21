@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>760</width>
+    <height>504</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QWidget" name="horizontalLayoutWidget">
+      <layout class="QHBoxLayout" name="excitation_layout">
+       <item>
+        <layout class="QVBoxLayout" name="excitation_voltage_layout">
+         <item>
+          <widget class="QGroupBox" name="excitation_voltage_groupbox">
+           <property name="title">
+            <string>Output Voltages (Peak)</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_70">
+            <item>
+             <widget class="QListWidget" name="excitation_voltage_list">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltages (Peak)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Maximum output voltage that will be sent to the shaker to generate the sum-of-decayed-sines signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="sizeAdjustPolicy">
+               <enum>QAbstractScrollArea::AdjustToContents</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="maximum_voltage_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Voltage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the voltage plot to show the excitation signal that reaches the largest maximum value.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Go to Maximum</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="minimum_voltage_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Voltage&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the voltage plot to show the excitation signal that reaches the smallest maximum value.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Go to Minimum</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="excitation_plot_layout">
+         <item>
+          <widget class="QTableWidget" name="sds_table">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sum of Decayed Sines Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Table showing sum-of-decayed-sines parameters used to generate the output voltage signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <column>
+            <property name="text">
+             <string>Frequency</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Amplitude</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Delay</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Decay</string>
+            </property>
+           </column>
+          </widget>
+         </item>
+         <item>
+          <widget class="PlotWidget" name="excitation_display_plot">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation Display&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the time history of the selected voltage signal generated from the sum-of-decayed-sines parameters.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="excitation_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies the excitation voltage channel to display in the plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="horizontalLayoutWidget_2">
+      <layout class="QHBoxLayout" name="response_layout">
+       <item>
+        <layout class="QVBoxLayout" name="response_error_layout">
+         <item>
+          <widget class="QGroupBox" name="response_error_groupbox">
+           <property name="title">
+            <string>Peak Response Error (dB)</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_71">
+            <item>
+             <widget class="QListWidget" name="response_error_list">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Peak Response Error (dB)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the maximum error between the specified SRS and the predicted or measured SRS in decibels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="sizeAdjustPolicy">
+               <enum>QAbstractScrollArea::AdjustToContents</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="maximum_error_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the response plots to show the control signal that has the largest maximum error.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Go to Maximum</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="minimum_error_button">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Changes the response plots to show the control signal that has the smallest maximum error.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Go to Minimum</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="response_plot_layout">
+         <item>
+          <widget class="PlotWidget" name="response_srs_plot">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control SRS Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the SRS for the specification as well as the predicted and measured signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="PlotWidget" name="response_display_plot">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Time History Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the time for the predicted and measured response signals.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="response_selector">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the control channel that will be displayed on the response plots.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

@@ -40,7 +40,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>Number of samples in the transient signal</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Samples&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of samples in the loaded signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -67,7 +67,7 @@
           <item>
            <widget class="QDoubleSpinBox" name="signal_time_display">
             <property name="toolTip">
-             <string>Time that the signal will take to generate</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The time in seconds that the signal will take to generate&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -100,7 +100,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>Sample rate of the data acquisition system</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sample rate of the data acquisition system.  This is for display only; the sample rate is set on the Data Acquisition Parameters tab&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -127,7 +127,7 @@
           <item>
            <widget class="QDoubleSpinBox" name="ramp_selector">
             <property name="toolTip">
-             <string>Time to ramp to zero if the transient signal is cancelled</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Ramp Time&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If the environment is cancelled manually, this is the time taken to reduce the signal to zero to prevent a hard stop of the excitation system, which could damage test equipment or articles.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="maximum">
              <double>300.000000000000000</double>
@@ -166,7 +166,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of measurement channels in the environment</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Input Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the total number of physical channels this environment is measuring, including excitation channels and control channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -199,7 +199,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of excitation channels in the environment</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the total number of physical channels this environment is outputting to excitation devices such as vibration shakers.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -232,7 +232,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of channels used for controlling the environment</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the total number of physical channels this environment is controlling to.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -270,7 +270,7 @@
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>File name for the Python script used to specify the control law.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Python Script&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Python script used to specify the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -280,7 +280,7 @@
             <item>
              <widget class="QPushButton" name="control_script_load_file_button">
               <property name="toolTip">
-               <string>Load a Python script that contains the control law.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to load in a Python script containing the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string>Load</string>
@@ -303,7 +303,7 @@
           <item>
            <widget class="QTextEdit" name="control_parameters_text_input">
             <property name="toolTip">
-             <string>Any additional parameters needed by the control law are entered in this text box.  It is up to the control law to define what is needed to be defined in this box.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Parameters&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Any additional parameters needed by the control law are entered in this text box. It is up to the control law to prescribe what is needed to be defined in this box. The data entered into this box will be passed to the control law as a string to the &amp;quot;extra_parameters&amp;quot; argument. Control laws should parse this string to extract needed information.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="lineWrapMode">
              <enum>QTextEdit::NoWrap</enum>
@@ -335,7 +335,7 @@
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>Item in the Python script to use as the control law.</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Python Function&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Selects the function, generator function, or class in the Python script to use as the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
              </widget>
             </item>
@@ -348,7 +348,7 @@
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>Specifies if the control law is defined in a Function, Generator, or Class</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select if the selected control law is a Function, Generator, Class, or Interactive Class.  This should be detected automatically by inspection; users should not have to adjust this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -405,7 +405,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Check channels that will be treated as control channels</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Channels&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Channels that are checked will be used as the control channels for this environment.  The control channels should be ordered in the specification the same way they are ordered in this list.  For example, the first row and column of the specification CPSD matrix will correspond to the first checked channel in this list.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -418,7 +418,7 @@
         <item>
          <widget class="QPushButton" name="check_selected_button">
           <property name="toolTip">
-           <string>Checks selected channels to use them as control channels.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Check Selected&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When clicked, any selected channels in the Control Channels list will be checked, and therefore used as control channels in the environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Check Selected</string>
@@ -428,7 +428,7 @@
         <item>
          <widget class="QPushButton" name="uncheck_selected_button">
           <property name="toolTip">
-           <string>Unchecks selected channels so they are not treated as control channels.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Uncheck Selected&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When clicked, any selected channels in the Control Channels list will be unchecked, and therefore not used as control channels in the environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Uncheck Selected</string>
@@ -447,7 +447,7 @@
         <item>
          <widget class="QPushButton" name="transformation_matrices_button">
           <property name="toolTip">
-           <string>Open the transformation matrix dialog to allow specification of transformations to virtual control or virtual excitation channels.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transformation Matrices...&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Open the transformation matrix dialog to allow specification of transformations to virtual control or virtual excitation channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Transformation
@@ -470,7 +470,7 @@ Matrices...</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of virtual channels used for control if transformations are specified.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transform Controls&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the number of virtual control channels in the environment due to transformation matrices applied to the physical control channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -503,7 +503,7 @@ Matrices...</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Number of virtual outputs defined if transformations are specified.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transform Outputs&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A display showing the number of virtual excitation channels in the environment due to transformation matrices applied to the physical excitation channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -546,7 +546,7 @@ Matrices...</string>
        <item>
         <widget class="QLineEdit" name="signal_file_name_display">
          <property name="toolTip">
-          <string>Filename from which the control signal was loaded</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal Filename&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Filename from which the control signal was loaded&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="readOnly">
           <bool>true</bool>
@@ -556,7 +556,7 @@ Matrices...</string>
        <item>
         <widget class="QPushButton" name="load_signal_button">
          <property name="toolTip">
-          <string>Load in a signal to control to</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load Signal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog allowing the user to select a file containing the signals that will be used as the control targets for this environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Load Signal</string>
@@ -568,7 +568,11 @@ Matrices...</string>
      <item>
       <layout class="QHBoxLayout" name="signal_display_layout">
        <item>
-        <widget class="PlotWidget" name="signal_display_plot"/>
+        <widget class="PlotWidget" name="signal_display_plot">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specification Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the time signals that the environment will try to reproduce on the control channels.  Individual signals can be displayed or hidden by checking the relevant box in the Specification Signal Table.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
        </item>
        <item>
         <layout class="QVBoxLayout" name="signal_table_layout">
@@ -580,6 +584,9 @@ Matrices...</string>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specification Signal Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A table showing the different signals defined in the specification.  Individual signals can be shown or hidden by checking or unchecking the check box in the Show? column.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <attribute name="horizontalHeaderDefaultSectionSize">
             <number>58</number>
            </attribute>
@@ -588,7 +595,7 @@ Matrices...</string>
              <string>Show?</string>
             </property>
             <property name="toolTip">
-             <string>Check a signal to show it on the plot</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show?&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If the checkbox is checked, the signal will be shown on the Specification Plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </column>
            <column>
@@ -596,7 +603,7 @@ Matrices...</string>
              <string>Signal</string>
             </property>
             <property name="toolTip">
-             <string>Channel name associated with the signal</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Signal&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The name of the signal in the environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </column>
            <column>
@@ -604,7 +611,7 @@ Matrices...</string>
              <string>Max</string>
             </property>
             <property name="toolTip">
-             <string>Maximum absolute value of the signal</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Max&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The maximum absolute value of each signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </column>
            <column>
@@ -612,7 +619,7 @@ Matrices...</string>
              <string>RMS</string>
             </property>
             <property name="toolTip">
-             <string>RMS value of the signal</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;RMS&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The root-mean-square value of the signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </column>
           </widget>
@@ -622,7 +629,7 @@ Matrices...</string>
            <item>
             <widget class="QPushButton" name="show_all_button">
              <property name="toolTip">
-              <string>Shows all signals</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show All&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows all signals in the specification plot&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string>Show All</string>
@@ -632,7 +639,7 @@ Matrices...</string>
            <item>
             <widget class="QPushButton" name="show_none_button">
              <property name="toolTip">
-              <string>Shows no signals</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show None&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Hides all channels in the specification plot&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string>Show None</string>
