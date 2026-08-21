@@ -32,9 +32,9 @@ class EnvironmentType(Enum):
     RANDOM = 1
     TRANSIENT = 2
     SINE = 3
-    TIME = 4
-    # NONLINEAR = 5
-    MODAL = 6
+    SDS = 4
+    MODAL = 5
+    TIME = 6
     SKELETON = 7
     SYSID_SKELETON = 8
     READ = 9

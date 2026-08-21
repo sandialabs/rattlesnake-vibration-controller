@@ -63,12 +63,8 @@ class ControllerProcess(AbstractMessageProcess):
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
-        self.map_command(
-            GlobalCommands.START_SYSTEM_ID_NOISE, self.start_system_id_noise
-        )
-        self.map_command(
-            GlobalCommands.START_SYSTEM_ID_TRANSFER, self.start_system_id_transfer
-        )
+        self.map_command(GlobalCommands.START_SYSTEM_ID_NOISE, self.start_system_id_noise)
+        self.map_command(GlobalCommands.START_SYSTEM_ID_TRANSFER, self.start_system_id_transfer)
         self.map_command(GlobalCommands.STOP_SYSTEM_ID, self.stop_system_id)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
@@ -77,9 +73,8 @@ class ControllerProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.STREAM_AT_TARGET_LEVEL, self.at_target_level)
         self.map_command(GlobalCommands.STREAM_MANUAL, self.manual_stream)
         self.map_command(GlobalCommands.PROFILE_CLOSEOUT, self.profile_closeout)
-        self.map_command(
-            GlobalCommands.SEND_ENVIRONMENT_COMMAND, self.send_environment_command
-        )
+        self.map_command(GlobalCommands.SEND_ENVIRONMENT_COMMAND, self.send_environment_command)
+        self.map_command(GlobalCommands.RESTART_ENVIRONMENT_OUTPUT, self.restart_environment_output)
 
     @property
     def acquisition_active(self):
@@ -115,9 +110,7 @@ class ControllerProcess(AbstractMessageProcess):
     def run_hardware(self, data: StreamMetadata):
         self.stream_metadata = data
         if self.acquisition_active:
-            raise RuntimeError(
-                "Tried to start hardware while acquisition is still running"
-            )
+            raise RuntimeError("Tried to start hardware while acquisition is still running")
         self.queue_container.acquisition_command_queue.put(
             TASK_NAME, (GlobalCommands.RUN_HARDWARE, None)
         )
@@ -150,9 +143,7 @@ class ControllerProcess(AbstractMessageProcess):
             TASK_NAME, (GlobalCommands.STOP_HARDWARE, None)
         )
         if not self.acquisition_active:
-            raise RuntimeError(
-                "Tried to stop hardware when acquisition was not running"
-            )
+            raise RuntimeError("Tried to stop hardware when acquisition was not running")
         if not self.output_active:
             raise RuntimeError("Tried to start hardware when output was not running")
 
@@ -172,12 +163,19 @@ class ControllerProcess(AbstractMessageProcess):
             TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction)
         )
 
+    def restart_environment_output(self, queue_name: str):
+        if queue_name not in self.environments_active:
+            raise RuntimeError(
+                f"Cannot restart environment {queue_name} output when it is not running."
+            )
+        self.queue_container.output_command_queue.put(
+            TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name)
+        )
+
     def stop_environment(self, data: str):
         queue_name = data
         if queue_name not in self.environments_active:
-            raise RuntimeError(
-                f"Tried to stop {queue_name} environment when it was not running"
-            )
+            raise RuntimeError(f"Tried to stop {queue_name} environment when it was not running")
         self.queue_container.environment_command_queues[queue_name].put(
             TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None)
         )

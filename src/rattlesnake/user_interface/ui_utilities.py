@@ -32,7 +32,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from qtpy import QtCore, QtGui, QtWidgets, uic
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, QLocale
 from scipy.io import loadmat
 from enum import Enum, IntEnum
 import openpyxl
@@ -171,9 +171,7 @@ def multiline_plotter(
             pen = {"color": colororder[i % len(colororder)]}
             pen.update(other_pen_options)
             handles.append(
-                plot_item.plot(
-                    x, this_y, pen=pen, name=None if names is None else names[i]
-                )
+                plot_item.plot(x, this_y, pen=pen, name=None if names is None else names[i])
             )
         return handles
     elif curve_list is not None:
@@ -422,9 +420,7 @@ class PlotWindow(QtWidgets.QDialog):
                     "style": PlotWindow.ABORT_LINESTYLE,
                 },
             )
-        self.curve = plot_item.plot(
-            self.frequencies, self.data, pen={"color": "r", "width": 1}
-        )
+        self.curve = plot_item.plot(self.frequencies, self.data, pen={"color": "r", "width": 1})
         self.setWindowTitle(f"{datatype_name} {row_name} / {column_name}")
         self.show()
 
@@ -470,9 +466,7 @@ class PlotWindow(QtWidgets.QDialog):
 class PlotTimeWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
 
-    def __init__(
-        self, parent, index, specification, sample_rate, index_name, unit=None
-    ):
+    def __init__(self, parent, index, specification, sample_rate, index_name, unit=None):
         """
         Creates a window showing time history information for a single channel.
 
@@ -510,9 +504,7 @@ class PlotTimeWindow(QtWidgets.QDialog):
         plot_item.setLabel("bottom", "Time (s)")
         plot_item.setLabel("left", "TRAC: 0.0")
         self.plot_item = plot_item
-        self.curve = plot_item.plot(
-            self.times, self.data, pen={"color": "r", "width": 1}
-        )
+        self.curve = plot_item.plot(self.times, self.data, pen={"color": "r", "width": 1})
         self.setWindowTitle(f"{index_name}" + (f" ({unit})" if unit else ""))
         self.show()
 
@@ -543,9 +535,7 @@ class PlotTimeWindow(QtWidgets.QDialog):
         """
         data = self.reduce_matrix(data)
         self.curve.setData(self.times, data)
-        self.plot_item.setLabel(
-            "left", f"TRAC: {trac(data, self.spec_data).squeeze():0.2f}"
-        )
+        self.plot_item.setLabel("left", f"TRAC: {trac(data, self.spec_data).squeeze():0.2f}")
 
 
 class TransformationMatrixWindow(QtWidgets.QDialog):
@@ -597,14 +587,10 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
             for row_idx, row in enumerate(current_response_transformation_matrix):
                 for col_idx, col in enumerate(row):
                     try:
-                        self.response_transformation_matrix.item(
-                            row_idx, col_idx
-                        ).setText(str(col))
+                        self.response_transformation_matrix.item(row_idx, col_idx).setText(str(col))
                     except AttributeError:
                         item = QtWidgets.QTableWidgetItem(str(col))
-                        self.response_transformation_matrix.setItem(
-                            row_idx, col_idx, item
-                        )
+                        self.response_transformation_matrix.setItem(row_idx, col_idx, item)
         if current_output_transformation_matrix is None:
             self.set_output_transformation_identity()
         else:
@@ -614,14 +600,10 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
             for row_idx, row in enumerate(current_output_transformation_matrix):
                 for col_idx, col in enumerate(row):
                     try:
-                        self.output_transformation_matrix.item(
-                            row_idx, col_idx
-                        ).setText(str(col))
+                        self.output_transformation_matrix.item(row_idx, col_idx).setText(str(col))
                     except AttributeError:
                         item = QtWidgets.QTableWidgetItem(str(col))
-                        self.output_transformation_matrix.setItem(
-                            row_idx, col_idx, item
-                        )
+                        self.output_transformation_matrix.setItem(row_idx, col_idx, item)
 
         # Callbacks
         self.ok_button.clicked.connect(self.accept)
@@ -721,11 +703,8 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
             ]
         )
         if all(
-            val == response_transformation.shape[0]
-            for val in response_transformation.shape
-        ) and np.allclose(
-            response_transformation, np.eye(response_transformation.shape[0])
-        ):
+            val == response_transformation.shape[0] for val in response_transformation.shape
+        ) and np.allclose(response_transformation, np.eye(response_transformation.shape[0])):
             response_transformation = None
         output_transformation = np.array(
             [
@@ -735,9 +714,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         )
         if all(
             val == output_transformation.shape[0] for val in output_transformation.shape
-        ) and np.allclose(
-            output_transformation, np.eye(output_transformation.shape[0])
-        ):
+        ) and np.allclose(output_transformation, np.eye(output_transformation.shape[0])):
             output_transformation = None
         return (response_transformation, output_transformation, result)
 
@@ -807,9 +784,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 if col_idx == num_cols:
                     break
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
-                        value
-                    )
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(value)
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(value)
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -825,9 +800,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 else:
                     value = 0.0
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
-                        str(value)
-                    )
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -867,9 +840,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
-                        str(value)
-                    )
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -909,9 +880,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.response_transformation_matrix.item(row_idx, col_idx).setText(
-                        str(value)
-                    )
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.response_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -980,9 +949,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 if col_idx == num_cols:
                     break
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
-                        value
-                    )
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(value)
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(value)
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -998,9 +965,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
                 else:
                     value = 0.0
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
-                        str(value)
-                    )
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -1039,9 +1004,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
-                        str(value)
-                    )
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -1080,9 +1043,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         for row_idx, row in enumerate(matrix):
             for col_idx, value in enumerate(row):
                 try:
-                    self.output_transformation_matrix.item(row_idx, col_idx).setText(
-                        str(value)
-                    )
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
                 except AttributeError:
                     item = QtWidgets.QTableWidgetItem(str(value))
                     self.output_transformation_matrix.setItem(row_idx, col_idx, item)
@@ -1153,9 +1114,7 @@ class ChannelMonitor(QtWidgets.QDialog):
         self.level_bars = None
         self.history_last_update = None
         self.history_hold_frames = int(
-            np.ceil(
-                10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read
-            )
+            np.ceil(10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read)
         )
         self.aborted_channels = None
         # Set up defaults for the plot
@@ -1193,9 +1152,7 @@ class ChannelMonitor(QtWidgets.QDialog):
         """Updates the channel list in the test"""
         self.channels = hardware_metadata.channel_list
         self.history_hold_frames = int(
-            np.ceil(
-                10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read
-            )
+            np.ceil(10 * hardware_metadata.sample_rate / hardware_metadata.samples_per_read)
         )
         self.build_plot()
 
@@ -1223,9 +1180,7 @@ class ChannelMonitor(QtWidgets.QDialog):
 
         # print('Channels per Bar {:}'.format(channels_per_bar))
         # Now let's actually make the plots
-        self.plots = [
-            self.graphics_layout_widget.addPlot(i, 0) for i in range(num_bars)
-        ]
+        self.plots = [self.graphics_layout_widget.addPlot(i, 0) for i in range(num_bars)]
 
         # Now parse the channel ranges
         self.channel_ranges = []
@@ -1268,9 +1223,7 @@ class ChannelMonitor(QtWidgets.QDialog):
                 next_starting_index = self.bar_channel_indices[-1][-1] + 1
             except IndexError:
                 next_starting_index = 0
-            self.bar_channel_indices.append(
-                next_starting_index + np.arange(num_channels)
-            )
+            self.bar_channel_indices.append(next_starting_index + np.arange(num_channels))
         # print(self.bar_channel_indices)
         self.background_bars = []
         self.history_bars = []
@@ -1344,9 +1297,7 @@ class ChannelMonitor(QtWidgets.QDialog):
             last_history_height = history_bar.opts.get("height")
             # print(last_history_height)
             if history_last_update > self.history_hold_frames:
-                desired_history_height = (
-                    last_history_height - 1 / self.history_hold_frames
-                )
+                desired_history_height = last_history_height - 1 / self.history_hold_frames
             else:
                 desired_history_height = last_history_height
             if desired_history_height < current_height:
@@ -1354,9 +1305,7 @@ class ChannelMonitor(QtWidgets.QDialog):
                 self.history_last_update[index] = 0
             else:
                 self.history_last_update[index] += 1
-            history_bar.setOpts(
-                height=1 if desired_history_height > 1 else desired_history_height
-            )
+            history_bar.setOpts(height=1 if desired_history_height > 1 else desired_history_height)
             # Now look at the pen color
             if level > abort or aborted:
                 current_bar.setOpts(brushes=[self.abort_brush])
@@ -1396,9 +1345,7 @@ class VaryingNumberOfLinePlot:
                 self.lines[i].setData(this_abscissa, this_ordinate)
             except IndexError:
                 pen = {"color": colororder[i % len(colororder)]}
-                self.lines.append(
-                    self.plot_item.plot(this_abscissa, this_ordinate, pen=pen)
-                )
+                self.lines.append(self.plot_item.plot(this_abscissa, this_ordinate, pen=pen))
 
         # Remove extra lines
         extra_lines = len(self.lines) - len(ordinate)
@@ -1453,8 +1400,7 @@ class EventWatcher(QtCore.QObject):
 
                 ready_ok = all(event.is_set() for event in self.ready_event_list)
                 active_ok = all(
-                    event.is_set() == self.active_event_check
-                    for event in self.active_event_list
+                    event.is_set() == self.active_event_check for event in self.active_event_list
                 )
 
                 if ready_ok and active_ok:
@@ -1471,17 +1417,13 @@ class EventWatcher(QtCore.QObject):
                         event.set()
 
                     self.error.emit(
-                        EventWatcherError(
-                            "EventWatcher has timed out while waiting for a response"
-                        )
+                        EventWatcherError("EventWatcher has timed out while waiting for a response")
                     )
                     return
 
                 if self._cancel_event.is_set():
                     self.error.emit(
-                        EventWatcherError(
-                            "EventWatcher was overridden by a new watcher"
-                        )
+                        EventWatcherError("EventWatcher was overridden by a new watcher")
                     )
                     return
 
@@ -1498,9 +1440,7 @@ def channel_unit_label(channel_list):
     """
     Returns the units from a channel list.
     """
-    units = {
-        c.unit for c in channel_list if c is not None and c.unit not in (None, "", "-")
-    }
+    units = {c.unit for c in channel_list if c is not None and c.unit not in (None, "", "-")}
     return units.pop() if len(units) == 1 else None
 
 
@@ -1516,9 +1456,7 @@ def axis_label(type, base, unit=None):
         case "ratio":
             numerator, denominator = unit
             return (
-                base
-                if not (numerator and denominator)
-                else f"{base} ({numerator}/{denominator})"
+                base if not (numerator and denominator) else f"{base} ({numerator}/{denominator})"
             )
         case _:
             return base
@@ -1537,9 +1475,7 @@ class IPAddressManager(QtWidgets.QDialog):
         if ip_addresses is None:
             ip_addresses = []
         super().__init__(parent)
-        ip_manager_ui_path = os.path.join(
-            DIRECTORY, "user_interface", "ui_files", "ip_manager.ui"
-        )
+        ip_manager_ui_path = os.path.join(DIRECTORY, "user_interface", "ui_files", "ip_manager.ui")
         uic.loadUi(ip_manager_ui_path, self)
 
         self.ip_address_table.setColumnWidth(0, 200)
@@ -1696,9 +1632,7 @@ class IPAddressManager(QtWidgets.QDialog):
                 # Merged into an existing row rather than being appended as
                 # a new one, so just refresh that row's displayed text.
                 merged_row = next(
-                    row
-                    for row, address in enumerate(self.ip_addresses)
-                    if address == ip_address
+                    row for row, address in enumerate(self.ip_addresses) if address == ip_address
                 )
                 self.refresh_ip_table([merged_row])
                 return
@@ -1741,12 +1675,8 @@ class IPAddressManager(QtWidgets.QDialog):
         host_name_input = QtWidgets.QLineEdit()
         host_name_input.setFixedHeight(45)
         host_name_input.setPlaceholderText("BK<Type>-<Serial>")
-        host_name_input.textChanged.connect(
-            lambda text: self.host_name_changed(text, unique_index)
-        )
-        host_name_input.focusInEvent = lambda event: self.ip_input_focused(
-            event, unique_index
-        )
+        host_name_input.textChanged.connect(lambda text: self.host_name_changed(text, unique_index))
+        host_name_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
 
         host_name_layout.addLayout(move_button_layout)
         host_name_layout.addWidget(host_name_input)
@@ -1756,24 +1686,16 @@ class IPAddressManager(QtWidgets.QDialog):
         ipv4_input = QtWidgets.QLineEdit()
         ipv4_input.setFixedHeight(45)
         ipv4_input.setPlaceholderText("169.254.001.001")
-        ipv4_input.textChanged.connect(
-            lambda text: self.ipv4_address_changed(text, unique_index)
-        )
-        ipv4_input.focusInEvent = lambda event: self.ip_input_focused(
-            event, unique_index
-        )
+        ipv4_input.textChanged.connect(lambda text: self.ipv4_address_changed(text, unique_index))
+        ipv4_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
 
         self.ip_address_table.setCellWidget(current_row, 1, ipv4_input)
 
         ipv6_input = QtWidgets.QLineEdit()
         ipv6_input.setFixedHeight(45)
         ipv6_input.setPlaceholderText("[<Unicast>%<Network>]")
-        ipv6_input.textChanged.connect(
-            lambda text: self.ipv6_address_changed(text, unique_index)
-        )
-        ipv6_input.focusInEvent = lambda event: self.ip_input_focused(
-            event, unique_index
-        )
+        ipv6_input.textChanged.connect(lambda text: self.ipv6_address_changed(text, unique_index))
+        ipv6_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
 
         self.ip_address_table.setCellWidget(current_row, 2, ipv6_input)
 
@@ -1804,9 +1726,7 @@ class IPAddressManager(QtWidgets.QDialog):
         self.ip_addresses[current_row].ipv6_address = text
         self.ip_addresses[current_row].valid_ip = False
 
-    def ip_input_focused(
-        self, event, unique_index: int
-    ):  # pylint: disable=unused-argument
+    def ip_input_focused(self, event, unique_index: int):  # pylint: disable=unused-argument
         """Updates the selected index based on the window focus"""
         self.selected_index = unique_index
 
@@ -2059,10 +1979,7 @@ class EditableSpinBox(QtWidgets.QAbstractSpinBox):
         self.setText(str(new_value))
 
     def stepEnabled(self):
-        return (
-            QtWidgets.QAbstractSpinBox.StepUpEnabled
-            | QtWidgets.QAbstractSpinBox.StepDownEnabled
-        )
+        return QtWidgets.QAbstractSpinBox.StepUpEnabled | QtWidgets.QAbstractSpinBox.StepDownEnabled
 
     def validate(self, text, pos):
         return QtGui.QValidator.Acceptable, text, pos
@@ -2103,9 +2020,7 @@ class EditableSpinBox(QtWidgets.QAbstractSpinBox):
 class ProfileTimer(QtCore.QTimer):
     """A timer class that allows storage of controller instruction information"""
 
-    def __init__(
-        self, timestamp: float, environment_name: str, command: str, data: str
-    ):
+    def __init__(self, timestamp: float, environment_name: str, command: str, data: str):
         """
         A timer class that allows storage of controller instruction information
 
@@ -2150,10 +2065,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         self.channel_names = self.parent.channel_names
         self.channel_list = getattr(self.parent, "channel_list", None)
         self.reference_names = np.array(
-            [
-                self.parent.channel_names[i]
-                for i in self.parent.reference_channel_indices
-            ]
+            [self.parent.channel_names[i] for i in self.parent.reference_channel_indices]
         )
         self.response_names = np.array(
             [self.parent.channel_names[i] for i in self.parent.response_channel_indices]
@@ -2245,9 +2157,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         """Updates the second view box based on the view from the first box"""
         if self.twinx_viewbox is None:
             return
-        self.twinx_viewbox.setGeometry(
-            self.twinx_original_plotitem.vb.sceneBoundingRect()
-        )
+        self.twinx_viewbox.setGeometry(self.twinx_original_plotitem.vb.sceneBoundingRect())
         # self.twinx_viewbox.linkedViewChanged(
         #     self.twinx_original_plotitem.vb, self.twinx_viewbox.XAxis)
 
@@ -2396,9 +2306,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         elif current_signal == 7:  # Reciprocity
             try:
                 response_index = self.reciprocal_responses[index]
-                channel = self._channel_at(
-                    self.parent.response_channel_indices[response_index]
-                )
+                channel = self._channel_at(self.parent.response_channel_indices[response_index])
             except (IndexError, TypeError):
                 channel = None
         else:  # FRF, FRF+Coherence, Coherence
@@ -2435,9 +2343,7 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             )
         elif current_signal == 3:  # Autospectrum
             self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
-            self.primary_plotitem.setLabel(
-                "left", axis_label("psd", "Autospectrum", response_unit)
-            )
+            self.primary_plotitem.setLabel("left", axis_label("psd", "Autospectrum", response_unit))
         elif current_signal in (4, 6, 7):  # FRF, FRF+Coherence, Reciprocity
             reference_unit = self.selected_reference_unit()
             self.primary_plotitem.setLabel("bottom", "Frequency (Hz)")
@@ -2487,25 +2393,19 @@ class ModalMDISubWindow(QtWidgets.QWidget):
         if current_index in [0, 1]:  # Time history
             if self.parent.last_frame is None:
                 return
-            data = self.parent.last_frame[
-                self.response_coordinate_selector.currentIndex()
-            ]
+            data = self.parent.last_frame[self.response_coordinate_selector.currentIndex()]
             if current_index == 1:
                 data = data * self.parent.window_function
             self.primary_plotdataitem.setData(self.parent.time_abscissa, data)
         elif current_index == 2:  # Spectrum
             if self.parent.last_spectrum is None:
                 return
-            data = self.parent.last_spectrum[
-                self.response_coordinate_selector.currentIndex()
-            ]
+            data = self.parent.last_spectrum[self.response_coordinate_selector.currentIndex()]
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 3:  # Autospectrum
             if self.parent.last_autospectrum is None:
                 return
-            data = self.parent.last_autospectrum[
-                self.response_coordinate_selector.currentIndex()
-            ]
+            data = self.parent.last_autospectrum[self.response_coordinate_selector.currentIndex()]
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 4 or current_index == 6:  # FRF or FRF Coherence
             if self.parent.last_frf is None:
@@ -2516,42 +2416,24 @@ class ModalMDISubWindow(QtWidgets.QWidget):
                 self.reference_coordinate_selector.currentIndex(),
             ]
             if self.data_type_selector.currentIndex() == 0:  # Magnitude
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.abs(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
             elif self.data_type_selector.currentIndex() == 1:  # Magnitude/Phase
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.angle(data)
-                )
-                self.secondary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.abs(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.angle(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
             elif self.data_type_selector.currentIndex() == 2:  # Real
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.real(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
             elif self.data_type_selector.currentIndex() == 3:  # Imag
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.imag(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
             elif self.data_type_selector.currentIndex() == 4:  # Real/Imag
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.real(data)
-                )
-                self.secondary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.imag(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
             if current_index == 6 and self.parent.last_coh is not None:
-                data = self.parent.last_coh[
-                    self.response_coordinate_selector.currentIndex()
-                ]
+                data = self.parent.last_coh[self.response_coordinate_selector.currentIndex()]
                 self.twinx_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 5:  # Coherence
             if self.parent.last_coh is None:
                 return
-            data = self.parent.last_coh[
-                self.response_coordinate_selector.currentIndex()
-            ]
+            data = self.parent.last_coh[self.response_coordinate_selector.currentIndex()]
             self.primary_plotdataitem.setData(self.parent.frequency_abscissa, data)
         elif current_index == 7:  # FRF or FRF Coherence
             if self.parent.last_frf is None:
@@ -2561,23 +2443,15 @@ class ModalMDISubWindow(QtWidgets.QWidget):
             resp_ind = self.response_coordinate_selector.currentIndex()
             ref_ind = self.reference_coordinate_selector.currentIndex()
             data = self.parent.last_frf[:, self.reciprocal_responses[resp_ind], ref_ind]
-            compare_data = self.parent.last_frf[
-                :, self.reciprocal_responses[ref_ind], resp_ind
-            ]
+            compare_data = self.parent.last_frf[:, self.reciprocal_responses[ref_ind], resp_ind]
             if self.data_type_selector.currentIndex() == 0:  # Magnitude
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.abs(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.abs(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 1:  # Magnitude/Phase
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.angle(data)
-                )
-                self.secondary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.abs(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.angle(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.abs(data))
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.angle(compare_data)
                 )
@@ -2585,26 +2459,18 @@ class ModalMDISubWindow(QtWidgets.QWidget):
                     self.parent.frequency_abscissa, np.abs(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 2:  # Real
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.real(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.real(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 3:  # Imag
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.imag(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.imag(compare_data)
                 )
             elif self.data_type_selector.currentIndex() == 4:  # Real/Imag
-                self.primary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.real(data)
-                )
-                self.secondary_plotdataitem.setData(
-                    self.parent.frequency_abscissa, np.imag(data)
-                )
+                self.primary_plotdataitem.setData(self.parent.frequency_abscissa, np.real(data))
+                self.secondary_plotdataitem.setData(self.parent.frequency_abscissa, np.imag(data))
                 self.primary_plotdataitem_compare.setData(
                     self.parent.frequency_abscissa, np.real(compare_data)
                 )
@@ -2695,9 +2561,7 @@ class RotatedAxisItem(pyqtgraph.AxisItem):  # pylint: disable=abstract-method
             x_offset = np.ceil(np.fabs(np.sin(np.radians(self._angle)) * rect.width()))
             if self._angle < 0:
                 x_offset = -x_offset
-            p.translate(
-                x_offset / 2, 0
-            )  # Move the coordinate system (relatively) downwards
+            p.translate(x_offset / 2, 0)  # Move the coordinate system (relatively) downwards
 
             p.drawText(rect, flags, text)
             p.restore()  # restore the painter state
@@ -2734,26 +2598,14 @@ class SysIdSelector(QtWidgets.QDialog):
 
     def _setup_tables(self):
         # LEFT: single selection
-        self.file_table_widget.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection
-        )
-        self.file_table_widget.setSelectionBehavior(
-            QtWidgets.QAbstractItemView.SelectRows
-        )
-        self.file_table_widget.setEditTriggers(
-            QtWidgets.QAbstractItemView.NoEditTriggers
-        )
+        self.file_table_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.file_table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.file_table_widget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
 
         # RIGHT: multi selection
-        self.current_table_widget.setSelectionMode(
-            QtWidgets.QAbstractItemView.MultiSelection
-        )
-        self.current_table_widget.setSelectionBehavior(
-            QtWidgets.QAbstractItemView.SelectRows
-        )
-        self.current_table_widget.setEditTriggers(
-            QtWidgets.QAbstractItemView.NoEditTriggers
-        )
+        self.current_table_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        self.current_table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.current_table_widget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
 
     def _populate_tables(self):
         # File environments (left)
@@ -2780,4 +2632,65 @@ class SysIdSelector(QtWidgets.QDialog):
         return load_from, load_to
 
 
-# endregion
+class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
+    """A simple class to remove the scroll wheel capability from a spin box"""
+
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
+        """Capture the wheel event but ignore it"""
+        event.ignore()
+
+
+class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
+    """A spinbox that changes number of decimals based on the value provided"""
+
+    localization = QLocale(QLocale.English, QLocale.UnitedStates)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setDecimals(10)
+
+    def textFromValue(self, value):  # pylint: disable=invalid-name
+        """Gets the text to show in the spinbox based on the value stored in the spinbox"""
+        return AdaptiveNoWheelSpinBox.localization.toString(value, "g", self.decimals())
+
+
+class NoWheelComboBox(QtWidgets.QComboBox):
+    """A simple class to remove the scroll wheel capability from a combo box"""
+
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
+        """Capture the wheel event but ignore it"""
+        event.ignore()
+
+
+class ScientificDoubleSpinBox(NoWheelSpinBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setDecimals(10)  # Allow for higher precision
+        self.setRange(-1e100, 1e100)  # Set a wide range for scientific values
+        # self.setAlignment(Qt.AlignRight) # Align text to the right for better readability
+
+    def textFromValue(self, value):
+        """
+        Override to display the value in scientific notation.
+        """
+        return f"{value:g}"  # Format as scientific notation with 10 decimal places
+
+    def valueFromText(self, text):
+        """
+        Override to parse scientific notation input.
+        """
+        try:
+            return float(text)  # Convert the text to a float
+        except ValueError:
+            return 0.0  # Return 0.0 if the input is invalid
+
+    def validate(self, text, pos):
+        """
+        Override to validate scientific notation input.
+        """
+        try:
+            float(text)  # Check if the text can be converted to a float
+            return QtGui.QValidator.Acceptable, text, pos
+        except ValueError:
+            return QtGui.QValidator.Invalid, text, pos

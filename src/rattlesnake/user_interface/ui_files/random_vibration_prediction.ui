@@ -21,7 +21,7 @@
        <item row="2" column="1">
         <widget class="QComboBox" name="excitation_column_selector">
          <property name="toolTip">
-          <string>Select the column of the excitation CPSD matrix to visualize</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation CPSD Column Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the column of the excitation CPSD matrix to visualize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -32,6 +32,9 @@
            <horstretch>1</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation Display Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the specified portion of the CPSD matrix.  If an off-diagonal term is selected, both real and imaginary parts will be plotted.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -56,7 +59,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>RMS Voltage predicted for each excitation channel</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Voltage (RMS)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;RMS Voltage predicted for each excitation channel&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -69,14 +72,14 @@
        <item row="1" column="1">
         <widget class="QComboBox" name="excitation_row_selector">
          <property name="toolTip">
-          <string>Select the row of the excitation CPSD matrix to visualize</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation CPSD Row Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the row of the excitation CPSD matrix to visualize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
        <item row="2" column="0">
         <widget class="QPushButton" name="minimum_voltage_button">
          <property name="toolTip">
-          <string>Shows the excitation channel with the smallest voltage</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Excitation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the excitation channel with the smallest voltage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Go to Minimum</string>
@@ -86,7 +89,7 @@
        <item row="1" column="0">
         <widget class="QPushButton" name="maximum_voltage_button">
          <property name="toolTip">
-          <string>Shows the excitation channel with the largest voltage</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Excitation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the excitation channel with the largest voltage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Go to Maximum</string>
@@ -112,7 +115,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>RMS dB error predicted at each control channel</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Error (dB)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;RMS dB error predicted at each control channel.  Channels will be highlighted yellow if they hit a warning limit and red if they hit an abort limit.  Double clicking on an item will show its response prediction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -125,7 +128,7 @@
        <item row="2" column="1">
         <widget class="QComboBox" name="response_column_selector">
          <property name="toolTip">
-          <string>Select the column of the response CPSD matrix to visualize</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response CPSD Column Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the column of the response CPSD matrix to visualize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -137,12 +140,15 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Prediction Display Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the specified portion of the response CPSD matrix predicted using the computed excitation CPSD and system identification information compared to the specification.  If an off-diagonal term is selected, both real and imaginary parts will be plotted.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
         </widget>
        </item>
        <item row="2" column="0">
         <widget class="QPushButton" name="minimum_error_button">
          <property name="toolTip">
-          <string>Show the control channel prediction with the smallest predicted error</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Minimum Response Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Show the control channel prediction with the smallest predicted error&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Go to Minimum</string>
@@ -152,7 +158,7 @@
        <item row="1" column="0">
         <widget class="QPushButton" name="maximum_error_button">
          <property name="toolTip">
-          <string>Show the control channel prediction with the largest predicted error</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Response Error&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Show the control channel prediction with the largest predicted error&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Go to Maximum</string>
@@ -162,7 +168,7 @@
        <item row="1" column="1">
         <widget class="QComboBox" name="response_row_selector">
          <property name="toolTip">
-          <string>Select the row of the response CPSD matrix to visualize</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response CPSD Row Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the row of the response CPSD matrix to visualize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -188,7 +194,7 @@
      <item>
       <widget class="QPushButton" name="recompute_prediction_button">
        <property name="toolTip">
-        <string>Click to recompute the prediction by running the control law again.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Recompute Prediction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Click to recompute the prediction by running the control law again.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Recompute Prediction</string>

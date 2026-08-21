@@ -136,3 +136,14 @@ for environment_type in EnvironmentType:
             ENVIRONMENT_CLASS[EnvironmentType.RANDOM] = RandomVibrationEnvironment
             ENVIRONMENT_PROCESS[EnvironmentType.RANDOM] = random_vibration_process
             SYSID_ENVIRONMENTS.append(EnvironmentType.RANDOM)
+
+        case EnvironmentType.SDS:
+            from rattlesnake.environment.sds_sys_id_environment import SDSEnvironment, sds_process
+            from rattlesnake.environment.sds_sys_id_metadata import SDSMetadata
+            from rattlesnake.environment.sds_sys_id_utilities import SDSCommands
+
+            ENVIRONMENT_CLASS[EnvironmentType.SDS] = SDSEnvironment
+            ENVIRONMENT_METADATA[EnvironmentType.SDS] = SDSMetadata
+            ENVIRONMENT_COMMANDS[EnvironmentType.SDS] = SDSCommands
+            ENVIRONMENT_PROCESS[EnvironmentType.SDS] = sds_process
+            SYSID_ENVIRONMENTS.append(EnvironmentType.SDS)

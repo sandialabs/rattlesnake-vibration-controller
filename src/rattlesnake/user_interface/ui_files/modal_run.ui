@@ -73,7 +73,7 @@
            </font>
           </property>
           <property name="toolTip">
-           <string>Starts the acquisition in Preview mode which will not save data to the disk nor will it stop automatically when the requested number of averages is reached.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Preview Acquisition&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the acquisition in Preview mode which will not save data to the disk nor will it stop automatically when the requested number of averages is reached.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Preview Acquisition</string>
@@ -131,7 +131,7 @@
            </font>
           </property>
           <property name="toolTip">
-           <string>Starts the acquisition and stores data to the disk.  Acquisition will stop automatically when the requested number of averages is reached.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Start Acquisition&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Starts the acquisition and stores data to the disk.  Acquisition will stop automatically when the requested number of averages is reached.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Start Acquisition</string>
@@ -192,7 +192,7 @@
            </font>
           </property>
           <property name="toolTip">
-           <string>Stops the currently active acquisition.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Stop Acquisition&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Stops the currently active acquisition.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Stop Acquisition</string>
@@ -221,7 +221,7 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>File to which modal data is written from Rattlesnake.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Data File&lt;/span&gt;&lt;/p&gt;&lt;p&gt;File to which modal data is written from Rattlesnake.  Note that writing modal data to a network drive can cause the user interface to hang if the files are large and the network is relatively slow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="readOnly">
            <bool>true</bool>
@@ -233,7 +233,7 @@
           <item>
            <widget class="QPushButton" name="select_file_button">
             <property name="toolTip">
-             <string>Select a file to which Rattlesnake modal data will be written.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Select File...&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Opens a file dialog to allow the user to select a file to which data will be saved.  For large tests, it is not recommended to write data directly to a network drive, as relatively slow network speeds may cause the user interface to hang while the file is being written.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Select File...</string>
@@ -243,7 +243,7 @@
           <item>
            <widget class="QCheckBox" name="autoincrement_checkbox">
             <property name="toolTip">
-             <string>Select this to automatically add a 4-digit number to the file name that will increment automatically.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Auto-Increment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select this to automatically add a 4-digit number to the file name that will increment automatically.  This can be useful for roving hammer excitation where the user does not want to accidentally overwrite previous data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Auto-Increment</string>
@@ -272,7 +272,7 @@
           <item>
            <widget class="QSpinBox" name="current_average_display">
             <property name="toolTip">
-             <string>Current number of averages acquired</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Average Count&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Current number of averages acquired&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -295,7 +295,7 @@
           <item>
            <widget class="QSpinBox" name="total_averages_display">
             <property name="toolTip">
-             <string>Total number of averages that will be acquired.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total Averages&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Total number of averages that will be acquired during the test, after which data acquisition will shut down automatically if not in preview mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
@@ -316,7 +316,7 @@
            <bool>false</bool>
           </property>
           <property name="toolTip">
-           <string>Manually accept the current measurement frame.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Accept&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Manually accept the current measurement frame.  This button will be disabled unless Manual acceptance is specified.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Accept</string>
@@ -329,7 +329,7 @@
            <bool>false</bool>
           </property>
           <property name="toolTip">
-           <string>Manually reject the current measurement frame.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Reject&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Manually reject the current measurement frame.  This button will be disabled unless Manual acceptance is specified.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Reject</string>
@@ -360,11 +360,11 @@
            </sizepolicy>
           </property>
           <property name="toolTip">
-           <string>Create a visualization window from a set of preset templates.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;New Window from Template...&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Create a visualization window from a set of preset templates of commonly requested visualizations, such as drive point FRFs or reference autospectra.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
-            <string>New from Template...</string>
+            <string>New Window from Template...</string>
            </property>
           </item>
           <item>
@@ -402,7 +402,7 @@
         <item row="2" column="1">
          <widget class="QPushButton" name="close_all_button">
           <property name="toolTip">
-           <string>Close all visualization windows.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Close All&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Close all visualization windows.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Close All</string>
@@ -427,7 +427,7 @@
           <item>
            <widget class="QPushButton" name="decrement_channels_button">
             <property name="toolTip">
-             <string>Increment channels in visualization windows by the specified number.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;&amp;lt; (Decrement Channels)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Decrement channels in visualization windows by the specified number of channels, except for windows that are locked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>&lt;&lt;</string>
@@ -437,14 +437,14 @@
           <item>
            <widget class="QSpinBox" name="increment_channels_number">
             <property name="toolTip">
-             <string>Select the number of channels to increment all windows by.  This is useful to quickly move through all channels.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Increment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the number of channels to increment all windows by.  This is useful to quickly move through all channels in a test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="increment_channels_button">
             <property name="toolTip">
-             <string>Increment channels in visualization windows by the specified number.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;gt;&amp;gt; (Increment Channels)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Increment channels in visualization windows by the specified number of channels, except for windows that are locked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>&gt;&gt;</string>
@@ -456,7 +456,7 @@
         <item row="2" column="0">
          <widget class="QPushButton" name="tile_layout_button">
           <property name="toolTip">
-           <string>Tile all visualization windows</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Tile&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Tile all visualization windows&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Tile</string>
@@ -466,10 +466,10 @@
         <item row="0" column="0" colspan="2">
          <widget class="QPushButton" name="new_window_button">
           <property name="toolTip">
-           <string>Create a new data visualization window.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;New Window&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Create a new data visualization window.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
-           <string>New</string>
+           <string>New Window</string>
           </property>
          </widget>
         </item>
@@ -490,6 +490,9 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Degree of Freedom Override Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table can be used during roving hammer testing, or other testing that involves changing the channel degrees of freedom, to change channel names during a test without needing to update the channel table and re-initialize the data acquisition system.  The user selects a channel to update and provides a new node number and new direction string.  Subsequently acquired data will have degree of freedom information updated in the channel table that gets stored to the disk with the data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
           </property>
@@ -504,7 +507,7 @@
             <string>Channel</string>
            </property>
            <property name="toolTip">
-            <string>Original channel to override</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Original Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Original channel that will be overridden&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </column>
           <column>
@@ -512,7 +515,7 @@
             <string>New Node</string>
            </property>
            <property name="toolTip">
-            <string>New Node Number to override the original channel with.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;New Node&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The new Node Number to override the original channel with.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </column>
           <column>
@@ -520,7 +523,7 @@
             <string>New Direction</string>
            </property>
            <property name="toolTip">
-            <string>New Direction to override the original channel with</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;New Direction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The new Direction to override the original channel with.  This should be a value like &amp;quot;X+&amp;quot; or &amp;quot;Z-&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </column>
          </widget>
@@ -530,7 +533,7 @@
           <item>
            <widget class="QPushButton" name="add_override_button">
             <property name="toolTip">
-             <string>Adds an override to the channel table to change the degree of freedom associated with a given channel.  Useful for roving hammer or roving accelerometer testing.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Add Override&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Adds an override to the channel table to change the degree of freedom associated with a given channel.  Useful for roving hammer or roving accelerometer testing.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Add Override</string>
@@ -540,7 +543,7 @@
           <item>
            <widget class="QPushButton" name="remove_override_button">
             <property name="toolTip">
-             <string>Removes the selected channel override.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Override&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes the selected channel override.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Remove Override</string>
@@ -555,7 +558,11 @@
     </layout>
    </item>
    <item>
-    <widget class="QMdiArea" name="channel_display_area"/>
+    <widget class="QMdiArea" name="channel_display_area">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Display Area&lt;/span&gt;&lt;/p&gt;&lt;p&gt;New windows will be placed in this area, allowing flexible visualization of modal data during the test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

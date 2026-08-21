@@ -69,9 +69,7 @@ for hardware_type in HardwareType:
             ]
             UI_ASK_FOR_FILE.append(HardwareType.STATE_SPACE)
         case HardwareType.SDYNPY_SYSTEM:
-            UI_HARDWARE_OPTIONS["SDynPy System Integration..."] = (
-                HardwareType.SDYNPY_SYSTEM
-            )
+            UI_HARDWARE_OPTIONS["SDynPy System Integration..."] = HardwareType.SDYNPY_SYSTEM
             UI_HARDWARE_WIDGETS[HardwareType.SDYNPY_SYSTEM] = [
                 "sample_rate",
                 "buffer_size",
@@ -144,6 +142,11 @@ for environment_type in EnvironmentType:
 
             ENVIRONMENT_UIS[EnvironmentType.RANDOM] = RandomVibrationUI
             UI_ENVIRONMENT_OPTIONS["MIMO Random Vibration"] = EnvironmentType.RANDOM
+        case EnvironmentType.SDS:
+            from rattlesnake.user_interface.sds_sys_id_ui import SDSUI
+
+            ENVIRONMENT_UIS[EnvironmentType.SDS] = SDSUI
+            UI_ENVIRONMENT_OPTIONS["MIMO Sum-Decayed-Sines"] = EnvironmentType.SDS
         case _:
             continue
 # endregion

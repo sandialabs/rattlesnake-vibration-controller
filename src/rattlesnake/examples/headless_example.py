@@ -53,9 +53,7 @@ def build_example_rattlesnake_object(
     # Initialize environment
     if environment_type is EnvironmentType.NONE:
         return rattlesnake
-    environment_metadata = ENVIRONMENT_DICT[environment_type][import_method](
-        hardware_metadata
-    )
+    environment_metadata = ENVIRONMENT_DICT[environment_type][import_method](hardware_metadata)
     environment_name = getattr(environment_metadata, "environment_name", None)
     rattlesnake.initialize_environments([environment_metadata])
 
