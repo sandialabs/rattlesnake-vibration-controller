@@ -332,11 +332,21 @@ jupyter book build
 
 `ci.yml` — Continuous Integration
 
-Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
+Triggered by:
 
-1. **changes** 
-   * Uses dorny/paths-filter to detect whether docs or code files changed. Downstream jobs use this to skip
-  unnecessary work.
+* A push to *any* branch.
+* A pull request targeting `main`/`dev`.
+* Manual `workflow_dispatch` (e.g., re-running CI on demand from the GitHub Actions UI, such as forcing the full `pytest_matrix` via `test_level=full` on a branch that wouldn't otherwise trigger it).
+* `workflow_call` (for example, `release.yml` invokes `ci.yml` as its `test` job through the `workflow_call` mechanism).
+
+Six jobs, four of which share a gate:
+
+* **`pytest_matrix`, `lint`, `coverage`** — run when `code_changed == 'true'` **or** the branch (or PR base branch) is `main`/`dev`.
+* **`docs_jupyter_book`** — runs when `docs_changed == 'true'` **or** the branch (or PR base branch) is `main`/`dev`.
+* **`deploy`** — runs on `main`/`dev` regardless of whether `code_changed` is `true` or `false`, and regardless of whether `docs_changed` is `true` or `false`.
+
+1. **changes**
+   * Uses [dorny/paths-filter](https://github.com/dorny/paths-filter) to detect whether docs and/or code files changed. Sets the job outputs `docs_changed` and `code_changed` (each `true`/`false`), which downstream jobs use to streamline the CI process by skipping unnecessary jobs.
 2. **pytest_matrix**
    * Runs tests on all combinations of [macos, ubuntu, windows] × [3.11, 3.12] using `pip install .[dev]` (not `uv`) for PyQt wheel compatibility. Test scope is adaptive:
      *  Default: `tests/short`
@@ -352,17 +362,24 @@ Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
 4. **coverage**
    * Runs `pytest --cov` via `uv` with the same adaptive test scope, then calls `report_coverage.py` to generate an HTML coverage report artifact.
 5. **docs_jupyter_book**
-   * Updates `myst.yml` metadata via `report_jupyter_book.py,` then builds the Jupyter Book. Only runs when docs changed (or on `main`/`dev`).
+   * Updates `myst.yml` metadata via `report_jupyter_book.py,` then builds the Jupyter Book.
 6. **deploy**
-   * Runs only on `main/dev`, assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
+   * Assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
 
 `release.yml` — Release Pipeline
 
-Triggered only on `v*` tags. Six sequential jobs:
+Triggered only by pushing a `v*` tag — never by a branch push, not even to `main` or `dev`. Once triggered, two conditions (both checked in `validate_tag`) decide where, if anywhere, the release publishes to:
+
+* **Branch:** the tag must be reachable from `main` or `dev`. A tag on any branch that is not `main`/`dev` fails the `validate_tag` job; a failed `validate_tag` job prevents any releases to TestPyPI or PyPI.
+* **Version string:** a prerelease version (`a`/`b`/`rc`/`.dev` segments) publishes to **TestPyPI**; a stable or `.post` version publishes to **PyPI**.
+  * The `main` branch can publish to either TestPyPI or PyPI. 
+  * The `dev` branch can publish to either TestPyPI or PyPI.
+
+Six sequential jobs:
 
 1. **validate_tag**
    * Verifies the tag was created on the `main` or `dev` branch, that it conforms to PEP 440, and that it is strictly newer than all existing tags.
-   * Also computes an `is_prerelease` job output using `packaging.version.Version(...).is_prerelease` (true for `a`/`b`/`rc`/`.dev` segments, false for stable and `.post` releases). This is the **single source of truth** consumed by every downstream job that needs to distinguish a prerelease from a production release — nothing downstream re-derives it with its own tag matching.
+   * Computes an `is_prerelease` job output using `packaging.version.Version(...).is_prerelease`. This is the **single source of truth** consumed by every downstream job that needs to distinguish a prerelease from a production release — nothing downstream re-derives it with its own tag matching.
 2. **test**
    * Calls `ci.yml` as a reusable workflow (workflow_call).
 3. **build**
