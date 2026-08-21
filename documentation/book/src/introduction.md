@@ -10,6 +10,10 @@ authors:
   - name: Norman Hunter
     affiliation: Sandia National Laboratories
     email: nfhunte@sandia.gov
+  - name: Cody Langston
+    affiliation: Sandia National Laboratories/University of Georgia
+  - name: Chad Hovey
+    affiliation: Sandia National Laboratories
 numbering:
   heading_1:
     template: "Chapter %s"
@@ -23,6 +27,17 @@ numbering:
   code:
     enumerator: 1.%s
 ---
+
+:::{warning} Warning: Research and Development Software
+:class: dropdown
+Rattlesnake is, at its heart, software designed to do research and development into MIMO Vibration Control problems without dealing with the restrictions and closed-off nature of proprietary software.  Users of Rattlesnake must be aware that various portions of the software are active research topics, so they should be used with caution.
+
+As with any capability in active research, there is the chance that the capability does not behave as expected.  Vibration test equipment can vary in cost from hundreds of dollars to millions of dollars, and test articles can range from a few dollars of stock material for a simple beam to almost priceless if they are one-of-a-kind.  Vibration control software that does not behave as expected could therefore cause damage to such equipment, which could impart catastrophic costs to the user of the software.
+
+**By using the Rattlesnake software, users accept this risk to their equipment and test articles.  There is no warranty expressed or implied by using this software.  If you do not accept this risk, do not use this software.**
+
+To give context, Rattlesnake has been used at Sandia National Laboratories with equipment and test articles totalling well over a million dollars, but it was done after **years** of using Rattlesnake on less consequential test scenarios to build up both confidence in the software and experience of test personnel using the software.
+:::
 
 Rattlesnake is a combined-environments, multiple input/multiple output control system for
 dynamic excitation of structures under test.  It provides capabilities to control multiple

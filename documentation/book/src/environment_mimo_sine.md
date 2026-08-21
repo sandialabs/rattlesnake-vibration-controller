@@ -20,7 +20,7 @@ The MIMO Sine environment in Rattlesnake is used to generate deterministic sinus
 
 At a high level, the MIMO Sine environment does three things:
 
-1. defines one or more sine sweeps or dwells as a specification,
+1. defines one or more sine sweeps as a specification,
 2. uses a system identification phase to estimate the transfer functions between drive and response channels,
 3. computes drive signals that should reproduce the specified response amplitudes and phases, and then updates those drives during a run based on measured tracking data.
 
@@ -37,15 +37,19 @@ The environment supports:
 Because Rattlesnake originated as a random vibration controller, it's acquisition and output strategies operate on blocks of data rather than individual samples.  Therefore, users may find the MIMO Sine environment to be less responsive to control error than equivalent commercial solutions.  This time delay may also result in certain closed-loop implementations going unstable.  Users may approach sample-by-sample control by reducing the buffer size of the controller (decreasing the time between reads and writes).  However, this can be dangerous; if the output process runs out of samples to generate, it will perform a hard stop, which may damage test equipment or test articles.  For important tests, always ensure computational resources are sufficient the specified settings in a low-risk environment, perhaps with test levels set to some small value.
 :::
 
+:::{warning} Capability Under Active Development
+The Sine environment and its default control law have been used on several large-scale tests successfully.  However, it is one of the least tested environments in Rattlesnake, and should be considered under active research and development.  Rattlesnake, at its heart, is research software, and its various environments have been developed to allow users to perform research into those types of environment.  The Sine environment is certainly one of those capabilities that is under active research and development; therefore, users should not expect the Sine environment to be as "polished" as other environments.  Before using the Sine environment on any test of high consequence, ensure that you thoroughly understand how the environment works and have tested it out on less consequential tests.
+:::
+
 ## Governing Equations
 
 At any instant in a sine test, the desired response of the structure may be represented as a complex response vector
 
 \begin{equation}
-\mathbf{x}(\omega) = \mathbf{a}_x(\omega)e^{i\mathbf{\phi}_x(\omega)}
+\mathbf{x}(\omega) = \mathbf{a}_x(\omega)e^{i\boldsymbol{\phi}_x(\omega)}
 \end{equation}
 
-where $\mathbf{a}_x$ is the vector of desired response amplitudes and $\mathbf{\phi}_x$ is the vector of desired response phases.
+where $\mathbf{a}_x$ is the vector of desired response amplitudes and $\boldsymbol{\phi}_x$ is the vector of desired response phases.
 
 The measured structural dynamics are represented by a frequency response matrix
 
@@ -119,7 +123,7 @@ For a specification where $n_f$ is the number of frequency breakpoints and $n_c$
 For any array with dimension of size $n_c$, the ordering of this dimension must be identical to the ordering of the control degrees of freedom in the environment loading the file.  No bookkeeping or reordering of specification data to match the channel data occurs in the Sine environment.  If a transformation matrix is used, then the ordering of this dimension must be identical to the rows of the transformation matrix.
 
 ## Defining the MIMO Sine Environment in Rattlesnake
-In addition to the specification, there are a number of sampling and signal processing parameters that are used by the MIMO Sine environment.  These, along with the specification, are defined on the `Environment Definition` tab in the Rattlesnake controller, on a sub-tab corresponding to a MIMO Sine environment.  @fig:sine_environment_definition
+In addition to the specification, there are a number of sampling and signal processing parameters that are used by the MIMO Sine environment.  These, along with the specification, are defined on the `Environment Definition` tab in the Rattlesnake controller, on a sub-tab corresponding to a MIMO Sine environment, as shown in @fig:sine_environment_definition.
 
 :::{figure} figures/sine_environment_definition.png
 :label: fig:sine_environment_definition
@@ -143,6 +147,9 @@ The @fig:sine_definition:signal_generation_groupbox section of the MIMO Sine def
 ### Tracking Filter Parameters
 The @fig:sine_definition:tracking_filter_groupbox section of the MIMO Sine definition sub-tab consists of properties used to specify the tracking filter, which is used to extract sine-tone information from the measured time histories.  Depending on which filter type is selected, different parameters will be made available to the user.
 
+```{embed} #sec:sine_definition:tracking_filter_groupbox
+```
+
 With the digital tracking filter selected, the following parameters are available:
 
 ```{embed} #sec:sine_definition__tracking_filter:tracking_filter_groupbox
@@ -154,9 +161,6 @@ With the Vold-Kalman filter selected, the following parameters are available:
 ```
 
 If the user is unsure as to which filter they should use, they can use the filter explorer to investigate filter performance, see @sec:sine_filter_explorer.
-
-```{embed} #sec:sine_definition:tracking_filter_groupbox
-```
 
 ### Control Parameters
 
@@ -192,24 +196,24 @@ The @fig:sine_definition:test_specification_groupbox section of the MIMO Sine de
 
 Within each sine tone, there are three tables behind a sub-tab interface.  The `Breakpoint Table` tab shows the frequency breakpoints, as well as various buttons to add or remove breakpoints.
 
-```{embed} #sec:sine_definition__sine_table_breakpoint_tab:auto
+```{embed} #sec:sine_definition__sine_table_breakpoint_tab:auto_1
 ```
 
 The `Warning Table` contains amplitude limits that will trigger warnings.
 
-```{embed} #sec:sine_definition__sine_table_warning_tab:auto
+```{embed} #sec:sine_definition__sine_table_warning_tab:auto_1
 ```
 
 The `Abort Table` contains amplitude limits that will trigger aborts.
 
-```{embed} #sec:sine_definition__sine_table_abort_tab:auto
+```{embed} #sec:sine_definition__sine_table_abort_tab:auto_1
 ```
 
 Both warning and abort limit tables allow for specifying the amplitude on the left and right side of the breakpoint independently.  This can allow for, for example, looser tolerances during segments of the test that have higher sweep rates.  Upper and lower tolerances can also be specified.  The warning and abort limits will be shown in the plots along with the breakpoints themselves.
 
 ## System Identification for the MIMO Sine Environment
 
-When all environments are defined aht the `Initialize Environments` button is pressed, Rattlesnake will proceed to the next phase of the test, which is defined on the `System Identification` tab.
+When all environments are defined and the `Initialize Environments` button is pressed, Rattlesnake will proceed to the next phase of the test, which is defined on the `System Identification` tab.
 
 Before the Sine environment can predict or control the response, it must estimate the transfer function matrix between the drive channels and control channels. This is done through the shared system identification workflow used by the system-ID-based environments.
 
@@ -433,7 +437,7 @@ The DTF is generally a good choice when:
 
 ### Vold-Kalman Filter
 
-The Vold-Kalman Filter is a more advanced order tracking method, and includes the method to track multiple sine tones simultaneously.  The basic formulation of the VK filter is as follows.
+The Vold-Kalman Filter [@vold1995_high_resolution_order_tracking_extreme_slew_rates_using_kalman_tracking_filters],[@blough2007_understanding_kalman_vold_kalman] is a more advanced order tracking method, and includes the method to track multiple sine tones simultaneously.  The basic formulation of the VK filter is as follows.
 
 For a given discretely-sampled signal $y(n)$ containing primarily a harmonic component, the equation for $y(n)$ can be written as
 
@@ -470,22 +474,22 @@ All discrete variables from these equations can be arranged into vectors of leng
 \mathbf{x} = \left[x(1), x(2), \dots, x(N)\right]^T
 \end{equation}
 \begin{equation}
-\mathbf{\eta} = \left[\eta(1), \eta(2), \dots, \eta(N)\right]^T
+\boldsymbol{\eta} = \left[\eta(1), \eta(2), \dots, \eta(N)\right]^T
 \end{equation}
 \begin{equation}
-\mathbf{\varepsilon} = \left[\varepsilon(1), \varepsilon(2), \dots, \varepsilon(N)\right]^T
+\boldsymbol{\varepsilon} = \left[\varepsilon(1), \varepsilon(2), \dots, \varepsilon(N)\right]^T
 \end{equation}
 
 We can then set up matrix forms for the structural equations @eq:vk_structural_matrix and data equations @eq:vk_data_matrix.
 
 \begin{equation}
 \label{eq:vk_structural_matrix}
-\mathbf{A}\mathbf{x} = \mathbf{\varepsilon}
+\mathbf{A}\mathbf{x} = \boldsymbol{\varepsilon}
 \end{equation}
 
 \begin{equation}
 \label{eq:vk_data_matrix}
-\mathbf{y}-\mathbf{C}\mathbf{x} = \mathbf{\eta}
+\mathbf{y}-\mathbf{C}\mathbf{x} = \boldsymbol{\eta}
 \end{equation}
 
 where the coefficient matrix $\mathbf{A}$ is
@@ -524,21 +528,21 @@ for the second-order filter, etc.  And, the coefficient matrix $\mathbf{C}$ is a
 \end{bmatrix}
 \end{equation}
 
-The goal is to minimize the values $\mathbf{\varepsilon}$ and $\mathbf{\eta}$, so we can represent the vectors as a scalar product.
+The goal is to minimize the values $\boldsymbol{\varepsilon}$ and $\boldsymbol{\eta}$, so we can represent the vectors as a scalar product.
 
 \begin{equation}
-\mathbf{\varepsilon}^T\mathbf{\varepsilon} = \mathbf{x}^T\mathbf{A}^T\mathbf{A}\mathbf{x}
+\boldsymbol{\varepsilon}^T\boldsymbol{\varepsilon} = \mathbf{x}^T\mathbf{A}^T\mathbf{A}\mathbf{x}
 \end{equation}
 
 \begin{equation}
-\mathbf{\eta}^H\mathbf{\eta} = \left(\mathbf{y}^T - \mathbf{x}^H\mathbf{C}^H\right)\left(\mathbf{y} - \mathbf{x}\mathbf{C}\right)
+\boldsymbol{\eta}^H\boldsymbol{\eta} = \left(\mathbf{y}^T - \mathbf{x}^H\mathbf{C}^H\right)\left(\mathbf{y} - \mathbf{x}\mathbf{C}\right)
 \end{equation}
 
 The weighted sum of these parameters form the loss function
 
 \begin{equation}
 \label{eq:vk_loss_function}
-J = r^2\mathbf{\varepsilon}^T\mathbf{\varepsilon} + \mathbf{\eta}^H\mathbf{\eta}
+J = r^2\boldsymbol{\varepsilon}^T\boldsymbol{\varepsilon} + \boldsymbol{\eta}^H\boldsymbol{\eta}
 \end{equation}
 
 where $r$ is a weighting parameter that determines how heavily the structural equations are weighted compared to the data equations.
@@ -567,7 +571,7 @@ where now there is a separate complex amplitude $x_k(n)$ and argument $\Theta_k(
 Following the same logic as above, the function to minimize becomes
 
 \begin{equation}
-J = \sum_{k=1}^{P} r^2{\mathbf{\varepsilon}_k}^T\mathbf{\varepsilon}_k + \mathbf{\eta}^H\mathbf{\eta} \\
+J = \sum_{k=1}^{P} r^2{\boldsymbol{\varepsilon}_k}^T\boldsymbol{\varepsilon}_k + \boldsymbol{\eta}^H\boldsymbol{\eta} \\
   = \sum_{k=1}^{P} r^2{\mathbf{x}_k}^H\mathbf{A}^T\mathbf{A}\mathbf{x}_k + \left( \mathbf{y}^T - \sum_{k=1}^{P} {\mathbf{x}_k}^H{\mathbf{C}_k}^H \right)\left( \mathbf{y} - \sum_{k=1}^{P} {\mathbf{C}_k}{\mathbf{x}_k} \right)
 \end{equation}
 
@@ -862,21 +866,368 @@ Transformation matrices in the Sine environment behave identically to the the Ra
 (sec:sine_custom_control_law)=
 ## Writing a Custom Sine Control Law
 
-The Sine environment supports custom control laws, typically as Python classes. These classes are expected to expose methods such as:
+Unlike the Random Vibration environment, where relatively simple function-based control laws can often be sufficient, the MIMO Sine environment is inherently more stateful.  The control logic must manage:
 
+- the prescribed response specification as a function of time,
+- the system identification transfer functions,
+- the initial open-loop drive synthesis,
+- the online correction of those drives,
+- the generation of drive signals in finite blocks,
+- and optional post-run updates to the drive signal.
+
+For this reason, the Sine environment is built around **class-based** custom control laws rather than one-shot function calls.  A custom Sine control law must therefore be implemented as a Python class with the methods described below.  The easiest way to understand the intent of these methods is to compare them to the current default control law, implemented in `rattlesnake/environment/sine_sys_id_utilities.py` as `DefaultSineControlLaw`.
+
+A MIMO sine test is not simply a static inversion problem at one frequency.  The environment must:
+
+- define one or more tones over time,
+- compute an initial open-loop drive for those tones,
+- track the achieved response while the test is running,
+- update the excitation in a stable way,
+- and generate the output in chunks that match the controller’s block-based acquisition and output architecture.
+
+The control law therefore needs to maintain internal state such as:
+
+- the current target amplitudes and phases,
+- the current preshaped drive amplitudes and phases,
+- the accumulated drive correction,
+- write and analysis indices,
+- and previously sent or measured portions of the signal.
+
+This is why the Sine environment expects a control-law **class** rather than a simple stateless function.
+
+### Required Control-Law Lifecycle Methods
+
+A custom Sine control law class is expected to expose the following methods:
+
+- `__init__(...)`
 - `system_id_update(...)`
 - `initialize_control(...)`
 - `update_control(...)`
 - `generate_signal(...)`
 - `finalize_control(...)`
 
-The control law is provided with:
+The environment calls these methods at different stages of the test.
 
-- the sine specification,
-- the transfer functions from system identification,
-- the measured response amplitudes and phases,
-- and any extra control parameters.
+#### `__init__(...)`
 
-Because the Sine environment is deterministic and time-evolving, custom control laws are typically stateful and class-based rather than simple one-shot functions.
+The constructor is called when the environment metadata are initialized and the control law is created.  It should store all persistent information required by the control law, including:
 
-The default sine control law is implemented in `sine_sys_id_utilities.py` and is a good starting point for understanding the expected behavior and data flow.
+- specification information,
+- sample rate,
+- output oversample,
+- ramp time,
+- convergence factor,
+- buffer sizes,
+- extra user parameters,
+- and any system-ID data already available.
+
+The constructor is also a reasonable place to precompute signal representations derived from the specification, such as:
+
+- combined time-domain target signals,
+- per-tone target signals,
+- breakpoint-derived instantaneous frequencies,
+- target amplitudes,
+- target phases.
+
+The current default control law does exactly this.  In particular, it uses `SineSpecification.create_combined_signals(...)` to build:
+
+- the total specified response signal,
+- each tone’s response signal,
+- the instantaneous frequencies,
+- the cosine arguments,
+- the target amplitudes,
+- and the target phases.
+
+These are stored as persistent arrays so they do not need to be recomputed repeatedly during the run.
+
+#### `system_id_update(...)`
+
+This method is called when the system identification data have been obtained or updated.  Its purpose is to convert the system-ID results into a usable open-loop drive estimate.
+
+A custom implementation should use the transfer functions to compute some initial estimate of the drive amplitudes and phases required to reproduce the specified response.
+
+In the default implementation, this method performs the following major steps:
+
+1. stores the transfer function matrix and related system-ID quantities,
+2. interpolates the FRF pseudoinverse onto the instantaneous frequencies of the specification,
+3. computes the desired complex response
+   $$
+   \mathbf{x}(t) = \mathbf{a}_x(t)e^{i\boldsymbol{\phi}_x(t)}
+   $$
+4. maps that desired response into a complex drive estimate
+   $$
+   \mathbf{v}(t) = \mathbf{H}_{xv}^{+}(t)\mathbf{x}(t)
+   $$
+5. extracts the resulting drive amplitudes and phases,
+6. reconstructs the corresponding time-domain preshaped drive signals.
+
+This stage is where the default control law solves for the open-loop drive signals that would produce the best estimate of the desired response, assuming the transfer functions are measured exactly.
+
+Any replacement control law must do something equivalent, even if the exact mathematical method differs.
+
+#### `initialize_control(...)`
+
+This method is called at the start of a particular run.  It is responsible for initializing the runtime state needed for online control.
+
+Typical responsibilities include:
+
+- selecting which tones are active in this run,
+- selecting the time region of interest,
+- initializing write and analysis indices,
+- computing ramp-up and ramp-down portions of the signal,
+- preparing the first signal block to send to output,
+- initializing storage for future drive corrections,
+- resetting any history buffers.
+
+The current default control law uses this method to:
+
+- select the controlled tones and time interval,
+- define ramped portions of both the target and the preshaped drive,
+- prepare the first portion of the drive signal,
+- initialize `control_drive_correction`,
+- initialize arrays that store sent and achieved signal data.
+
+This method returns the first excitation signal block that will be sent to the output process.
+
+#### `update_control(...)`
+
+This is the key online feedback method.  It is called when a new portion of the measured response has been analyzed and reduced to:
+
+- tracked time histories,
+- amplitudes,
+- phases,
+- frequencies,
+- and a time-delay estimate.
+
+A custom control law should compare the achieved response to the target response over the current block and update its internal drive-correction state.
+
+The default implementation does this by:
+
+1. storing the achieved response data,
+2. identifying the corresponding time block within the full specification,
+3. reconstructing the target complex response over that block,
+4. reconstructing the achieved complex response over that block,
+5. computing the complex error,
+6. projecting that error back through the transfer function pseudoinverse,
+7. scaling the result by a convergence factor,
+8. accumulating the resulting correction into `self.control_drive_correction`.
+
+Conceptually, the default implementation is applying a correction of the form
+
+\begin{equation}
+\Delta \mathbf{v}(t) \propto \mathbf{H}_{xv}^{+}(t)\left(\mathbf{x}_{\mathrm{target}}(t)-\mathbf{x}_{\mathrm{achieved}}(t)\right)
+\end{equation}
+
+and accumulating this correction across blocks.
+
+Any custom control law that performs closed-loop sine control must implement an analogous update rule, even if the exact form of the correction differs.
+
+#### `generate_signal(...)`
+
+This method is called whenever the signal generation process needs another block of output samples.
+
+It should:
+
+- determine the next signal block time range,
+- retrieve the nominal preshaped excitation over that block,
+- apply any accumulated corrections,
+- convert the complex drive representation back into a real time-domain signal,
+- enforce output limits if needed,
+- return the next signal block,
+- and indicate whether the signal generation is complete; there is no more data to generate.
+
+In the default implementation, this method forms a complex excitation signal of the form
+
+\begin{equation}
+\mathbf{v}_{\mathrm{block}}(t)
+=
+\mathbf{a}_v(t)e^{i\boldsymbol{\phi}_v(t)}
++
+\Delta\mathbf{v}
+\end{equation}
+
+and then converts it into a real time signal using cosine reconstruction.
+
+It also applies an optional drive-voltage limit by clipping the magnitude of the complex excitation vector.
+
+This is the method that turns the control law’s internal state into actual samples to be output by the hardware.
+
+#### `finalize_control(...)`
+
+This method is called after the run has completed.  It allows the control law to perform any final processing or to prepare updated preshaped drive information for later use.
+
+In the current default implementation, this method primarily returns the current drive signals and associated metadata:
+
+- preshaped drive signals,
+- frequencies,
+- arguments,
+- amplitudes,
+- phases,
+- ramp sample count.
+
+A more advanced custom implementation could use this stage to:
+
+- update future open-loop drives,
+- compress or archive state,
+- compute statistics for the UI,
+- or refine the starting signal for the next run.
+
+### What the Default Control Law Does
+
+The current `DefaultSineControlLaw` in `sine_sys_id_utilities.py` can be understood as having the following stages.
+
+#### Stage 1: Parse and store the specification
+
+In `__init__`, the default control law:
+
+- stores the sine specifications,
+- computes the combined target signals,
+- computes instantaneous frequency, argument, amplitude, and phase trajectories,
+- and determines the active tone slices.
+
+This establishes the full target trajectory that the environment will attempt to realize.
+
+#### Stage 2: Ingest the system identification results
+
+In `system_id_update`, the default law:
+
+- stores FRFs and related noise/coherence information,
+- computes the pseudoinverse of the FRF matrix,
+- interpolates that pseudoinverse onto the tone trajectories,
+- and computes preshaped drive amplitudes and phases.
+
+This stage generates the initial open-loop estimate of the excitation.
+
+#### Stage 3: Build preshaped drive signals
+
+Still within `system_id_update`, the default implementation reconstructs the corresponding time-domain preshaped drives by applying the amplitude and phase trajectories to the tone arguments.
+
+These preshaped drives are what the environment uses as the baseline excitation before any online correction is applied.  This is the signal used to develop the test predictions shown on the `Test Predictions` tab.
+
+#### Stage 4: Initialize runtime control state
+
+In `initialize_control`, the default control law:
+
+- selects the active tones,
+- defines the run interval,
+- sets up ramp-up and ramp-down data,
+- seeds the write and analysis indices,
+- prepares the first excitation signal block,
+- and initializes the correction state.
+
+This transitions the control law from an open-loop prediction object into a live online controller.
+
+#### Stage 5: Update based on measured response
+
+In `update_control`, the default implementation:
+
+- stores the measured response data,
+- constructs the target complex response for the current block,
+- constructs the achieved complex response for the same block,
+- computes the blockwise complex error,
+- maps that error back through the interpolated FRF pseudoinverse,
+- scales the update by the convergence factor,
+- and accumulates the correction.
+
+This is the core online feedback stage.
+
+#### Stage 6: Generate the next output block
+
+In `generate_signal`, the default control law:
+
+- takes the next preshaped excitation block,
+- adds the accumulated complex correction,
+- clips amplitudes if a maximum drive limit is configured,
+- converts the result to a real time-domain drive block,
+- and returns it.
+
+This continues until all requested signal data have been generated.
+
+#### Stage 7: Finalize
+
+In `finalize_control`, the default law returns the final drive predictions and associated arrays so they can be reused or displayed after the run.
+
+### What a Custom Sine Control Law Must Do
+
+A replacement control law should preserve the same broad responsibilities, even if the mathematics differ.
+
+At minimum, a custom implementation should be able to:
+
+1. accept and store specification information,
+2. accept updated system identification results,
+3. compute an initial open-loop drive estimate,
+4. initialize per-run state,
+5. compare achieved response to target response during the run,
+6. compute and accumulate drive corrections,
+7. generate output signal blocks,
+8. optionally finalize or update future drive predictions after the run.
+
+In other words, even if a custom control law uses a completely different control strategy, it still needs to participate correctly in the same lifecycle as the default implementation.
+
+### Practical Guidance for Implementing a Replacement
+
+#### Preserve state explicitly
+
+The Sine control problem is inherently stateful. A custom class should explicitly track:
+
+- target signal arrays,
+- preshaped drive arrays,
+- current write and analysis indices,
+- accumulated corrections,
+- and any other information needed between method calls.
+
+#### Be careful about coordinate systems
+
+The control law may be operating on:
+
+- physical control channels,
+- transformed response coordinates,
+- physical drive channels,
+- transformed drive coordinates.
+
+A custom implementation should ensure that the transfer functions, specification, and drive outputs are all interpreted in compatible coordinates.
+
+#### Respect blockwise execution
+
+The environment acquires and outputs data in finite blocks. A custom control law must therefore be designed to work incrementally, not just as a single full-signal solve.
+
+#### Use tracked data, not raw data
+
+By the time `update_control(...)` is called, the environment has already extracted:
+
+- amplitudes,
+- phases,
+- frequencies,
+- and aligned time-domain information.
+
+Most custom control laws should work with those reduced quantities rather than trying to reinterpret the raw time histories from scratch.
+
+#### Think carefully about output limits
+
+The default implementation optionally clips the magnitude of the complex excitation to a maximum drive voltage. A replacement control law should decide explicitly:
+
+- how actuator saturation is handled,
+- whether clipping is acceptable,
+- and what effect that clipping has on stability or convergence.
+
+### Summary
+
+A custom Sine control law in Rattlesnake is best understood as a **stateful object managing the full sine-test lifecycle**, not merely as a function that computes one correction.
+
+The default implementation provides a working reference for:
+
+- how to convert system ID into initial drives,
+- how to track achieved response,
+- how to compute blockwise corrections,
+- and how to generate real output signals.
+
+When implementing a replacement control law, the most important thing is not to duplicate the exact mathematics of the default implementation, but rather to preserve the required lifecycle:
+
+- initialize,
+- update from system ID,
+- initialize the run,
+- update from measured response,
+- generate output,
+- finalize.
+
+Any custom control law that satisfies that lifecycle correctly can be integrated into the Sine environment.

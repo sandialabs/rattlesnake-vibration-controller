@@ -72,7 +72,7 @@
                <bool>true</bool>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Samples Per Acquire&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of samples that the control process processes at a time.  This will be equal to the Samples per Frame * (1 - Overlap Percentage / 100).  This need correspond to the read or write size of the data acquisition system as the control process acquisition is buffered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Samples Per Acquire&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Number of samples that the control process processes at a time. This is driven by the Rattlesnake read buffer size from the data acquisition parameters.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
