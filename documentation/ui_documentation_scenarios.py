@@ -233,7 +233,7 @@ def modal_environment_scenario(display_errors=False):
     QtWidgets.QApplication.processEvents()
 
     # 15 averages x 2 second frames = ~30 s, give some margin.
-    QtTest.QTest.qWait(40000)
+    QtTest.QTest.qWait(60000)
     QtWidgets.QApplication.processEvents()
 
     env_ui.stop_environment()

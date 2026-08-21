@@ -122,6 +122,8 @@ project:
     PyPI: Python Package Index
     ReST: Representational State Transfer
     RMS: Root-Mean-Square
+    SDS: Sum of Decayed Sines
+    SRS: Shock Response Spectrum
     SVD: Singular Value Decomposition
     TRAC: Time Response Assurance Criterion
     UI: User Interface

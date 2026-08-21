@@ -59,6 +59,7 @@ import numpy as np
 import importlib
 from enum import Enum
 import os
+from scipy.io import loadmat
 import netCDF4 as nc4
 
 CONTROL_TYPE = EnvironmentType.SDS
@@ -365,18 +366,22 @@ class SDSUI(SysIdEnvironmentUI):
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
                 "Select Specification File",
-                filter="Numpy or Mat (*.npy *.npz *.mat)",
+                filter="Numpy or Mat (*.npz *.mat)",
             )
             if filename == "":
                 return
-        spec_data = np.load(filename)
+        _, extension = os.path.splitext(filename)
+        if extension.lower() == ".mat":
+            spec_data = loadmat(filename)
+        else:
+            spec_data = np.load(filename)
         self.clear_and_update_specification_table(
-            spec_data["f"],
+            spec_data["f"].squeeze(),
             spec_data["srs"],
             spec_data["lower_limit"] if "lower_limit" in spec_data else None,
             spec_data["upper_limit"] if "upper_limit" in spec_data else None,
         )
-        self.definition_widget.num_hits_spinbox.setValue(spec_data["num_hits"])
+        self.definition_widget.num_hits_spinbox.setValue(spec_data["num_hits"].squeeze())
         self.update_specification()
 
     def clear_and_update_specification_table(
