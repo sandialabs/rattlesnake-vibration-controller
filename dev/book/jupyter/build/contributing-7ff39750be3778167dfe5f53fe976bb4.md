@@ -328,16 +328,20 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
+The CI/CD pipeline comprises two GitHub Actions workflows, `ci.yml` and `release.yml`, described in detail below.
+
 ### Synopsis
 
 `ci.yml` — Continuous Integration
 
 Triggered by:
 
-* A push to *any* branch.
-* A pull request targeting `main`/`dev`.
-* Manual `workflow_dispatch` (e.g., re-running CI on demand from the GitHub Actions UI, such as forcing the full `pytest_matrix` via `test_level=full` on a branch that wouldn't otherwise trigger it).
-* `workflow_call` (for example, `release.yml` invokes `ci.yml` as its `test` job through the `workflow_call` mechanism).
+* A push to *any* branch
+* A pull request targeting `main`/`dev`
+* Manual `workflow_dispatch`
+  * *Example:* re-running CI on demand from the GitHub Actions UI, such as forcing the full `pytest_matrix` via `test_level=full` on a branch that wouldn't otherwise trigger it.
+* `workflow_call`
+  * *Example:* `release.yml` invokes `ci.yml` as its `test` job through the `workflow_call` mechanism.
 
 Six jobs, four of which share a gate:
 
@@ -348,9 +352,12 @@ Six jobs, four of which share a gate:
 1. **changes**
    * Uses [dorny/paths-filter](https://github.com/dorny/paths-filter) to detect whether docs and/or code files changed. Sets the job outputs `docs_changed` and `code_changed` (each `true`/`false`), which downstream jobs use to streamline the CI process by skipping unnecessary jobs.
 2. **pytest_matrix**
-   * Runs tests on all combinations of [macos, ubuntu, windows] × [3.11, 3.12] using `pip install .[dev]` (not `uv`) for PyQt wheel compatibility. Test scope is adaptive:
-     *  Default: `tests/short`
-     * Full suite triggered by: commit message containing `[all tests]`, manual dispatch with `test_level=full`, or branch is `main` or `dev`
+   * Runs tests on all combinations of [macOS, Ubuntu, Windows] × [3.11, 3.12] of Python using `pip install .[dev]`.  PyQt wheel compatibility requires use of `pip` instead of `uv`. Test scope is adaptive:
+     * Default: `tests/short`
+     * Full suite triggered by:
+       * commit message containing `[all tests]`, or
+       * manual dispatch with `test_level=full`, or
+       * branch is `main` or `dev`
 3. **lint**
    * Runs `uv run ruff format --check src/rattlesnake` first. This step is **non-blocking** — a
   formatting drift surfaces as a `::warning::` annotation on the workflow run instead of failing
@@ -362,13 +369,13 @@ Six jobs, four of which share a gate:
 4. **coverage**
    * Runs `pytest --cov` via `uv` with the same adaptive test scope, then calls `report_coverage.py` to generate an HTML coverage report artifact.
 5. **docs_jupyter_book**
-   * Updates `myst.yml` metadata via `report_jupyter_book.py,` then builds the Jupyter Book.
+   * Updates `myst.yml` metadata via `report_jupyter_book.py`, then builds the Jupyter Book.
 6. **deploy**
    * Assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
 
 `release.yml` — Release Pipeline
 
-Triggered only by pushing a `v*` tag — never by a branch push, not even to `main` or `dev`. Once triggered, two conditions (both checked in `validate_tag`) decide where, if anywhere, the release publishes to:
+Triggered by a `v*` **tag push**, but never a **branch push** (not even a branch push to `main` or `dev`). Once triggered, two conditions (both checked in `validate_tag`) decide where, if anywhere, the release publishes to:
 
 * **Branch:** the tag must be reachable from `main` or `dev`. A tag on any branch that is not `main`/`dev` fails the `validate_tag` job; a failed `validate_tag` job prevents any releases to TestPyPI or PyPI.
 * **Version string:** a prerelease version (`a`/`b`/`rc`/`.dev` segments) publishes to **TestPyPI**; a stable or `.post` version publishes to **PyPI**.
@@ -381,43 +388,17 @@ Six sequential jobs:
    * Verifies the tag was created on the `main` or `dev` branch, that it conforms to PEP 440, and that it is strictly newer than all existing tags.
    * Computes an `is_prerelease` job output using `packaging.version.Version(...).is_prerelease`. This is the **single source of truth** consumed by every downstream job that needs to distinguish a prerelease from a production release — nothing downstream re-derives it with its own tag matching.
 2. **test**
-   * Calls `ci.yml` as a reusable workflow (workflow_call).
+   * Calls `ci.yml` as a reusable workflow (`workflow_call`).
 3. **build**
    * Runs `uv build` and generates a Supply chain Levels for Software Artifacts (SLSA, aka "salsa") provenance attestation for the dist artifacts.
 4. **github-release**
-   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files. `prerelease:` is set directly from `validate_tag`'s `is_prerelease` output.
+   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files.
+   * `prerelease:` is set directly from `validate_tag`'s `is_prerelease` output.
 5. **publish_testpypi** / **publish_pypi**
-   * Two separate jobs, mutually exclusive via `if: needs.validate_tag.outputs.is_prerelease == 'true'` / `'false'`. Each has a hardcoded `environment:` (`testpypi` / `pypi`) and hardcoded publish target — no ternary expression to read or evaluate. In the Actions UI this shows as one job succeeding and the other skipped, so which registry a run published to is visible at a glance from the job list alone, and each job's last step also writes an explicit one-line status (e.g. "📦 Published `v1.2.3` to **production PyPI**") to the run's Summary tab.
-   * Splitting into two jobs (rather than two steps in one job) is required because GitHub Actions environments — including the `pypi` environment's required-reviewers approval gate — are configured per-job, not per-step.
-
-### Details
-
-The separate concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
-
-* **Continuous Integration (CI)**
-  * **Test (Verification)**
-    * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
-    * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
-    * **What happens:** Automated unit tests, integration tests, and code quality assessments are performed.
-      * **Testing** (e.g., [pytest](https://docs.pytest.org/en/stable/)) runs your unit and integration tests.
-      * **Code coverage** (e.g., pytest with a coverage report) assesses the number of lines of code covered by tests.
-      * **Linting** (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and 
-      * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks ensure code consistency.
-      *  **Documentation** may also be assembled and compiled.  This is particularly important for interactive documentation that has examples that depend on source code functionality.
-    * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
-  * **Build (Packaging)**
-    * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
-    * **What happens:** Tools (like `uv build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
-     * **Key Outcome:** Portability. You now have a single file (an "artifact") that contains everything needed to install your library on any compatible system.
-  * **Release (Documentation & Tagging)**
-     * **Purpose:** To create an official "point-in-time" snapshot of the project for project management and users. It uses an immutable Git tag and GitHub Release page.
-     * **What happens:** A permanent Git tag (like v1.0.0) is assigned to a specific commit. A GitHub Release page is generated with a Changelog (i.e., What's New?) and the build artifacts are attached to it as "Release Assets."
-    * **Key Outcome:** Traceability. It provides a clear history of the project's evolution and a stable place for users to download specific versions.
-* **Continuous Delivery (CD)**
-  * **Publish (Distribution)**
-     * **Purpose:** To make the software easily available to the global ecosystem.
-     * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
-     * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
+   * Two separate jobs, mutually exclusive via `if: needs.validate_tag.outputs.is_prerelease == 'true'` / `'false'`. 
+     * Each has a hardcoded `environment:` (`testpypi` / `pypi`) and hardcoded publish target — no ternary expression to read or evaluate.
+     * In the Actions UI this shows as one job succeeding and the other skipped, so which registry a run published to is visible at a glance from the job list alone, and each job's last step also writes an explicit one-line status (e.g., "📦 Published `v1.2.3` to **production PyPI**") to the run's Summary tab.
+   * Splitting into two jobs (rather than two steps in one job) is required because GitHub Actions environments (including the `pypi` environment's required-reviewers approval gate) are configured per-job, not per-step.
 
 ### Efficiency
 
@@ -464,7 +445,7 @@ Only the `pytest_matrix`, `lint`, and `coverage` jobs will be run.  The `docs_ju
 
 #### All test
 
-Regardless of the file type, if either the `main` or the `dev` branch is target
+Regardless of the file type, if either the `main` or the `dev` branch is the target
 of an update, *all tests* are run, for example,
 
 :::{figure} figures/cicd_all_jobs.svg
@@ -571,14 +552,14 @@ On the GitHub repo:
 Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 
 * Log into your [PyPI](https://pypi.org) (or [Test PyPI](https://test.pypi.org)) account
-* Go to your project's **Manage** page (or your account's **Publishing** settings if you are setting it up for the first time.)
+* Go to your project's **Manage** page (or your account's **Publishing** settings if you are setting it up for the first time)
 * Look for the **Publishing** tab
 * Click **Add new publisher**
 * Select **GitHub** as the source
 * Enter the following details:
   * Owner: sandialabs
   * Repository name: rattlesnake-vibration-controller
-  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory)
+  * Workflow name: `release.yml` (this must match your filename in your `.github/workflows/` directory)
   * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used 
     * `pypi` for live publishing to the PyPI site, and
     * `testpypi` for test publishing to the TestPyPI site.
@@ -631,6 +612,8 @@ Following is an example of creating a release with a tag.
 
 To create a prerelease on TestPyPI:
 
+The tag must be pushed from `main` or `dev` (see [Synopsis](#synopsis)); the convention (but not requirement) is to tag from `dev`, so that release-candidate tags can be tested before merging to `main`.
+
 * On the `dev` branch, create a tag and then push, e.g.,
 
 ```sh
@@ -651,6 +634,8 @@ git push origin v1.0.0rc1
 #### Create a Release
 
 To create a release on PyPI:
+
+The tag must be pushed from `main` or `dev` (see [Synopsis](#synopsis)); the convention (but not requirement) is to cut production PyPI releases from `main`, after merging in the validated work from `dev`, so that `main` reliably reflects what has actually shipped.
 
 * Merge the `dev` branch into the `main` branch.
 * On the `main` branch, create a tag using `git tag` and push it to the `main` branch on GitHub, e.g.,
