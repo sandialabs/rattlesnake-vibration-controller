@@ -969,7 +969,7 @@ This is especially valuable for SDS because the environment is naturally hit-bas
 
 #### Expected class structure
 
-A class-based SDS control law should generally provide:
+A class-based SDS control law in the SDS environment is expected to provide at least:
 
 - a constructor `__init__(...)`
 - a `system_id_update(...)` method
@@ -1009,6 +1009,17 @@ class MySDSControlLaw:
         return amplitudes, decays, delays
 ```
 
+In practice, the current example class-based implementation (`DefaultSDSControlLaw`) uses the following pattern:
+
+- `__init__(...)` stores the environment metadata, the system identification package, and any extra user-provided parameters,
+- `system_id_update(...)` performs the main SDS-table computation using the specification and FRFs,
+- `control(...)` returns the most recently computed amplitudes, decays, and delays.
+
+This means that a class-based SDS control law does **not** have to recompute the entire SDS table on every `control(...)` call. A valid implementation may instead compute the table once in `system_id_update(...)`, cache it internally, and then either:
+
+- return it unchanged, or
+- apply incremental updates based on the most recent measured hit data.
+
 #### Lifecycle of a class-based control law
 
 A class-based SDS control law participates in the environment lifecycle as follows.
@@ -1039,15 +1050,23 @@ This is useful if the class wants to store:
 - pseudoinverse matrices,
 - or any derived transfer-function quantities.
 
-##### `control(...)`
+#### `control(...)`
 
-This method is called to actually compute the next SDS table.
+This method is called to obtain the SDS table that should be used for prediction or for the next hit.
 
-A class-based control law should perform whatever computations it needs and then return:
+A class-based control law may choose to:
+
+- recompute the SDS table from scratch,
+- apply a hit-to-hit update to a previously computed table,
+- or simply return the most recently cached table.
+
+The current example class-based control law uses the third approach: it performs the main inversion and table construction in `system_id_update(...)`, then `control(...)` returns the most recently computed:
 
 - amplitudes,
 - decays,
 - delays.
+
+This is a valid pattern when the control law is effectively open-loop after the most recent system-identification update.
 
 #### Practical guidance
 
@@ -1085,7 +1104,7 @@ This mode is best suited to research-oriented or experimental control implementa
 
 One of the most useful SDS features is that additional control-law parameters can be exposed automatically in the Environment Definition page when a Python control function is loaded.
 
-When the user loads a Python module containing candidate SDS control laws, the UI inspects the available functions and identifies which ones are valid control laws.
+When the user loads a Python module containing candidate SDS control laws, the UI inspects the available functions and classes and identifies which ones are valid control laws.
 
 A function is considered valid if it contains the required arguments:
 
@@ -1146,7 +1165,9 @@ in the SDS Environment Definition page.
 
 The UI collects those values into a dictionary and stores them in the `ControlParameters` metadata object.
 
-When the environment later calls the function-based control law, those parameters are unpacked as keyword arguments:
+For class-based SDS control laws, the same idea applies to the constructor. The UI inspects the `__init__(...)` signature of the class and exposes any supported additional keyword-capable constructor arguments as editable GUI parameters, while ignoring the standard runtime-provided SDS arguments such as the environment metadata and system identification package.
+
+When the environment later calls the function-based control law or class control law's `__init__(...)` method, those parameters are unpacked as keyword arguments:
 
 ```python
 control_law(
@@ -1161,6 +1182,7 @@ control_law(
     **control_parameters,
 )
 ```
+
 
 Thus, extra control-law arguments are simply normal Python keyword arguments whose values are supplied by the UI.
 
