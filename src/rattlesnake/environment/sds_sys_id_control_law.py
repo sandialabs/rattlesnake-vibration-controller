@@ -257,3 +257,250 @@ def default_control_law(
         decays = np.concatenate((decays, np.zeros((1, decays.shape[-1]))))
 
     return amplitudes, decays, delays
+
+
+class DefaultSDSControlLaw:
+    """
+    Class-based SDS control law equivalent to the default function-based control law.
+
+    The class stores environment metadata and the most recent system identification
+    package. The actual SDS table computation is performed in `system_id_update(...)`,
+    and `control(...)` returns the most recently computed amplitudes, decays, and delays.
+    """
+
+    def __init__(
+        self,
+        environment_metadata: SDSMetadata,
+        sysid_data: SysIdDataPackage,
+        last_response_srs: np.ndarray = None,
+        last_drive_amplitudes: np.ndarray = None,
+        last_drive_decays: np.ndarray = None,
+        last_drive_delays: np.ndarray = None,
+        *,
+        rcond_class: float = 1e-10,
+        accuracy_weight: float = 100.0,
+        input_weight: float = 1.0,
+        **kwargs,
+    ):
+        self.environment_metadata = environment_metadata
+        self.sysid_data = sysid_data
+        if sysid_data.sysid_frf is not None:
+            self.system_id_update(sysid_data)
+        else:
+            self.sysid_data = sysid_data
+
+        self.last_response_srs = last_response_srs
+        self.last_drive_amplitudes = last_drive_amplitudes
+        self.last_drive_decays = last_drive_decays
+        self.last_drive_delays = last_drive_delays
+
+        self.rcond = rcond_class
+        self.accuracy_weight = accuracy_weight
+        self.input_weight = input_weight
+        self.extra_parameters = kwargs
+
+        self.output_amplitudes = None
+        self.output_decays = None
+        self.output_delays = None
+
+    def system_id_update(self, sysid_data: SysIdDataPackage):
+        """
+        Update the internal system identification package and recompute the SDS table.
+
+        Parameters
+        ----------
+        sysid_data : SysIdDataPackage
+            The latest system identification data package.
+        """
+        print("Running class-based default SDS control law system_id_update!")
+
+        self.sysid_data = sysid_data
+
+        # Main control frequencies (not including compensation pulse)
+        control_frequencies = self.environment_metadata.get_sds_frequencies()
+        all_frequencies = self.environment_metadata.get_sds_frequencies_w_compensation_pulse()
+
+        num_control_freqs = len(control_frequencies)
+        num_all_freqs = len(all_frequencies)
+        num_drive_channels = self.environment_metadata.num_reference_channels
+        num_control_channels = self.environment_metadata.num_response_channels
+
+        # Use metadata-defined decays
+        control_decays = self.environment_metadata.get_sds_decays()
+        all_decays = self.environment_metadata.get_sds_decays_w_compensation_pulse()
+
+        # Pull target SRS from metadata
+        target_srs = np.array(self.environment_metadata.specification_data.srs_spec, dtype=float)
+        target_frequencies = np.array(
+            self.environment_metadata.specification_data.frequencies, dtype=float
+        )
+
+        if target_srs.shape[0] != num_control_freqs:
+            raise ValueError(
+                f"Specification SRS frequency dimension ({target_srs.shape[0]}) does not match "
+                f"number of SDS frequencies ({num_control_freqs})."
+            )
+
+        if target_srs.shape[1] != num_control_channels:
+            raise ValueError(
+                f"Specification SRS channel dimension ({target_srs.shape[1]}) does not match "
+                f"number of control channels ({num_control_channels})."
+            )
+
+        # Build initial response-side SDS amplitudes/decays
+        sds_amplitudes = []
+        sds_decays = []
+        for index, specification in enumerate(target_srs.T):
+            breakpoint_table = np.concatenate(
+                (target_frequencies[:, np.newaxis], specification[:, np.newaxis]),
+                axis=-1,
+            )
+            _, _, _, _, sine_amplitudes, sine_decays, _ = sum_decayed_sines(
+                self.environment_metadata.sample_rate,
+                self.environment_metadata.block_size,
+                sine_frequencies=control_frequencies,
+                sine_decays=control_decays,
+                srs_breakpoints=breakpoint_table,
+                srs_damping=self.environment_metadata.srs_data.srs_damping,
+                srs_type=self.environment_metadata.srs_data.srs_type.value
+                * self.environment_metadata.srs_data.srs_displacement.value,
+                ignore_compensation_pulse=True,
+            )
+            sds_amplitudes.append(sine_amplitudes)
+            sds_decays.append(sine_decays)
+        sds_amplitudes = np.array(sds_amplitudes)
+        sds_decays = np.array(sds_decays)
+
+        # Get the transfer functions
+        frf_frequencies = self.sysid_data.frequencies
+        frf_matrix = self.sysid_data.sysid_frf
+        frf_interpolator = interp1d(
+            frf_frequencies,
+            frf_matrix,
+            axis=0,
+            kind="linear",
+            bounds_error=True,
+        )
+        A_all = frf_interpolator(control_frequencies)
+        b_all = sds_amplitudes[:, :-1].T
+
+        # Solve for specification phases that reduce drive effort
+        x_opt = []
+        b_opt = []
+
+        for A, b_amplitude in zip(A_all, b_all):
+            x_o, b_o, _ = optimize_phase_targets_pinv(
+                A,
+                b_amplitude,
+                rcond=self.rcond,
+                weight_accuracy=self.accuracy_weight,
+                weight_magnitude=self.input_weight,
+            )
+            x_opt.append(x_o)
+            b_opt.append(b_o)
+
+        x_opt = np.array(x_opt)
+        b_opt = np.array(b_opt)
+
+        # Recompute the response-side SDS with preferred phasing
+        phases = np.angle(b_opt).T
+        delays = -phases / (2 * np.pi * control_frequencies)
+        decays = sds_decays[:, :-1]
+
+        sds_amplitudes = []
+        sds_decays = []
+        for index, specification in enumerate(target_srs.T):
+            breakpoint_table = np.concatenate(
+                (target_frequencies[:, np.newaxis], specification[:, np.newaxis]),
+                axis=-1,
+            )
+            _, _, _, _, sine_amplitudes, sine_decays, _ = sum_decayed_sines(
+                self.environment_metadata.sample_rate,
+                self.environment_metadata.block_size,
+                sine_frequencies=control_frequencies,
+                sine_decays=decays[index],
+                sine_delays=delays[index],
+                srs_breakpoints=breakpoint_table,
+                srs_damping=self.environment_metadata.srs_data.srs_damping,
+                srs_type=self.environment_metadata.srs_data.srs_type.value
+                * self.environment_metadata.srs_data.srs_displacement.value,
+                ignore_compensation_pulse=True,
+            )
+            sds_amplitudes.append(sine_amplitudes)
+            sds_decays.append(sine_decays)
+        sds_amplitudes = np.array(sds_amplitudes)
+        sds_decays = np.array(sds_decays)
+
+        # Solve again for the actual drive signals using the improved response-side target
+        x_opt = []
+        b_opt2 = []
+        angle_guess = np.angle(b_opt)
+        b_all = sds_amplitudes[:, :-1].T
+
+        for A, b, phi0 in zip(A_all, b_all, angle_guess):
+            x_o, b_o, _ = optimize_phase_targets_pinv(
+                A,
+                np.abs(b),
+                rcond=self.rcond,
+                phi0=phi0,
+                weight_accuracy=self.accuracy_weight,
+                weight_magnitude=self.input_weight,
+            )
+            x_opt.append(x_o)
+            b_opt2.append(b_o)
+
+        x_opt = np.array(x_opt).T
+        b_opt2 = np.array(b_opt2).T
+
+        amplitudes = np.abs(x_opt).T
+        drive_phases = np.angle(x_opt)
+        delays = (-drive_phases / (2 * np.pi * control_frequencies)).T
+        decays = np.tile(sds_decays[:1, :-1], [amplitudes.shape[-1], 1]).T
+
+        # Add back the compensation pulse if necessary
+        if self.environment_metadata.compensation_pulse_data.use_compensation_pulse:
+            amplitudes = np.concatenate((amplitudes, np.zeros((1, amplitudes.shape[-1]))))
+            delays = np.concatenate((delays, np.zeros((1, delays.shape[-1]))))
+            decays = np.concatenate((decays, np.zeros((1, decays.shape[-1]))))
+
+        self.output_amplitudes = amplitudes
+        self.output_decays = decays
+        self.output_delays = delays
+
+    def control(
+        self,
+        last_response_srs: np.ndarray = None,
+        last_response_signals: np.ndarray = None,
+        last_drive_amplitudes: np.ndarray = None,
+        last_drive_decays: np.ndarray = None,
+        last_drive_delays: np.ndarray = None,
+        last_drive_signals: np.ndarray = None,
+    ):
+        """
+        Return the most recently computed SDS table parameters.
+
+        At present this class-based default control law is effectively open-loop
+        after the most recent `system_id_update(...)`. Closed-loop hit-to-hit
+        correction can be added here in the future.
+
+        Returns
+        -------
+        amplitudes : ndarray
+        decays : ndarray
+        delays : ndarray
+        """
+        self.last_response_srs = last_response_srs
+        self.last_drive_amplitudes = last_drive_amplitudes
+        self.last_drive_decays = last_drive_decays
+        self.last_drive_delays = last_drive_delays
+
+        if (
+            self.output_amplitudes is None
+            or self.output_decays is None
+            or self.output_delays is None
+        ):
+            raise ValueError(
+                "DefaultSDSControlLaw.control() called before system_id_update() computed the SDS table."
+            )
+
+        return self.output_amplitudes, self.output_decays, self.output_delays

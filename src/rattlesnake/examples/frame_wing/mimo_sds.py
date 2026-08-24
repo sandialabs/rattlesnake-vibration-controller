@@ -151,13 +151,13 @@ def build_mimo_sds_controller(threaded=False):
 
     rattlesnake.initialize_environments([environment_metadata])
 
-    rattlesnake.initialize_system_id(sysid_parameters, environment_metadata.environment_name)
-    rattlesnake.run_system_id(sysid_parameters, environment_metadata.environment_name)
+    # rattlesnake.initialize_system_id(sysid_parameters, environment_metadata.environment_name)
+    # rattlesnake.run_system_id(sysid_parameters, environment_metadata.environment_name)
 
-    rattlesnake.initialize_profile_event_list([])
+    # rattlesnake.initialize_profile_event_list([])
 
-    stream_metadata = StreamMetadata(StreamType.NO_STREAM, stream_file=None)
-    rattlesnake.start_acquisition(stream_metadata)
+    # stream_metadata = StreamMetadata(StreamType.NO_STREAM, stream_file=None)
+    # rattlesnake.start_acquisition(stream_metadata)
 
     return rattlesnake
 

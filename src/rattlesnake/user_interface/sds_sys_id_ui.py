@@ -199,7 +199,13 @@ class SDSUI(SysIdEnvironmentUI):
         self.definition_widget.control_function_input.currentIndexChanged.connect(
             self.set_up_widgets
         )
+        self.definition_widget.control_function_input.currentIndexChanged.connect(
+            self.update_generator_selector
+        )
         self.definition_widget.load_breakpoints_button.clicked.connect(self.load_specification)
+        self.definition_widget.control_script_load_file_button.clicked.connect(
+            self.select_python_module
+        )
         # Prediction
         self.prediction_widget.recompute_prediction_button.clicked.connect(
             self.recompute_prediction
@@ -660,7 +666,7 @@ class SDSUI(SysIdEnvironmentUI):
 
     @staticmethod
     def get_valid_control_laws(module):
-        required_control_law_arguments = {
+        required_function_arguments = {
             "environment_metadata",
             "sysid_data",
             "last_response_srs",
@@ -670,79 +676,125 @@ class SDSUI(SysIdEnvironmentUI):
             "last_drive_delays",
             "last_drive_signals",
         }
+
+        required_class_init_arguments = {
+            "environment_metadata",
+            "sysid_data",
+        }
+
         valid_control_laws = []
         members = inspect.getmembers(module)
+
         for objname, obj in members:
-            # print(f"Analyzing member {objname}")
             valid_control_law = True
-            # Check if it is a function
+            extra_arguments = []
+
+            # ------------------------------------------------------------
+            # Function-based control law
+            # ------------------------------------------------------------
             if inspect.isfunction(obj):
                 signature = inspect.signature(obj)
                 parameters = signature.parameters
-                # Check if is a valid object
-                if not all(arg in parameters for arg in required_control_law_arguments):
-                    # print(f"Member {objname} does not have all required arguments")
+
+                if not all(arg in parameters for arg in required_function_arguments):
                     continue
-                # Get extra arguments
-                extra_arguments = []
-                # print(f"{signature=}")
-                # print(f"{parameters=}")
+
                 for name, parameter in parameters.items():
-                    # Extra arguments are not required arguments
-                    if name in required_control_law_arguments:
-                        # print(f"  Argument {name} is a required argument")
+                    if name in required_function_arguments:
                         continue
-                    # Extra arguments must be be able to be set by keyword
-                    elif parameter.kind != inspect.Parameter.POSITIONAL_ONLY:
+
+                    # only expose keyword-capable extra arguments
+                    if parameter.kind in (
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY,
+                    ):
                         annotation = parameter.annotation
                         default = parameter.default
-                        if (
-                            not SDSUI.valid_annotation(annotation)
-                            and default == inspect.Parameter.empty
+
+                        if annotation is inspect.Parameter.empty or not SDSUI.valid_annotation(
+                            annotation
                         ):
-                            # If it doesn't have an annotation, we can't automatically create a
-                            # widget for it, so if it also doesn't have a default argument, we can't
-                            # use it.
-                            # print(
-                            #     f"  Argument {name} has no valid annotation or default "
-                            #     "value, invalid control law"
-                            # )
-                            valid_control_law = False
-                            break
-                        if (
-                            not SDSUI.valid_annotation(annotation)
-                            and default != inspect.Parameter.empty
-                        ):
-                            # print(
-                            #     f"  Argument {name} has an invalid annotation but contains a "
-                            #     "default value which will be used, and will therefore not be "
-                            #     "treated as an extra parameter"
-                            # )
+                            if default is inspect.Parameter.empty:
+                                valid_control_law = False
+                                break
                             continue
+
                         extra_arguments.append([name, annotation, default])
+
                     elif (
                         parameter.kind == inspect.Parameter.POSITIONAL_ONLY
-                        and default == inspect.Parameter.empty
+                        and parameter.default == inspect.Parameter.empty
                     ):
-                        # print(
-                        #     f"  Argument {name} is positional only without a "
-                        #     "default and therefore cannot be specified."
-                        # )
                         valid_control_law = False
                         break
-                    else:
-                        # print(
-                        #     f"  Argument {name} is positional only but has a default argument"
-                        #     "which will be used, and will therefore not be treated as an "
-                        #     "extra parameter"
-                        # )
-                        continue
-                if not valid_control_law:
+
+                if valid_control_law:
+                    valid_control_laws.append([objname, extra_arguments])
+
+            # ------------------------------------------------------------
+            # Class-based control law
+            # ------------------------------------------------------------
+            elif inspect.isclass(obj):
+                # Must provide the methods used by SDS environment
+                if not hasattr(obj, "control") or not callable(getattr(obj, "control")):
                     continue
-                valid_control_laws.append([objname, extra_arguments])
-            # else:
-            # print(f"Member {objname} is not a valid type of object to be a control law")
-        # print(valid_control_laws)
+                if not hasattr(obj, "system_id_update") or not callable(
+                    getattr(obj, "system_id_update")
+                ):
+                    continue
+
+                try:
+                    init_signature = inspect.signature(obj.__init__)
+                except (TypeError, ValueError):
+                    continue
+
+                init_parameters = init_signature.parameters
+
+                if not all(arg in init_parameters for arg in required_class_init_arguments):
+                    continue
+
+                for name, parameter in init_parameters.items():
+                    if name == "self":
+                        continue
+                    if name in required_class_init_arguments:
+                        continue
+
+                    # These are runtime-provided optional environment values, not GUI extras
+                    if name in {
+                        "last_response_srs",
+                        "last_drive_amplitudes",
+                        "last_drive_decays",
+                        "last_drive_delays",
+                    }:
+                        continue
+
+                    if parameter.kind in (
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY,
+                    ):
+                        annotation = parameter.annotation
+                        default = parameter.default
+
+                        if annotation is inspect.Parameter.empty or not SDSUI.valid_annotation(
+                            annotation
+                        ):
+                            if default is inspect.Parameter.empty:
+                                valid_control_law = False
+                                break
+                            continue
+
+                        extra_arguments.append([name, annotation, default])
+
+                    elif (
+                        parameter.kind == inspect.Parameter.POSITIONAL_ONLY
+                        and parameter.default == inspect.Parameter.empty
+                    ):
+                        valid_control_law = False
+                        break
+
+                if valid_control_law:
+                    valid_control_laws.append([objname, extra_arguments])
+
         return valid_control_laws
 
     def select_python_module(
@@ -792,6 +844,7 @@ class SDSUI(SysIdEnvironmentUI):
         for function in self.python_function_extra_arguments:
             self.definition_widget.control_function_input.addItem(function[0])
         self.set_up_widgets()
+        self.update_generator_selector()
 
     @staticmethod
     def create_widget_for_type(arg_type, default_value):
@@ -830,6 +883,47 @@ class SDSUI(SysIdEnvironmentUI):
             widget = SDSUI.create_widget_for_type(arg_type, arg_default)
             layout.addRow(arg_name, widget)
             self.python_function_extra_argument_widgets[arg_name] = widget
+
+    def update_generator_selector(self):
+        """Updates the control type selector based on the selected control object."""
+        # print(
+        #     f"Called Update Generator Selector with \n{self.python_control_module=}\n"
+        #     + f"{self.definition_widget.control_function_input.currentIndex()=}\n"
+        #     + f"{self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex())=}."
+        # )
+        if self.python_control_module is None:
+            # print("Control Module is None")
+            return
+
+        try:
+            obj = getattr(
+                self.python_control_module,
+                self.definition_widget.control_function_input.itemText(
+                    self.definition_widget.control_function_input.currentIndex()
+                ),
+            )
+        except AttributeError:
+            # print("Couldn't get the object from the module!")
+            return
+
+        if inspect.isgeneratorfunction(obj):
+            # SDS doesn't currently use generator-style control laws, but preserve the pattern
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                ControlLawType.FUNCTION.value
+            )
+        elif inspect.isclass(obj):
+            if hasattr(obj, "send_command") or hasattr(obj, "update_parameters"):
+                self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                    ControlLawType.INTERACTIVE_CLASS.value
+                )
+            else:
+                self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                    ControlLawType.CLASS.value
+                )
+        else:
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(
+                ControlLawType.FUNCTION.value
+            )
 
     def collect_control_extra_parameters(self):
         kwargs = {}
