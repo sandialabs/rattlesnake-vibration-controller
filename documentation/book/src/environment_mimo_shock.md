@@ -1080,6 +1080,7 @@ In this mode, the environment can:
 
 This mode is best suited to research-oriented or experimental control implementations.
 
+(sec:mimo_sds_control_law_parameters)=
 ### Additional Control-Law Parameters and GUI Population
 
 One of the most useful SDS features is that additional control-law parameters can be exposed automatically in the Environment Definition page when a Python control function is loaded.
