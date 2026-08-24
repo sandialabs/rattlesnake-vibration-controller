@@ -78,7 +78,7 @@ def run_environment_for_documentation(
         handle,
         env_ui.environment_name,
         active=True,
-        timeout=30.0,
+        timeout=240.0,
     )
     if not started:
         raise RuntimeError(f"Environment {env_ui.environment_name} did not become active in time.")
