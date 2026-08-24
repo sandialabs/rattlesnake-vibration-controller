@@ -16,7 +16,7 @@ numbering:
 (sec:mimo_shock)=
 # Multiple Input/Multiple Output Shock Control
 
-The MIMO Shock environment in Rattlesnake is currently implemented as a sum-of-decayed-sines (SDS) shock environment. Its purpose is to generate one or more drive signals whose resulting measured responses match a specified shock response spectrum (SRS) at one or more control channels.
+The MIMO Shock environment in Rattlesnake is implemented as a sum-of-decayed-sines (SDS) shock environment. Its purpose is to generate one or more drive signals whose resulting measured responses match a specified shock response spectrum (SRS) at one or more control channels.
 
 The environment supports:
 
@@ -508,13 +508,289 @@ Control Time Window
 ```{embed} #sec:srs_sds_run:data_display_groupbox
 ```
 
+## Output NetCDF File Structure
+
+Like the other environments in Rattlesnake, the SDS environment stores its metadata in a netCDF group whose name matches the environment name.
+
+Because the SDS environment derives from the shared system-identification infrastructure, its netCDF group contains SDS-specific metadata, shared system-ID metadata, and, when saving control data, the current SDS table, most recent hit data, and hit history.
+
+Due to the complexity of the metadata for the SDS environment, the metadata is spread between the main group and several subgroups, each handling a specific portion of the metadata.
+
+### NetCDF Dimensions
+
+The SDS environment creates the following dimensions in its netCDF group.
+
+- **control_channels** — the number of physical control channels.
+- **specification_channels** — the number of specification/control channels after transformation.
+- **tone_data_size** — the number of tone-definition values used when tones are specified explicitly.
+- **num_decays** — the number of explicitly stored decay values if decays are not common across tones.
+- **num_frequencies** — the number of SRS frequency lines in the specification.
+- **num_spec_signals** — the number of control/specification channels in the SRS specification.
+- **sds_frequencies** — the number of frequencies in the run SDS table when saving control data.
+- **sds_drive_channels** — the number of drive channels in the run SDS table when saving control data.
+- **hit_history_length** — the number of historical hits when saving control data.
+- **response_transformation_rows** — the number of rows in the response transformation matrix, if one is defined.
+- **response_transformation_cols** — the number of columns in the response transformation matrix, if one is defined.
+- **reference_transformation_rows** — the number of rows in the excitation/output transformation matrix, if one is defined.
+- **reference_transformation_cols** — the number of columns in the excitation/output transformation matrix, if one is defined.
+
+### NetCDF Attributes
+
+The SDS environment group stores both shared system-ID attributes and SDS-specific attributes on the environment's netCDF group.
+
+- **sysid_sample_rate** — the sample rate used during system identification.
+- **sysid_frame_size** — the number of samples per frame used during system identification.
+- **sysid_averaging_type** — the averaging scheme used in the system identification (`Linear` or `Exponential`).
+- **sysid_noise_averages** — the number of frames used in the noise-floor characterization.
+- **sysid_averages** — the number of frames used in the transfer-function measurement.
+- **sysid_exponential_averaging_coefficient** — the exponential averaging coefficient when exponential averaging is selected.
+- **sysid_estimator** — the estimator used for FRF computation, such as H1, H2, H3, or Hv.
+- **sysid_level** — the excitation level used during system identification.
+- **sysid_level_ramp_time** — the ramp time used to transition into and out of the system identification level.
+- **sysid_signal_type** — the signal type used during system identification.
+- **sysid_window** — the window applied to the time frames during system identification.
+- **sysid_overlap** — the overlap fraction used during system identification.
+- **sysid_burst_on** — the fraction of the burst-random frame that is “on,” if burst random is used.
+- **sysid_pretrigger** — the fraction of the frame used as pretrigger for burst-random system identification.
+- **sysid_burst_ramp_fraction** — the fraction of the burst-random “on” interval used to ramp the burst up and down.
+- **sysid_low_frequency_cutoff** — the low-frequency cutoff used during system identification.
+- **sysid_high_frequency_cutoff** — the high-frequency cutoff used during system identification.
+- **block_size** — the number of samples in one SDS hit block.
+
+When saving current control data after or during a run, additional scalar attributes are also stored, including:
+
+- **current_test_level_db** — the run test level in dB,
+- **current_test_level_scale** — the corresponding linear scale factor,
+- **total_hits** — cumulative number of hits,
+- **hits_at_target** — cumulative number of hits at the currently selected test level,
+- **allow_automatic_updates** — whether the run table is being automatically updated.
+
+### NetCDF Variables
+
+Only one variable consistently exists in the root environment group.
+
+- **control_channel_indices** — the indices of the physical control channels in the environment.  These indices correspond to the physical channels that define the control degrees of freedom before any response transformation is applied.  Type: 32-bit integer; Dimensions: `control_channels`
+
+If transformation matrices are defined, the following variables may also be present directly on the environment group:
+
+- **response_transformation_matrix** — the transformation matrix applied to the physical control channels.  Type: 64-bit float; Dimensions: `specification_channels` × `control_channels`
+- **reference_transformation_matrix** — the transformation matrix applied to the physical drive channels.  Type: 64-bit float; Dimensions: `reference_transformation_rows` × `reference_transformation_cols`
+
+These variables are omitted when no transformation is used.
+
+### Tone Parameters Subgroup
+
+The subgroup **tone_parameters** stores:
+
+- **tone_data_size** (dimension) — This dimension will only exist if the `tone_data` variable exists.  It will be `3` if the tone strategy is "octave spacing"; otherwise, it will be the number of manual tones specified.
+- **strategy** (attribute) — A numerical value representing the tone-generation strategy:
+  - from specification (`strategy == 0`)
+  - octave spacing (`strategy == 1`)
+  - manual tones (`stragegy == 2`)
+- **tone_data** (variable, optional) — the associated tone-definition values.  If the tone strategy is "from specification", this variable will not exist.  If the tone strategy is "octave spacing", it will have three values, which are the minimum frequency, maximum frequency, and tones per octave.  If the tone strategy is "manual tones", it will include each frequency.  Type: 64-bit float; Dimensions: `tone_data_size`.
+
+### Compensation Pulse Subgroup
+
+The subgroup **compensation_pulse_parameters** stores the following attributes:
+
+- **use_compensation_pulse** — whether a compensation pulse is enabled.  It is represented as a boolean integer with `0` representing no compensation pulse used and `1` when using a compensation pulse.
+- **compensation_frequency** — compensation frequency if specified explicitly.  If this value is not defined and `use_compensation_pulse == 1`, then the frequency is automatically selected.
+- **compensation_decay** — compensation decay value.  This value is only defined if a compensation pulse is used.
+
+### Decay Parameters Subgroup
+
+The subgroup **decay_parameters** stores the following attributes:
+
+- **decay_strategy** — an integer describing how the decay values were originally specified.  The supported values correspond to the `DecayStrategy` enumeration:
+  - `0` = damping
+  - `1` = time constant
+  - `2` = number of time constants
+- **common_decay** — a boolean integer indicating whether a single common decay value is used for all tones.  A value of `1` means a single decay value is used for all tones, while `0` means one decay value is specified per tone.
+
+This subgroup also stores one of the following:
+
+- **decay_data** — if `common_decay == 1`, then `decay_data` is stored as a scalar attribute representing the common decay value.
+- **num_decays** (dimension) and **decay_data** (variable) — if `common_decay == 0`, then a dimension `num_decays` is created and the decay values are stored as a one-dimensional variable.  Type: 64-bit float; Dimensions: `num_decays`.
+
+### SRS Parameters Subgroup
+
+The subgroup **srs_parameters** stores the following attributes:
+
+- **srs_type** — an integer identifying the SRS response type, corresponding to the `SRSType` enumeration.
+  - Primary Positive = 1
+  - Primary Negative = 2
+  - Primary Absolute Maximum = 3
+  - Residual Positive = 4
+  - Residual Negative = 5
+  - Residual Absolute Maximum = 6
+  - Maximum Positive = 7
+  - Maximum Negative = 8
+  - Maximum Absolute Maximum = 9
+- **srs_displacement** — an integer identifying whether absolute (`1`) or relative displacement (`-1`) is used in the SRS computation.
+- **srs_damping** — the damping ratio used in the SRS computation.
+
+These values fully define how the environment computes SRS values from transient response data.
+
+### SDS Synthesis Parameters Subgroup
+
+The subgroup **sds_parameters** stores the following attributes:
+
+- **iterations** — the number of iterations used by the SDS synthesis algorithm.
+- **convergence** — the convergence factor used by the iterative SDS synthesis.
+- **scale_factor** — a multiplicative factor applied during SDS synthesis to bias the result toward slightly over-hitting the target.
+- **error_tolerance** — the allowable fractional error used during SDS synthesis.
+
+These values define how the response-side sum-of-decayed-sines synthesis is performed before the MIMO inverse is solved.
+
+### Specification Parameters Subgroup
+
+The subgroup **specification_parameters** stores the user’s SRS specification.  It contains the following attribute:
+
+- **num_hits** — the requested number of hits to perform at the selected level.
+
+The subgroup also stores the following dimensions:
+
+- **num_frequencies** — the number of frequency lines in the specification.
+- **num_spec_signals** — the number of control/specification channels.
+
+The following variables are then defined:
+
+- **frequencies** — the specification SRS frequencies in Hz.  Type: 64-bit float; Dimensions: `num_frequencies`
+- **srs_spec** — the required SRS amplitudes at each specification frequency for each control channel.  Type: 64-bit float; Dimensions: `num_frequencies` × `num_spec_signals`
+- **srs_lower_limit** — the lower SRS limits at each specification frequency for each control channel.  Type: 64-bit float; Dimensions: `num_frequencies` × `num_spec_signals`
+- **srs_upper_limit** — the upper SRS limits at each specification frequency for each control channel.  Type: 64-bit float; Dimensions: `num_frequencies` × `num_spec_signals`
+
+If control or limits are not required for particular frequency/channel combinations, those entries may be `NaN`.
+
+### Control Parameters Subgroup
+
+The subgroup **control_parameters** stores metadata describing the SDS control law.  It contains the following attributes:
+
+- **control_type** — an integer specifying how the control law is implemented.  The values correspond to the `ControlLawType` enumeration:
+  - `0` = function
+  - `1` = class
+  - `2` = interactive class
+- **control_script** — the Python module or script path containing the control law.
+- **control_object** — the function or class name inside the control script.
+
+A nested subgroup named **control_extra_parameters** is also created.  This subgroup stores each additional control-law parameter as an attribute on the subgroup, using the parameter name as the attribute key.
+
+This allows arbitrary scalar control-law settings to be stored without changing the netCDF schema.
+
+### Saved Control Data
+
+When the user saves current SDS control data from the Run Test page rather than streaming, the netCDF file additionally stores the current run state, including:
+
+- the current SDS table:
+  - **run_table_frequency**
+  - **run_table_amplitude**
+  - **run_table_delay**
+  - **run_table_decay**
+- the most recent measured drive time history:
+  - **measured_drive_time_history**
+- the most recent measured response time history:
+  - **measured_response_time_history**
+- the most recent measured response SRS:
+  - **measured_response_srs**
+- convenience copies of the specification arrays:
+  - **specification_frequencies_array**
+  - **specification_srs**
+  - **specification_lower_limit**
+  - **specification_upper_limit**
+- hit history arrays:
+  - **hit_index**
+  - **timestamp**
+  - **test_level_db**
+  - **counted_at_target**
+  - **total_hits**
+  - **hits_at_target**
+  - **target_hits_at_level**
+
+These are in addition to the environment metadata already described above.
+
+If a run SDS table is stored, the following dimensions are created:
+
+- **sds_frequencies** — the number of rows in the current SDS table.
+- **sds_drive_channels** — the number of drive channels represented in the SDS table.
+
+The following variables are then stored:
+
+- **run_table_frequency** — the frequencies of the current SDS table.  Type: 64-bit float; Dimensions: `sds_frequencies`
+- **run_table_amplitude** — the amplitudes of the current SDS table.  Type: 64-bit float; Dimensions: `sds_frequencies` × `sds_drive_channels`
+- **run_table_delay** — the delays of the current SDS table.  Type: 64-bit float; Dimensions: `sds_frequencies` × `sds_drive_channels`
+- **run_table_decay** — the decays of the current SDS table.  Type: 64-bit float; Dimensions: `sds_frequencies` × `sds_drive_channels`
+
+If the most recent measured drive signal is available, the following dimensions are created:
+
+- **measured_drive_channels**
+- **measured_drive_samples**
+
+and the variable
+
+- **measured_drive_time_history** — the measured drive signal from the most recent hit.  Type: 64-bit float; Dimensions: `measured_drive_channels` × `measured_drive_samples`
+
+If the most recent measured control response is available, the following dimensions are created:
+
+- **measured_response_channels**
+- **measured_response_samples**
+
+and the variable
+
+- **measured_response_time_history** — the measured response signal from the most recent hit.  Type: 64-bit float; Dimensions: `measured_response_channels` × `measured_response_samples`
+
+If the most recent measured response SRS is available, the following dimensions are created:
+
+- **measured_srs_frequencies**
+- **measured_srs_channels**
+
+and the variable
+
+- **measured_response_srs** — the measured response SRS from the most recent hit.  Type: 64-bit float; Dimensions: `measured_srs_frequencies` × `measured_srs_channels`
+
+To make post-run analysis easier, the current specification is also written explicitly to the saved control-data file even though it is already represented in the metadata subgroup.  The following dimensions are created:
+
+- **specification_frequencies**
+- **specification_channels**
+
+The following variables are stored:
+
+- **specification_frequencies_array** — the specification SRS frequency vector.  Type: 64-bit float; Dimensions: `specification_frequencies`
+- **specification_srs** — the specified SRS values.  Type: 64-bit float; Dimensions: `specification_frequencies` × `specification_channels`
+- **specification_lower_limit** — the lower SRS limits.  Type: 64-bit float; Dimensions: `specification_frequencies` × `specification_channels`
+- **specification_upper_limit** — the upper SRS limits.  Type: 64-bit float; Dimensions: `specification_frequencies` × `specification_channels`
+
+When saving current SDS control data, the following scalar run-state attributes are written:
+
+- **current_test_level_db** — the currently selected SDS run level in dB.
+- **current_test_level_scale** — the corresponding linear scale factor.
+- **total_hits** — the cumulative number of hits performed in the environment.
+- **hits_at_target** — the cumulative number of hits at the currently selected test level.
+- **allow_automatic_updates** — 1 if automatic SDS table updates are enabled, 0 otherwise.
+
+The hit history is stored in a flattened array form for easy analysis.  The dimension
+
+- **hit_history_length** — the number of entries in the hit history
+
+is created, and then the following arrays are stored:
+
+- **hit_index** — integer index of each hit.  Type: integer; Dimensions: `hit_history_length`
+- **timestamp** — timestamp string for each hit.  Type: string; Dimensions: `hit_history_length`
+- **test_level_db** — test level in dB at which the hit was performed.  Type: 64-bit float; Dimensions: `hit_history_length`
+- **counted_at_target** — boolean/int flag indicating whether the hit counted toward the currently selected target-level count.  Type: integer/bool; Dimensions: `hit_history_length`
+- **total_hits** — cumulative total hit count after that hit.  Type: integer; Dimensions: `hit_history_length`
+- **hits_at_target** — cumulative hit count at the selected level after that hit.  Type: integer; Dimensions: `hit_history_length`
+- **target_hits_at_level** — requested target number of hits at that level at the time of the run.  Type: integer; Dimensions: `hit_history_length`
+
+This structure allows a saved SDS run file to serve not only as a metadata archive, but also as a record of what was actually done to the test article over the course of the run.
+
+(sec:srs_sds_control_law)=
 ## Writing a Custom SDS Control Law
 
-The SDS environment supports custom control laws through a Python function or class, but the current default implementation is a useful reference because it demonstrates the full chain from:
+The SDS environment supports custom control laws through a Python function or class, and the current default implementation is a useful reference because it demonstrates the full chain from:
 
-- specification SRS
-- to response target construction
-- to MIMO inverse
+- specification SRS,
+- to response target construction,
+- to MIMO inversion,
 - to drive amplitudes, phases, and delays.
 
 A custom SDS control law is expected to produce updated SDS table quantities:
@@ -535,7 +811,7 @@ The control law begins from the target SRS stored in the environment metadata. T
 
 #### Stage 2: Generate a decayed-sine representation of the target response
 
-For each control channel, the helper routines synthesize a decayed-sine signal whose resulting SRS approximates the target SRS. This produces:
+For each control channel, helper routines synthesize a decayed-sine signal whose resulting SRS approximates the target SRS. This produces:
 
 - sine frequencies,
 - provisional response amplitudes,
@@ -570,134 +846,415 @@ and the phases are converted to delays via
 
 #### Stage 6: Optionally include a compensation pulse row
 
-If a compensation pulse is enabled, the returned SDS table includes an additional row for it.
+If a compensation pulse is enabled, the returned SDS table includes an additional row for it. The current default control law does not yet try to optimize the compensation pulse itself, so the compensation row is currently appended with zero amplitude.
 
-### What a replacement SDS control law must do
+### Function-Based SDS Control Laws
 
-A custom SDS control law should, at minimum, be able to:
+The simplest way to implement a custom SDS control law is as a Python function.
 
-1. accept environment metadata and system-ID data,
-2. use the SRS specification as the response target,
-3. map that target into drive quantities through the FRFs,
-4. return amplitudes, decays, and delays in the table format expected by the environment.
+This is the same style used by the current default control law.
 
-During a run, if automatic table updates are enabled, the environment may call the control law after a completed hit using:
+A function-based control law is best when the control calculation is mostly stateless, all required information is naturally available from the current call, or the user wants the simplest possible implementation.
 
-- the measured response SRS,
-- the measured response time history,
-- the previous SDS table,
-- and the measured drive history.
+A function-based SDS control law must accept the core arguments expected by the environment and must return
+- amplitudes
+- decays
+- delays
+for each sine tone.
 
-Thus a replacement control law can be either:
+#### Expected function signature
 
-- a largely open-loop constructor of an SDS table, or
-- an iterative between-hit updater.
+A function-based SDS control law should have a signature compatible with:
 
-## Output NetCDF File Structure
+```python
+def my_sds_control_law(
+    environment_metadata,
+    sysid_data,
+    last_response_srs=None,
+    last_response_signals=None,
+    last_drive_amplitudes=None,
+    last_drive_decays=None,
+    last_drive_delays=None,
+    last_drive_signals=None,
+    **kwargs,
+):
+    ...
+    return amplitudes, decays, delays
+```
 
-Like the other environments in Rattlesnake, the SDS environment stores its metadata in a netCDF group whose name matches the environment name.
+The exact parameter order and keyword argument names need not match exactly, but the function must be callable using keyword arguments corresponding to the environment’s expected call pattern.
 
-Because the SDS environment derives from the shared system-identification infrastructure, its netCDF group contains:
+The function arguments are:
 
-- SDS-specific metadata,
-- shared system-ID metadata,
-- and, when saving control data, the current SDS table, most recent hit data, and hit history.
+- **environment_metadata** — the full SDS environment metadata object, including specification, tone strategy, decay strategy, SRS parameters, and control-law configuration.
+- **sysid_data** — the system identification package, including the FRFs and related system-ID outputs.
+- **last_response_srs** — the most recent measured response SRS from a completed hit, scaled back to full test level.
+- **last_response_signals** — the most recent measured response time histories from a completed hit, scaled back to full test level.
+- **last_drive_amplitudes** — the amplitudes from the previous SDS table used for the last hit.
+- **last_drive_decays** — the decays from the previous SDS table used for the last hit.
+- **last_drive_delays** — the delays from the previous SDS table used for the last hit.
+- **last_drive_signals** — the most recent measured drive time histories, scaled back to full test level.
 
-### NetCDF Dimensions
+These last-* quantities may be `None` during the initial prediction stage, before any actual hit has been performed.
 
-The SDS environment defines dimensions associated with:
+Additional keyword arguments can be specified in the function signature, but they must have type hints assigned to allow the UI to populate the correct interface to capture that argument.  See @sec:mimo_sds_control_law_parameters for more information.
 
-- the control channels,
-- the transformed control channels,
-- the SDS frequencies,
-- the drive channels,
-- the specification channels,
-- and the hit-history length if control data are saved.
+#### Return values
 
-More specifically, dimensions may include:
+The function must return three arrays:
 
-- **control_channels** — the number of physical control channels.
-- **specification_channels** — the number of specification/control channels after transformation.
-- **tone_data_size** — the number of tone-definition values used when tones are specified explicitly.
-- **num_decays** — the number of explicitly stored decay values if decays are not common across tones.
-- **num_frequencies** — the number of SRS frequency lines in the specification.
-- **num_spec_signals** — the number of control/specification channels in the SRS specification.
-- **sds_frequencies** — the number of frequencies in the run SDS table when saving control data.
-- **sds_drive_channels** — the number of drive channels in the run SDS table when saving control data.
-- **hit_history_length** — the number of historical hits when saving control data.
-- plus transformation-matrix dimensions if transformations are present.
+1. **amplitudes**
+2. **decays**
+3. **delays**
 
-### NetCDF Attributes
+These are expected to be shaped consistently with the environment’s SDS table:
 
-The SDS environment group stores both shared system-ID attributes and SDS-specific attributes.
+- one row per SDS frequency, including the compensation-pulse row if enabled,
+- one column per drive channel.
 
-#### Shared system-identification attributes
+Thus, if there are $n_f$ SDS frequencies and $n_o$ drive channels, the returned arrays should each have shape
 
-The group stores the standard system-ID metadata such as:
+\begin{equation}
+(n_f, n_o)
+\end{equation}
 
-- **sysid_sample_rate**
-- **sysid_frame_size**
-- **sysid_averaging_type**
-- **sysid_noise_averages**
-- **sysid_averages**
-- **sysid_exponential_averaging_coefficient**
-- **sysid_estimator**
-- **sysid_level**
-- **sysid_level_ramp_time**
-- **sysid_signal_type**
-- **sysid_window**
-- **sysid_overlap**
-- **sysid_burst_on**
-- **sysid_pretrigger**
-- **sysid_burst_ramp_fraction**
-- **sysid_low_frequency_cutoff**
-- **sysid_high_frequency_cutoff**
+If the compensation pulse is enabled, the final row corresponds to that compensation term.
 
-These have the same meanings as in the other system-ID-capable environments.
+#### Minimal example
 
-#### SDS-specific attributes
+A minimal function-based control law might look like:
 
-The SDS environment additionally stores:
+```python
+def my_sds_control_law(
+    environment_metadata,
+    sysid_data,
+    last_response_srs=None,
+    last_response_signals=None,
+    last_drive_amplitudes=None,
+    last_drive_decays=None,
+    last_drive_delays=None,
+    last_drive_signals=None,
+    **kwargs,
+):
+    frequencies = environment_metadata.get_sds_frequencies_w_compensation_pulse()
+    num_drive_channels = environment_metadata.num_reference_channels
 
-- **block_size** — the number of samples in one SDS hit block.
-- compensation-pulse settings through the compensation-pulse subgroup,
-- SRS settings through the SRS subgroup,
-- decay settings through the decay subgroup,
-- control-law settings through the control subgroup,
-- synthesis iteration settings through the SDS subgroup.
+    amplitudes = np.zeros((frequencies.size, num_drive_channels))
+    decays = np.tile(
+        environment_metadata.get_sds_decays_w_compensation_pulse()[:, np.newaxis],
+        (1, num_drive_channels),
+    )
+    delays = np.zeros((frequencies.size, num_drive_channels))
 
-When saving current control data after or during a run, additional scalar attributes are also stored, including:
+    return amplitudes, decays, delays
+```
 
-- **current_test_level_db** — the run test level in dB,
-- **current_test_level_scale** — the corresponding linear scale factor,
-- **total_hits** — cumulative number of hits,
-- **hits_at_target** — cumulative number of hits at the currently selected test level,
-- **allow_automatic_updates** — whether the run table is being automatically updated.
+This example is not useful as a real controller as it only outputs zeros, but it shows the required structure.
 
-### NetCDF Variables and Subgroups
+### Class-Based SDS Control Laws
 
-The SDS metadata are organized into several logical subgroups.
+A class-based control law is appropriate when the user wants to preserve state between calls.
 
-#### Tone parameters subgroup
+This is useful when the control law needs to remember things like:
 
-The subgroup **tone_parameters** stores:
+- optimization history,
+- phase-target history,
+- trust-region or step-size information,
+- previous successful SDS tables,
+- hit-dependent weighting or adaptation logic.
 
-- **strategy** (attribute) — the tone-generation strategy:
-  - from specification,
-  - octave spacing,
-  - or manual tones.
-- **tone_data** (variable, optional) — the associated tone-definition values.
+A class makes it easy to keep persistent internal state without rederiving or reparsing everything on every control-law call.
 
-#### Compensation pulse subgroup
+This is especially valuable for SDS because the environment is naturally hit-based and iterative.
 
-The subgroup **compensation_pulse_parameters** stores:
+#### Expected class structure
 
-- **use_compensation_pulse** — whether a compensation pulse is enabled,
-- **compensation_frequency** — compensation frequency if specified explicitly,
-- **compensation_decay** — compensation decay value.
+A class-based SDS control law should generally provide:
 
-#### Decay parameters subgroup
+- a constructor `__init__(...)`
+- a `system_id_update(...)` method
+- a `control(...)` method
 
-The subgroup **decay_parameters** stores:
+A typical structure might look like:
 
-- **decay_strategy**An unknown exception has occurred.
+```python
+class MySDSControlLaw:
+    def __init__(
+        self,
+        environment_metadata,
+        sysid_data,
+        last_response_srs=None,
+        last_drive_amplitudes=None,
+        last_drive_decays=None,
+        last_drive_delays=None,
+        **kwargs,
+    ):
+        self.environment_metadata = environment_metadata
+        self.sysid_data = sysid_data
+        self.extra_parameters = kwargs
+
+    def system_id_update(self, sysid_data):
+        self.sysid_data = sysid_data
+
+    def control(
+        self,
+        last_response_srs,
+        last_response_signals,
+        last_drive_amplitudes,
+        last_drive_decays,
+        last_drive_delays,
+        last_drive_signals,
+    ):
+        ...
+        return amplitudes, decays, delays
+```
+
+#### Lifecycle of a class-based control law
+
+A class-based SDS control law participates in the environment lifecycle as follows.
+
+##### `__init__(...)`
+
+The environment constructs the class during environment initialization and passes in:
+
+- environment metadata,
+- current system-ID package,
+- initial response/drive data if available,
+- and any extra control-law parameters.
+
+This is the correct place to:
+
+- store persistent metadata,
+- parse user parameters,
+- initialize caches,
+- and prepare internal data structures.
+
+##### `system_id_update(...)`
+
+When the system identification changes or is reloaded, this method is called so the control law can update any FRF-dependent internal state.
+
+This is useful if the class wants to store:
+
+- interpolated FRFs,
+- pseudoinverse matrices,
+- or any derived transfer-function quantities.
+
+##### `control(...)`
+
+This method is called to actually compute the next SDS table.
+
+A class-based control law should perform whatever computations it needs and then return:
+
+- amplitudes,
+- decays,
+- delays.
+
+#### Practical guidance
+
+A class-based SDS control law should still preserve the same core responsibilities as the function-based version:
+
+1. use the SRS specification as the response target,
+2. use the system identification data to relate response to drive,
+3. produce an SDS table that can be synthesized by the environment,
+4. optionally adapt that table based on previous measured hits.
+
+The difference is that a class can preserve internal state between those calls.
+
+### Interactive SDS Control Laws
+
+The SDS environment also supports an **interactive class** mode, intended for more advanced workflows where the control law may need to exchange parameters or commands with a UI object.
+
+This is the most advanced and most stateful control-law style.
+
+An interactive control law may be appropriate when the user wants:
+
+- custom runtime parameter tuning,
+- custom visualization,
+- or a dialog/window dedicated to the control algorithm itself.
+
+In this mode, the environment can:
+
+- update the control-law parameters dynamically,
+- send interactive commands,
+- and allow the control law to return information back to the UI.
+
+This mode is best suited to research-oriented or experimental control implementations.
+
+### Additional Control-Law Parameters and GUI Population
+
+One of the most useful SDS features is that additional control-law parameters can be exposed automatically in the Environment Definition page when a Python control function is loaded.
+
+When the user loads a Python module containing candidate SDS control laws, the UI inspects the available functions and identifies which ones are valid control laws.
+
+A function is considered valid if it contains the required arguments:
+
+- `environment_metadata`
+- `sysid_data`
+- `last_response_srs`
+- `last_response_signals`
+- `last_drive_amplitudes`
+- `last_drive_decays`
+- `last_drive_delays`
+- `last_drive_signals`
+
+Any additional keyword-capable arguments beyond these required arguments are treated as **extra control parameters**.
+
+The UI can automatically create widgets for extra parameters when the parameter type annotation is one of:
+
+- `int`
+- `float`
+- `str`
+- an `Enum` subclass
+
+If the parameter has a supported type annotation, the UI creates a matching widget automatically:
+
+- `int` → integer spin box
+- `float` → scientific double spin box
+- `str` → text edit
+- `Enum` → combo box
+
+If the parameter has an unsupported annotation but provides a default value, the function can still be loaded, but that argument is not exposed as an editable widget.
+
+For example, a function like:
+
+```python
+def my_sds_control_law(
+    environment_metadata,
+    sysid_data,
+    last_response_srs=None,
+    last_response_signals=None,
+    last_drive_amplitudes=None,
+    last_drive_decays=None,
+    last_drive_delays=None,
+    last_drive_signals=None,
+    *,
+    rcond: float = 1e-10,
+    accuracy_weight: float = 100.0,
+    input_weight: float = 1.0,
+):
+    ...
+```
+
+will automatically expose widgets for:
+
+- `rcond`
+- `accuracy_weight`
+- `input_weight`
+
+in the SDS Environment Definition page.
+
+The UI collects those values into a dictionary and stores them in the `ControlParameters` metadata object.
+
+When the environment later calls the function-based control law, those parameters are unpacked as keyword arguments:
+
+```python
+control_law(
+    environment_metadata=...,
+    sysid_data=...,
+    last_response_srs=...,
+    last_response_signals=...,
+    last_drive_amplitudes=...,
+    last_drive_decays=...,
+    last_drive_delays=...,
+    last_drive_signals=...,
+    **control_parameters,
+)
+```
+
+Thus, extra control-law arguments are simply normal Python keyword arguments whose values are supplied by the UI.
+
+If you want your control law to expose user-tunable parameters in the GUI, the easiest way is to:
+
+1. include the standard required SDS arguments,
+2. add additional keyword arguments,
+3. annotate them with supported Python types,
+4. provide reasonable default values.
+
+That way the SDS UI can automatically build the needed widgets.
+
+### What a Custom SDS Control Law Must Do
+
+A replacement SDS control law should preserve the same broad responsibilities, even if the mathematics differ.
+
+At minimum, a custom implementation should be able to:
+
+1. accept and store specification information,
+2. accept updated system identification results,
+3. compute an initial or updated SDS table,
+4. optionally preserve state between hits,
+5. return amplitudes, decays, and delays in the expected SDS table format.
+
+In other words, even if a custom SDS control law uses a completely different synthesis or inversion strategy, it still needs to fit into the same environment lifecycle and data contract.
+
+### Practical Guidance for Implementing a Replacement
+
+#### Preserve state explicitly if needed
+
+If your control law needs to remember things like:
+
+- previous optimization seeds,
+- previous phase targets,
+- previous fitted errors,
+- or any iterative tuning history,
+
+then use a class-based implementation rather than trying to reconstruct that state each call.
+
+#### Be careful about coordinate systems
+
+The control law may be operating on:
+
+- physical control channels,
+- transformed response coordinates,
+- physical drive channels,
+- transformed drive coordinates.
+
+A custom implementation should ensure that:
+
+- the specification,
+- the transfer functions,
+- and the returned SDS table
+
+are all interpreted in mutually consistent coordinates.
+
+#### Respect the expected return format
+
+The SDS environment expects arrays shaped like the current SDS table. In particular:
+
+- one row per SDS frequency,
+- one column per drive channel,
+- compensation-pulse row included if the environment expects it.
+
+Returning the wrong shape will generally cause the environment to fail or produce invalid synthesis.
+
+#### Remember that measured data are scaled back to full level
+
+During run-time postprocessing, the SDS environment scales measured response and drive data back up to the nominal full level before passing them to the control law. A custom control law therefore receives normalized data appropriate for direct comparison to the specification.
+
+#### Think carefully about hit-based iteration
+
+Unlike Random or Sine, the SDS environment evolves one hit at a time. A replacement control law should therefore think in terms of:
+
+- what to do before the first hit,
+- what to do after a completed hit,
+- whether to preserve state between hits,
+- and whether automatic updates are intended to occur at all.
+
+If automatic SDS table updates are disabled, the environment may skip calling the control law entirely after hits, so a custom implementation should be designed with that workflow in mind.
+
+### Summary
+
+A custom SDS control law in Rattlesnake may be implemented as either:
+
+- a Python function,
+- a stateful Python class,
+- or an interactive class.
+
+The current default implementation is function-based, but class-based implementations are often a natural fit for SDS because the problem is iterative and hit-based.
+
+The key requirement is that the control law must participate correctly in the SDS environment lifecycle and return:
+
+- amplitudes,
+- decays,
+- delays
+
+in a form that the environment can synthesize and execute.
