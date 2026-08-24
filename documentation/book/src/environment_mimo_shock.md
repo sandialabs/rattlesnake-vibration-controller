@@ -216,82 +216,82 @@ If decays are specified per sine tone, then they can be entered in the @fig:srs_
 
 ### SRS Parameters
 
-The SRS section defines how the response SRS is computed. This includes:
+The @fig:srs_sds_definition:srs_groupbox section defines how the response SRS is computed. This includes the SRS type, absolute vs. relative displacement convention, and damping.  These parameters define both how the specification SRS is computed and how the SRS will be computed from time data.
 
-- SRS type,
-- absolute vs. relative displacement convention,
-- damping.
-
-These parameters are used both for:
-
-- prediction, and
-- measured-hit postprocessing.
+```{embed} #sec:srs_sds_definition:srs_groupbox
+```
 
 ### SDS Synthesis Parameters
 
-The SDS synthesis settings control the iterative decayed-sine synthesis algorithm. These include:
+The @fig:srs_sds_definition:sds_groupbox settings control the iterative decayed-sine synthesis algorithm.  Because the computation of the SRS is a nonlinear operation on the time response data, an iterative solution is required to compute time response data that fits a given SRS.
 
-- number of iterations,
-- convergence,
-- scale factor,
-- error tolerance.
-
-These are used when generating a decayed-sine representation that approximates the desired SRS.
+```{embed} #sec:srs_sds_definition:sds_groupbox
+```
 
 ### Control Law Definition
 
-Like other advanced environments, SDS supports loading a custom Python control law. The definition page allows the user to specify:
+Like other advanced environments, SDS supports loading a custom Python control law in the @fig:srs_sds_definition:control_parameters_groupbox section of the window. The definition page allows the user to specify a Python script and function or class within that script to use as a control law.  The default control law uses a MIMO inverse-based approach and is described in Section @sec:srs_sds_control_law.
 
-- the Python module,
-- the control object (typically a function),
-- the control-law type,
-- and any additional control parameters.
-
-The default control law uses a MIMO inverse-based approach and is described later in the custom-control-law section.
+```{embed} #sec:srs_sds_definition:control_parameters_groupbox
+```
 
 ### Control Channels
 
-The control-channel list defines which channels are used to evaluate and control the SRS response. The ordering of these channels determines the ordering of the specification columns when no transformation is used.
+The @fig:srs_sds_definition:control_channels_groupbox section defines which channels are used to evaluate and control the SRS response. The ordering of these channels determines the ordering of the specification columns when no transformation is used.
+
+```{embed} #sec:srs_sds_definition:control_channels_groupbox
+```
+
+The @fig:srs_sds_definition:io_groupbox section then summarizes the number of physical channels used as inputs, outputs, and control channels.
 
 ### Transformation Matrices
 
-The SDS environment supports both response and excitation transformations. These work the same way conceptually as in the other environments. A response transformation maps physical control channels into virtual control channels, and an excitation transformation maps physical drive channels into virtual drive signals.
+The SDS environment supports both response and excitation transformations, defined in the @fig:srs_sds_definition:transformation_matrices_groupbox section of the window. These work the same way conceptually as in the other environments. A response transformation maps physical control channels into virtual control channels, and an excitation transformation maps physical drive channels into virtual drive signals.  See @sec:rattlesnake_environments_transformation_matrices for the shared transformation-matrix workflow.
 
-See @sec:rattlesnake_environments_transformation_matrices for the shared transformation-matrix workflow.
+```{embed} #sec:srs_sds_definition:transformation_matrices_groupbox
+```
 
 ### Test Specification
 
-The SRS specification itself is entered or loaded in the Test Specification section of the definition page. The user can:
+The SRS specification itself is entered or loaded in the @fig:srs_sds_definition:specification_groupbox section of the definition page. The user can add or remove breakpoints, edit the required SRS values, edit lower and upper limits, and set the target number of hits.  If a user does not wish to control to a specific frequency tone for a specific channel or if upper or lower limits are not desired for that channel and frequency, a Value of `NaN` can be provided in the loaded specification file, or the value in the table can be set to `Disabled`.
 
-- add or remove breakpoints,
-- edit the required SRS values,
-- edit lower and upper limits,
-- set the target number of hits.
+The specification is added on the @fig:srs_sds_definition__spec_breakpoint_tab:specification_groupbox section of the window on the `Breakpoint Table` tab.  This is where the breakpoints are added or removed and the control values are modified.
 
-The lower and upper limit tables are presented on separate tabs and therefore are documented through page states.
+```{embed} #sec:srs_sds_definition__spec_breakpoint_tab:specification_groupbox
+```
+
+The lower limits are added on the `Lower Limit Table` tab of the @fig:srs_sds_definition__spec_lower_limit_tab:specification_groupbox portion of the window.
+
+```{embed} #sec:srs_sds_definition__spec_lower_limit_tab:specification_groupbox
+```
+
+Similarly, upper limits are added on the `Upper Limit Table` tab of the @fig:srs_sds_definition__spec_upper_limit_tab:specification_groupbox portion of the window.
+
+```{embed} #sec:srs_sds_definition__spec_upper_limit_tab:specification_groupbox
+```
+
+Finally, there is functionality to display various channels of the specification.
+
+```{embed} #sec:srs_sds_definition:specification_groupbox
+```
 
 ## System Identification for the MIMO Shock Environment
 
-Like the Random, Sine, and Transient environments, the SDS environment uses a system identification phase to estimate the transfer functions between the drive channels and control channels.
+Like the Random, Sine, and Transient environments, the SDS environment uses a system identification phase defined on the `System Identification` tab to estimate the transfer functions between the drive channels and control channels.  This is shown when all environments are defined and the `Initialize Environments` button is pressed.  The transfer functions are needed because the environment must map desired response behavior back into the corresponding drive signals that can be generated by the control system.
 
-These transfer functions are needed because the environment must map desired response behavior back into the corresponding drive signals.
+A typical system identification UI for the shock environment is shown in @fig:srs_sds_system_id.
 
-A representative system identification UI is shared with the other system-ID environments and is described in detail in @sec:using_rattlesnake_system_identification.
+:::{figure} figures/srs_sds_system_identification.png
+:label: fig:srs_sds_system_id
+:align: center
+System identification UI used by the MIMO Shock / SDS environment.
+:::
 
-The SDS environment uses the system ID results to populate a `SysIdDataPackage`, which includes:
-
-- FRFs,
-- coherence,
-- response CPSDs,
-- reference CPSDs,
-- noise-floor spectra,
-- and associated frequencies.
-
-The default SDS control law uses the FRFs directly when solving the MIMO inverse problem for the drive amplitudes and phases.
+Rattlesnake's system identification phase will start with a noise floor check, where the data acquisition records data on all the channels without specifying an output signal.  After the noise floor is computed, the system identification phase will play out the specified signals to the excitation devices, and transfer functions will be computed using the responses of the control channels to those excitation signals.  @sec:using_rattlesnake_system_identification describes the System Identification tab and its various parameters and capabilities.
 
 ## Test Prediction for the MIMO Shock Environment
 
-Once system identification is complete, the SDS environment can compute a prediction of the drive signals and the resulting response.
+Once system identification is complete, the SDS environment can compute a prediction of the drive signals and the resulting response.  Note that because the Sum-of-Decays sine calculation is iterative, it can take a bit of time to compute predictions using the default control law, see @sec:srs_sds_control_law for more information on the default control law's computations.
 
 A representative prediction page is shown in @fig:mimo_sds_prediction.
 
@@ -304,14 +304,14 @@ Prediction UI used by the MIMO Shock / SDS environment.
 
 The prediction page and associated run-table dialog allow the user to inspect:
 
-- the current SDS table,
+- the current drive SDS table,
 - synthesized drive time histories,
 - predicted response time histories,
 - predicted response SRS,
 - peak drive voltages,
 - peak response errors relative to the SRS specification.
 
-### Prediction table
+### Excitation Prediction
 
 The SDS prediction UI is centered around a table of decayed sine terms. For each excitation channel, the table stores:
 
@@ -320,17 +320,23 @@ The SDS prediction UI is centered around a table of decayed sine terms. For each
 - decay
 - delay
 
-These parameters fully define the synthesized drive transient for that drive channel.
+for each sine tone.
 
-### Prediction plots
+These parameters fully define the synthesized drive transient for that drive channel.  The [**Excitation Display**](#fig:srs_sds_prediction:excitation_display_plot) shows the synthesized time history from the tone table.  Selecting a row in the tone table will draw that specific sine tone's contribution to drive transient.
 
-The prediction page displays:
+```{embed} #sec:srs_sds_prediction:excitation_voltage_groupbox
+```
+```{embed} #sec:srs_sds_prediction:auto_2
+```
 
-- synthesized drive time histories,
-- response time histories,
-- predicted response SRS overlaid against the specification and any limits.
+### Response Prediction
 
-These plots allow the user to inspect whether the current open-loop or updated SDS table is likely to meet the specification.
+The right side of the page displays response data.  Responses are computed from a convolution of the generated drive signals with the system's impulse response as measured in the `System Identification` phase of the controller.  These plots allow the user to inspect whether the current open-loop or updated SDS table is likely to meet the specification.
+
+```{embed} #sec:srs_sds_prediction:response_error_groupbox
+```
+```{embed} #sec:srs_sds_prediction:auto_1
+```
 
 ## Running the MIMO Shock Environment
 
@@ -345,7 +351,7 @@ A representative run page is shown in @fig:mimo_sds_run.
 Run GUI used by the MIMO Shock / SDS environment.
 :::
 
-The SDS run workflow differs from the Random and Sine environments because the natural unit of operation is **a hit**, not a continuously running stationary control loop.
+The SDS run workflow differs from the Random and Sine environments because the natural unit of operation is a single hit, not a continuously running stationary control loop.
 
 The SDS run mode supports:
 
@@ -353,11 +359,9 @@ The SDS run mode supports:
 - automatic repeated hits,
 - hit counting,
 - hit history,
-- run-time SDS table use,
-- optional automatic updates of the SDS table,
+- manual run-time SDS table drive updates,
+- optional automatic updates of the SDS table based on the control law,
 - and post-hit response visualization.
-
-### Hit-based operation
 
 A single SDS hit consists of:
 
@@ -370,13 +374,29 @@ A single SDS hit consists of:
 
 This is fundamentally different from the continuously updating loop used by Random Vibration.
 
-### Manual mode
+The main `Run Test` tab for the Shock environment contains displays for tracking the overall drive levels and response errors.  It also displays the control SRS to give the user a rough idea of the current responses.
 
-In manual mode, each press of **Start Environment** performs exactly one hit and then returns to idle.
+```{embed} #sec:srs_sds_run:test_output_voltages_groupbox
+```
+```{embed} #sec:srs_sds_run:test_response_error_groupbox
+```
+```{embed} #sec:srs_sds_run:control_response_groupbox
+```
+
+The tab also has a number of widgets to control the environment as it is running.
+
+```{embed} #sec:srs_sds_run:auto_1
+```
+
+A brief discussion of the capabilities provided by these widgets is described below.
+
+### Manual Hits mode
+
+In manual hits mode, each press of **Start Environment** performs exactly one hit and then returns to idle.
 
 This is useful when dialing in the transient carefully or when the operator wants explicit control over each impact.
 
-### Automatic mode
+### Automatic Hits mode
 
 In automatic mode, one press of **Start Environment** begins a sequence of repeated hits separated by the requested interval. The sequence continues until:
 
@@ -384,6 +404,10 @@ In automatic mode, one press of **Start Environment** begins a sequence of repea
 - the operator presses **Stop Environment**.
 
 If post-hit computations take longer than the requested interval, the next hit is simply launched as soon as the computations finish.
+
+:::{warning} Interval is Approximate
+Users should not rely on the impact interval being an exact timing between hits.  Depending on the measurement duration (block size time sample rate), channel count, and control law update complexity, it may take longer to measure and compute results than the specified interval.
+:::
 
 ### Hit counters and history
 
@@ -394,9 +418,18 @@ The SDS run page tracks:
 - progress toward the requested target hit count,
 - a full shock history dialog.
 
-Unlike a hardcoded “0 dB only” notion of target-level hits, the SDS environment now interprets “hits at level” relative to the currently selected run test level. Thus, if the test level is set to $-3$ dB, then the displayed hit count and automatic stop logic both operate on the number of historical hits performed at $-3$ dB.
+Unlike a hardcoded “0 dB only” notion of target-level hits, the SDS environment interprets "hits at level" relative to the currently selected run test level. Thus, if the test level is set to $-3$ dB, then the displayed hit count and automatic stop logic both operate on the number of historical hits performed at $-3$ dB.
 
-## Shock History
+### Shock History
+
+Clicking on the [**Shock History**](#fig:srs_sds_run:shock_history_button) button opens the Shock History dialog shown in @fig:mimo_sds_shock_history.
+
+:::{figure} figures/srs_sds_shock_history.png
+:label: fig:mimo_sds_shock_history
+:align: center
+
+Shock History Dialog
+:::
 
 The Shock History dialog provides an overview of what has been done to the test article, including:
 
@@ -409,29 +442,71 @@ The Shock History dialog provides an overview of what has been done to the test 
 
 This is especially useful when many lower-level “dial-in” hits are performed before full-level hits.
 
-## Run-Time SDS Table
+There are several numerical displays showing the number of hits.
 
-The SDS Run Table dialog allows the user to:
+```{embed} #sec:srs_sds_run__shock_history_dialog:summary_groupbox
+```
 
-- inspect the current run SDS table,
-- manually edit or load SDS tables,
-- allow or disallow manual updates,
-- allow or disallow automatic control-law updates,
-- visualize predicted and measured response quantities.
+There are also graphical displays showing a visual representation of the hit history.
+
+```{embed} #sec:srs_sds_run__shock_history_dialog:auto_1
+```
+
+If more detail is desired, a hit table can be shown, showing exactly when each hit occurred.
+
+```{embed} #sec:srs_sds_run__shock_history_dialog_with_table:history_table_groupbox
+```
+
+### Run-Time SDS Table
+
+Clicking the [**SDS Table**](#fig:srs_sds_run:sds_table_button) button will bring up a dialog containing a real-time display of the SDS table that is used to generate voltage signals.  This is shown in @fig:mimo_sds_run_table.
+
+:::{figure} figures/srs_sds_run_sds_table.png
+:label: fig:mimo_sds_run_table
+:align: center
+
+Shock History Dialog
+:::
+
+Depending on which options are checked the user can manually or the control law can automatically update the values in this table.  When values are updated, the control law will automatically make response predictions based on the new drive signals.  When measurements are obtained, the measured data will also be plotted on the response sections.  This allows users or the control law to tune the controller as the run is progressing.
 
 This dialog is particularly important because the SDS environment is table-driven: the current SDS table defines the transient that will be played on the next hit.
 
-## Tracking Response Quality
+The left side of the window focuses on the drive signals:
 
-The SDS run page presents several useful response metrics, including:
+```{embed} #sec:srs_sds_run__run_table_dialog:excitation_voltage_groupbox
+```
+```{embed} #sec:srs_sds_run__run_table_dialog:auto_1
+```
 
-- measured response SRS,
-- measured response time history,
-- peak output voltage by drive channel,
-- worst-case dB response error per control channel,
-- a global response plot showing all measured control-channel SRS curves.
+The right side of the window focuses on measured responses and responses predicted from the updated drive voltages based on transfer functions.
 
-The response error list is compared directly against the specification and warning/abort limits. When a measured SRS violates a limit, the corresponding entry is highlighted.
+```{embed} #sec:srs_sds_run__run_table_dialog:response_error_groupbox
+```
+
+```{embed} #sec:srs_sds_run__run_table_dialog:auto_2
+```
+
+### Displaying Data
+
+In addition to the main UI showing all of the control SRSs and the Run Table showing predictions and measured responses, SRS and time histories from individual channels can be shown in separate windows using the operations in the @fig:srs_sds_run:data_display_groupbox.  Representative windows are shown in @fig:mimo_sds_srs_channel and @fig:mimo_sds_time_channel.
+
+:::{figure} figures/srs_sds_srs_channel_window.png
+:label: fig:mimo_sds_srs_channel
+:align: center
+
+Control SRS Window
+:::
+
+:::{figure} figures/srs_sds_time_channel_window.png
+:label: fig:mimo_sds_time_channel
+:align: center
+
+Control Time Window
+:::
+
+```{embed} #sec:srs_sds_run:data_display_groupbox
+```
 
 ## Writing a Custom SDS Control Law
 

@@ -222,7 +222,7 @@ A typical system identification UI for the sine environment is shown in @fig:mim
 :::{figure} figures/sine_system_identification.png
 :label: fig:mimo_sine_system_id
 :align: center
-System identification UI used by the MIMO Random Vibration environment.
+System identification UI used by the MIMO Sine environment.
 :::
 
 Rattlesnake's system identification phase will start with a noise floor check, where the data acquisition records data on all the channels without specifying an output signal.  After the noise floor is computed, the system identification phase will play out the specified signals to the excitation devices, and transfer functions will be computed using the responses of the control channels to those excitation signals.  @sec:using_rattlesnake_system_identification describes the System Identification tab and its various parameters and capabilities.
