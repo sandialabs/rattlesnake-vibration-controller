@@ -27,6 +27,8 @@ import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 from typing import Dict
+import os
+import time
 
 import numpy as np
 
@@ -40,11 +42,7 @@ from rattlesnake.utilities import GlobalCommands, QueueContainer, flush_queue, r
 TASK_NAME = "Output"
 
 DEBUG = False
-if DEBUG:
-    from glob import glob
-
-    FILE_OUTPUT = "debug_data/output_{:}.npz"
-    ENV_OUTPUT = "debug_data/output_first_data_{:}.npz"
+DEBUG_DIRECTORY = "debug_data"
 
 
 # region Output
@@ -115,7 +113,84 @@ class OutputProcess(AbstractMessageProcess):
         self.hardware_metadata = None
         # Shared memory to record activity
         self._output_active_event = output_active_event
+        # Debug state
+        self.debug_output_counter = 0
+        self.debug_environment_out_counters = {}
         # print('output setup')
+
+    # region Debug
+    def _reset_debug_counters(self):
+        self.debug_output_counter = 0
+        self.debug_environment_out_counters = {}
+
+    def _ensure_debug_directory(self):
+        if DEBUG:
+            os.makedirs(DEBUG_DIRECTORY, exist_ok=True)
+
+    @staticmethod
+    def _safe_environment_name(environment):
+        return str(environment).replace(" ", "_")
+
+    def _save_output_debug(self, write_data, active_environments, first_data_flags):
+        if not DEBUG:
+            return
+        if write_data is None or write_data.size == 0:
+            return
+        if len(active_environments) == 0 and not any(first_data_flags.values()):
+            return
+
+        self._ensure_debug_directory()
+        filename = os.path.join(
+            DEBUG_DIRECTORY,
+            f"output_debug_{self.debug_output_counter:04d}.npz",
+        )
+        np.savez(
+            filename,
+            timestamp=np.array(time.time()),
+            write_data=write_data,
+            active_environments=np.array(active_environments, dtype=object),
+            first_data_flags=np.array(
+                [f"{k}:{int(v)}" for k, v in first_data_flags.items()],
+                dtype=object,
+            ),
+        )
+        self.debug_output_counter += 1
+
+    def _save_environment_data_out_debug(
+        self,
+        environment,
+        environment_data,
+        last_run,
+        active_flag,
+        startup_flag,
+        shutdown_flag,
+    ):
+        if not DEBUG:
+            return
+        if environment_data is None:
+            return
+        if environment_data.size == 0:
+            return
+        if not (active_flag or startup_flag or shutdown_flag):
+            return
+
+        self._ensure_debug_directory()
+        safe_environment = self._safe_environment_name(environment)
+        index = self.debug_environment_out_counters.get(safe_environment, 0)
+        filename = os.path.join(
+            DEBUG_DIRECTORY,
+            f"{safe_environment}_data_out_{index:04d}.npz",
+        )
+        np.savez(
+            filename,
+            timestamp=np.array(time.time()),
+            environment_data=environment_data,
+            last_run=last_run,
+            active_flag=active_flag,
+            startup_flag=startup_flag,
+            shutdown_flag=shutdown_flag,
+        )
+        self.debug_environment_out_counters[safe_environment] = index + 1
 
     # region State Sync
     @property
@@ -240,6 +315,8 @@ class OutputProcess(AbstractMessageProcess):
             ``command_map``
 
         """
+        if self.startup and DEBUG:
+            self._reset_debug_counters()
         # Skip hardware operations if there are no channels
         skip_hardware = self.num_outputs == 0
         # Go through each environment and collect data no matter what.
@@ -266,6 +343,14 @@ class OutputProcess(AbstractMessageProcess):
                         self.queue_container.environment_data_out_queues[
                             environment
                         ].get_nowait()
+                    )
+                    self._save_environment_data_out_debug(
+                        environment,
+                        environment_data,
+                        last_run,
+                        self.environment_active_flags[environment],
+                        self.environment_starting_up_flags[environment],
+                        self.environment_shutting_down_flags[environment],
                     )
                 except (thqueue.Empty, mpqueue.Empty):
                     # If data is not ready yet, simply continue to the next environment and we'll
@@ -368,19 +453,23 @@ class OutputProcess(AbstractMessageProcess):
                             )
                         )
                         self.environment_first_data[environment] = False
-                        if DEBUG:
-                            np.savez(
-                                ENV_OUTPUT.format(environment), write_data=write_data
-                            )
-                if DEBUG:
-                    num_files = len(glob(FILE_OUTPUT.format("*")))
-                    np.savez(FILE_OUTPUT.format(num_files), write_data=write_data)
+
+                self._save_output_debug(
+                    write_data.copy(),
+                    [
+                        env
+                        for env, flag in self.environment_active_flags.items()
+                        if flag or self.environment_starting_up_flags[env]
+                    ],
+                    self.environment_first_data,
+                )
+
                 self.hardware.write(write_data.copy())
             else:
-                if self.environment_first_data[environment]:
-                    self.queue_container.input_output_sync_queue.put((environment, 0))
-                    self.environment_first_data[environment] = False
-            #            np.savez('test_data/output_data_check.npz',output_data = write_data)
+                for environment in self.environment_first_data:
+                    if self.environment_first_data[environment]:
+                        self.queue_container.input_output_sync_queue.put((environment, 0))
+                        self.environment_first_data[environment] = False
             # Now check and see if we are starting up and start the hardare if so
             if self.startup:
                 self.log("Starting Hardware Output")
