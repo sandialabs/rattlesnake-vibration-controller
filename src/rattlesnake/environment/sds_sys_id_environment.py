@@ -722,6 +722,11 @@ class SDSEnvironment(SysIdEnvironment):
         #     full_control=full_control,
         #     full_output=full_output,
         #     last_drive_signal=self.last_drive_signal,
+        #     current_test_level_db=self.current_test_level_db,
+        #     current_test_level_scale=self.current_test_level_scale,
+        #     output_oversample=self.hardware_metadata.output_oversample,
+        #     sample_rate=self.environment_metadata.sample_rate,
+        #     block_size=self.environment_metadata.block_size,
         # )
 
         aligned_output, sample_delay, phase_change, found_correlation = align_signals(
@@ -731,10 +736,6 @@ class SDSEnvironment(SysIdEnvironment):
             perform_subsample=True,
         )
 
-        print(
-            f"Completed alignment, {aligned_output.shape=}, {sample_delay=}, {found_correlation=}"
-        )
-
         if aligned_output is None:
             self.log("Could not align measured output to expected drive signal.")
             print("Could not align output.")
@@ -742,6 +743,9 @@ class SDSEnvironment(SysIdEnvironment):
             self.last_response_signal = full_control[..., :samples_to_keep]
             measured_drive_signal = full_output[..., :samples_to_keep]
         else:
+            print(
+                f"Completed alignment, {aligned_output.shape=}, {sample_delay=}, {found_correlation=}"
+            )
             self.log(
                 f"Alignment found: sample_delay={sample_delay}, "
                 f"phase_change={phase_change}, correlation={found_correlation}"
