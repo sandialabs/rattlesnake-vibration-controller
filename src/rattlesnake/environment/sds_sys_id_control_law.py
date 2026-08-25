@@ -504,3 +504,38 @@ class DefaultSDSControlLaw:
             )
 
         return self.output_amplitudes, self.output_decays, self.output_delays
+
+
+def zzz_debug_control_law_zzz(
+    environment_metadata: SDSMetadata,
+    sysid_data: SysIdDataPackage,
+    last_response_srs: np.ndarray = None,
+    last_response_signals: np.ndarray = None,
+    last_drive_amplitudes: np.ndarray = None,
+    last_drive_decays: np.ndarray = None,
+    last_drive_delays: np.ndarray = None,
+    last_drive_signals: np.ndarray = None,
+    *,
+    table_file_path: str = "",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Control law for debugging; simply loads in a decayed sine table at table_file_path and
+    returns amplitudes, decays, and delays.
+
+    Returns
+    -------
+    amplitudes : ndarray
+        Shape (num_frequencies_with_comp, num_drive_channels)
+    decays : ndarray
+        Shape (num_frequencies_with_comp, num_drive_channels)
+    delays : ndarray
+        Shape (num_frequencies_with_comp, num_drive_channels)
+    """
+
+    table_data = np.load(table_file_path)
+
+    amplitudes = table_data["amplitude"]
+    decays = table_data["decay"]
+    delays = table_data["delay"]
+
+    return amplitudes, decays, delays
