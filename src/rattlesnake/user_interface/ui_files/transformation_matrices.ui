@@ -116,6 +116,9 @@
       </item>
       <item>
        <widget class="QTableWidget" name="response_transformation_matrix">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Response Transformation Matrix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Transformation matrix transforming physical control degrees of freedom (columns) into virtual degrees of freedom (rows).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="rowCount">
          <number>10</number>
         </property>
@@ -256,6 +259,9 @@
       </item>
       <item>
        <widget class="QTableWidget" name="output_transformation_matrix">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Output Transformation Matrix&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Transformation matrix transforming physical excitation degrees of freedom (columns) into virtual excitation degrees of freedom (rows).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="rowCount">
          <number>10</number>
         </property>

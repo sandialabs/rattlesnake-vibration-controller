@@ -31,42 +31,62 @@ project:
   #     email: nfhunte@sandia.gov
   github: https://github.com/sandialabs/rattlesnake-vibration-controller
   toc:
-    - file: book/src/chapter_01.md
+    - file: book/src/introduction.md
     - file: book/src/document_overview.md
-    - file: book/src/part_1.md
+    - file: book/src/part_1_rattlesnake_overview.md
       children:
-        - file: book/src/chapter_02.md
-        - file: book/src/chapter_03.md
-    - file: book/src/part_2.md
+        - file: book/src/acquiring_and_running_rattlesnake.md
+        - file: book/src/using_rattlesnake.md
+    - file: book/src/part_2_rattlesnake_hardware.md
       children:
-        - file: book/src/chapter_04.md
-        - file: book/src/chapter_05.md
-        - file: book/src/chapter_06.md
-        - file: book/src/chapter_07.md
-        - file: book/src/chapter_08.md
-        - file: book/src/chapter_09.md
-        - file: book/src/chapter_10.md
-        - file: book/src/chapter_11.md
-    - file: book/src/part_3.md
+        - file: book/src/hardware_nidaqmx.md
+        - file: book/src/hardware_lanxi.md
+        - file: book/src/hardware_quattro.md
+        - file: book/src/hardware_dp900.md
+        - file: book/src/hardware_state_space.md
+        - file: book/src/hardware_exodus.md
+        - file: book/src/hardware_sdynpy.md
+        - file: book/src/hardware_new_devices.md
+    - file: book/src/part_3_rattlesnake_environments.md
       children:
-        - file: book/src/chapter_12.md
-        - file: book/src/chapter_13.md
-        - file: book/src/chapter_14.md
-        - file: book/src/chapter_15.md
-        - file: book/src/chapter_16.md
-        - file: book/src/chapter_17.md
+        - file: book/src/environment_mimo_random.md
+        - file: book/src/environment_mimo_transient.md
+        - file: book/src/environment_mimo_sine.md
+        - file: book/src/environment_mimo_shock.md
+        - file: book/src/environment_modal_testing.md
+        - file: book/src/environment_time_history_generator.md
+        - file: book/src/environment_read_data.md
+        - file: book/src/environment_combined_environments.md
+        - file: book/src/environment_new_environments.md
     - file: book/src/examples.md
       children:
-        - file: book/src/appendix_b.md
-        - file: book/src/appendix_c.md
-        - file: book/src/appendix_d.md
+        - file: book/src/example_nidaqmx_cdaq.md
+        - file: book/src/example_sdynpy.md
+        - file: book/src/example_state_space.md
     - file: book/src/notation.md
     - file: book/src/contributing.md
+    - title: Developer's Guide
+      children:
+        - file: book/src/code_overview.md
     - file: book/src/ui_documentation.md
       children:
         - file: book/src/_generated/random_vibration_definition_doc.md
         - file: book/src/_generated/random_vibration_prediction_doc.md
         - file: book/src/_generated/random_vibration_run_doc.md
+        - file: book/src/_generated/system_identification_doc.md
+        - file: book/src/_generated/transient_definition_doc.md
+        - file: book/src/_generated/transient_prediction_doc.md
+        - file: book/src/_generated/transient_run_doc.md
+        - file: book/src/_generated/sine_definition_doc.md
+        - file: book/src/_generated/sine_prediction_doc.md
+        - file: book/src/_generated/sine_run_doc.md
+        - file: book/src/_generated/srs_sds_definition_doc.md
+        - file: book/src/_generated/srs_sds_prediction_doc.md
+        - file: book/src/_generated/srs_sds_run_doc.md
+        - file: book/src/_generated/modal_definition_doc.md
+        - file: book/src/_generated/modal_run_doc.md
+        - file: book/src/_generated/time_definition_doc.md
+        - file: book/src/_generated/time_run_doc.md
   numbering:
     headings: true
     heading_1:
@@ -87,6 +107,7 @@ project:
     CCLD: Constant Current Line Drive
     COLA: Constant Overlap and Add
     CPSD: Cross-Power Spectral Density
+    DTF: Digital Tracking Filter
     FEM: Finite Element Model
     FFT: Fast Fourier Transform
     FRF: Frequency Response Function
@@ -98,11 +119,15 @@ project:
     IP: Internet Protocol
     JSON: Javascript Object Notation
     MIMO: Multiple Input, Multiple Output
+    PyPI: Python Package Index
     ReST: Representational State Transfer
     RMS: Root-Mean-Square
+    SDS: Sum of Decayed Sines
+    SRS: Shock Response Spectrum
     SVD: Singular Value Decomposition
     TRAC: Time Response Assurance Criterion
     UI: User Interface
+    VK: Vold-Kalman (Filter)
   bibliography:
     - book/bibliography.bib
 site:

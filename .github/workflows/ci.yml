@@ -322,14 +322,50 @@ jobs:
             coverage_report.html
             htmlcov/
             coverage.xml
+  docs_ui_generate:
+    needs: changes
+    if: |
+      needs.changes.outputs.docs_changed == 'true' ||
+      github.ref_name == 'main' ||
+      github.ref_name == 'dev' ||
+      github.base_ref == 'main' ||
+      github.base_ref == 'dev'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+
+      - name: Generate UI documentation
+        shell: bash
+        run: |
+          python documentation/generate_ui_documentation.py
+
+      - name: Upload generated UI documentation
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-generated-docs
+          path: documentation/book/src/_generated
   # This job builds the Jupyter Book documentation and uploads it as an artifact. It runs on Ubuntu with Python 3.12.
   # To test locally:
   # 1. Install uv: https://astral.sh/uv/installation/
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   docs_jupyter_book:
-    needs: changes
+    needs: [changes, docs_ui_generate]
     # Run job if docs changed
     # OR if we're on a primary branch (main/dev)
     # OR if it's a PR targeting a primary branch (main/dev)
@@ -355,6 +391,12 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras --dev
+
+      - name: Download generated UI documentation
+        uses: actions/download-artifact@v8
+        with:
+          name: ui-generated-docs
+          path: documentation/book/src/_generated
 
       - name: Update Jupyter Book metadata
         run: |

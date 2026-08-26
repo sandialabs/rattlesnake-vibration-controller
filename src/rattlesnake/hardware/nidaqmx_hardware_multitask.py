@@ -111,11 +111,15 @@ class NIDAQmxMetadata(HardwareMetadata):
             self._ao_voltage_range[device_name] = ao_voltage_range
             self._excitation_current[device_name] = excitation_current
         self._engineering_units = {
-            "Acceleration": ["g"],
+            "Acceleration": ["g", "m/s^2", "in/s^2", "m/s2", "in/s2"],
             "Force": ["lbs", "n"],
             "Voltage": ["V"],
         }
-        self._coupling = {"Acceleration": ["AC"], "Force": ["AC"], "Voltage": ["DC"]}
+        self._coupling = {
+            "Acceleration": ["AC", "ICP", "IEPE"],
+            "Force": ["AC", "ICP", "IEPE"],
+            "Voltage": ["DC", "NONE"],
+        }
 
     # region Validation
     def validate(self):
@@ -140,10 +144,11 @@ class NIDAQmxMetadata(HardwareMetadata):
                 )
 
             unit = str(channel.unit).lower()
-            if channel_type == "Acceleration" and unit not in ("g", "gs"):
+            valid_accel_units = ("g", "gs", "in/s2", "in/s^2", "m/s^2", "m/s2")
+            if channel_type == "Acceleration" and unit.lower() not in valid_accel_units:
                 raise RattlesnakeError(
-                    f"Invalid unit in channel table row {row+1}. Acceleration "
-                    "channels must be in 'G'"
+                    f"Invalid unit in channel table row {row + 1}. Acceleration "
+                    f"channels must be one of {valid_accel_units}."
                 )
             elif channel_type == "Force" and unit not in (
                 "lb",
@@ -811,9 +816,19 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             channel_type = nic.UsageTypeAI.ACCELERATION_ACCELEROMETER_CURRENT_INPUT
             if str(channel_data.unit).lower() in ["g", "gs"]:
                 unit = nic.AccelUnits.G
+            elif str(channel_data.unit).lower() in ["m/s^2", "m/s2"]:
+                # The NI-DAQmx libraries only take sensitivity in mV/G, so we are just pretending
+                # to make it so the data acquisition doesn't put some strange scaling on the data
+                # So we'll just call it Gs but put our own unit label on it later.
+                unit = nic.AccelUnits.G  # METERS_PER_SECOND_SQUARED
+            elif str(channel_data.unit).lower() in ["in/s^2", "in/s2"]:
+                # The NI-DAQmx libraries only take sensitivity in mV/G, so we are just pretending
+                # to make it so the data acquisition doesn't put some strange scaling on the data
+                # So we'll just call it Gs but put our own unit label on it later.
+                unit = nic.AccelUnits.G  # INCHES_PER_SECOND_SQUARED
             else:
                 raise ValueError(
-                    f"Accelerometer units must be in G, not {channel_data.unit}"
+                    f"Accelerometer units must be in G, in/s^2, or m/s^2, not {channel_data.unit}"
                 )
         elif str(channel_data.channel_type).lower() == "force":
             channel_type = nic.UsageTypeAI.FORCE_IEPE_SENSOR
