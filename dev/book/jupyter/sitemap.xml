@@ -8,79 +8,91 @@
     <loc>http://localhost:3000/document-overview</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/part-1</loc>
+    <loc>http://localhost:3000/part-1-rattlesnake-overview</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-02</loc>
+    <loc>http://localhost:3000/acquiring-and-running-rattlesnake</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-03</loc>
+    <loc>http://localhost:3000/using-rattlesnake</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/part-2</loc>
+    <loc>http://localhost:3000/part-2-rattlesnake-hardware</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-04</loc>
+    <loc>http://localhost:3000/hardware-nidaqmx</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-05</loc>
+    <loc>http://localhost:3000/hardware-lanxi</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-06</loc>
+    <loc>http://localhost:3000/hardware-quattro</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-07</loc>
+    <loc>http://localhost:3000/hardware-dp900</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-08</loc>
+    <loc>http://localhost:3000/hardware-state-space</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-09</loc>
+    <loc>http://localhost:3000/hardware-exodus</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-10</loc>
+    <loc>http://localhost:3000/hardware-sdynpy</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-11</loc>
+    <loc>http://localhost:3000/hardware-new-devices</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/part-3</loc>
+    <loc>http://localhost:3000/part-3-rattlesnake-environments</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-12</loc>
+    <loc>http://localhost:3000/environment-mimo-random</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-13</loc>
+    <loc>http://localhost:3000/environment-mimo-transient</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-14</loc>
+    <loc>http://localhost:3000/environment-mimo-sine</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-15</loc>
+    <loc>http://localhost:3000/environment-mimo-shock</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-16</loc>
+    <loc>http://localhost:3000/environment-modal-testing</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/chapter-17</loc>
+    <loc>http://localhost:3000/environment-time-history-generator</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/environment-read-data</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/environment-combined-environments</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/environment-new-environments</loc>
   </url>
   <url>
     <loc>http://localhost:3000/examples</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/appendix-b</loc>
+    <loc>http://localhost:3000/example-nidaqmx-cdaq</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/appendix-c</loc>
+    <loc>http://localhost:3000/example-sdynpy</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/appendix-d</loc>
+    <loc>http://localhost:3000/example-state-space</loc>
   </url>
   <url>
     <loc>http://localhost:3000/notation</loc>
   </url>
   <url>
     <loc>http://localhost:3000/contributing</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/code-overview</loc>
   </url>
   <url>
     <loc>http://localhost:3000/ui-documentation</loc>
@@ -93,5 +105,47 @@
   </url>
   <url>
     <loc>http://localhost:3000/random-vibration-run-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/system-identification-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/transient-definition-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/transient-prediction-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/transient-run-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/sine-definition-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/sine-prediction-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/sine-run-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/srs-sds-definition-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/srs-sds-prediction-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/srs-sds-run-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/modal-definition-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/modal-run-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/time-definition-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/time-run-doc</loc>
   </url>
 </urlset>

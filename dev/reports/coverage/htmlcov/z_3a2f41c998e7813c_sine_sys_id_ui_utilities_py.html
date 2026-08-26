@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_3a2f41c998e7813c_skeleton_sys_id_ui_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-08-21 21:48 +0000
+            created at 2026-08-26 16:35 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -549,7 +549,7 @@
     <p class="mis show_mis"><span class="n"><a id="t467" href="#t467">467</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">channel_index</span> <span class="op">=</span> <span class="nam">channel_index</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t468" href="#t468">468</a></span><span class="t">        <span class="nam">spec_frequency</span> <span class="op">=</span> <span class="nam">ui</span><span class="op">.</span><span class="nam">specification_frequencies</span><span class="op">[</span><span class="nam">tone_index</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t469" href="#t469">469</a></span><span class="t">        <span class="nam">spec_amplitude</span> <span class="op">=</span> <span class="nam">ui</span><span class="op">.</span><span class="nam">specification_amplitudes</span><span class="op">[</span><span class="nam">tone_index</span><span class="op">,</span> <span class="nam">channel_index</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t470" href="#t470">470</a></span><span class="t">        <span class="nam">spec_phase</span> <span class="op">=</span> <span class="nam">wrap</span><span class="op">(</span><span class="nam">ui</span><span class="op">.</span><span class="nam">specification_phases</span><span class="op">[</span><span class="nam">tone_index</span><span class="op">,</span> <span class="nam">channel_index</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t470" href="#t470">470</a></span><span class="t">        <span class="nam">spec_phase</span> <span class="op">=</span> <span class="nam">wrap</span><span class="op">(</span><span class="nam">ui</span><span class="op">.</span><span class="nam">specification_phases</span><span class="op">[</span><span class="nam">tone_index</span><span class="op">,</span> <span class="nam">channel_index</span><span class="op">]</span><span class="op">,</span> <span class="nam">period</span><span class="op">=</span><span class="num">360.0</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t471" href="#t471">471</a></span><span class="t">        <span class="nam">spec</span> <span class="op">=</span> <span class="nam">ui</span><span class="op">.</span><span class="nam">environment_metadata</span><span class="op">.</span><span class="nam">specifications</span><span class="op">[</span><span class="nam">tone_index</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t472" href="#t472">472</a></span><span class="t">        <span class="nam">warn_freq</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">repeat</span><span class="op">(</span><span class="nam">spec</span><span class="op">.</span><span class="nam">breakpoint_table</span><span class="op">[</span><span class="str">"frequency"</span><span class="op">]</span><span class="op">,</span> <span class="num">2</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t473" href="#t473">473</a></span><span class="t">        <span class="nam">warn_low</span> <span class="op">=</span> <span class="nam">spec</span><span class="op">.</span><span class="nam">breakpoint_table</span><span class="op">[</span><span class="str">"warning"</span><span class="op">]</span><span class="op">[</span><span class="op">:</span><span class="op">,</span> <span class="num">0</span><span class="op">,</span> <span class="op">:</span><span class="op">,</span> <span class="nam">channel_index</span><span class="op">]</span><span class="op">.</span><span class="nam">flatten</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -1243,7 +1243,7 @@
             <a class="nav" href="z_3a2f41c998e7813c_skeleton_sys_id_ui_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-08-21 21:48 +0000
+            created at 2026-08-26 16:35 +0000
         </p>
     </div>
 </footer>
