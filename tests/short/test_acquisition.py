@@ -214,11 +214,11 @@ def test_acquisition_acquire_signal(
     acquisition.warning_limits = [10, 10]
     acquisition.abort_limits = [10, 10]
     mock_environment = mock.MagicMock()
-    mock_environment.__getitem__.return_value = 1
+    mock_environment.__getitem__.return_value = np.array(1)
     acquisition.environment_first_data = mock_environment
     acquisition.environment_active_flags["Environment 0"] = True
     acquisition.read_data = np.zeros((2, 100))
-    mock_align.return_value = (None, 2, None, None)
+    mock_align.return_value = (np.zeros((2, 98)), 2, 0, 0.9)
     acquisition.environment_acquisition_channels = {"Environment 0": [0, 1]}
     acquisition.set_streaming()
 
@@ -230,7 +230,12 @@ def test_acquisition_acquire_signal(
         mock.call("Detected Output Started"),
         mock.call("Starting Hardware Acquisition"),
         mock.call("Acquiring Data for ['Environment 0'] environments"),
-        mock.call("Correlation check for environment Environment 0 took 10.00 seconds"),
+        mock.call(
+            "Correlation check for environment Environment 0 took 10.00 seconds and achieved 0.90"
+        ),
+        mock.call(
+            "Environment 0: first-data alignment returned delay=2, read_buffer_shape=(2, 100), expected_first_shape=()"
+        ),
         mock.call("Found First Data for Environment Environment 0"),
         mock.call("Sending (2, 98) data to Environment 0 environment"),
     ]
