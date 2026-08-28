@@ -42,6 +42,8 @@ import sys
 import urllib.error
 import urllib.request
 
+from rattlesnake.cicd import toc
+
 
 def check_connectivity(timeout: int = 5) -> tuple:
     """
@@ -95,6 +97,68 @@ def run_step(
     except FileNotFoundError:
         print("Result: [ERROR] (Command not found.)")
         sys.exit(1)
+
+
+# MyST prefixes every error-level log line with this marker.
+MYST_ERROR_MARKER = "⛔️"
+
+
+def docs_checks(*, no_sync: bool) -> bool:
+    """
+    Run the documentation checks that the docs_jupyter_book CI job runs.
+
+    The table of contents is validated before the build because the build's
+    --strict flag does not fail on a missing entry, and the build log is
+    scanned afterward because --strict likewise ignores any other error
+    recorded against myst.yml rather than against a page.
+
+    Args:
+        no_sync: Skip dependency synchronization, matching --no-sync.
+
+    Returns:
+        True if the documentation is sound.
+    """
+    print("\n--- Jupyter Book Table of Contents ---")
+    myst_file: str = os.path.join("documentation", "myst.yml")
+    passed: bool = toc.report(myst_file=myst_file) == 0
+    print("Result: [SUCCESS]" if passed else "Result: [FAILED]")
+    if not passed:
+        print(
+            "\n[TIP] The pages under book/src/_generated are generated, not"
+            " checked in. If those are the missing entries, run"
+            " 'uv run python documentation/generate_ui_documentation.py'."
+        )
+
+    print("\n--- Jupyter Book Build (--html --strict) ---")
+    print("Note: Requires network access to api.mystmd.org.")
+    uv_sync_flag = ["--no-sync"] if no_sync else []
+    with subprocess.Popen(
+        ["uv", "run"]
+        + uv_sync_flag
+        + ["jupyter", "book", "build", "--html", "--strict"],
+        cwd="documentation",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ) as build:
+        # Echo the build as it runs, keeping the error lines for the scan below.
+        errors: list[str] = []
+        for line in build.stdout:
+            print(line, end="")
+            if MYST_ERROR_MARKER in line:
+                errors.append(line.strip())
+
+    if build.returncode != 0:
+        print(f"Result: [FAILED] (Exit code: {build.returncode})")
+        return False
+    if errors:
+        print(f"Result: [FAILED] (MyST reported {len(errors)} error(s))")
+        for error in errors:
+            print(f"    - {error}")
+        return False
+
+    print("Result: [SUCCESS]")
+    return passed
 
 
 def validate_tag_checks(tag: str) -> bool:
@@ -379,22 +443,8 @@ def main() -> None:
 
     # 6. Jupyter Book build (optional — requires network access)
     if args.docs:
-        print("\n--- Jupyter Book Build (--html --strict) ---")
-        print("Note: Requires network access to api.mystmd.org.")
-        uv_sync_flag = ["--no-sync"] if args.no_sync else []
-        docs_result = subprocess.run(
-            ["uv", "run"]
-            + uv_sync_flag
-            + ["jupyter", "book", "build", "--html", "--strict"],
-            cwd="documentation",
-            text=True,
-            check=False,
-        )
-        if docs_result.returncode != 0:
-            print(f"Result: [FAILED] (Exit code: {docs_result.returncode})")
+        if not docs_checks(no_sync=args.no_sync):
             all_passed = False
-        else:
-            print("Result: [SUCCESS]")
 
     print("\n" + "=" * 40)
     if all_passed:

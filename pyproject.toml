@@ -48,6 +48,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-qt==4.4.0",
+  "pyyaml",  # documentation/myst.yml parsing, see cicd/toc.py
   "requests",
   "ruff",
 ]
