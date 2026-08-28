@@ -103,6 +103,30 @@ def run_step(
 MYST_ERROR_MARKER = "⛔️"
 
 
+def _console_print(text: str, *, end: str = "\n") -> None:
+    """
+    Print text that may contain characters the terminal cannot encode.
+
+    MyST's build output is full of emoji (⛔️, 📚, 🔗, ...). Some terminals,
+    most notably the default Windows console codec ("charmap"/cp1252), cannot
+    encode them, and pytest's default file-descriptor capture goes through
+    that same codec even though nothing is actually rendered to a screen. So
+    the failure is not cosmetic: a plain print() can crash a real preflight
+    run on Windows. Fall back to a printable approximation rather than
+    raising.
+
+    Args:
+        text: The text to print.
+        end: String appended after the text, matching print()'s parameter.
+    """
+    try:
+        print(text, end=end)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        safe = text.encode(encoding, errors="backslashreplace").decode(encoding)
+        print(safe, end=end)
+
+
 def docs_checks(*, no_sync: bool) -> bool:
     """
     Run the documentation checks that the docs_jupyter_book CI job runs.
@@ -140,11 +164,17 @@ def docs_checks(*, no_sync: bool) -> bool:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        # MyST (a Node.js CLI) writes UTF-8 regardless of platform. Decode
+        # explicitly rather than falling back to the locale's preferred
+        # encoding, which on Windows is typically cp1252 and would garble or
+        # reject the build's emoji.
+        encoding="utf-8",
+        errors="replace",
     ) as build:
         # Echo the build as it runs, keeping the error lines for the scan below.
         errors: list[str] = []
         for line in build.stdout:
-            print(line, end="")
+            _console_print(line, end="")
             if MYST_ERROR_MARKER in line:
                 errors.append(line.strip())
 
@@ -154,7 +184,7 @@ def docs_checks(*, no_sync: bool) -> bool:
     if errors:
         print(f"Result: [FAILED] (MyST reported {len(errors)} error(s))")
         for error in errors:
-            print(f"    - {error}")
+            _console_print(f"    - {error}")
         return False
 
     print("Result: [SUCCESS]")

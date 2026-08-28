@@ -2,7 +2,9 @@
 Tests for the preflight documentation checks.
 """
 
+import io
 import subprocess
+import sys
 
 from rattlesnake import preflight
 
@@ -91,3 +93,51 @@ def test_docs_checks_fails_on_a_failed_build(monkeypatch):
     build_patch(monkeypatch, ["Site has 5 errors, stopping build.\n"], returncode=1)
 
     assert preflight.docs_checks(no_sync=True) is False
+
+
+def narrow_stdout_patch(monkeypatch, *, encoding: str) -> io.BytesIO:
+    """
+    Replace sys.stdout with a stream restricted to the given encoding.
+
+    Reproduces the default Windows console codec ("charmap"/cp1252), which
+    cannot encode MyST's emoji. pytest's own file-descriptor capture goes
+    through that same codec, so this is not a synthetic scenario: it is what
+    actually failed on the Windows CI runner.
+
+    Args:
+        monkeypatch: The pytest monkeypatch fixture.
+        encoding: The encoding to restrict sys.stdout to.
+
+    Returns:
+        The underlying buffer, for inspecting what was actually written.
+    """
+    buffer = io.BytesIO()
+    stream = io.TextIOWrapper(buffer, encoding=encoding, newline="")
+    monkeypatch.setattr(sys, "stdout", stream)
+    return buffer
+
+
+def test_console_print_falls_back_when_the_stream_cannot_encode_the_text(monkeypatch):
+    """A narrow stdout encoding does not raise; unencodable text degrades instead."""
+    buffer = narrow_stdout_patch(monkeypatch, encoding="cp1252")
+
+    preflight._console_print("📚 Built 28 pages for project in 4.57 s.\n", end="")
+    sys.stdout.flush()
+
+    written = buffer.getvalue().decode("cp1252")
+    assert "Built 28 pages" in written
+    assert "📚" not in written
+
+
+def test_docs_checks_survives_a_narrow_stdout_encoding(monkeypatch):
+    """
+    The exact failure seen on Windows CI: stdout cannot encode MyST's emoji.
+
+    Before the fix, printing the build's emoji-laden output crashed with
+    UnicodeEncodeError under cp1252 instead of reporting a check result.
+    """
+    toc_patch(monkeypatch, 0)
+    build_patch(monkeypatch, ["📚 Built 28 pages for project in 4.57 s.\n"])
+    narrow_stdout_patch(monkeypatch, encoding="cp1252")
+
+    assert preflight.docs_checks(no_sync=True) is True
