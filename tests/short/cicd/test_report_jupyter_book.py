@@ -32,10 +32,33 @@ def test_generate_footer():
     assert "&nbsp;&nbsp;2024-03-24 08:00:00 EST<br>" in footer
     assert "&nbsp;&nbsp;2024-03-24 06:00:00 MST<br>" in footer
     assert 'Run ID: <a href="https://github.com/owner/repo/actions/runs/12345678">12345678</a><br>' in footer
-    assert 'Branch: <a href="https://github.com/owner/repo/tree/main">main</a><br>' in footer
+    assert "Branch: main<br>" in footer
     assert 'Commit: <a href="https://github.com/owner/repo/commit/abc123456789">abc1234</a><br>' in footer
     assert "owner/repo" in footer
     assert "Repository:" not in footer
+
+
+def test_generate_footer_does_not_link_the_branch():
+    """
+    The branch line is plain text, not a link to .../tree/{ref_name}.
+
+    A feature branch is commonly deleted right after its PR merges, and
+    docs_ui_generate alone takes ~25 minutes. If the branch is linked, the
+    strict build's own link checker can lose that race against the deletion
+    and fail the job on a now-dead URL, even though the merge succeeded.
+    """
+    metadata = ReportMetadata(
+        timestamp="20240324_120000_UTC",
+        run_id="12345678",
+        ref_name="dev-preflight",
+        github_sha="abc123456789",
+        github_repo="owner/repo",
+    )
+
+    footer = generate_footer(metadata)
+
+    assert "https://github.com/owner/repo/tree/dev-preflight" not in footer
+    assert "Branch: dev-preflight<br>" in footer
 
 
 def test_update_myst_file_success(tmp_path):

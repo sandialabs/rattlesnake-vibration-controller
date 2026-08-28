@@ -28,7 +28,6 @@ def generate_footer(metadata: ReportMetadata) -> str:
     """
     github_url = f"https://github.com/{metadata.github_repo}"
     run_url = f"{github_url}/actions/runs/{metadata.run_id}"
-    branch_url = f"{github_url}/tree/{metadata.ref_name}"
     commit_url = f"{github_url}/commit/{metadata.github_sha}"
 
     ts_lines = get_multiline_timestamp(metadata.timestamp)
@@ -42,7 +41,15 @@ def generate_footer(metadata: ReportMetadata) -> str:
         f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
         f"{indent}&nbsp;&nbsp;{ts_lines[4]}<br>\n"
         f'{indent}Run ID: <a href="{run_url}">{metadata.run_id}</a><br>\n'
-        f'{indent}Branch: <a href="{branch_url}">{metadata.ref_name}</a><br>\n'
+        # Branch is deliberately plain text, not a link to .../tree/{ref_name}.
+        # A feature branch is often deleted right after its PR merges, and
+        # docs_ui_generate alone takes ~25 minutes, so the strict build's own
+        # link checker can lose that race and fail on a now-dead branch URL.
+        # main/dev persist, but the footer has no way to tell which case it's
+        # in, so treat every branch as ephemeral. The commit link below is
+        # stable: GitHub keeps a commit's page reachable by SHA independent
+        # of whether the branch that pointed to it still exists.
+        f"{indent}Branch: {metadata.ref_name}<br>\n"
         f'{indent}Commit: <a href="{commit_url}">{metadata.github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
         f"\n"
