@@ -192,6 +192,12 @@ def default_control_law(
     x_opt = np.array(x_opt)
     b_opt = np.array(b_opt)
 
+    # We want amplitudes to be alternating with +/- 1.
+    amplitude_sign_flips = -np.sign((np.arange(b_opt.shape[-1]) % 2) - 0.5)
+    # We need to adjust by the sign flip value to make sure the phase is pulled out correctly
+    # based on the flipped amplitude
+    b_opt = b_opt * amplitude_sign_flips
+
     # Now that we know the phases, recompute the SRSs with adjusted phases
     # to get better amplitude estimates
     phases = np.angle(b_opt).T
@@ -244,11 +250,19 @@ def default_control_law(
     x_opt = np.array(x_opt).T
     b_opt2 = np.array(b_opt2).T
 
+    # We want amplitudes to be alternating with +/- 1.
+    amplitude_sign_flips = -np.sign((np.arange(x_opt.shape[-1]) % 2) - 0.5)
+    # We need to adjust by the sign flip value to make sure the phase is pulled out correctly
+    # based on the flipped amplitude
+    x_opt = x_opt * amplitude_sign_flips
+
     # Extract the drive amplitudes and phases
     amplitudes = np.abs(x_opt).T
     drive_phases = np.angle(x_opt)
     delays = (-drive_phases / (2 * np.pi * control_frequencies)).T
     decays = np.tile(sds_decays[:1, :-1], [amplitudes.shape[-1], 1]).T
+
+    amplitudes = amplitudes * amplitude_sign_flips[:, np.newaxis]
 
     # Add back the compensation pulse if necessary
     if environment_metadata.compensation_pulse_data.use_compensation_pulse:
@@ -402,6 +416,12 @@ class DefaultSDSControlLaw:
         x_opt = np.array(x_opt)
         b_opt = np.array(b_opt)
 
+        # We want amplitudes to be alternating with +/- 1.
+        amplitude_sign_flips = -np.sign((np.arange(b_opt.shape[-1]) % 2) - 0.5)
+        # We need to adjust by the sign flip value to make sure the phase is pulled out correctly
+        # based on the flipped amplitude
+        b_opt = b_opt * amplitude_sign_flips
+
         # Recompute the response-side SDS with preferred phasing
         phases = np.angle(b_opt).T
         delays = -phases / (2 * np.pi * control_frequencies)
@@ -452,10 +472,19 @@ class DefaultSDSControlLaw:
         x_opt = np.array(x_opt).T
         b_opt2 = np.array(b_opt2).T
 
+        # We want amplitudes to be alternating with +/- 1.
+        amplitude_sign_flips = -np.sign((np.arange(x_opt.shape[-1]) % 2) - 0.5)
+        # We need to adjust by the sign flip value to make sure the phase is pulled out correctly
+        # based on the flipped amplitude
+        x_opt = x_opt * amplitude_sign_flips
+
+        # Extract the drive amplitudes and phases
         amplitudes = np.abs(x_opt).T
         drive_phases = np.angle(x_opt)
         delays = (-drive_phases / (2 * np.pi * control_frequencies)).T
         decays = np.tile(sds_decays[:1, :-1], [amplitudes.shape[-1], 1]).T
+
+        amplitudes = amplitudes * amplitude_sign_flips[:, np.newaxis]
 
         # Add back the compensation pulse if necessary
         if self.environment_metadata.compensation_pulse_data.use_compensation_pulse:
