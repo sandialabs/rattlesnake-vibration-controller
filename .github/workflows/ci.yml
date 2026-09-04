@@ -299,7 +299,7 @@ jobs:
             echo "🚀 FAST TEST MODE: Proceeding with default core test suite"
           fi
 
-          uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          uv run pytest -v $TEST_PATHS --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing --junitxml=junit.xml
 
           # github.head_ref is the source branch name on PRs; empty on push events.
           # github.ref_name is "83/merge" on PRs, which produces a 404 branch URL.
@@ -322,6 +322,7 @@ jobs:
             coverage_report.html
             htmlcov/
             coverage.xml
+            junit.xml
   docs_ui_generate:
     needs: changes
     if: |
@@ -577,6 +578,19 @@ jobs:
               --github_server_url ${{ github.server_url }}
           else
             echo "⚠️ No coverage report xml file found; skipping coverage badge generation."
+          fi
+
+          # Safe evaluation operator check for the JUnit XML report
+          if [ -f "coverage-report/junit.xml" ]; then
+            uv run python src/rattlesnake/cicd/badge_tests.py \
+              --input_file coverage-report/junit.xml \
+              --output_dir badges \
+              --github_repo ${{ github.repository }} \
+              --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+              --run_id ${{ github.run_id }} \
+              --github_server_url ${{ github.server_url }}
+          else
+            echo "⚠️ No JUnit XML report found; skipping tests badge generation."
           fi
 
       - name: Assemble pages directory
