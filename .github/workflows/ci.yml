@@ -359,11 +359,21 @@ jobs:
         with:
           name: ui-generated-docs
           path: documentation/book/src/_generated
+          # Fail loudly rather than uploading an empty artifact. The book's
+          # table of contents lists every generated page, so an empty upload
+          # here breaks the docs_jupyter_book job downstream.
+          if-no-files-found: error
   # This job builds the Jupyter Book documentation and uploads it as an artifact. It runs on Ubuntu with Python 3.12.
   # To test locally:
   # 1. Install uv: https://astral.sh/uv/installation/
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
-  # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
+  # 3. Run `uv run python src/rattlesnake/cicd/toc.py --myst_file documentation/myst.yml` from the root of the repository to check the table of contents
+  # 4. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
+  #
+  # Note that step 3 is not redundant. `--strict` does not fail on a missing
+  # table of contents entry. MyST records that error against myst.yml, and the
+  # strict check only inspects errors recorded against pages that made it into
+  # the project. MyST prints the error and then exits zero.
   docs_jupyter_book:
     needs: [changes, docs_ui_generate]
     # Run job if docs changed
@@ -416,10 +426,32 @@ jobs:
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
-      - name: Build the book
+      - name: Validate the table of contents
         run: |
-          # Build the book. We use --strict to ensure any errors fail the job.
-          cd documentation && uv run jupyter book build --html --strict && cd ..
+          # Check every table of contents entry before building. The build's
+          # --strict flag does not catch a missing entry, so without this step
+          # a book with missing content deploys as a green build.
+          uv run python src/rattlesnake/cicd/toc.py --myst_file documentation/myst.yml
+
+      - name: Build the book
+        shell: bash
+        run: |
+          set -o pipefail
+
+          # Build the book. We use --strict to ensure any page errors fail the job.
+          BUILD_LOG="${RUNNER_TEMP:-/tmp}/jupyter_book_build.log"
+          cd documentation
+          uv run jupyter book build --html --strict 2>&1 | tee "$BUILD_LOG"
+          cd ..
+
+          # --strict only inspects errors recorded against pages that made it
+          # into the project. Errors recorded against myst.yml itself are
+          # printed and then ignored, and the build exits zero. Scan the log for
+          # the error marker so those fail the job too.
+          if grep -qF '⛔️' "$BUILD_LOG"; then
+            echo "::error::MyST reported errors during the book build; see the ⛔️ lines above."
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
