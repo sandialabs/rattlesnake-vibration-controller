@@ -1648,7 +1648,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         for window in self.plot_windows:
             window.close()
 
-    def save_spectral_data(self, clicked, filename=None):
+    def save_spectral_data(self, clicked=None, filename=None):
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self.definition_widget,
