@@ -11,7 +11,7 @@ numbering:
   code:
     enumerator: 12.%s
 ---
-# Multiple Input/Multiple Ouptut Random Vibration
+# Multiple Input/Multiple Output Random Vibration
 
 (sec:mimo_random)=
 # Multiple Input/Multiple Output Random Vibration
