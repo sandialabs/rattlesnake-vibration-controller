@@ -1,0 +1,12 @@
+{
+  "total": 663,
+  "passed": 663,
+  "failed": 0,
+  "skipped": 0,
+  "message": "663 pass 0 fail",
+  "color": "brightgreen",
+  "workflow_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml?query=branch%3Adev",
+  "run_id": "33929349173",
+  "artifact_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/33929349173",
+  "timestamp": "2026-09-04T23:50:26Z"
+}
