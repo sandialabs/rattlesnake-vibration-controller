@@ -53,6 +53,14 @@ from rattlesnake.examples.environment.sine.sine_metadata import (
     sine_event_list,
     worksheet_sine_event_list,
 )
+from rattlesnake.examples.environment.sds.sds_metadata import (
+    worksheet_sds_metadata,
+    netcdf_sds_metadata,
+    manual_sds_metadata,
+    sds_instructions,
+    sds_event_list,
+    worksheet_sds_event_list,
+)
 from rattlesnake.examples.environment.read.read_metadata import (
     manual_read_metadata,
     worksheet_read_metadata,
@@ -148,6 +156,13 @@ __all__ = [
     "sine_instructions",
     "sine_event_list",
     "worksheet_sine_event_list",
+    # SDS
+    "worksheet_sds_metadata",
+    "netcdf_sds_metadata",
+    "manual_sds_metadata",
+    "sds_instructions",
+    "sds_event_list",
+    "worksheet_sds_event_list",
     # Read
     "manual_read_metadata",
     "worksheet_read_metadata",
