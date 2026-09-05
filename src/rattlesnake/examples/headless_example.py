@@ -18,14 +18,14 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 TIMEOUT = 20
-IMPORT_METHOD = "manual"  # worksheet, netcdf, manual
+IMPORT_METHOD = "netcdf"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 ENVIRONMENT_TYPE = EnvironmentType.SDS
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = True
 RUN_SYSID = False
-START_HARDWARE = False
-START_ENVIRONMENT = False
+START_HARDWARE = True
+START_ENVIRONMENT = True
 RUN_PROFILE = False
 
 

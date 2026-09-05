@@ -108,12 +108,38 @@ def manual_sds_metadata(hardware_metadata, **overrides):
     return SDSMetadata(**kwargs)
 
 
-def netcdf_sds_metadata():
-    pass
+def netcdf_sds_metadata(hardware_metadata):
+    netcdf_dir = defaults.DIRECTORY + "/environment/sds/sds_v4.nc4"
+    netcdf_dataset = nc4.Dataset(netcdf_dir)
+    netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    metadata = SDSMetadata.load_metadata_from_netcdf(
+        netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    metadata.control_python_script = (
+        DIRECTORY + "/environment/sds_sys_id_control_law.py"
+    )
+
+    return metadata
 
 
-def worksheet_sds_metadata():
-    pass
+def worksheet_sds_metadata(hardware_metadata):
+    worksheet_dir = defaults.DIRECTORY + "/environment/sds/sds_v4.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir)
+    worksheet = workbook[ENVIRONMENT_NAME]
+
+    worksheet.cell(18, 2, defaults.DIRECTORY + "/environment/sds/sds_spec.npz")
+
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    metadata = SDSMetadata.load_metadata_from_worksheet(
+        worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    metadata.control_script_data.control_script = (
+        DIRECTORY + "/environment/sds_sys_id_control_law.py"
+    )
+
+    return metadata
 
 
 def sds_instructions():
@@ -149,4 +175,4 @@ def sds_event_list():
 
 
 def worksheet_sds_event_list():
-    pass
+    return []

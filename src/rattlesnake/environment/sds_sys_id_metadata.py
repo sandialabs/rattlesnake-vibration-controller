@@ -638,20 +638,22 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(24, 1, "Specification Num Hits")
         worksheet.cell(24, 3, "# Integer number of target hits")
 
-        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=26)
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=25)
 
-        worksheet.cell(42, 1, "Response Transformation Matrix:")
+        worksheet.cell(41, 1, "Response Transformation Matrix:")
+        worksheet.cell(
+            41,
+            2,
+            "# Transformation matrix to apply to the response channels.  Type None if there "
+            "is none.  Otherwise, make this a 2D array in the spreadsheet.",
+        )
+
+        worksheet.cell(42, 1, "Output Transformation Matrix:")
         worksheet.cell(
             42,
             2,
-            "# Type None if not used, otherwise put matrix values starting in column 2",
-        )
-
-        worksheet.cell(43, 1, "Output Transformation Matrix:")
-        worksheet.cell(
-            43,
-            2,
-            "# Type None if not used, otherwise put matrix values starting in column 2",
+            "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
+            "Otherwise, make this a 2D array in the spreadsheet.",
         )
 
     @classmethod
@@ -738,14 +740,19 @@ class SDSMetadata(SysIdEnvironmentMetadata):
 
         common_decay = str(worksheet.cell(9, 2).value).strip().upper() == "Y"
 
-        decay_values = []
-        col = 2
-        while True:
-            value = worksheet.cell(10, col).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
-                break
-            decay_values.append(float(value))
-            col += 1
+        if common_decay:
+            # Only column 2 is populated for a common decay value; column 3 onward
+            # may still hold the template's explanatory comment.
+            decay_values = [float(worksheet.cell(10, 2).value)]
+        else:
+            decay_values = []
+            col = 2
+            while True:
+                value = worksheet.cell(10, col).value
+                if value is None or (isinstance(value, str) and value.strip() == ""):
+                    break
+                decay_values.append(float(value))
+                col += 1
         decay_data = np.array(decay_values)
 
         decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
@@ -836,11 +843,11 @@ class SDSMetadata(SysIdEnvironmentMetadata):
             specification_data.num_hits = int(num_hits_cell)
 
         sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
-            worksheet, hardware_metadata, start_row=26
+            worksheet, hardware_metadata, start_row=25
         )
 
         response_transformation_matrix, output_transformation_matrix = (
-            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=42)
+            cls.load_sysid_matrix_from_worksheet(worksheet, start_row=41)
         )
 
         return cls(
@@ -935,13 +942,13 @@ class SDSMetadata(SysIdEnvironmentMetadata):
 
         worksheet.cell(24, 2, int(self.specification_data.num_hits))
 
-        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=26)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=25)
 
         self.save_sysid_matrix_to_worksheet(
             worksheet,
             self.response_transformation_matrix,
             self.reference_transformation_matrix,
-            start_row=42,
+            start_row=41,
         )
 
     @classmethod
