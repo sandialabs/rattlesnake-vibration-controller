@@ -168,6 +168,8 @@ class LanXIMetadata(HardwareMetadata):
                     address = IPAddress(ipv4_address=channel.feedback_device)
                 elif is_ipv6:
                     address = IPAddress(ipv6_address=channel.feedback_device)
+                else:
+                    address = IPAddress()
                 address.get_host_name_from_ip()
                 address.get_ip_from_host_name()
                 self.ip_addresses.append(address)
@@ -810,7 +812,9 @@ def create_hardware_maps(acquisition_map, output_map, channel_list):
         output_map[channel.feedback_device][int(channel.feedback_channel)] = i, channel
 
 
-def wait_for_ptp_state(host: str, state: str):
+def wait_for_ptp_state(
+    host: str, state: str, ping_alive_event: mp.synchronize.Event = None
+):
     """Waits until hardware is at a current state
 
     Parameters
@@ -819,6 +823,8 @@ def wait_for_ptp_state(host: str, state: str):
         The address of the host to wait for
     state : str
         The name of the state to wait until.
+    ping_alive_event : mp.synchronize.Event, optional
+        Event that extends the timeout timer for the main controller.
 
     Returns
     -------
@@ -830,6 +836,8 @@ def wait_for_ptp_state(host: str, state: str):
     current_state = ""
     iteration = 0
     while True:
+        if ping_alive_event is not None:
+            ping_alive_event.set()
         response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
         state_data = response.json()
         current_state = state_data["ptpStatus"]
@@ -851,7 +859,9 @@ def wait_for_ptp_state(host: str, state: str):
     return result
 
 
-def wait_for_recorder_state(host: str, state: str):
+def wait_for_recorder_state(
+    host: str, state: str, ping_alive_event: mp.synchronize.Event = None
+):
     """Waits until hardware is at a current state
 
     Parameters
@@ -860,6 +870,8 @@ def wait_for_recorder_state(host: str, state: str):
         The address of the host to wait for
     state : str
         The name of the state to wait until.
+    ping_alive_event : mp.synchronize.Event, optional
+        Event that extends the timeout timer for the main controller.
 
     Returns
     -------
@@ -871,6 +883,8 @@ def wait_for_recorder_state(host: str, state: str):
     current_state = ""
     iteration = 0
     while True:
+        if ping_alive_event is not None:
+            ping_alive_event.set()
         response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
         state_data = response.json()
         current_state = state_data["moduleState"]
@@ -895,7 +909,9 @@ def wait_for_recorder_state(host: str, state: str):
     return result
 
 
-def wait_for_input_state(host: str, state: str):
+def wait_for_input_state(
+    host: str, state: str, ping_alive_event: mp.synchronize.Event = None
+):
     """Waits until hardware is at a current state
 
     Parameters
@@ -904,6 +920,8 @@ def wait_for_input_state(host: str, state: str):
         The address of the host to wait for
     state : str
         The name of the state to wait until.
+    ping_alive_event : mp.synchronize.Event, optional
+        Event that extends the timeout timer for the main controller.
 
     Returns
     -------
@@ -915,6 +933,8 @@ def wait_for_input_state(host: str, state: str):
     current_state = ""
     iteration = 0
     while True:
+        if ping_alive_event is not None:
+            ping_alive_event.set()
         response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
         state_data = response.json()
         current_state = state_data["inputStatus"]
@@ -936,16 +956,18 @@ def wait_for_input_state(host: str, state: str):
     return result
 
 
-def close_recorder(host):
+def close_recorder(host, ping_alive_event: mp.synchronize.Event = None):
     """Closes the host based on its current state"""
+    if ping_alive_event is not None:
+        ping_alive_event.set()
     response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
     state_data = response.json()
     current_state = state_data["moduleState"]
     if current_state == "RecorderRecording":
         print(f"Stopping Measurement on {host}")
         requests.put("http://" + host + "/rest/rec/measurements/stop", timeout=60)
-        wait_for_recorder_state(host, "RecorderStreaming")
-        close_recorder(host)
+        wait_for_recorder_state(host, "RecorderStreaming", ping_alive_event)
+        close_recorder(host, ping_alive_event)
     elif current_state == "RecorderConfiguring":
         response = requests.get(
             "http://" + host + "/rest/rec/channels/input/default", timeout=60
@@ -956,18 +978,18 @@ def close_recorder(host):
             json=channel_settings,
             timeout=60,
         )
-        wait_for_recorder_state(host, "RecorderStreaming")
-        close_recorder(host)
+        wait_for_recorder_state(host, "RecorderStreaming", ping_alive_event)
+        close_recorder(host, ping_alive_event)
     elif current_state == "RecorderStreaming":
         print(f"Finishing Streaming on {host}")
         requests.put("http://" + host + "/rest/rec/finish", timeout=60)
-        wait_for_recorder_state(host, "RecorderOpened")
-        close_recorder(host)
+        wait_for_recorder_state(host, "RecorderOpened", ping_alive_event)
+        close_recorder(host, ping_alive_event)
     elif current_state == "RecorderOpened":
         print(f"Closing Recorder on {host}")
         requests.put("http://" + host + "/rest/rec/close", timeout=60)
-        wait_for_recorder_state(host, "Idle")
-        close_recorder(host)
+        wait_for_recorder_state(host, "Idle", ping_alive_event)
+        close_recorder(host, ping_alive_event)
     elif current_state == "Idle":
         print(f"Recorder {host} Idle")
     else:
@@ -1112,9 +1134,13 @@ class LanXIAcquisition(HardwareAcquisition):
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                wait_for_recorder_state(slave_address, "RecorderRecording")
+                wait_for_recorder_state(
+                    slave_address, "RecorderRecording", self.ping_alive_event
+                )
         if self.master_address in self.acquisition_map:
-            wait_for_recorder_state(self.master_address, "RecorderRecording")
+            wait_for_recorder_state(
+                self.master_address, "RecorderRecording", self.ping_alive_event
+            )
 
         # Here we need to start the processes
         # Split it up into multiple processes
@@ -1251,9 +1277,13 @@ class LanXIAcquisition(HardwareAcquisition):
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                wait_for_recorder_state(slave_address, "RecorderStreaming")
+                wait_for_recorder_state(
+                    slave_address, "RecorderStreaming", self.ping_alive_event
+                )
         if self.master_address in self.acquisition_map:
-            wait_for_recorder_state(self.master_address, "RecorderStreaming")
+            wait_for_recorder_state(
+                self.master_address, "RecorderStreaming", self.ping_alive_event
+            )
         # Join the processes
         for acquisition_device, process in self.processes.items():
             print(f"Recovering process {acquisition_device}")
@@ -1392,8 +1422,8 @@ class LanXIOutput(HardwareOutput):
             print("Waiting for PTP Sync...")
             # Wait until PTP locks
             for slave_address in self.slave_addresses:
-                wait_for_ptp_state(slave_address, "Locked")
-            wait_for_ptp_state(self.master_address, "Locked")
+                wait_for_ptp_state(slave_address, "Locked", self.ping_alive_event)
+            wait_for_ptp_state(self.master_address, "Locked", self.ping_alive_event)
             print("PTP Synced!")
             single_module = False
         else:
@@ -1488,9 +1518,13 @@ class LanXIOutput(HardwareOutput):
             )
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                wait_for_recorder_state(slave_address, "RecorderConfiguring")
+                wait_for_recorder_state(
+                    slave_address, "RecorderConfiguring", self.ping_alive_event
+                )
         if self.master_address in self.acquisition_map:
-            wait_for_recorder_state(self.master_address, "RecorderConfiguring")
+            wait_for_recorder_state(
+                self.master_address, "RecorderConfiguring", self.ping_alive_event
+            )
         print("\nStates after Recorder Create")
         self._get_states()
         self.ping_alive_event.set()
@@ -1567,9 +1601,13 @@ class LanXIOutput(HardwareOutput):
         if len(self.slave_addresses) > 0:
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
-                    wait_for_input_state(slave_address, "Settled")
+                    wait_for_input_state(
+                        slave_address, "Settled", self.ping_alive_event
+                    )
             if self.master_address in self.acquisition_map:
-                wait_for_input_state(self.master_address, "Settled")
+                wait_for_input_state(
+                    self.master_address, "Settled", self.ping_alive_event
+                )
             print("Recorder Settled, Synchronizing...")
 
             for slave_address in self.slave_addresses:
@@ -1585,9 +1623,13 @@ class LanXIOutput(HardwareOutput):
             self.ping_alive_event.set()
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
-                    wait_for_input_state(slave_address, "Synchronized")
+                    wait_for_input_state(
+                        slave_address, "Synchronized", self.ping_alive_event
+                    )
             if self.master_address in self.acquisition_map:
-                wait_for_input_state(self.master_address, "Synchronized")
+                wait_for_input_state(
+                    self.master_address, "Synchronized", self.ping_alive_event
+                )
             print("Recorder Synchronized, Starting Streaming...")
             self.ping_alive_event.set()
 
@@ -1608,9 +1650,13 @@ class LanXIOutput(HardwareOutput):
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                wait_for_recorder_state(slave_address, "RecorderStreaming")
+                wait_for_recorder_state(
+                    slave_address, "RecorderStreaming", self.ping_alive_event
+                )
         if self.master_address in self.acquisition_map:
-            wait_for_recorder_state(self.master_address, "RecorderStreaming")
+            wait_for_recorder_state(
+                self.master_address, "RecorderStreaming", self.ping_alive_event
+            )
         print("Recorder Streaming")
         self._get_states()
         self.ping_alive_event.set()
@@ -1893,7 +1939,9 @@ class LanXIOutput(HardwareOutput):
         with mp.Pool(
             len(hosts)
         ) as pool:  # Not sure if this can be len(hosts) or if it should be self.maximum_processes
-            pool.map(close_recorder, hosts)
+            pool.map(
+                partial(close_recorder, ping_alive_event=self.ping_alive_event), hosts
+            )
         # host_states = {}
         # while True:
         #     for host in hosts:

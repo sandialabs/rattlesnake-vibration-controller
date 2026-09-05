@@ -467,7 +467,7 @@ class PlotSineWindow(QtWidgets.QDialog):
         self.channel_index = channel_index
         spec_frequency = ui.specification_frequencies[tone_index]
         spec_amplitude = ui.specification_amplitudes[tone_index, channel_index]
-        spec_phase = wrap(ui.specification_phases[tone_index, channel_index])
+        spec_phase = wrap(ui.specification_phases[tone_index, channel_index], period=360.0)
         spec = ui.environment_metadata.specifications[tone_index]
         warn_freq = np.repeat(spec.breakpoint_table["frequency"], 2)
         warn_low = spec.breakpoint_table["warning"][:, 0, :, channel_index].flatten()

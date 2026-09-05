@@ -237,9 +237,32 @@ rattlesnake-vibration-controller/documentation
 
 folder.
 
+(sec:generated-ui-pages)=
+#### Generated User Interface Pages
+
+Seventeen pages under `book/src/_generated` document the Rattlesnake user interface.  The script `documentation/generate_ui_documentation.py` writes them.  It opens each environment's user interface, walks its widget tree, screenshots every widget, and produces one Markdown page per interface along with the figures that page references.
+
+These pages are **not** checked into the repository.  `documentation/.gitignore` excludes `book/src/_generated/**`.  The `docs_ui_generate` job in `.github/workflows/ci.yml` regenerates them on every documentation build.  Its `Generate UI documentation` step runs the script.  Do not update the `book/src/_generated/**` files.
+
+Hand-written chapters cross-reference the generated figures.  `environment_mimo_random.md` links to `fig:random_vibration_definition:cpsd_parameters_groupbox`, for example.  A working tree without the generated pages therefore fails a book build twice over: seventeen table of contents entries do not resolve, and the cross-references from the hand-written chapters do not resolve either.
+
+Generate the pages locally by running this from the repository root:
+
+```sh
+uv run python documentation/generate_ui_documentation.py
+```
+
+The script opens real Qt windows and screenshots them, so it needs a desktop session rather than a headless one.  It also takes a while, roughly half an hour on the CI Windows runner.  Run it once.  The output then persists in your working tree, and you can rebuild the book as often as you like without regenerating the screenshots.
+
+```{note}
+CI runs this job on `windows-latest`.  Windows is where the interface is developed, so its screenshots are the reference.  A macOS or Linux run produces different window decorations and widget metrics, so use the generated pages for a local preview rather than as a match for what CI will publish.
+```
+
 #### Local Build
 
 Within the `documentation` folder, the `myst.yml` file specifies how Jupyter Book should build the documentation.  Importantly, it links to Markdown files that contain the book's content.
+
+Generate the user interface pages first, as described in [Generated User Interface Pages](#sec:generated-ui-pages).  A fresh clone does not contain them, and the build fails without them.
 
 ```sh
 jupyter book build --html --strict
@@ -250,6 +273,20 @@ This will build the Jupyter Book documentation.
 ```{warning}
 The foregoing command may not work behind a corporate firewall, in which case, the simpler `jupyter book build` command should still work.
 ```
+
+````{warning}
+The `--strict` flag does not catch every error MyST prints.  MyST records a missing table of contents entry against `myst.yml`.  The strict check only inspects errors recorded against pages that made it into the project.  MyST prints the error and then exits zero (`success`).  A book missing every page under `book/src/_generated` still builds green.
+
+Check the table of contents separately.  Run the following from the repository root, before the build:
+
+```sh
+python src/rattlesnake/cicd/toc.py --myst_file documentation/myst.yml
+```
+
+The script exits non-zero and lists every entry that does not resolve.  `uv run preflight --docs` runs it for you, along with the build.
+
+Seventeen missing entries under `book/src/_generated` mean you have not generated the user interface pages yet.  See [Generated User Interface Pages](#sec:generated-ui-pages).
+````
 
 The output will be similar to:
 
@@ -328,19 +365,36 @@ jupyter book build
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
+The CI/CD pipeline comprises two GitHub Actions workflows, `ci.yml` and `release.yml`, described in detail below.
+
 ### Synopsis
 
 `ci.yml` — Continuous Integration
 
-Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
+Triggered by:
 
-1. **changes** 
-   * Uses dorny/paths-filter to detect whether docs or code files changed. Downstream jobs use this to skip
-  unnecessary work.
+* A push to *any* branch
+* A pull request targeting `main`/`dev`
+* Manual `workflow_dispatch`
+  * *Example:* re-running CI on demand from the GitHub Actions UI, such as forcing the full `pytest_matrix` via `test_level=full` on a branch that wouldn't otherwise trigger it.
+* `workflow_call`
+  * *Example:* `release.yml` invokes `ci.yml` as its `test` job through the `workflow_call` mechanism.
+
+Seven jobs, five of which share a gate:
+
+* **`pytest_matrix`, `lint`, `coverage`** — run when `code_changed == 'true'` **or** the branch (or PR base branch) is `main`/`dev`.
+* **`docs_ui_generate`, `docs_jupyter_book`** — run when `docs_changed == 'true'` **or** the branch (or PR base branch) is `main`/`dev`. `docs_ui_generate` produces the pages under `book/src/_generated`. `docs_jupyter_book` consumes them. `docs_jupyter_book` declares `needs: docs_ui_generate`, so it waits for the producing job to finish before it builds the book.
+* **`deploy`** — runs on `main`/`dev` regardless of whether `code_changed` is `true` or `false`, and regardless of whether `docs_changed` is `true` or `false`.
+
+1. **changes**
+   * Uses [dorny/paths-filter](https://github.com/dorny/paths-filter) to detect whether docs and/or code files changed. Sets the job outputs `docs_changed` and `code_changed` (each `true`/`false`), which downstream jobs use to streamline the CI process by skipping unnecessary jobs.
 2. **pytest_matrix**
-   * Runs tests on all combinations of [macos, ubuntu, windows] × [3.11, 3.12] using `pip install .[dev]` (not `uv`) for PyQt wheel compatibility. Test scope is adaptive:
-     *  Default: `tests/short`
-     * Full suite triggered by: commit message containing `[all tests]`, manual dispatch with `test_level=full`, or branch is `main` or `dev`
+   * Runs tests on all combinations of [macOS, Ubuntu, Windows] × [3.11, 3.12] of Python using `pip install .[dev]`.  PyQt wheel compatibility requires use of `pip` instead of `uv`. Test scope is adaptive:
+     * Default: `tests/short`
+     * Full suite triggered by:
+       * commit message containing `[all tests]`, or
+       * manual dispatch with `test_level=full`, or
+       * branch is `main` or `dev`
 3. **lint**
    * Runs `uv run ruff format --check src/rattlesnake` first. This step is **non-blocking** — a
   formatting drift surfaces as a `::warning::` annotation on the workflow run instead of failing
@@ -351,56 +405,43 @@ Triggered on every push to *any* branch, plus manual dispatch. Six jobs:
   a redundant environment setup per workflow run.
 4. **coverage**
    * Runs `pytest --cov` via `uv` with the same adaptive test scope, then calls `report_coverage.py` to generate an HTML coverage report artifact.
-5. **docs_jupyter_book**
-   * Updates `myst.yml` metadata via `report_jupyter_book.py,` then builds the Jupyter Book. Only runs when docs changed (or on `main`/`dev`).
-6. **deploy**
-   * Runs only on `main/dev`, assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
+5. **docs_ui_generate**
+   * Runs on `windows-latest`. Executes `documentation/generate_ui_documentation.py`, which opens each environment's user interface, screenshots its widgets, and writes the seventeen pages and their figures into `documentation/book/src/_generated`.
+   * Uploads that folder as the `ui-generated-docs` artifact. The upload uses `if-no-files-found: error`, so an empty generation fails here rather than silently breaking the book downstream.
+   * This job is why `book/src/_generated` is *not* checked into the repository. See [Generated User Interface Pages](#sec:generated-ui-pages).
+   * The job takes roughly half an hour, so the docs gate matters here more than anywhere else.
+6. **docs_jupyter_book**
+   * Downloads the `ui-generated-docs` artifact into `documentation/book/src/_generated`, updates `myst.yml` metadata via `report_jupyter_book.py`, validates the table of contents via `toc.py`, then builds the Jupyter Book.
+   * The table of contents check and the scan of the build log for MyST's `⛔️` error marker both exist because `--strict` alone does not fail the job.  MyST records some errors, a missing table of contents entry among them, against `myst.yml` rather than against a page.  MyST's help text for `--strict` reads "Summarize build warnings and stop on any errors," and MyST does log the missing entry at error level.  The strict check simply never inspects errors recorded against the config file.  So MyST prints them and exits zero (`success`).  This is an upstream gap that our manually-created `toc.py` now guards against.
+7. **deploy**
+   * Assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
 
 `release.yml` — Release Pipeline
 
-Triggered only on `v*` tags. Six sequential jobs:
+Triggered by a `v*` **tag push**, but never a **branch push** (not even a branch push to `main` or `dev`). Once triggered, two conditions (both checked in `validate_tag`) decide where, if anywhere, the release publishes to:
+
+* **Branch:** the tag must be reachable from `main` or `dev`. A tag on any branch that is not `main`/`dev` fails the `validate_tag` job; a failed `validate_tag` job prevents any releases to TestPyPI or PyPI.
+* **Version string:** a prerelease version (`a`/`b`/`rc`/`.dev` segments) publishes to **TestPyPI**; a stable or `.post` version publishes to **PyPI**.
+  * The `main` branch can publish to either TestPyPI or PyPI. 
+  * The `dev` branch can publish to either TestPyPI or PyPI.
+
+Six sequential jobs:
 
 1. **validate_tag**
    * Verifies the tag was created on the `main` or `dev` branch, that it conforms to PEP 440, and that it is strictly newer than all existing tags.
-   * Also computes an `is_prerelease` job output using `packaging.version.Version(...).is_prerelease` (true for `a`/`b`/`rc`/`.dev` segments, false for stable and `.post` releases). This is the **single source of truth** consumed by every downstream job that needs to distinguish a prerelease from a production release — nothing downstream re-derives it with its own tag matching.
+   * Computes an `is_prerelease` job output using `packaging.version.Version(...).is_prerelease`. This is the **single source of truth** consumed by every downstream job that needs to distinguish a prerelease from a production release — nothing downstream re-derives it with its own tag matching.
 2. **test**
-   * Calls `ci.yml` as a reusable workflow (workflow_call).
+   * Calls `ci.yml` as a reusable workflow (`workflow_call`).
 3. **build**
    * Runs `uv build` and generates a Supply chain Levels for Software Artifacts (SLSA, aka "salsa") provenance attestation for the dist artifacts.
 4. **github-release**
-   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files. `prerelease:` is set directly from `validate_tag`'s `is_prerelease` output.
+   * Creates a GitHub Release with auto-generated notes and attaches the `dist` files.
+   * `prerelease:` is set directly from `validate_tag`'s `is_prerelease` output.
 5. **publish_testpypi** / **publish_pypi**
-   * Two separate jobs, mutually exclusive via `if: needs.validate_tag.outputs.is_prerelease == 'true'` / `'false'`. Each has a hardcoded `environment:` (`testpypi` / `pypi`) and hardcoded publish target — no ternary expression to read or evaluate. In the Actions UI this shows as one job succeeding and the other skipped, so which registry a run published to is visible at a glance from the job list alone, and each job's last step also writes an explicit one-line status (e.g. "📦 Published `v1.2.3` to **production PyPI**") to the run's Summary tab.
-   * Splitting into two jobs (rather than two steps in one job) is required because GitHub Actions environments — including the `pypi` environment's required-reviewers approval gate — are configured per-job, not per-step.
-
-### Details
-
-The separate concerns of **test**, **build**, **release**, and **publish** are contained in the `.github/workflows/` files.
-
-* **Continuous Integration (CI)**
-  * **Test (Verification)**
-    * **Purpose:** To ensure that the code is functional and hasn't introduced regressions (broken existing features).
-    * **Scope:** Tests are run on one or more versions of Python and on multiple operating systems (e.g., Linux, macOS, Windows).
-    * **What happens:** Automated unit tests, integration tests, and code quality assessments are performed.
-      * **Testing** (e.g., [pytest](https://docs.pytest.org/en/stable/)) runs your unit and integration tests.
-      * **Code coverage** (e.g., pytest with a coverage report) assesses the number of lines of code covered by tests.
-      * **Linting** (static code analysis, e.g., [pylint](https://pypi.org/project/pylint/)) and 
-      * **Code Formatting** (e.g., [ruff](https://docs.astral.sh/ruff/)) checks ensure code consistency.
-      *  **Documentation** may also be assembled and compiled.  This is particularly important for interactive documentation that has examples that depend on source code functionality.
-    * **Key Outcome:** Confidence. If this stage fails, the process stops immediately, preventing broken code from ever reaching a user.
-  * **Build (Packaging)**
-    * **Purpose:** To transform your "human-readable" source code into "machine-installable" artifacts. This is the bridge between CI and CD. Once the code is verified (integrated), it can be packaged into a deployable format (Wheels/SDists).
-    * **What happens:** Tools (like `uv build`) bundle your code into standard formats, such as a Wheel (`.whl`) or a Source Distribution (`.tar.gz`).
-     * **Key Outcome:** Portability. You now have a single file (an "artifact") that contains everything needed to install your library on any compatible system.
-  * **Release (Documentation & Tagging)**
-     * **Purpose:** To create an official "point-in-time" snapshot of the project for project management and users. It uses an immutable Git tag and GitHub Release page.
-     * **What happens:** A permanent Git tag (like v1.0.0) is assigned to a specific commit. A GitHub Release page is generated with a Changelog (i.e., What's New?) and the build artifacts are attached to it as "Release Assets."
-    * **Key Outcome:** Traceability. It provides a clear history of the project's evolution and a stable place for users to download specific versions.
-* **Continuous Delivery (CD)**
-  * **Publish (Distribution)**
-     * **Purpose:** To make the software easily available to the global ecosystem.
-     * **What happens:** The built artifacts are uploaded to a package registry, such as [PyPI](https://pypi.org/project/rattlesnake-vibration-controller/) (the Python Package Index).
-     * **Key Outcome:** Accessibility. Once published, anyone in the world can install your software using a simple command like `pip install rattlesnake-vibration-controller`.
+   * Two separate jobs, mutually exclusive via `if: needs.validate_tag.outputs.is_prerelease == 'true'` / `'false'`. 
+     * Each has a hardcoded `environment:` (`testpypi` / `pypi`) and hardcoded publish target — no ternary expression to read or evaluate.
+     * In the Actions UI this shows as one job succeeding and the other skipped, so which registry a run published to is visible at a glance from the job list alone, and each job's last step also writes an explicit one-line status (e.g., "📦 Published `v1.2.3` to **production PyPI**") to the run's Summary tab.
+   * Splitting into two jobs (rather than two steps in one job) is required because GitHub Actions environments (including the `pypi` environment's required-reviewers approval gate) are configured per-job, not per-step.
 
 ### Efficiency
 
@@ -447,7 +488,7 @@ Only the `pytest_matrix`, `lint`, and `coverage` jobs will be run.  The `docs_ju
 
 #### All test
 
-Regardless of the file type, if either the `main` or the `dev` branch is target
+Regardless of the file type, if either the `main` or the `dev` branch is the target
 of an update, *all tests* are run, for example,
 
 :::{figure} figures/cicd_all_jobs.svg
@@ -492,7 +533,7 @@ option | description
 `--all-tests` | Full suite including `tests/long/`; matches CI on `main`/`dev`
 `--coverage` | Adds `--cov=rattlesnake --cov-report=term-missing` to the pytest run (no effect while pytest is disabled)
 `--tag TAG` | Validates `TAG` before pushing a release: checks current branch is `main` or `dev`, that the tag conforms to PEP 440, and that it is strictly newer than all existing tags. Runs before lint and tests.
-`--docs` | Builds the Jupyter Book with `--strict`; matches the `docs_jupyter_book` CI job. Requires network access to `api.mystmd.org`.
+`--docs` | Validates the table of contents, then builds the Jupyter Book with `--strict` and scans the log for errors `--strict` ignores; matches the `docs_jupyter_book` CI job. Requires network access to `api.mystmd.org`.
 `--no-sync` | Skips `uv sync` (useful when offline or behind a firewall)
 `--skip-network-check` | Skips the initial PyPI connectivity check
 `--force` | Continues even if the network or sync checks fail
@@ -554,14 +595,14 @@ On the GitHub repo:
 Finally, the PyPI (respectively, Test PyPI) site needs to be configured.
 
 * Log into your [PyPI](https://pypi.org) (or [Test PyPI](https://test.pypi.org)) account
-* Go to your project's **Manage** page (or your account's **Publishing** settings if you are setting it up for the first time.)
+* Go to your project's **Manage** page (or your account's **Publishing** settings if you are setting it up for the first time)
 * Look for the **Publishing** tab
 * Click **Add new publisher**
 * Select **GitHub** as the source
 * Enter the following details:
   * Owner: sandialabs
   * Repository name: rattlesnake-vibration-controller
-  * Workflow name: `release.yml` (This must match your filename in your `.github/workflows/` directory)
+  * Workflow name: `release.yml` (this must match your filename in your `.github/workflows/` directory)
   * Environment name: You can leave this blank or name it `pypi` (if you use it in your YAML).  We used 
     * `pypi` for live publishing to the PyPI site, and
     * `testpypi` for test publishing to the TestPyPI site.
@@ -614,6 +655,8 @@ Following is an example of creating a release with a tag.
 
 To create a prerelease on TestPyPI:
 
+The tag must be pushed from `main` or `dev` (see [Synopsis](#synopsis)); the convention (but not requirement) is to tag from `dev`, so that release-candidate tags can be tested before merging to `main`.
+
 * On the `dev` branch, create a tag and then push, e.g.,
 
 ```sh
@@ -634,6 +677,8 @@ git push origin v1.0.0rc1
 #### Create a Release
 
 To create a release on PyPI:
+
+The tag must be pushed from `main` or `dev` (see [Synopsis](#synopsis)); the convention (but not requirement) is to cut production PyPI releases from `main`, after merging in the validated work from `dev`, so that `main` reliably reflects what has actually shipped.
 
 * Merge the `dev` branch into the `main` branch.
 * On the `main` branch, create a tag using `git tag` and push it to the `main` branch on GitHub, e.g.,

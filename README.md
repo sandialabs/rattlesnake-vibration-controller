@@ -1,4 +1,4 @@
-![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
+![Rattlesnake Logo](https://raw.githubusercontent.com/sandialabs/rattlesnake-vibration-controller/main/logo/Rattlesnake_Logo_Banner.png)
 
 # Rattlesnake Vibration Controller
 

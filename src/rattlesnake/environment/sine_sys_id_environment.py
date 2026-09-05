@@ -351,9 +351,9 @@ class SineMetadata(SysIdEnvironmentMetadata):
         if self.ramp_time < 0:
             raise RattlesnakeError("ramp_time must be greater than or equal to 0")
 
-        if not (0 < self.control_convergence <= 1):
+        if not (0 <= self.control_convergence <= 1):
             raise RattlesnakeError(
-                "control_convergence must be greater than 0 and up to 1"
+                "control_convergence must be greater than or equal to 0 and up to 1"
             )
 
         if self.buffer_blocks < 1:

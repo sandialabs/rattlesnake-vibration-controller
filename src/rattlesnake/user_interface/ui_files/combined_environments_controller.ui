@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2183</width>
+    <width>2076</width>
     <height>703</height>
    </rect>
   </property>
@@ -63,6 +63,9 @@
                <property name="enabled">
                 <bool>true</bool>
                </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Assist&lt;/span&gt;&lt;/p&gt;&lt;p&gt;When checked, the Channel Table will use &amp;quot;Assist&amp;quot; mode.  In this mode, the software will attempt to validate channel data against the data acquisition system.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Assist</string>
                </property>
@@ -86,6 +89,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="initialize_hardware_button">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Initialize Hardware&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Clicking this button will initialize the data acquisition system and set up the user interface for the selected environments.  This will advance the software to the next tab.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Initialize Hardware</string>
                </property>
@@ -97,6 +103,9 @@
             <layout class="QHBoxLayout" name="table_layout">
              <item>
               <widget class="QTableWidget" name="channel_table">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;This table describes how physical sensors and channels are connected to the data acquisition system.  Hover over the column headers to see tooltips for each individual column.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="verticalScrollBarPolicy">
                 <enum>Qt::ScrollBarAlwaysOn</enum>
                </property>
@@ -144,7 +153,7 @@
                  <string>Node Number</string>
                 </property>
                 <property name="toolTip">
-                 <string>Determines the instrumentation position on the test article. While not used directly by the controller except to label plots, it is important for book-keeping and test documentation. The node number will generally correspond to a node in a test geometry or FEM.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Node Number&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines the instrumentation position on the test article. The node number will generally correspond to a node in a test geometry or FEM. While not used directly by the controller for most environments except to label plots, it is important for book-keeping and test documentation. The modal environment does use this value when identifying drive point measurements.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -152,7 +161,7 @@
                  <string>Node Direction</string>
                 </property>
                 <property name="toolTip">
-                 <string>Determines the instrumentation direction on the test article at the position specified by the Node Number.  This is not used directly by the controller except to label plots, but it is important for book-keeping. The Node Direction will generally correspond to the node’s local coordinate system if one exists in the test geometry.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Node Direction&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Determines the instrumentation direction on the test article at the position specified by the Node Number. The Node Direction will generally correspond to the node’s local coordinate system if one exists in the test geometry. While not used directly by the controller for most environments except to label plots, it is important for book-keeping and test documentation. The modal environment does use this value when identifying drive point measurements.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -160,7 +169,7 @@
                  <string>Comment</string>
                 </property>
                 <property name="toolTip">
-                 <string>Provides space for additional information about a channel that may not be captured by the Node Number and Node Direction. Be aware that the comment field of the first channel is used to specify the modal damping for virtual tests using Exodus files.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Comment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Provides space for additional information about a channel that may not be captured by the Node Number and Node Direction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -168,7 +177,7 @@
                  <string>Serial Number</string>
                 </property>
                 <property name="toolTip">
-                 <string>The serial number of the instrument used for the given channel. Not used by the controller, but is important for data traceability to know which instruments were used to measure which channels.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Serial Number&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The serial number of the instrument used for the given channel. Not used by the controller, but is important for data traceability to know which instruments were used to measure which channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -176,7 +185,7 @@
                  <string>Triax DoF</string>
                 </property>
                 <property name="toolTip">
-                 <string>The degree of freedom on a given instrument corresponding to the given channel, if applicable.  This is primarily used to distinguish between the three axes of a triaxial accelerometer, but has the potential to be used for other multi-axis instrumentation types such as strain gauge rosettes.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Triax DoF&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The degree of freedom on a given instrument corresponding to the given channel, if applicable.  This is primarily used to distinguish between the three axes of a triaxial accelerometer, but has the potential to be used for other multi-axis instrumentation types such as strain gauge rosettes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -184,7 +193,7 @@
                  <string>Sensitivity (mV/EU)</string>
                 </property>
                 <property name="toolTip">
-                 <string>The sensitivity of the instrument in millivolts per Engineering Unit. This is used to transform the acquired data from a raw voltage to a engineering quantity such as acceleration or force.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sensitivity (mV/EU)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The sensitivity of the instrument in millivolts per Engineering Unit. This is used to transform the acquired data from a raw voltage to a engineering quantity such as acceleration or force.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -192,7 +201,7 @@
                  <string>Engineering Unit</string>
                 </property>
                 <property name="toolTip">
-                 <string>The unit in which the measured signal for the given instrument will be reported. Certain hardware will limit the units that can be specified.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Engineering Unit&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The unit in which the measured signal for the given instrument will be reported. Certain hardware will limit the units that can be specified.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -200,7 +209,7 @@
                  <string>Make</string>
                 </property>
                 <property name="toolTip">
-                 <string>Manufacturer of the sensor, for data traceability.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Make&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Manufacturer of the sensor, for data traceability.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -208,7 +217,7 @@
                  <string>Model</string>
                 </property>
                 <property name="toolTip">
-                 <string>The product name or model number of the instrument, used for data traceability.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Model&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The product name or model number of the instrument, used for data traceability.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -216,7 +225,7 @@
                  <string>Expiration</string>
                 </property>
                 <property name="toolTip">
-                 <string>The expiration date of the instrument’s calibration certificate. Note that this is only for data traceability; no checking of this date with the current data to ensure a valid calibration is performed by the software.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Expiration Date&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The expiration date of the instrument’s calibration certificate. Note that this is only for data traceability; no checking of this date with the current data to ensure a valid calibration is performed by the software.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -224,7 +233,7 @@
                  <string>Physical Device</string>
                 </property>
                 <property name="toolTip">
-                 <string>The reference to a physical device attached to the computer.  The entries inthis field will be specific to the acquisition hardware being used for a given test.  If NI is used, this should be the device name (e.g., PXI1Slot2 or Dev3).  If this is a LAN-XI hardware, this should be the IP address of the card the channel is plugged into.  For virtual control, this column must be filled to specify that a given channel is active.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Physical Device&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The reference to a physical device attached to the computer. The entries inthis field will be specific to the acquisition hardware being used for a given test. For example, if NI is used, this should be the device name (e.g., PXI1Slot2 or Dev3). If this is a LAN-XI hardware, this should be the IP address of the card the channel is plugged into. Other hardware devices may require other inputs. For virtual control, this column must be filled to specify that a given channel is active.&lt;/p&gt;&lt;p&gt;For an output channel teed off into an acquisition channel, the output device and channel should be listed in the&lt;span style=&quot; font-style:italic;&quot;&gt; Feedback Device &lt;/span&gt;and &lt;span style=&quot; font-style:italic;&quot;&gt;Feedback Channel&lt;/span&gt; columns and the acquisition device and channel that it is teed into should be listed as the &lt;span style=&quot; font-style:italic;&quot;&gt;Physical Device&lt;/span&gt; and &lt;span style=&quot; font-style:italic;&quot;&gt;Physical Channel&lt;/span&gt; columns&lt;span style=&quot; font-style:italic;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -232,7 +241,7 @@
                  <string>Physical Channel</string>
                 </property>
                 <property name="toolTip">
-                 <string>The reference to a channel on a physical device attached to the computer.  The entries in this column will be specific to the acquisition hardware being used for a given test.  For NI, this should be an analog input channel (e.g., ai2).  For LAN-XI, this should be the channel number of the input (e.g. 3).</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Physical Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The reference to an &lt;span style=&quot; font-style:italic;&quot;&gt;acquisition&lt;/span&gt; channel on a physical device attached to the computer. The entries in this column will be specific to the acquisition hardware being used for a given test. For example, for NI, this should be an analog input channel name (e.g., ai2). For LAN-XI, this should be the channel number of the input (e.g. 3). Other devices may require other inputs.&lt;/p&gt;&lt;p&gt;For an output channel teed off into an acquisition channel, the output device and channel should be listed in the&lt;span style=&quot; font-style:italic;&quot;&gt; Feedback Device &lt;/span&gt;and &lt;span style=&quot; font-style:italic;&quot;&gt;Feedback Channel&lt;/span&gt; columns and the acquisition device and channel that it is teed into should be listed as the &lt;span style=&quot; font-style:italic;&quot;&gt;Physical Device&lt;/span&gt; and &lt;span style=&quot; font-style:italic;&quot;&gt;Physical Channel&lt;/span&gt; columns&lt;span style=&quot; font-style:italic;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -240,7 +249,7 @@
                  <string>Channel Type</string>
                 </property>
                 <property name="toolTip">
-                 <string>The type of the channel being used for a given test, such as Acceleration, Force, or Voltage. The allowable entries in this column will be specific to the acquisition hardware being used for a given test.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The type of the channel being used for a given test, such as Acceleration, Force, or Voltage. The allowable entries in this column will be specific to the acquisition hardware being used for a given test.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -248,7 +257,7 @@
                  <string>Minimum Value (V)</string>
                 </property>
                 <property name="toolTip">
-                 <string>The minimum voltage that the data acquisition system can handle during a test. This is used to set the range on the data acquisition system. For hardware devices with symmetric ranges (e.g. ±10V), this column can be left blank.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Minimum Value (V)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The minimum voltage that the data acquisition system can handle during a test. This is used to set the range on the data acquisition system. For hardware devices with symmetric ranges (e.g. ±10V), this column can typically be left blank.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -256,7 +265,7 @@
                  <string>Maximum Value (V)</string>
                 </property>
                 <property name="toolTip">
-                 <string>The maximum voltage that the data acquisition system can handle during a test. This is used to set the range on the data acquisition system. For hardware devices with symmetric ranges (e.g. ±10V), this column is used to set the maximum and minimum voltage values.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Maximum Voltage (V)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The maximum voltage that the data acquisition system can handle during a test. This is used to set the range on the data acquisition system. For hardware devices with symmetric ranges (e.g. ±10V), this column is used to set the maximum and minimum voltage values.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -264,11 +273,7 @@
                  <string>Coupling</string>
                 </property>
                 <property name="toolTip">
-                 <string>The coupling used by the data acquisition system. This may include filtering in addition to AC/DC coupling, which is dependent on the hardware being used for a given test.
-
-This is currently not used by NI, as the Channel Type will determine the coupling.
-
-For LAN-XI, this specifies filtering as well as coupling.  Valid values for LAN-XI are`DC`, `0.7 Hz`, `7.0 Hz`, `22.4 Hz`, or `Intensity`.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Coupling&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The coupling used by the data acquisition system. This may include filtering in addition to AC/DC coupling, which is dependent on the hardware being used for a given test.&lt;/p&gt;&lt;p&gt;This is currently not used by NI, as the Channel Type will determine the coupling.  For LAN-XI, this specifies filtering as well as coupling. Valid values for LAN-XI are`DC`, `0.7 Hz`, `7.0 Hz`, `22.4 Hz`, or `Intensity`.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -276,11 +281,7 @@ For LAN-XI, this specifies filtering as well as coupling.  Valid values for LAN-
                  <string>Excitation Source</string>
                 </property>
                 <property name="toolTip">
-                 <string>Used to specify the signal conditioning that is required by the instrument. This column is generally where the CCLD/IEPE/ICP is specified for a given hardware device.
-
-For NI, Excitation Source should be set to either `Internal` or `None`.  If set to Internal, the device will generate the ICP/CCLD/IEPE signal conditioning required by the sensor. If set to None, no signal conditioning will be provided by the hardware device.
-
-For LAN-XI, if signal conditioning is used, type `CCLD` in this column.  If none is needed, it can be left blank.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Excitation Source&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Used to specify the signal conditioning that is required by the instrument. This column is generally where the CCLD/IEPE/ICP is specified for a given hardware device.&lt;/p&gt;&lt;p&gt;For NI, Excitation Source should be set to either `Internal` or `None`.  If set to Internal, the device will generate the ICP/CCLD/IEPE signal conditioning required by the sensor. If set to None, no signal conditioning will be provided by the hardware device.&lt;/p&gt;&lt;p&gt;For LAN-XI, if signal conditioning is used, type `CCLD` in this column.  If none is needed, it can be left blank.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -288,13 +289,7 @@ For LAN-XI, if signal conditioning is used, type `CCLD` in this column.  If none
                  <string>Current Excitation (A)</string>
                 </property>
                 <property name="toolTip">
-                 <string>Used to specify the excitation current sent to the device for signal conditioning. Depending on whether the device has a fixed or variable excitation current, this field may be left empty. This can also be left empty if no signal conditioning is provided by the data acquisition system.
-
-For NI, Current Excitation should typically be set to 0.004 (4 mA) unless the sensor requires a different
-current to be provided. The Current Excitation value is only used if the Excitation Source is set to
-Internal. If set to None, no current is generated.
-
-LAN-XI does not use this field.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Current Excitation (A)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Used to specify the excitation current sent to the device for signal conditioning. Depending on whether the device has a fixed or variable excitation current, this field may be left empty. This can also be left empty if no signal conditioning is provided by the data acquisition system.&lt;/p&gt;&lt;p&gt;For NI, Current Excitation should typically be set to 0.004 (4 mA) unless the sensor requires a different&lt;/p&gt;&lt;p&gt;current to be provided. The Current Excitation value is only used if the Excitation Source is set to&lt;/p&gt;&lt;p&gt;Internal. If set to None, no current is generated.&lt;/p&gt;&lt;p&gt;LAN-XI does not use this field.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -302,11 +297,7 @@ LAN-XI does not use this field.</string>
                  <string>Feedback Device</string>
                 </property>
                 <property name="toolTip">
-                 <string>Rattlesnake requires the output signals to be measured by the controller to achieve synchronization for devices without input/output synchronization.  This means that output signals to shakers must be teed off back into an acquisition channel.
-
-For output channels, this is the reference to the output or excitation device that is being fed back into the current channel’s Physical device. If the current channel is not an output channel, it should be left empty. A populated Feedback Device column tells the controller that the given channel is an output channel.  These follow the same naming conventions as Physical Device.
-
-As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed into Analog Input PXI1Slot3 ai2, then the Physical Device for the channel would be PXI1Slot3, the Physical Channel would be ai2, the Feedback Device would be PXI1Slot4, and the Feedback Channel would be ao0.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Feedback Device&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Rattlesnake requires the output signals to be measured by the controller to achieve synchronization for devices without input/output synchronization.  This means that output signals to shakers must be teed off back into an acquisition channel.&lt;/p&gt;&lt;p&gt;For output channels, this is the reference to the output or excitation device that is being fed back into the current channel’s Physical device. If the current channel is not an output channel, it should be left empty. A populated Feedback Device column tells the controller that the given channel is an output channel.  These follow the same naming conventions as Physical Device.&lt;/p&gt;&lt;p&gt;As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed into Analog Input PXI1Slot3 ai2, then the Physical Device for the channel would be PXI1Slot3, the Physical Channel would be ai2, the Feedback Device would be PXI1Slot4, and the Feedback Channel would be ao0.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -314,9 +305,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                  <string>Feedback Channel</string>
                 </property>
                 <property name="toolTip">
-                 <string>For output channels, this is the reference to the output channel on the output or excitation device that is being fed back into the current channel’s Physical Device.
-
-As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed into Analog Input PXI1Slot3 ai2, then the Physical Device for the channel would be PXI1Slot3, the Physical Channel would be ai2, the Feedback Device would be PXI1Slot4, and the Feedback Channel would be ao0.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Feedback Channel&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For output channels, this is the reference to the output channel on the output or excitation device that is being fed back into the current channel’s Physical Device.&lt;/p&gt;&lt;p&gt;As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed into Analog Input PXI1Slot3 ai2, then the Physical Device for the channel would be PXI1Slot3, the Physical Channel would be ai2, the Feedback Device would be PXI1Slot4, and the Feedback Channel would be ao0.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -324,7 +313,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                  <string>Warning Level (EU)</string>
                 </property>
                 <property name="toolTip">
-                 <string>Global warning level in engineering units.  If data reaches this level, text will be displayed in the system console and the Channel Monitor will display the channel with a yellow tint.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Warning Level (EU)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Global warning level in engineering units.  If data reaches this level, text will be displayed in the system console and the Channel Monitor will display the channel with a yellow tint.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
                <column>
@@ -332,7 +321,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                  <string>Abort Level (EU)</string>
                 </property>
                 <property name="toolTip">
-                 <string>If a channel reaches the specified abort level in engineering units, the controller will immediately attempt to gracefully shut itself down.</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Abort Level (EU)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If a channel reaches the specified abort level in engineering units, the controller will immediately attempt to gracefully shut itself down.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </column>
               </widget>
@@ -346,7 +335,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                 </sizepolicy>
                </property>
                <property name="toolTip">
-                <string>Specifies which channels are active for which environments.  If, for example, if a particular environment doesn't use specific shakers, they can be disabled for that environment.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Environment Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies which channels are active for which environments.  If, for example, if a particular environment doesn't use specific shakers or sensors, they can be disabled for that environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="verticalScrollBarPolicy">
                 <enum>Qt::ScrollBarAlwaysOn</enum>
@@ -405,6 +394,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
             <layout class="QHBoxLayout" name="channel_table_button_layout">
              <item>
               <widget class="QPushButton" name="save_channel_table_button">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Channel Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Clicking this button will open a file dialog allowing the user to save the current state of the channel table to an Excel or CSV file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Save Channel Table</string>
                </property>
@@ -413,7 +405,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              <item>
               <widget class="QPushButton" name="load_channel_table_button">
                <property name="toolTip">
-                <string>Loads a channel table in the form of an Excel Spreadsheet.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load Channel Table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Clicking this button loads a channel table from an Excel spreadsheet or CSV file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>Load Channel Table</string>
@@ -435,6 +427,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              </item>
              <item>
               <widget class="QPushButton" name="remove_environment_button">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Remove Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Removes the currently selected environment.  The environment can be selected by selecting a cell in the environment table in the column corresponding to that environment, or by selecting the environment column's header directly.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Remove Environment</string>
                </property>
@@ -442,6 +437,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              </item>
              <item>
               <widget class="QComboBox" name="add_environment_combobox">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Add Environment&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Adds a new environment with the selected type.  The user can specify a name for the environment after the type is selected.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="iconSize">
                 <size>
                  <width>30</width>
@@ -485,12 +483,15 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                 </sizepolicy>
                </property>
                <property name="toolTip">
-                <string>Choose which hardware you will be using in the test.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hardware Selector&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Choose which hardware you will be using in the test.  Certain selections will immediately require the user to select a file to represent a synthetic system or to select license or library files used to run the hardware interface.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QCheckBox" name="lanxi_ip_checkbox">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Use IPv6?&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If checked, LAN-XI will use IPv6 addresses instead of IPv4 addresses.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Use IPv6?</string>
                </property>
@@ -498,6 +499,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              </item>
              <item>
               <widget class="QPushButton" name="lanxi_ip_address_button">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;IP Address Lookup&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For LAN-XI Hardware, the IP Address Lookup can assist in filling out the channel table by finding IPv4 or IPv6 addresses.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>IP Address Lookup</string>
                </property>
@@ -513,7 +517,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              <item>
               <widget class="QSpinBox" name="sample_rate_selector">
                <property name="toolTip">
-                <string>Sets the sample rate of the data acquisition system.  The bandwidth will be half this value.  If anti-aliasing filters are present, the usable bandwidth is typically the sample rate divided by 2.56</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the sample rate of the data acquisition system.  The bandwidth will be half this value.  If anti-aliasing filters are present on the data acquisition system, the usable bandwidth is typically the sample rate divided by 2.56.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="keyboardTracking">
                 <bool>false</bool>
@@ -538,7 +542,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                 </sizepolicy>
                </property>
                <property name="toolTip">
-                <string>Select the sample rate of the LAN-XI data acquisition system, which uses powers of 2.  The LAN-XI Generator has a minimum frequency of 16,384 Hz, so the output signals are oversample by the hardware prior to being output.  The user needn't oversample their signals; this will be handled automatically by the data acquisition system.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sample Rate&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select the sample rate of the LAN-XI data acquisition system, which uses powers of 2. The LAN-XI Generator has a minimum frequency of 16,384 Hz, so the output signals are oversample by the hardware prior to being output.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="sizeAdjustPolicy">
                 <enum>QComboBox::AdjustToContents</enum>
@@ -585,7 +589,10 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              <item>
               <widget class="QDoubleSpinBox" name="buffer_size_selector">
                <property name="toolTip">
-                <string>Specify the time between reads from the data acquisition system.  Communications with hardware are computationally expensive, so we can't pull every sample off as it arrives.  We therefore allow samples to accumulate on the data acquisition system's buffer and then read every so often.  Larger values will result in the controller not falling behind, but smaller values will allow the controller to be more responsive.  Values such as 0.25 or 0.5 are typical.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Buffer Size&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specify the time in seconds between reads from the data acquisition system.  Communications with hardware are computationally expensive, so we can't pull every sample off as it arrives.  We therefore allow samples to accumulate on the data acquisition system's buffer and then read every so often.  Larger values will result in the controller not falling behind, but smaller values will allow the controller to be more responsive.  Values such as 0.25 or 0.5 are typical.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="suffix">
+                <string> s</string>
                </property>
                <property name="minimum">
                 <double>0.010000000000000</double>
@@ -611,7 +618,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              <item>
               <widget class="QSpinBox" name="lanxi_maximum_acquisition_processes_selector">
                <property name="toolTip">
-                <string>Set the number of processes to use to pull data from the LAN-XI hardware.  1 processor per 20-40 channels is typically sufficient depending on the sample rate.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Maximum Acquisition Processes&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Sets the number of processes to use to pull data from the LAN-XI hardware.  1 processor per 20-40 channels is typically sufficient depending on the sample rate.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="minimum">
                 <number>1</number>
@@ -631,7 +638,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              <item>
               <widget class="QSpinBox" name="integration_oversample_selector">
                <property name="toolTip">
-                <string>Specifies how much oversampling is used when integrating equations of motion.  Integration in Rattlesnake uses `lsim` from SciPy, which is a linear integrator and typically provides accurate results with an oversample factor of 10.</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Integration Oversample&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Specifies how much oversampling is used when integrating equations of motion.  For example, if the sample rate is set to 4192 Hz, and an integration oversample factor of 10 is specified, then the integration step size will be 41920 Hz.  Integration in Rattlesnake uses `lsim` from SciPy, which is a linear integrator and typically provides accurate results with an oversample factor of 10.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="minimum">
                 <number>1</number>
@@ -653,6 +660,12 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              </item>
              <item>
               <widget class="QDoubleSpinBox" name="damping_ratio_selector">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Damping Ratio&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For Exodus Modal Solutions, this is the damping ratio applied to each mode in the model.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="suffix">
+                <string>%</string>
+               </property>
                <property name="maximum">
                 <double>10.000000000000000</double>
                </property>
@@ -670,6 +683,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              </item>
              <item>
               <widget class="QComboBox" name="task_trigger_selector">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Task Trigger&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select how to trigger the acquisition tasks in the measurement. An internal trigger will attempt to use internal routing through the NI hardware to the physical devices used in the measurement.  If such routing does not exist, an external trigger will be accepted using the devices' PFI0 input.  If a trigger task is specified, then Rattlesnake will generate the external trigger itself from the device and channel specified in the &amp;quot;Trigger Output Channel&amp;quot;.  If only an external trigger is specified, then Rattlesnake will not generate a trigger signal, so it must be generated from some other source like a function generator.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="sizeAdjustPolicy">
                 <enum>QComboBox::AdjustToContents</enum>
                </property>
@@ -703,10 +719,17 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="trigger_output_selector"/>
+              <widget class="QLineEdit" name="trigger_output_selector">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Trigger Output File&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For NI hardware for rough synchronization between different hardware devices. This channel will be used to output a step function that can be used as a trigger.  This can be teed into the PFI inputs on various devices to use as a trigger signal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QPushButton" name="select_file_button">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Select File&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For virtual hardware or hardware requiring additional file inputs (license files or libraries), this button will bring up a file selection dialog that can be used to navigate to the desired file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Select File</string>
                </property>
@@ -1398,7 +1421,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
          <bool>true</bool>
         </property>
         <property name="toolTip">
-         <string>Open up channel monitor to see the levels of each channel compared to their maximum values.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Channel Monitor&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Open up channel monitor to see the levels of each channel compared to their maximum values.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Channel Monitor</string>
@@ -1414,7 +1437,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
          </sizepolicy>
         </property>
         <property name="toolTip">
-         <string>Saves the current channel table to an Excel Spreadsheet.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Template&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves the user interface configuration to an Excel Spreadsheet that can be used as a template that can be subsequently loaded back into the controller.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Save Template</string>
@@ -1430,7 +1453,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
          </sizepolicy>
         </property>
         <property name="toolTip">
-         <string>Loads a NetCDF4 file containing test data to replicate the parameters in that test.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Load Template&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Loads in a completed template containing information about the channel table, environment(s), and test profile.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Load Template</string>
@@ -1446,6 +1469,9 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
       </item>
       <item>
        <widget class="QComboBox" name="color_theme_combobox">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Theme&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Allows users to switch between light mode and dark mode.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <item>
          <property name="text">
           <string>Light</string>
@@ -1480,8 +1506,8 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2183</width>
-     <height>22</height>
+     <width>2076</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>

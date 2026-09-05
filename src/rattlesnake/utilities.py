@@ -1598,7 +1598,7 @@ def align_signals(
     found_correlation = correlation[delay]
     print(f"Max Correlation: {found_correlation}")
     if found_correlation < correlation_threshold:
-        return None, None, None, None
+        return None, None, None, found_correlation
     # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
     #          specification = specification,
     #          correlation_threshold = correlation_threshold)

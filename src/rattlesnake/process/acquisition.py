@@ -27,6 +27,7 @@ import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 from time import sleep, time
 from typing import Dict
+import os
 
 import numpy as np
 
@@ -47,10 +48,7 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 TASK_NAME = "Acquisition"
 
 DEBUG = False
-if DEBUG:
-    from glob import glob
-
-    FILE_OUTPUT = "debug_data/acquisition_{:}.npz"
+DEBUG_DIRECTORY = "debug_data"
 
 
 # region Acquisition
@@ -136,7 +134,137 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.warning_limits = None
         self._acquisition_active_event = acquisition_active_event
         self._streaming_active_event = streaming_active_event
+        # Debug state
+        self.debug_acquisition_counter = 0
+        self.debug_environment_in_counters = {}
         # print('acquisition setup')
+
+    # region Debug
+    def _reset_debug_counters(self):
+        self.debug_acquisition_counter = 0
+        self.debug_environment_in_counters = {}
+
+    def _ensure_debug_directory(self):
+        if DEBUG:
+            os.makedirs(DEBUG_DIRECTORY, exist_ok=True)
+
+    @staticmethod
+    def _safe_environment_name(environment):
+        return str(environment).replace(" ", "_")
+
+    def _debug_should_save(self):
+        return (
+            any(self.environment_active_flags.values())
+            or any(self.environment_last_data.values())
+            or any(v is not None for v in self.environment_first_data.values())
+            or self.shutdown_flag
+        )
+
+    def _save_acquisition_debug(self, read_data):
+        if not DEBUG:
+            return
+        if read_data is None:
+            return
+        if not self._debug_should_save():
+            return
+
+        self._ensure_debug_directory()
+        filename = os.path.join(
+            DEBUG_DIRECTORY,
+            f"acquisition_debug_{self.debug_acquisition_counter:04d}.npz",
+        )
+        np.savez(
+            filename,
+            timestamp=np.array(time()),
+            read_data=read_data,
+            read_data_buffer=self.read_data.copy(),
+            output_indices=np.array(self.output_indices),
+            shutdown_flag=self.shutdown_flag,
+            active_environments=np.array(
+                [k for k, v in self.environment_active_flags.items() if v], dtype=object
+            ),
+            last_data_flags=np.array(
+                [f"{k}:{int(v)}" for k, v in self.environment_last_data.items()],
+                dtype=object,
+            ),
+            first_data_pending=np.array(
+                [k for k, v in self.environment_first_data.items() if v is not None],
+                dtype=object,
+            ),
+            environment_samples_remaining_to_read=np.array(
+                [
+                    (f"{k}:{self.environment_samples_remaining_to_read.get(k, np.nan)}")
+                    for k in self.environment_samples_remaining_to_read
+                ],
+                dtype=object,
+            ),
+        )
+        self.debug_acquisition_counter += 1
+
+    def _save_first_data_alignment_debug(
+        self,
+        environment,
+        expected_first_data,
+        read_data_buffer,
+        aligned_output_buffer,
+        delay,
+        environment_data,
+    ):
+        if not DEBUG:
+            return
+
+        self._ensure_debug_directory()
+        safe_environment = self._safe_environment_name(environment)
+        index = self.debug_environment_in_counters.get(f"{safe_environment}_first", 0)
+        filename = os.path.join(
+            DEBUG_DIRECTORY,
+            f"{safe_environment}_first_data_alignment_{index:04d}.npz",
+        )
+        np.savez(
+            filename,
+            timestamp=np.array(time()),
+            expected_first_data=expected_first_data,
+            read_data_buffer=read_data_buffer,
+            aligned_output_buffer=aligned_output_buffer,
+            delay=(np.nan if delay is None else delay),
+            environment_data=environment_data,
+            output_indices=np.array(self.output_indices),
+            acquisition_channels=np.array(self.environment_acquisition_channels[environment]),
+        )
+
+    def _save_environment_data_in_debug(
+        self,
+        environment,
+        environment_data,
+        environment_finished,
+        first_acquisition_for_environment,
+        samples_remaining_to_read=None,
+    ):
+        if not DEBUG:
+            return
+        if environment_data is None:
+            return
+
+        self._ensure_debug_directory()
+        safe_environment = self._safe_environment_name(environment)
+        index = self.debug_environment_in_counters.get(safe_environment, 0)
+        filename = os.path.join(
+            DEBUG_DIRECTORY,
+            f"{safe_environment}_data_in_{index:04d}.npz",
+        )
+        np.savez(
+            filename,
+            timestamp=np.array(time()),
+            environment_data=environment_data,
+            environment_finished=environment_finished,
+            first_acquisition_for_environment=first_acquisition_for_environment,
+            samples_remaining_to_read=(
+                np.nan if samples_remaining_to_read is None else samples_remaining_to_read
+            ),
+            environment_active_flag=self.environment_active_flags.get(environment, False),
+            environment_last_data_flag=self.environment_last_data.get(environment, False),
+        )
+        self.debug_environment_in_counters[safe_environment] = index + 1
 
     # region State Sync
     @property
@@ -259,16 +387,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.log(f"Deactivating Environment {data}")
         self.environment_active_flags[data] = False
         self.environment_last_data[data] = True
-        self.environment_samples_remaining_to_read[data] = (
-            self.hardware.get_acquisition_delay()
-        )
-        if self.environment_first_data[data] is not None:
-            # This environment never found a valid input/output sync.
-            self.log(
-                f"Environment {data} was stopped before an input/output sync "
-                "was found; abandoning the sync search"
-            )
-            self.environment_first_data[data] = None
+        self.environment_samples_remaining_to_read[data] = self.hardware.get_acquisition_delay()
 
     def start_streaming(self, data):  # pylint: disable=unused-argument
         """Sets the flag to tell the acquisition to write data to disk
@@ -324,6 +443,8 @@ class AcquisitionProcess(AbstractMessageProcess):
 
         """
         if self.startup:
+            if DEBUG:
+                self._reset_debug_counters()
             self.any_environments_started = False
             self.log("Waiting for Output to Start")
             start_wait_time = time()
@@ -383,6 +504,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.log("Acquiring Remaining Data")
             read_data = self.hardware.read_remaining()
             self.add_data_to_buffer(read_data)
+            self._save_acquisition_debug(read_data)
             if read_data.shape[-1] != 0:
                 max_vals = np.max(np.abs(read_data), axis=-1)
                 self.gui_update_queue.put((UICommands.MONITOR, max_vals))
@@ -423,6 +545,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.log(f"Acquiring Data for {aquiring_environments} environments")
             read_data = self.hardware.read()
             self.add_data_to_buffer(read_data)
+            self._save_acquisition_debug(read_data)
             if read_data.shape[-1] != 0:
                 max_vals = np.max(np.abs(read_data), axis=-1)
                 self.gui_update_queue.put((UICommands.MONITOR, max_vals))
@@ -446,30 +569,28 @@ class AcquisitionProcess(AbstractMessageProcess):
             for environment in self.environment_list:
                 # Check to see if we're waiting for the first data for this environment
                 if self.environment_first_data[environment] is not None:
-                    if self.shutdown_flag and self.environment_last_data[environment]:
+                    # This environment never found a valid input/output sync.
+                    if (
+                        self.environment_last_data[environment]
+                        and self.environment_samples_remaining_to_read[environment] <= 0
+                    ):
                         # Shut down the environment in the case that the input/output never synced
                         self.log(
                             f"Abandoning input/output sync search for {environment} "
-                            "because acquisition is shutting down"
+                            "because environment is shutting down"
                         )
                         self.environment_first_data[environment] = None
                         continue
-                    if np.all(np.abs(self.environment_first_data[environment]) < 1e-10):
+
+                    expected_first_data = self.environment_first_data[environment]
+
+                    if np.all(np.abs(expected_first_data) < 1e-10):
                         delay = -self.read_size
                     else:
                         correlation_start_time = time()
-                        if DEBUG:
-                            num_files = len(glob(FILE_OUTPUT.format("*")))
-                            np.savez(
-                                FILE_OUTPUT.format(num_files),
-                                read_data_buffer=self.read_data,
-                                read_data=read_data,
-                                output_indices=self.output_indices,
-                                first_data=self.environment_first_data[environment],
-                            )
-                        _, delay, _, _ = align_signals(
+                        _, delay, _, found_correlation = align_signals(
                             self.read_data[self.output_indices],
-                            self.environment_first_data[environment],
+                            expected_first_data,
                             perform_subsample=False,
                             correlation_threshold=0.5,
                             correlation_metric=correlation_norm_signal_spec_ratio,
@@ -478,25 +599,36 @@ class AcquisitionProcess(AbstractMessageProcess):
                         corr_time = correlation_end_time - correlation_start_time
                         self.log(
                             f"Correlation check for environment {environment} took "
-                            f"{corr_time:0.2f} seconds"
+                            f"{corr_time:0.2f} seconds and achieved {found_correlation:0.2f}"
                         )
+
+                        self.log(
+                            f"{environment}: first-data alignment returned delay={delay}, "
+                            f"read_buffer_shape={self.read_data.shape}, "
+                            f"expected_first_shape={expected_first_data.shape}"
+                        )
+
                         # Adding a criteria that the delay must be in the first half
                         # of the buffer, otherwise we could still be increasing
-                        # in correlation as more data is acquired.  If it's in
-                        # the first half, it means that we have acquired more
-                        # data and the best match did not improve
+                        # in correlation as more data is acquired.
                         if delay is None or delay > self.read_data.shape[-1] // 2:
                             continue
-                    self.log(f"Found First Data for Environment {environment}")
+
                     environment_data = self.read_data[
                         self.environment_acquisition_channels[environment], delay:
                     ]
-                    if DEBUG:
-                        np.savez(
-                            f"debug_data/environment_first_data_{environment}.npz",
-                            found_data=environment_data,
-                            expected_data=self.environment_first_data[environment],
-                        )
+                    first_acquisition_for_environment = True
+
+                    self._save_first_data_alignment_debug(
+                        environment,
+                        expected_first_data,
+                        self.read_data.copy(),
+                        self.read_data[self.output_indices].copy(),
+                        delay,
+                        environment_data.copy(),
+                    )
+
+                    self.log(f"Found First Data for Environment {environment}")
                     self.environment_first_data[environment] = None
                     if not self.environment_last_data[environment]:
                         self.environment_active_flags[environment] = True
@@ -513,6 +645,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                     environment_data = read_data[
                         self.environment_acquisition_channels[environment]
                     ].copy()
+                    first_acquisition_for_environment = False
                 # Otherwise the environment isn't active
                 else:
                     continue
@@ -531,6 +664,13 @@ class AcquisitionProcess(AbstractMessageProcess):
                 )
                 self.log(
                     f"Sending {environment_data.shape} data to {environment} environment"
+                )
+                self._save_environment_data_in_debug(
+                    environment,
+                    environment_data,
+                    environment_finished,
+                    first_acquisition_for_environment,
+                    self.environment_samples_remaining_to_read.get(environment),
                 )
                 self.queue_container.environment_data_in_queues[environment].put(
                     (environment_data, environment_finished)

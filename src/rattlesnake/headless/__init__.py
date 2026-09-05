@@ -91,6 +91,7 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
 
 # region User Interface
 from rattlesnake.main import build_rattlesnake_app, launch_rattlesnake_ui
+import rattlesnake.headless.notebook_font as notebook_font
 
 # endregion
 
@@ -157,4 +158,5 @@ __all__ = [
     # User Interface
     "build_rattlesnake_app",
     "launch_rattlesnake_ui",
+    "notebook_font",
 ]

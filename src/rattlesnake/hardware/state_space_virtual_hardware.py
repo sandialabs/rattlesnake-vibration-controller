@@ -97,34 +97,36 @@ class StateSpaceMetadata(HardwareMetadata):
             )
 
         for row, channel in enumerate(self.channel_list):
-            if channel.physical_device not in self.valid_physical_device:
+            # TODO: Discuss with Cody: I want to be able to mirror real channel tables
+            # with state space hardware.
+            # if channel.physical_device not in self.valid_physical_device:
+            #     raise RattlesnakeError(
+            #         f"Physical device should be 'Virtual' in channel table row {row + 1}"
+            #     )
+            if str(channel.channel_type).lower() not in self.accepted_channel_type_strings:
                 raise RattlesnakeError(
-                    f"Physical device should be 'Virtual' in channel table "
-                    f"row {row+1}"
+                    f"Invalid channel type in channel table row {row + 1}. "
+                    f"Valid channel types include {', '.join(self.valid_channel_types)}"
                 )
-            if (
-                str(channel.channel_type).lower()
-                not in self.accepted_channel_type_strings
-            ):
-                raise RattlesnakeError(
-                    f"Invalid channel type in channel table row {row+1}. "
-                    "Valid channel types include 'Acceleration', 'Force'"
-                )
-            if str(
-                channel.channel_type
-            ).lower() == "force" and not self._has_feedback_device(channel):
-                raise RattlesnakeError(
-                    "Force channel types require an 'Input' feedback device "
-                    f"in channel table row {row+1}"
-                )
-            if (
-                self._has_feedback_device(channel)
-                and channel.feedback_device not in self.valid_feedback_device
-            ):
-                raise RattlesnakeError(
-                    f"Invalid feedback device in channel table row {row+1}. "
-                    "Valid feedback devices include 'Input' or blank"
-                )
+            # TODO: Discuss with Cody: you can construct a state-space system
+            # where the inputs are voltages if you use shaker models.
+            # if str(
+            #     channel.channel_type
+            # ).lower() == "force" and not self._has_feedback_device(channel):
+            #     raise RattlesnakeError(
+            #         "Force channel types require an 'Input' feedback device "
+            #         f"in channel table row {row+1}"
+            #     )
+            # TODO: Discuss with Cody: I want to be able to mirror real channel tables
+            # with state space hardware.
+            # if (
+            #     self._has_feedback_device(channel)
+            #     and channel.feedback_device not in self.valid_feedback_device
+            # ):
+            #     raise RattlesnakeError(
+            #         f"Invalid feedback device in channel table row {row + 1}. "
+            #         "Valid feedback devices include 'Input' or blank"
+            #     )
 
         if len(self.channel_list) != n_outputs:
             raise RattlesnakeError(
@@ -182,7 +184,21 @@ class StateSpaceMetadata(HardwareMetadata):
 
     @property
     def accepted_channel_type_strings(self):
-        return ["accel", "acceleration", "acc", "force"]
+        return [
+            "accel",
+            "acceleration",
+            "acc",
+            "force",
+            "disp",
+            "displacement",
+            "velocity",
+            "vel",
+            "voltage",
+            "volt",
+            "current",
+            "stress",
+            "strain",
+        ]
 
     @property
     def assist_mode_modules(self):
@@ -195,23 +211,38 @@ class StateSpaceMetadata(HardwareMetadata):
     def valid_channel_dict(self, channel: Channel):
         valid_dict = super().valid_channel_dict(channel)
 
-        valid_dict["physical_device"] = self.valid_physical_device
+        # TODO: Discuss with Cody what these do?
+        # valid_dict["physical_device"] = self.valid_physical_device
         valid_dict["channel_type"] = self.valid_channel_types
-        valid_dict["feedback_device"] = self.valid_feedback_device
+        # valid_dict["feedback_device"] = self.valid_feedback_device
 
         return valid_dict
 
+    # TODO: Discuss with Cody: I added a few different types of channels based on
+    # what you could concievably put into a state-space model.  Even this might be
+    # a bit too constrained.
     @property
     def valid_channel_types(self):
-        return ["Acceleration", "Force"]
+        return [
+            "Acceleration",
+            "Force",
+            "Displacement",
+            "Velocity",
+            "Voltage",
+            "Current",
+            "Strain",
+            "Stress",
+        ]
 
-    @property
-    def valid_physical_device(self):
-        return ["Virtual"]
-
-    @property
-    def valid_feedback_device(self):
-        return ["Input"]
+    # TODO: Discuss with Cody: I kind of want state space to be able to mirror other
+    # hardware devices so we could use it in teaching situations where I want the
+    # students' channel tables to mirror mine.
+    # @property
+    # def valid_physical_device(self):
+    #     return ["Virtual"]
+    # @property
+    # def valid_feedback_device(self):
+    #     return ["Input"]
 
     # endregion
 
@@ -404,13 +435,11 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(
-            test_data.samples_per_read * self.integration_oversample + 1
-        ) / (test_data.sample_rate * self.integration_oversample)
-        self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = (
-            test_data.samples_per_write / test_data.output_oversample
+        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
+            test_data.sample_rate * self.integration_oversample
         )
+        self.frame_time = test_data.samples_per_read / test_data.sample_rate
+        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
 
     def start(self):
         """Method to start acquiring data.

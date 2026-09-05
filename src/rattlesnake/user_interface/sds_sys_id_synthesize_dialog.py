@@ -38,10 +38,10 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
         self.metadata = parent.get_environment_metadata(parent.hardware_metadata.channel_list)
         self.setWindowTitle("Sum-of-Decayed-Sines Synthesis")
         self.plot_data_items = {}
-        self.sds_tables = [None for i in parent.initialized_control_names]
-        self.sds_signals = [None for i in parent.initialized_control_names]
-        self.sds_srss = [None for i in parent.initialized_control_names]
-        self.response_selector.addItems(parent.initialized_control_names)
+        self.sds_tables = [None for _ in parent.control_names]
+        self.sds_signals = [None for _ in parent.control_names]
+        self.sds_srss = [None for _ in parent.control_names]
+        self.response_selector.addItems(parent.control_names)
         self.all_table_widgets = []
 
         plot_item = self.time_history_plot.getPlotItem()
