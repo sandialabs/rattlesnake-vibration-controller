@@ -59,7 +59,7 @@ import numpy as np
 import importlib
 from enum import Enum
 import os
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 import netCDF4 as nc4
 
 CONTROL_TYPE = EnvironmentType.SDS
@@ -110,6 +110,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.python_function_extra_arguments = []
         self.python_function_extra_argument_widgets = {}
         self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+        self.specification_filename = None
         self.shock_history = None
         self.plot_windows = []
 
@@ -224,6 +225,9 @@ class SDSUI(SysIdEnvironmentUI):
         )
         self.definition_widget.load_breakpoints_button.clicked.connect(
             self.load_specification
+        )
+        self.definition_widget.save_breakpoint_button.clicked.connect(
+            self.save_specification
         )
         self.definition_widget.control_script_load_file_button.clicked.connect(
             self.select_python_module
@@ -436,6 +440,43 @@ class SDSUI(SysIdEnvironmentUI):
             spec_data["num_hits"].squeeze()
         )
         self.update_specification()
+        self.specification_filename = filename
+
+    def save_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
+        if filename is None:
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self.definition_widget,
+                "Select Specification File",
+                self.specification_filename or "",
+                filter="Numpy (*.npz);;Mat (*.mat)",
+            )
+            if filename == "":
+                return
+        spec_data = self.collect_specification()
+        _, extension = os.path.splitext(filename)
+        if extension.lower() == ".mat":
+            savemat(
+                filename,
+                {
+                    "f": spec_data.frequencies,
+                    "srs": spec_data.srs_spec,
+                    "lower_limit": spec_data.srs_lower_limit,
+                    "upper_limit": spec_data.srs_upper_limit,
+                    "num_hits": spec_data.num_hits,
+                },
+            )
+        else:
+            np.savez(
+                filename,
+                f=spec_data.frequencies,
+                srs=spec_data.srs_spec,
+                lower_limit=spec_data.srs_lower_limit,
+                upper_limit=spec_data.srs_upper_limit,
+                num_hits=spec_data.num_hits,
+            )
+        self.specification_filename = filename
 
     def clear_and_update_specification_table(
         self, frequencies=None, srs=None, lower_limit=None, upper_limit=None
