@@ -23,7 +23,6 @@ from rattlesnake.environment.sds_sys_id_metadata import (
 from rattlesnake.environment.sds_sys_id_environment import SDSEnvironment
 from rattlesnake.environment.sds_sys_id_utilities import (
     SDSInstructions,
-    decayed_sine_table,
     octspace,
 )
 from rattlesnake.profile_manager import ProfileEvent
@@ -143,30 +142,14 @@ def worksheet_sds_metadata(hardware_metadata):
 
 
 def sds_instructions():
-    control_test_level = 0.0
-    target_hits_at_level = 1
-    automatic_hits = False
-    automatic_interval = None
-    allow_automatic_updates = False
-    tone_frequencies = octspace(20, 0.9 * defaults.SAMPLE_RATE / 2, 3)
-    compensation_frequency = tone_frequencies.min() / 3
-    frequencies = np.concatenate((tone_frequencies, [compensation_frequency]))
-    num_drive_channels = 9
-    sds_table = decayed_sine_table(
-        frequency=frequencies,
-        amplitude=np.zeros((len(frequencies), num_drive_channels)),
-        decay=np.zeros((len(frequencies), num_drive_channels)),
-        delay=np.zeros((len(frequencies), num_drive_channels)),
-    )
-
     return SDSInstructions(
         environment_name=ENVIRONMENT_NAME,
-        control_test_level=control_test_level,
-        target_hits_at_level=target_hits_at_level,
-        automatic_hits=automatic_hits,
-        automatic_interval=automatic_interval,
-        sds_table=sds_table,
-        allow_automatic_updates=allow_automatic_updates,
+        control_test_level=0.0,
+        target_hits_at_level=1,
+        automatic_hits=False,
+        automatic_interval=None,
+        sds_table=None,
+        allow_automatic_updates=False,
     )
 
 
