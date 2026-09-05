@@ -21,7 +21,11 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SpecParameters,
 )
 from rattlesnake.environment.sds_sys_id_environment import SDSEnvironment
-from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
+from rattlesnake.environment.sds_sys_id_utilities import (
+    SDSInstructions,
+    decayed_sine_table,
+    octspace,
+)
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.utilities import DIRECTORY
@@ -40,7 +44,7 @@ def manual_sds_metadata(hardware_metadata, **overrides):
     )
     compensation_pulse_data = CompPulseParameters(
         use_compensation_pulse=True,
-        compensation_frequency=0,
+        compensation_frequency=None,
         compensation_decay=0.95,
     )
     decay_data = DecayParameters(
@@ -51,7 +55,7 @@ def manual_sds_metadata(hardware_metadata, **overrides):
     srs_data = SRSParameters(
         srs_type=SRSType.MAXIMUM_ABSMAX,
         srs_displacement=SRSDisplacementType.ABSOLUTE,
-        srs_damping=3,
+        srs_damping=0.03,
     )
     sds_data = SDSParameters(
         iterations=3,
@@ -63,19 +67,21 @@ def manual_sds_metadata(hardware_metadata, **overrides):
         control_script=DIRECTORY + r"\environment\sds_sys_id_control_law.py",
         control_object="default_control_law",
         control_type=ControlLawType.FUNCTION,
-        control_parameters="round=1e-10\naccuracy_weight=100\ninput_weight=1",
+        control_parameters={"rcond": 1e-10, "accuracy_weight": 100, "input_weight": 1},
     )
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
     response_transformation_matrix = None
     excitation_transformation_matrix = None
-    n_freq = int(sample_rate / 2) + 1
+    frequencies = octspace(20, 0.9 * sample_rate / 2, 3)
+    num_freq = len(frequencies)
 
+    num_control_channels = len(control_channel_indices)
     specification_data = SpecParameters(
-        frequencies=np.arange(0, n_freq, 1),
-        srs_spec=np.ones((n_freq, 3, 3)),
-        srs_lower_limit=np.ones((n_freq, 3, 3)) * 0.5,
-        srs_upper_limit=np.ones((n_freq, 3, 3)) * 1.5,
+        frequencies=frequencies,
+        srs_spec=np.ones((num_freq, num_control_channels)),
+        srs_lower_limit=np.ones((num_freq, num_control_channels)) * 0.5,
+        srs_upper_limit=np.ones((num_freq, num_control_channels)) * 1.5,
         num_hits=10,
     )
 
@@ -111,7 +117,31 @@ def worksheet_sds_metadata():
 
 
 def sds_instructions():
-    pass
+    control_test_level = 0.0
+    target_hits_at_level = 1
+    automatic_hits = False
+    automatic_interval = None
+    allow_automatic_updates = False
+    tone_frequencies = octspace(20, 0.9 * defaults.SAMPLE_RATE / 2, 3)
+    compensation_frequency = tone_frequencies.min() / 3
+    frequencies = np.concatenate((tone_frequencies, [compensation_frequency]))
+    num_drive_channels = 9
+    sds_table = decayed_sine_table(
+        frequency=frequencies,
+        amplitude=np.zeros((len(frequencies), num_drive_channels)),
+        decay=np.zeros((len(frequencies), num_drive_channels)),
+        delay=np.zeros((len(frequencies), num_drive_channels)),
+    )
+
+    return SDSInstructions(
+        environment_name=ENVIRONMENT_NAME,
+        control_test_level=control_test_level,
+        target_hits_at_level=target_hits_at_level,
+        automatic_hits=automatic_hits,
+        automatic_interval=automatic_interval,
+        sds_table=sds_table,
+        allow_automatic_updates=allow_automatic_updates,
+    )
 
 
 def sds_event_list():
