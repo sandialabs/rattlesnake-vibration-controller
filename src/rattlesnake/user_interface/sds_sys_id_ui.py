@@ -35,6 +35,7 @@ from rattlesnake.user_interface.ui_utilities import (
     multiline_plotter,
     AdaptiveNoWheelSpinBox,
     ScientificDoubleSpinBox,
+    axis_label,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.utilities import (
@@ -152,6 +153,7 @@ class SDSUI(SysIdEnvironmentUI):
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
             plot_item.setLogMode(True, True)
+            plot_item.setLabel("bottom", "Frequency (Hz)")
 
         self.connect_callbacks()
 
@@ -351,6 +353,11 @@ class SDSUI(SysIdEnvironmentUI):
         """Names of the physical drive channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
+    @property
+    def physical_output_units(self):
+        """Units of the physical drive channels"""
+        return [self.physical_unit_names[i] for i in self.physical_output_indices]
+
     # region UI Environment
 
     @property
@@ -385,6 +392,15 @@ class SDSUI(SysIdEnvironmentUI):
         return [self.physical_unit_names[i] for i in self.physical_control_indices]
 
     @property
+    def control_units(self):
+        """Units of the control channels, or None per channel if transformed"""
+        return (
+            self.physical_control_units
+            if self.response_transformation_matrix is None
+            else [None] * self.response_transformation_matrix.shape[0]
+        )
+
+    @property
     def initialized_control_names(self):
         """Names of the control channels that have been initialized"""
         if self.environment_metadata.response_transformation_matrix is None:
@@ -401,6 +417,20 @@ class SDSUI(SysIdEnvironmentUI):
             ]
 
     @property
+    def initialized_control_units(self):
+        """Units of the control channels that have been initialized, or None per
+        channel if transformed"""
+        if self.environment_metadata.response_transformation_matrix is None:
+            return [
+                self.physical_unit_names[i]
+                for i in self.environment_metadata.control_channel_indices
+            ]
+        else:
+            return [
+                None
+            ] * self.environment_metadata.response_transformation_matrix.shape[0]
+
+    @property
     def initialized_output_names(self):
         """Names of the drive channels that have been initialized"""
         if self.environment_metadata.reference_transformation_matrix is None:
@@ -412,6 +442,17 @@ class SDSUI(SysIdEnvironmentUI):
                     self.environment_metadata.reference_transformation_matrix.shape[0]
                 )
             ]
+
+    @property
+    def initialized_output_units(self):
+        """Units of the drive channels that have been initialized, or None per
+        channel if transformed"""
+        if self.environment_metadata.reference_transformation_matrix is None:
+            return self.physical_output_units
+        else:
+            return [
+                None
+            ] * self.environment_metadata.reference_transformation_matrix.shape[0]
 
     # region UI Specification
     def load_specification(
@@ -718,6 +759,11 @@ class SDSUI(SysIdEnvironmentUI):
         self.plot_data_items["specification_srs"].setData(freqs, srss)
         self.plot_data_items["specification_lower_limit"].setData(freqs, lower_limits)
         self.plot_data_items["specification_upper_limit"].setData(freqs, upper_limits)
+        units = self.control_units
+        unit = units[channel_index] if 0 <= channel_index < len(units) else None
+        self.definition_widget.specification_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "SRS", unit)
+        )
 
     def collect_specification(self):
         num_freqs = self.definition_widget.breakpoint_table.rowCount()
@@ -1350,10 +1396,16 @@ class SDSUI(SysIdEnvironmentUI):
     def initialize_environment(self, environment_metadata: SDSMetadata):
         super().initialize_environment(environment_metadata)
         self.prediction_table.update_names(
-            self.initialized_output_names, self.initialized_control_names
+            self.initialized_output_names,
+            self.initialized_control_names,
+            self.initialized_output_units,
+            self.initialized_control_units,
         )
         self.run_table.update_names(
-            self.initialized_output_names, self.initialized_control_names
+            self.initialized_output_names,
+            self.initialized_control_names,
+            self.initialized_output_units,
+            self.initialized_control_units,
         )
         self.run_widget.control_channel_selector.blockSignals(True)
         self.run_widget.control_channel_selector.clear()
@@ -1362,6 +1414,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_widget.control_channel_selector.blockSignals(False)
         self.prediction_table.update_parameters(environment_metadata)
         self.run_table.update_parameters(environment_metadata)
+        self.update_global_srs_plot(None)
         return self.environment_metadata
 
     def define_transformation_matrices(
@@ -1887,6 +1940,10 @@ class SDSUI(SysIdEnvironmentUI):
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.setLogMode(True, True)
+        plot_item.setLabel("bottom", "Frequency (Hz)")
+        units = set(self.initialized_control_units)
+        common_unit = units.pop() if len(units) == 1 else None
+        plot_item.setLabel("left", axis_label("amplitude", "SRS", common_unit))
 
         if measured_response_srs is None:
             return
