@@ -542,6 +542,27 @@ class SDSMetadata(SysIdEnvironmentMetadata):
             )
         return decay_values
 
+    def get_truncated_specification_mask(self):
+        spec_freq = np.asarray(self.specification_data.frequencies)
+        sds_freq = np.asarray(self.get_sds_frequencies())
+        return (spec_freq >= np.min(sds_freq)) & (spec_freq <= np.max(sds_freq))
+
+    def get_truncated_specification_frequencies(self):
+        mask = self.get_truncated_specification_mask()
+        return np.asarray(self.specification_data.frequencies)[mask]
+
+    def get_truncated_specification_srs(self):
+        mask = self.get_truncated_specification_mask()
+        return self.specification_data.srs_spec[mask]
+
+    def get_truncated_specification_lower_limit(self):
+        mask = self.get_truncated_specification_mask()
+        return self.specification_data.srs_lower_limit[mask]
+
+    def get_truncated_specification_upper_limit(self):
+        mask = self.get_truncated_specification_mask()
+        return self.specification_data.srs_upper_limit[mask]
+
     @classmethod
     def create_blank_worksheet_template(cls, worksheet):
         super().create_blank_worksheet_template(worksheet)
