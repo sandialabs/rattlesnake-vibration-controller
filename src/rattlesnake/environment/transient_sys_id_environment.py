@@ -65,6 +65,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 
 from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdDataAnalysisCommands,
     SysIdMetadata,
     SysIdDataPackage,
     sysid_data_analysis_process,
@@ -101,16 +102,19 @@ class TransientCommands(EnvironmentCommands):
     SET_TEST_LEVEL = 5
     SET_REPEAT = 6
     SET_NO_REPEAT = 7
+    SAVE_CONTROL_DATA = 8
 
     VALID_PROFILE_COMMANDS = (
         SET_TEST_LEVEL,
         SET_REPEAT,
         SET_NO_REPEAT,
+        SAVE_CONTROL_DATA,
     )
     VALID_DATA = {
         SET_TEST_LEVEL: int,
         SET_REPEAT: type(None),
         SET_NO_REPEAT: type(None),
+        SAVE_CONTROL_DATA: str,
     }
 
 
@@ -248,10 +252,14 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             )
 
         if self.test_level_ramp_time < 0:
-            raise RattlesnakeError("Test level ramp time must be greater than or equal to 0")
+            raise RattlesnakeError(
+                "Test level ramp time must be greater than or equal to 0"
+            )
 
         if len(self.control_channel_indices) == 0:
-            raise RattlesnakeError("control_channel_indices must contain at least one channel")
+            raise RattlesnakeError(
+                "control_channel_indices must contain at least one channel"
+            )
         for index in self.control_channel_indices:
             if not (0 <= index < self.number_of_channels):
                 raise RattlesnakeError(
@@ -260,7 +268,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
                 )
 
         if len(self.output_channel_indices) == 0:
-            raise RattlesnakeError("output_channel_indices must contain at least one channel")
+            raise RattlesnakeError(
+                "output_channel_indices must contain at least one channel"
+            )
         for index in self.output_channel_indices:
             if not (0 <= index < self.number_of_channels):
                 raise RattlesnakeError(
@@ -270,7 +280,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
 
         if self.response_transformation_matrix is not None and (
             self.response_transformation_matrix.ndim != 2
-            or self.response_transformation_matrix.shape[1] != len(self.control_channel_indices)
+            or self.response_transformation_matrix.shape[1]
+            != len(self.control_channel_indices)
         ):
             raise RattlesnakeError(
                 "response_transformation_matrix must be 2D with a number of "
@@ -281,7 +292,8 @@ class TransientMetadata(SysIdEnvironmentMetadata):
 
         if self.reference_transformation_matrix is not None and (
             self.reference_transformation_matrix.ndim != 2
-            or self.reference_transformation_matrix.shape[1] != len(self.output_channel_indices)
+            or self.reference_transformation_matrix.shape[1]
+            != len(self.output_channel_indices)
         ):
             raise RattlesnakeError(
                 "reference_transformation_matrix must be 2D with a number of "
@@ -298,11 +310,14 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         Validates the spec that is being initialized to the environment
         """
         if self.control_signal is None:
-            raise RattlesnakeError(f"{self.environment_name} has no control signal loaded")
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control signal loaded"
+            )
 
         if self.control_signal.shape[-1] == 0:
             raise RattlesnakeError(
-                f"{self.environment_name} control signal must have at least " "one sample"
+                f"{self.environment_name} control signal must have at least "
+                "one sample"
             )
 
         n_control_channels = (
@@ -323,9 +338,13 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         Validates the control law being initialized to the environment
         """
         if not self.control_python_script:
-            raise RattlesnakeError(f"{self.environment_name} has no control_python_script set")
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_script set"
+            )
         if not self.control_python_function:
-            raise RattlesnakeError(f"{self.environment_name} has no control_python_function set")
+            raise RattlesnakeError(
+                f"{self.environment_name} has no control_python_function set"
+            )
 
         try:
             module = load_python_module(self.control_python_script)
@@ -345,7 +364,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
 
         if inspect.isgeneratorfunction(function):
             actual_type = 1
-        elif inspect.isclass(function) and issubclass(function, AbstractControlLawComputation):
+        elif inspect.isclass(function) and issubclass(
+            function, AbstractControlLawComputation
+        ):
             actual_type = 3
         elif inspect.isclass(function):
             actual_type = 2
@@ -383,13 +404,19 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         netcdf_group_handle.test_level_ramp_time = self.test_level_ramp_time
         netcdf_group_handle.control_python_script = self.control_python_script
         netcdf_group_handle.control_python_function = self.control_python_function
-        netcdf_group_handle.control_python_function_type = self.control_python_function_type
+        netcdf_group_handle.control_python_function_type = (
+            self.control_python_function_type
+        )
         netcdf_group_handle.control_python_function_parameters = (
             self.control_python_function_parameters
         )
         # Save the output signal
-        netcdf_group_handle.createDimension("control_channels", len(self.control_channel_indices))
-        netcdf_group_handle.createDimension("specification_channels", self.control_signal.shape[0])
+        netcdf_group_handle.createDimension(
+            "control_channels", len(self.control_channel_indices)
+        )
+        netcdf_group_handle.createDimension(
+            "specification_channels", self.control_signal.shape[0]
+        )
         netcdf_group_handle.createDimension("signal_samples", self.signal_samples)
         var = netcdf_group_handle.createVariable(
             "control_signal", "f8", ("specification_channels", "signal_samples")
@@ -449,17 +476,23 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         control_python_script = netcdf_group_handle.control_python_script
         control_python_function = netcdf_group_handle.control_python_function
         control_python_function_type = netcdf_group_handle.control_python_function_type
-        control_python_function_parameters = netcdf_group_handle.control_python_function_parameters
+        control_python_function_parameters = (
+            netcdf_group_handle.control_python_function_parameters
+        )
         # Load Variables
         control_signal = netcdf_group_handle.variables["control_signal"][:]
-        control_channel_indices = netcdf_group_handle.variables["control_channel_indices"][:]
+        control_channel_indices = netcdf_group_handle.variables[
+            "control_channel_indices"
+        ][:]
 
         number_of_channels = sum(channel_list_bools)
 
         # Handle derived channel lists (matching your example pattern)
         environment_channel_list = [
             channel
-            for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools)
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
             if channel_bool
         ]
 
@@ -505,7 +538,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         super().create_blank_worksheet_template(worksheet)
         worksheet.cell(1, 2, "Transient")
         worksheet.cell(2, 1, "Signal File")
-        worksheet.cell(2, 3, "# Path to the file that contains the time signal that will be output")
+        worksheet.cell(
+            2, 3, "# Path to the file that contains the time signal that will be output"
+        )
         worksheet.cell(3, 1, "Ramp Time")
         worksheet.cell(
             3,
@@ -543,7 +578,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             "be the number of physical output channels in the environment.",
         )
 
-    def save_metadata_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    def save_metadata_to_worksheet(
+        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
+    ):
         super().save_metadata_to_worksheet(worksheet)
         if self.spec_filename:
             worksheet.cell(2, 2, str(self.spec_filename))
@@ -579,7 +616,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
         number_of_channels = sum(channel_list_bools)
         environment_channel_list = [
             channel
-            for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools)
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
             if channel_bool
         ]
 
@@ -621,7 +660,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             control_python_function_type = None
             if inspect.isgeneratorfunction(function):
                 control_python_function_type = 1
-            elif inspect.isclass(function) and issubclass(function, AbstractControlLawComputation):
+            elif inspect.isclass(function) and issubclass(
+                function, AbstractControlLawComputation
+            ):
                 control_python_function_type = 3
             elif inspect.isclass(function):
                 control_python_function_type = 2
@@ -634,7 +675,9 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             cls.load_sysid_matrix_from_worksheet(worksheet, start_row=24)
         )
 
-        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(worksheet, hardware_metadata, 8)
+        sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
+            worksheet, hardware_metadata, 8
+        )
 
         metadata = cls(
             environment_name=environment_name,
@@ -803,11 +846,14 @@ class TransientEnvironment(SysIdEnvironment):
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
         self.map_command(TransientCommands.START_CONTROL, self.start_control)
         self.map_command(TransientCommands.STOP_CONTROL, self.stop_environment)
+        self.map_command(TransientCommands.SAVE_CONTROL_DATA, self.save_control_data)
         self.map_command(
             ControlLawCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
             self.update_interactive_control_parameters,
         )
-        self.map_command(ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
+        self.map_command(
+            ControlLawCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command
+        )
         # Persistent data
         self.queue_container = queue_container
         self.control_function_type = None
@@ -858,16 +904,22 @@ class TransientEnvironment(SysIdEnvironment):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.control_function_type = environment_metadata.control_python_function_type
-        self.extra_control_parameters = environment_metadata.control_python_function_parameters
+        self.extra_control_parameters = (
+            environment_metadata.control_python_function_parameters
+        )
         if self.control_function_type == 1:  # Generator
             # Get the generator function
-            generator_function = getattr(module, environment_metadata.control_python_function)()
+            generator_function = getattr(
+                module, environment_metadata.control_python_function
+            )()
             # Get us to the first yield statement
             next(generator_function)
             # Define the control function as the generator's send function
             self.control_function = generator_function.send
         elif self.control_function_type == 2:  # Class
-            self.control_function = getattr(module, environment_metadata.control_python_function)(
+            self.control_function = getattr(
+                module, environment_metadata.control_python_function
+            )(
                 self.hardware_metadata.sample_rate,
                 self.environment_metadata.control_signal,
                 self.hardware_metadata.output_oversample,
@@ -886,7 +938,9 @@ class TransientEnvironment(SysIdEnvironment):
                 self.aligned_response,
             )  # Last response signal for error-based correction
         elif self.control_function_type == 3:  # Interactive Class
-            control_class = getattr(module, environment_metadata.control_python_function)
+            control_class = getattr(
+                module, environment_metadata.control_python_function
+            )
             self.control_function = control_class(
                 self.environment_name,
                 self.gui_update_queue,
@@ -910,7 +964,9 @@ class TransientEnvironment(SysIdEnvironment):
             self.last_interactive_parameters = None
             self.has_sent_interactive_control_transfer_function_results = False
         else:  # Function
-            self.control_function = getattr(module, environment_metadata.control_python_function)
+            self.control_function = getattr(
+                module, environment_metadata.control_python_function
+            )
 
         self.set_ready()
 
@@ -953,6 +1009,32 @@ class TransientEnvironment(SysIdEnvironment):
                 "Received an SEND_INTERACTIVE_COMMAND signal without an interactive "
                 "control law.  How did this happen?"
             )
+
+    def save_control_data(self, data):
+        filename = data
+        netcdf_dataset = nc4.Dataset(  # pylint: disable=no-member
+            filename, "w", format="NETCDF4", clobber=True
+        )
+        if self.environment_name not in netcdf_dataset.groups:
+            netcdf_handle = netcdf_dataset.createGroup(self.environment_name)
+        else:
+            netcdf_handle = netcdf_dataset.groups[self.environment_name]
+        self.environment_metadata.save_metadata_to_netcdf(netcdf_handle)
+        if self.sysid_data.sysid_frf is not None:
+            self.sysid_data.save_package_to_netcdf(netcdf_handle)
+        if self.aligned_response is not None and self.aligned_output is not None:
+            netcdf_handle.createDimension(
+                "drive_channels", self.aligned_output.shape[0]
+            )
+            var = netcdf_handle.createVariable(
+                "control_response", "f8", ("specification_channels", "signal_samples")
+            )
+            var[...] = self.aligned_response
+            var = netcdf_handle.createVariable(
+                "control_drives", "f8", ("drive_channels", "signal_samples")
+            )
+            var[...] = self.aligned_output
+        netcdf_dataset.close()
 
     def system_id_complete(self, data):
         """Sends the message that system identification is complete and control calculations
@@ -1042,7 +1124,9 @@ class TransientEnvironment(SysIdEnvironment):
                     self.next_drive, self.predicted_response
                 )
             else:
-                self.log("Have not yet received control parameters from interactive control law!")
+                self.log(
+                    "Have not yet received control parameters from interactive control law!"
+                )
                 output_time_history = None
                 return
         else:  # Function
@@ -1071,12 +1155,18 @@ class TransientEnvironment(SysIdEnvironment):
         """Sends the test predictions to the UI"""
         # print('Drive Signals {:}'.format(self.next_drive.shape))
         drive_signals = self.next_drive[:, :: self.hardware_metadata.output_oversample]
-        impulse_responses = np.moveaxis(np.fft.irfft(self.sysid_data.sysid_frf, axis=0), 0, -1)
+        impulse_responses = np.moveaxis(
+            np.fft.irfft(self.sysid_data.sysid_frf, axis=0), 0, -1
+        )
 
-        self.predicted_response = np.zeros((impulse_responses.shape[0], drive_signals.shape[-1]))
+        self.predicted_response = np.zeros(
+            (impulse_responses.shape[0], drive_signals.shape[-1])
+        )
 
         for i, impulse_response_row in enumerate(impulse_responses):
-            for _, (impulse, drive) in enumerate(zip(impulse_response_row, drive_signals)):
+            for _, (impulse, drive) in enumerate(
+                zip(impulse_response_row, drive_signals)
+            ):
                 # print('Convolving {:},{:}'.format(i,j))
                 self.predicted_response[i, :] += sig.convolve(drive, impulse, "full")[
                     : drive_signals.shape[-1]
@@ -1084,7 +1174,9 @@ class TransientEnvironment(SysIdEnvironment):
 
         # print('Response Prediction {:}'.format(self.predicted_response.shape))
         # print('Control Signal {:}'.format(self.environment_metadata.control_signal.shape))
-        time_trac = trac(self.predicted_response, self.environment_metadata.control_signal)
+        time_trac = trac(
+            self.predicted_response, self.environment_metadata.control_signal
+        )
         peak_voltages = np.max(np.abs(self.next_drive), axis=-1)
         self.gui_update_queue.put(
             (
@@ -1212,7 +1304,9 @@ class TransientEnvironment(SysIdEnvironment):
             )
         # See if any data has come in
         try:
-            acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
+            acquisition_data, last_acquisition = (
+                self.queue_container.data_in_queue.get_nowait()
+            )
             if self.last_signal_found is not None:
                 self.last_signal_found -= self.hardware_metadata.samples_per_read
             if last_acquisition:
@@ -1224,18 +1318,22 @@ class TransientEnvironment(SysIdEnvironment):
                 self.log("Acquired Data")
             scale_factor = 0.0 if self.test_level < 1e-10 else 1 / self.test_level
             control_data = (
-                acquisition_data[self.environment_metadata.control_channel_indices] * scale_factor
+                acquisition_data[self.environment_metadata.control_channel_indices]
+                * scale_factor
             )
             if self.environment_metadata.response_transformation_matrix is not None:
                 control_data = (
-                    self.environment_metadata.response_transformation_matrix @ control_data
+                    self.environment_metadata.response_transformation_matrix
+                    @ control_data
                 )
             output_data = (
-                acquisition_data[self.environment_metadata.output_channel_indices] * scale_factor
+                acquisition_data[self.environment_metadata.output_channel_indices]
+                * scale_factor
             )
             if self.environment_metadata.reference_transformation_matrix is not None:
                 output_data = (
-                    self.environment_metadata.reference_transformation_matrix @ output_data
+                    self.environment_metadata.reference_transformation_matrix
+                    @ output_data
                 )
             # Add the data to the buffers
             self.control_buffer.add_data(control_data)
@@ -1277,7 +1375,9 @@ class TransientEnvironment(SysIdEnvironment):
                     sample_delay,
                     phase_change,
                 )
-                time_trac = trac(self.aligned_response, self.environment_metadata.control_signal)
+                time_trac = trac(
+                    self.aligned_response, self.environment_metadata.control_signal
+                )
                 self.gui_update_queue.put(
                     (
                         self.environment_name,
@@ -1342,7 +1442,9 @@ class TransientEnvironment(SysIdEnvironment):
         """Let the UI know that this environment has completely shut down"""
         self.log("Environment Shut Down")
         self.clear_active()
-        self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
+        self.gui_update_queue.put(
+            (self.environment_name, (UICommands.ENVIRONMENT_ENDED, None))
+        )
         self.startup = True
 
     # endregion
