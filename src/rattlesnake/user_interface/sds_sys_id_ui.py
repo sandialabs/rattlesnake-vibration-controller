@@ -35,6 +35,7 @@ from rattlesnake.user_interface.ui_utilities import (
     multiline_plotter,
     AdaptiveNoWheelSpinBox,
     ScientificDoubleSpinBox,
+    axis_label,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.utilities import (
@@ -59,7 +60,7 @@ import numpy as np
 import importlib
 from enum import Enum
 import os
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 import netCDF4 as nc4
 
 CONTROL_TYPE = EnvironmentType.SDS
@@ -110,10 +111,13 @@ class SDSUI(SysIdEnvironmentUI):
         self.python_function_extra_arguments = []
         self.python_function_extra_argument_widgets = {}
         self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
+        self.specification_filename = None
         self.shock_history = None
         self.plot_windows = []
 
-        self.control_selector_widgets = [self.definition_widget.specification_plot_selector]
+        self.control_selector_widgets = [
+            self.definition_widget.specification_plot_selector
+        ]
 
         self.output_selector_widgets = []
 
@@ -149,6 +153,7 @@ class SDSUI(SysIdEnvironmentUI):
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
             plot_item.setLogMode(True, True)
+            plot_item.setLabel("bottom", "Frequency (Hz)")
 
         self.connect_callbacks()
 
@@ -157,21 +162,39 @@ class SDSUI(SysIdEnvironmentUI):
     def connect_callbacks(self):
         """Connects the callbacks to the SDS UI widgets"""
         # Definition
-        self.definition_widget.add_breakpoint_button.clicked.connect(self.add_breakpoint)
-        self.definition_widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
+        self.definition_widget.add_breakpoint_button.clicked.connect(
+            self.add_breakpoint
+        )
+        self.definition_widget.remove_breakpoint_button.clicked.connect(
+            self.remove_breakpoint
+        )
         self.definition_widget.from_spec_button.toggled.connect(self.update_tone_table)
         self.definition_widget.octave_button.toggled.connect(self.update_tone_table)
         self.definition_widget.manual_button.toggled.connect(self.update_tone_table)
-        self.definition_widget.min_frequency_selector.valueChanged.connect(self.update_tone_table)
-        self.definition_widget.max_frequency_selector.valueChanged.connect(self.update_tone_table)
+        self.definition_widget.min_frequency_selector.valueChanged.connect(
+            self.update_tone_table
+        )
+        self.definition_widget.max_frequency_selector.valueChanged.connect(
+            self.update_tone_table
+        )
         self.definition_widget.tones_per_octave_selector.valueChanged.connect(
             self.update_tone_table
         )
-        self.definition_widget.common_decay_checkbox.toggled.connect(self.update_decay_table)
-        self.definition_widget.decay_value_selector.valueChanged.connect(self.update_decay_table)
-        self.definition_widget.damping_zeta_button.toggled.connect(self.update_decay_table)
-        self.definition_widget.time_constant_tau_button.toggled.connect(self.update_decay_table)
-        self.definition_widget.num_time_constants_button.toggled.connect(self.update_decay_table)
+        self.definition_widget.common_decay_checkbox.toggled.connect(
+            self.update_decay_table
+        )
+        self.definition_widget.decay_value_selector.valueChanged.connect(
+            self.update_decay_table
+        )
+        self.definition_widget.damping_zeta_button.toggled.connect(
+            self.update_decay_table
+        )
+        self.definition_widget.time_constant_tau_button.toggled.connect(
+            self.update_decay_table
+        )
+        self.definition_widget.num_time_constants_button.toggled.connect(
+            self.update_decay_table
+        )
         self.definition_widget.add_tone_button.clicked.connect(self.add_tone)
         self.definition_widget.remove_tone_button.clicked.connect(self.remove_tone)
         self.definition_widget.transformation_matrices_button.clicked.connect(
@@ -202,7 +225,12 @@ class SDSUI(SysIdEnvironmentUI):
         self.definition_widget.control_function_input.currentIndexChanged.connect(
             self.update_generator_selector
         )
-        self.definition_widget.load_breakpoints_button.clicked.connect(self.load_specification)
+        self.definition_widget.load_breakpoints_button.clicked.connect(
+            self.load_specification
+        )
+        self.definition_widget.save_breakpoint_button.clicked.connect(
+            self.save_specification
+        )
         self.definition_widget.control_script_load_file_button.clicked.connect(
             self.select_python_module
         )
@@ -218,12 +246,16 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_widget.current_test_level_selector.valueChanged.connect(
             self.update_hits_at_selected_level_display
         )
-        self.run_widget.save_current_control_data_button.clicked.connect(self.save_control_data)
+        self.run_widget.save_current_control_data_button.clicked.connect(
+            self.save_control_data
+        )
         self.run_widget.create_srs_window_button.clicked.connect(self.create_srs_window)
         self.run_widget.create_time_history_window_button.clicked.connect(
             self.create_time_history_window
         )
-        self.run_widget.show_all_srs_channels_button.clicked.connect(self.show_all_srs_channels)
+        self.run_widget.show_all_srs_channels_button.clicked.connect(
+            self.show_all_srs_channels
+        )
         self.run_widget.show_all_time_history_channels_button.clicked.connect(
             self.show_all_time_history_channels
         )
@@ -277,15 +309,23 @@ class SDSUI(SysIdEnvironmentUI):
             for channel in hardware_metadata.channel_list
         ]
         self.physical_output_indices = [
-            i for i, channel in enumerate(hardware_metadata.channel_list) if channel.feedback_device
+            i
+            for i, channel in enumerate(hardware_metadata.channel_list)
+            if channel.feedback_device
         ]
 
         # Set default values for various widgets
         # Sampling parameters
-        self.definition_widget.sample_rate_display.setValue(hardware_metadata.sample_rate)
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(hardware_metadata.sample_rate)
+        self.definition_widget.sample_rate_display.setValue(
+            hardware_metadata.sample_rate
+        )
+        self.system_id_widget.samplesPerFrameSpinBox.setValue(
+            hardware_metadata.sample_rate
+        )
         # By default set the block time length to 1 second
-        self.definition_widget.block_size_selector.setValue(hardware_metadata.sample_rate)
+        self.definition_widget.block_size_selector.setValue(
+            hardware_metadata.sample_rate
+        )
         # Set up control channel list
         self.definition_widget.control_channels_selector.clear()
         for channel_name in self.physical_channel_names:
@@ -297,8 +337,12 @@ class SDSUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.define_transformation_matrices(None, False)
-        self.definition_widget.input_channels_display.setValue(len(self.physical_channel_names))
-        self.definition_widget.output_channels_display.setValue(len(self.physical_output_indices))
+        self.definition_widget.input_channels_display.setValue(
+            len(self.physical_channel_names)
+        )
+        self.definition_widget.output_channels_display.setValue(
+            len(self.physical_output_indices)
+        )
         self.definition_widget.control_channels_display.setValue(0)
 
         # Clear and update specification table
@@ -309,6 +353,11 @@ class SDSUI(SysIdEnvironmentUI):
         """Names of the physical drive channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
+    @property
+    def physical_output_units(self):
+        """Units of the physical drive channels"""
+        return [self.physical_unit_names[i] for i in self.physical_output_indices]
+
     # region UI Environment
 
     @property
@@ -317,7 +366,8 @@ class SDSUI(SysIdEnvironmentUI):
         return [
             i
             for i in range(self.definition_widget.control_channels_selector.count())
-            if self.definition_widget.control_channels_selector.item(i).checkState() == Qt.Checked
+            if self.definition_widget.control_channels_selector.item(i).checkState()
+            == Qt.Checked
         ]
 
     @property
@@ -342,6 +392,15 @@ class SDSUI(SysIdEnvironmentUI):
         return [self.physical_unit_names[i] for i in self.physical_control_indices]
 
     @property
+    def control_units(self):
+        """Units of the control channels, or None per channel if transformed"""
+        return (
+            self.physical_control_units
+            if self.response_transformation_matrix is None
+            else [None] * self.response_transformation_matrix.shape[0]
+        )
+
+    @property
     def initialized_control_names(self):
         """Names of the control channels that have been initialized"""
         if self.environment_metadata.response_transformation_matrix is None:
@@ -352,8 +411,24 @@ class SDSUI(SysIdEnvironmentUI):
         else:
             return [
                 f"Transformed Response {i + 1}"
-                for i in range(self.environment_metadata.response_transformation_matrix.shape[0])
+                for i in range(
+                    self.environment_metadata.response_transformation_matrix.shape[0]
+                )
             ]
+
+    @property
+    def initialized_control_units(self):
+        """Units of the control channels that have been initialized, or None per
+        channel if transformed"""
+        if self.environment_metadata.response_transformation_matrix is None:
+            return [
+                self.physical_unit_names[i]
+                for i in self.environment_metadata.control_channel_indices
+            ]
+        else:
+            return [
+                None
+            ] * self.environment_metadata.response_transformation_matrix.shape[0]
 
     @property
     def initialized_output_names(self):
@@ -363,11 +438,26 @@ class SDSUI(SysIdEnvironmentUI):
         else:
             return [
                 f"Transformed Drive {i + 1}"
-                for i in range(self.environment_metadata.reference_transformation_matrix.shape[0])
+                for i in range(
+                    self.environment_metadata.reference_transformation_matrix.shape[0]
+                )
             ]
 
+    @property
+    def initialized_output_units(self):
+        """Units of the drive channels that have been initialized, or None per
+        channel if transformed"""
+        if self.environment_metadata.reference_transformation_matrix is None:
+            return self.physical_output_units
+        else:
+            return [
+                None
+            ] * self.environment_metadata.reference_transformation_matrix.shape[0]
+
     # region UI Specification
-    def load_specification(self, clicked, filename=None):  # pylint: disable=unused-argument
+    def load_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
@@ -387,8 +477,47 @@ class SDSUI(SysIdEnvironmentUI):
             spec_data["lower_limit"] if "lower_limit" in spec_data else None,
             spec_data["upper_limit"] if "upper_limit" in spec_data else None,
         )
-        self.definition_widget.num_hits_spinbox.setValue(spec_data["num_hits"].squeeze())
+        self.definition_widget.num_hits_spinbox.setValue(
+            spec_data["num_hits"].squeeze()
+        )
         self.update_specification()
+        self.specification_filename = filename
+
+    def save_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
+        if filename is None:
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self.definition_widget,
+                "Select Specification File",
+                self.specification_filename or "",
+                filter="Numpy (*.npz);;Mat (*.mat)",
+            )
+            if filename == "":
+                return
+        spec_data = self.collect_specification()
+        _, extension = os.path.splitext(filename)
+        if extension.lower() == ".mat":
+            savemat(
+                filename,
+                {
+                    "f": spec_data.frequencies,
+                    "srs": spec_data.srs_spec,
+                    "lower_limit": spec_data.srs_lower_limit,
+                    "upper_limit": spec_data.srs_upper_limit,
+                    "num_hits": spec_data.num_hits,
+                },
+            )
+        else:
+            np.savez(
+                filename,
+                f=spec_data.frequencies,
+                srs=spec_data.srs_spec,
+                lower_limit=spec_data.srs_lower_limit,
+                upper_limit=spec_data.srs_upper_limit,
+                num_hits=spec_data.num_hits,
+            )
+        self.specification_filename = filename
 
     def clear_and_update_specification_table(
         self, frequencies=None, srs=None, lower_limit=None, upper_limit=None
@@ -407,8 +536,12 @@ class SDSUI(SysIdEnvironmentUI):
         self.definition_widget.upper_limit_table.setColumnCount(1 + len(control_names))
         header_labels = ["Frequency"] + list(control_names)
         self.definition_widget.breakpoint_table.setHorizontalHeaderLabels(header_labels)
-        self.definition_widget.lower_limit_table.setHorizontalHeaderLabels(header_labels)
-        self.definition_widget.upper_limit_table.setHorizontalHeaderLabels(header_labels)
+        self.definition_widget.lower_limit_table.setHorizontalHeaderLabels(
+            header_labels
+        )
+        self.definition_widget.upper_limit_table.setHorizontalHeaderLabels(
+            header_labels
+        )
         for row in range(num_rows):
             # Frequency breakpoint
             spinbox = AdaptiveNoWheelSpinBox()
@@ -459,29 +592,39 @@ class SDSUI(SysIdEnvironmentUI):
                 spinbox.setKeyboardTracking(False)
                 spinbox.setSpecialValueText("No Control")
                 spinbox.valueChanged.connect(self.update_specification)
-                self.definition_widget.breakpoint_table.setCellWidget(row, 1 + j, spinbox)
+                self.definition_widget.breakpoint_table.setCellWidget(
+                    row, 1 + j, spinbox
+                )
                 spinbox = AdaptiveNoWheelSpinBox()
                 spinbox.setRange(0, 1000000)
                 spinbox.setSingleStep(1)
                 if lower_limit is None:
                     spinbox.setValue(0)
                 else:
-                    spinbox.setValue(0 if np.isnan(lower_limit[row, j]) else lower_limit[row, j])
+                    spinbox.setValue(
+                        0 if np.isnan(lower_limit[row, j]) else lower_limit[row, j]
+                    )
                 spinbox.setKeyboardTracking(False)
                 spinbox.setSpecialValueText("No Limit")
                 spinbox.valueChanged.connect(self.update_specification)
-                self.definition_widget.lower_limit_table.setCellWidget(row, 1 + j, spinbox)
+                self.definition_widget.lower_limit_table.setCellWidget(
+                    row, 1 + j, spinbox
+                )
                 spinbox = AdaptiveNoWheelSpinBox()
                 spinbox.setRange(0, 1000000)
                 spinbox.setSingleStep(1)
                 if upper_limit is None:
                     spinbox.setValue(0)
                 else:
-                    spinbox.setValue(0 if np.isnan(upper_limit[row, j]) else upper_limit[row, j])
+                    spinbox.setValue(
+                        0 if np.isnan(upper_limit[row, j]) else upper_limit[row, j]
+                    )
                 spinbox.setKeyboardTracking(False)
                 spinbox.setSpecialValueText("No Limit")
                 spinbox.valueChanged.connect(self.update_specification)
-                self.definition_widget.upper_limit_table.setCellWidget(row, 1 + j, spinbox)
+                self.definition_widget.upper_limit_table.setCellWidget(
+                    row, 1 + j, spinbox
+                )
 
     def add_breakpoint(self):
         selected_indices = self.definition_widget.breakpoint_table.selectedIndexes()
@@ -531,7 +674,9 @@ class SDSUI(SysIdEnvironmentUI):
             spinbox.setKeyboardTracking(False)
             spinbox.setSpecialValueText("No Control")
             spinbox.valueChanged.connect(self.update_specification)
-            self.definition_widget.breakpoint_table.setCellWidget(selected_row, 1 + j, spinbox)
+            self.definition_widget.breakpoint_table.setCellWidget(
+                selected_row, 1 + j, spinbox
+            )
             spinbox = AdaptiveNoWheelSpinBox()
             spinbox.setRange(0, 1000000)
             spinbox.setSingleStep(1)
@@ -539,7 +684,9 @@ class SDSUI(SysIdEnvironmentUI):
             spinbox.setKeyboardTracking(False)
             spinbox.setSpecialValueText("No Limit")
             spinbox.valueChanged.connect(self.update_specification)
-            self.definition_widget.lower_limit_table.setCellWidget(selected_row, 1 + j, spinbox)
+            self.definition_widget.lower_limit_table.setCellWidget(
+                selected_row, 1 + j, spinbox
+            )
             spinbox = AdaptiveNoWheelSpinBox()
             spinbox.setRange(0, 1000000)
             spinbox.setSingleStep(1)
@@ -547,7 +694,9 @@ class SDSUI(SysIdEnvironmentUI):
             spinbox.setKeyboardTracking(False)
             spinbox.setSpecialValueText("No Limit")
             spinbox.valueChanged.connect(self.update_specification)
-            self.definition_widget.upper_limit_table.setCellWidget(selected_row, 1 + j, spinbox)
+            self.definition_widget.upper_limit_table.setCellWidget(
+                selected_row, 1 + j, spinbox
+            )
         self.update_specification()
 
     def remove_breakpoint(self):
@@ -563,7 +712,9 @@ class SDSUI(SysIdEnvironmentUI):
         self.update_specification()
 
     def update_specification(self):
-        channel_index = self.definition_widget.specification_plot_selector.currentIndex()
+        channel_index = (
+            self.definition_widget.specification_plot_selector.currentIndex()
+        )
         num_freqs = self.definition_widget.breakpoint_table.rowCount()
         freqs = np.empty(num_freqs, "float")
         srss = np.empty(num_freqs, "float")
@@ -572,7 +723,9 @@ class SDSUI(SysIdEnvironmentUI):
         if self.definition_widget.from_spec_button.isChecked():
             self.update_tone_table()
         for row in range(num_freqs):
-            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
+            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(
+                row, 0
+            ).value()
             srss[row] = (
                 np.nan
                 if self.definition_widget.breakpoint_table.cellWidget(
@@ -606,6 +759,11 @@ class SDSUI(SysIdEnvironmentUI):
         self.plot_data_items["specification_srs"].setData(freqs, srss)
         self.plot_data_items["specification_lower_limit"].setData(freqs, lower_limits)
         self.plot_data_items["specification_upper_limit"].setData(freqs, upper_limits)
+        units = self.control_units
+        unit = units[channel_index] if 0 <= channel_index < len(units) else None
+        self.definition_widget.specification_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "SRS", unit)
+        )
 
     def collect_specification(self):
         num_freqs = self.definition_widget.breakpoint_table.rowCount()
@@ -617,27 +775,46 @@ class SDSUI(SysIdEnvironmentUI):
         if self.definition_widget.from_spec_button.isChecked():
             self.update_tone_table()
         for row in range(num_freqs):
-            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
+            freqs[row] = self.definition_widget.breakpoint_table.cellWidget(
+                row, 0
+            ).value()
             for col in range(num_control):
                 srss[row, col] = (
                     np.nan
-                    if self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value() == 0
-                    else self.definition_widget.breakpoint_table.cellWidget(row, 1 + col).value()
+                    if self.definition_widget.breakpoint_table.cellWidget(
+                        row, 1 + col
+                    ).value()
+                    == 0
+                    else self.definition_widget.breakpoint_table.cellWidget(
+                        row, 1 + col
+                    ).value()
                 )
                 lower_limits[row, col] = (
                     np.nan
-                    if self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
+                    if self.definition_widget.lower_limit_table.cellWidget(
+                        row, 1 + col
+                    ).value()
                     == 0
-                    else self.definition_widget.lower_limit_table.cellWidget(row, 1 + col).value()
+                    else self.definition_widget.lower_limit_table.cellWidget(
+                        row, 1 + col
+                    ).value()
                 )
                 upper_limits[row, col] = (
                     np.nan
-                    if self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
+                    if self.definition_widget.upper_limit_table.cellWidget(
+                        row, 1 + col
+                    ).value()
                     == 0
-                    else self.definition_widget.upper_limit_table.cellWidget(row, 1 + col).value()
+                    else self.definition_widget.upper_limit_table.cellWidget(
+                        row, 1 + col
+                    ).value()
                 )
         spec_data = SpecParameters(
-            freqs, srss, lower_limits, upper_limits, self.definition_widget.num_hits_spinbox.value()
+            freqs,
+            srss,
+            lower_limits,
+            upper_limits,
+            self.definition_widget.num_hits_spinbox.value(),
         )
         return spec_data
 
@@ -711,8 +888,9 @@ class SDSUI(SysIdEnvironmentUI):
                         annotation = parameter.annotation
                         default = parameter.default
 
-                        if annotation is inspect.Parameter.empty or not SDSUI.valid_annotation(
-                            annotation
+                        if (
+                            annotation is inspect.Parameter.empty
+                            or not SDSUI.valid_annotation(annotation)
                         ):
                             if default is inspect.Parameter.empty:
                                 valid_control_law = False
@@ -750,7 +928,9 @@ class SDSUI(SysIdEnvironmentUI):
 
                 init_parameters = init_signature.parameters
 
-                if not all(arg in init_parameters for arg in required_class_init_arguments):
+                if not all(
+                    arg in init_parameters for arg in required_class_init_arguments
+                ):
                     continue
 
                 for name, parameter in init_parameters.items():
@@ -775,8 +955,9 @@ class SDSUI(SysIdEnvironmentUI):
                         annotation = parameter.annotation
                         default = parameter.default
 
-                        if annotation is inspect.Parameter.empty or not SDSUI.valid_annotation(
-                            annotation
+                        if (
+                            annotation is inspect.Parameter.empty
+                            or not SDSUI.valid_annotation(annotation)
                         ):
                             if default is inspect.Parameter.empty:
                                 valid_control_law = False
@@ -946,7 +1127,9 @@ class SDSUI(SysIdEnvironmentUI):
             try:
                 widget = self.python_function_extra_argument_widgets[key]
             except KeyError:
-                raise ValueError(f"Parameter {key} not found in extra parameter widget list.")
+                raise ValueError(
+                    f"Parameter {key} not found in extra parameter widget list."
+                )
             if isinstance(widget, QtWidgets.QSpinBox):
                 widget.setValue(value)
             elif isinstance(widget, QtWidgets.QDoubleSpinBox):
@@ -958,7 +1141,9 @@ class SDSUI(SysIdEnvironmentUI):
                 if index >= 0:
                     widget.setCurrentIndex(index)
                 else:
-                    raise ValueError(f"Data {value} not found in combobox for parameter {key}")
+                    raise ValueError(
+                        f"Data {value} not found in combobox for parameter {key}"
+                    )
             else:
                 raise ValueError(f"Unsupported widget type: {type(widget)}")
 
@@ -972,13 +1157,18 @@ class SDSUI(SysIdEnvironmentUI):
         )
         control_function_parameters = self.collect_control_extra_parameters()
         control_data = ControlParameters(
-            control_module, control_function, control_function_type, control_function_parameters
+            control_module,
+            control_function,
+            control_function_type,
+            control_function_parameters,
         )
         return control_data
 
     def set_control_data(self, control_data: ControlParameters):
         self.select_python_module(filename=control_data.control_script)
-        index = self.definition_widget.control_function_input.findText(control_data.control_object)
+        index = self.definition_widget.control_function_input.findText(
+            control_data.control_object
+        )
         if index != -1:
             self.definition_widget.control_function_input.setCurrentIndex(index)
         else:
@@ -1070,7 +1260,9 @@ class SDSUI(SysIdEnvironmentUI):
             num_rows = self.definition_widget.tone_table.rowCount()
             decay_data = np.empty(num_rows, "float")
             for row in num_rows:
-                decay_data[row] = self.definition_widget.tone_table.cellWidget(row, 1).value()
+                decay_data[row] = self.definition_widget.tone_table.cellWidget(
+                    row, 1
+                ).value()
         decay_parameters = DecayParameters(decay_strategy, common_decay, decay_data)
         return decay_parameters
 
@@ -1081,9 +1273,13 @@ class SDSUI(SysIdEnvironmentUI):
             self.definition_widget.time_constant_tau_button.setChecked(True)
         elif decay_parameters.decay_strategy == DecayStrategy.NUM_TIME_CONSTANTS:
             self.definition_widget.num_time_constants_button.setChecked(True)
-        self.definition_widget.common_decay_checkbox.setChecked(decay_parameters.common_decay)
+        self.definition_widget.common_decay_checkbox.setChecked(
+            decay_parameters.common_decay
+        )
         if decay_parameters.common_decay:
-            self.definition_widget.decay_value_selector.setValue(decay_parameters.decay_data[0])
+            self.definition_widget.decay_value_selector.setValue(
+                decay_parameters.decay_data[0]
+            )
         else:
             self.set_sine_tone_values(decays=decay_parameters.decay_data)
 
@@ -1107,7 +1303,9 @@ class SDSUI(SysIdEnvironmentUI):
         elif srs_data.srs_displacement == SRSDisplacementType.RELATIVE:
             self.definition_widget.srs_displacement_setter.setCurrentIndex(1)
         else:
-            raise ValueError(f"Invalid value for srs_displacement {srs_data.srs_displacement}")
+            raise ValueError(
+                f"Invalid value for srs_displacement {srs_data.srs_displacement}"
+            )
         self.definition_widget.srs_damping_setter.setValue(srs_data.srs_damping * 100)
 
     def collect_sds_data(self):
@@ -1121,9 +1319,15 @@ class SDSUI(SysIdEnvironmentUI):
 
     def set_sds_data(self, sds_data: SDSParameters):
         self.definition_widget.sds_iterations_selector.setValue(sds_data.iterations)
-        self.definition_widget.sds_convergence_selector.setValue(sds_data.convergence * 100)
-        self.definition_widget.sds_scale_factor_selector.setValue(sds_data.scale_factor * 100)
-        self.definition_widget.error_tolerance_selector.setValue(sds_data.error_tolerance * 100)
+        self.definition_widget.sds_convergence_selector.setValue(
+            sds_data.convergence * 100
+        )
+        self.definition_widget.sds_scale_factor_selector.setValue(
+            sds_data.scale_factor * 100
+        )
+        self.definition_widget.error_tolerance_selector.setValue(
+            sds_data.error_tolerance * 100
+        )
 
     def get_environment_metadata(self, global_channel_list):
         """Collects the metadata defining the environment from the UI widgets"""
@@ -1163,9 +1367,13 @@ class SDSUI(SysIdEnvironmentUI):
         # First we need to set control channels correctly so the specification has the right
         # number of columns
         for index in range(self.definition_widget.control_channels_selector.count()):
-            self.definition_widget.control_channels_selector.item(index).setCheckState(Qt.Unchecked)
+            self.definition_widget.control_channels_selector.item(index).setCheckState(
+                Qt.Unchecked
+            )
         for index in metadata.control_channel_indices:
-            self.definition_widget.control_channels_selector.item(index).setCheckState(Qt.Checked)
+            self.definition_widget.control_channels_selector.item(index).setCheckState(
+                Qt.Checked
+            )
         # Now we need to set up any transformation matrices again so the specification has the
         # correct number of channels
         self.response_transformation_matrix = metadata.response_transformation_matrix
@@ -1188,9 +1396,17 @@ class SDSUI(SysIdEnvironmentUI):
     def initialize_environment(self, environment_metadata: SDSMetadata):
         super().initialize_environment(environment_metadata)
         self.prediction_table.update_names(
-            self.initialized_output_names, self.initialized_control_names
+            self.initialized_output_names,
+            self.initialized_control_names,
+            self.initialized_output_units,
+            self.initialized_control_units,
         )
-        self.run_table.update_names(self.initialized_output_names, self.initialized_control_names)
+        self.run_table.update_names(
+            self.initialized_output_names,
+            self.initialized_control_names,
+            self.initialized_output_units,
+            self.initialized_control_units,
+        )
         self.run_widget.control_channel_selector.blockSignals(True)
         self.run_widget.control_channel_selector.clear()
         for i, control_name in enumerate(self.initialized_control_names):
@@ -1198,6 +1414,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.run_widget.control_channel_selector.blockSignals(False)
         self.prediction_table.update_parameters(environment_metadata)
         self.run_table.update_parameters(environment_metadata)
+        self.update_global_srs_plot(None)
         return self.environment_metadata
 
     def define_transformation_matrices(
@@ -1281,7 +1498,9 @@ class SDSUI(SysIdEnvironmentUI):
                     freq_spinbox.setKeyboardTracking(False)
                     freq_spinbox.setDecimals(4)
                     freq_spinbox.valueChanged.connect(self.update_sine_table)
-                    self.definition_widget.tone_table.setCellWidget(row, 0, freq_spinbox)
+                    self.definition_widget.tone_table.setCellWidget(
+                        row, 0, freq_spinbox
+                    )
                 if decay_spinbox is None:
                     decay_spinbox = AdaptiveNoWheelSpinBox()
                     decay_spinbox.setRange(0, 1000000)
@@ -1289,8 +1508,12 @@ class SDSUI(SysIdEnvironmentUI):
                     decay_spinbox.setKeyboardTracking(False)
                     decay_spinbox.valueChanged.connect(self.update_sine_table)
                     if decays is None:
-                        decay_spinbox.setValue(self.definition_widget.decay_value_selector.value())
-                    self.definition_widget.tone_table.setCellWidget(row, 1, decay_spinbox)
+                        decay_spinbox.setValue(
+                            self.definition_widget.decay_value_selector.value()
+                        )
+                    self.definition_widget.tone_table.setCellWidget(
+                        row, 1, decay_spinbox
+                    )
                 freq_spinbox.setValue(frequency)
                 if decays is not None:
                     decay_spinbox.setValue(decays[row])
@@ -1309,14 +1532,18 @@ class SDSUI(SysIdEnvironmentUI):
                     freq_spinbox.setDecimals(4)
                     freq_spinbox.setValue(0)
                     freq_spinbox.valueChanged.connect(self.update_sine_table)
-                    self.definition_widget.tone_table.setCellWidget(row, 0, freq_spinbox)
+                    self.definition_widget.tone_table.setCellWidget(
+                        row, 0, freq_spinbox
+                    )
                 if decay_spinbox is None:
                     decay_spinbox = AdaptiveNoWheelSpinBox()
                     decay_spinbox.setRange(0, 1000000)
                     decay_spinbox.setSingleStep(1)
                     decay_spinbox.setKeyboardTracking(False)
                     decay_spinbox.valueChanged.connect(self.update_sine_table)
-                    self.definition_widget.tone_table.setCellWidget(row, 1, decay_spinbox)
+                    self.definition_widget.tone_table.setCellWidget(
+                        row, 1, decay_spinbox
+                    )
                 decay_spinbox.setValue(decay)
         if decays is None:
             self.update_decay_table()
@@ -1328,7 +1555,9 @@ class SDSUI(SysIdEnvironmentUI):
             widget = self.definition_widget.tone_table.cellWidget(row, 0)
             widget.setReadOnly(not enabled)
             widget.setButtonSymbols(
-                AdaptiveNoWheelSpinBox.UpDownArrows if enabled else AdaptiveNoWheelSpinBox.NoButtons
+                AdaptiveNoWheelSpinBox.UpDownArrows
+                if enabled
+                else AdaptiveNoWheelSpinBox.NoButtons
             )
 
     def enable_sine_decay_modifications(self, enabled=True):
@@ -1336,7 +1565,9 @@ class SDSUI(SysIdEnvironmentUI):
             widget = self.definition_widget.tone_table.cellWidget(row, 1)
             widget.setReadOnly(not enabled)
             widget.setButtonSymbols(
-                AdaptiveNoWheelSpinBox.UpDownArrows if enabled else AdaptiveNoWheelSpinBox.NoButtons
+                AdaptiveNoWheelSpinBox.UpDownArrows
+                if enabled
+                else AdaptiveNoWheelSpinBox.NoButtons
             )
         self.definition_widget.decay_value_selector.setVisible(not enabled)
 
@@ -1357,7 +1588,9 @@ class SDSUI(SysIdEnvironmentUI):
             num_freqs = self.definition_widget.breakpoint_table.rowCount()
             freqs = np.empty(num_freqs, "float")
             for row in range(num_freqs):
-                freqs[row] = self.definition_widget.breakpoint_table.cellWidget(row, 0).value()
+                freqs[row] = self.definition_widget.breakpoint_table.cellWidget(
+                    row, 0
+                ).value()
             self.set_sine_tone_values(freqs)
             self.enable_sine_tone_modifications(False)
             self.enable_octave_buttons(False)
@@ -1380,7 +1613,10 @@ class SDSUI(SysIdEnvironmentUI):
     def update_decay_table(self):
         if self.definition_widget.common_decay_checkbox.isChecked():
             num_decays = self.definition_widget.tone_table.rowCount()
-            decay_values = self.definition_widget.decay_value_selector.value() * np.ones(num_decays)
+            decay_values = (
+                self.definition_widget.decay_value_selector.value()
+                * np.ones(num_decays)
+            )
             self.set_sine_tone_values(decays=decay_values)
             if self.definition_widget.damping_zeta_button.isChecked():
                 self.decay_values_current_strategy = DecayStrategy.DAMPING
@@ -1402,10 +1638,12 @@ class SDSUI(SysIdEnvironmentUI):
             current_decay_values = np.empty(num_decays, "float")
             frequency_values = np.empty(num_decays, "float")
             for row in range(num_decays):
-                current_decay_values[row] = self.definition_widget.tone_table.cellWidget(
-                    row, 1
+                current_decay_values[row] = (
+                    self.definition_widget.tone_table.cellWidget(row, 1).value()
+                )
+                frequency_values[row] = self.definition_widget.tone_table.cellWidget(
+                    row, 0
                 ).value()
-                frequency_values[row] = self.definition_widget.tone_table.cellWidget(row, 0).value()
             new_decay_values = convert_decay_strategy(
                 current_decay_values,
                 frequency_values,
@@ -1474,13 +1712,17 @@ class SDSUI(SysIdEnvironmentUI):
                     min_freq = min(min_freq, val)
             if min_freq == np.inf:
                 min_freq = 3
-            self.definition_widget.compensation_frequency_selector.setValue(min_freq / 3)
+            self.definition_widget.compensation_frequency_selector.setValue(
+                min_freq / 3
+            )
 
     def update_control_channels(self):
         """Updates the control channels due to selection changes"""
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
-        self.definition_widget.control_channels_display.setValue(len(self.physical_control_indices))
+        self.definition_widget.control_channels_display.setValue(
+            len(self.physical_control_indices)
+        )
         self.define_transformation_matrices(None, False)
         self.clear_and_update_specification_table()
 
@@ -1668,8 +1910,12 @@ class SDSUI(SysIdEnvironmentUI):
         return instructions
 
     def set_environment_instructions(self, instructions):
-        self.run_widget.current_test_level_selector.setValue(instructions.control_test_level)
-        self.run_widget.target_hits_at_level_selector.setValue(instructions.target_hits_at_level)
+        self.run_widget.current_test_level_selector.setValue(
+            instructions.control_test_level
+        )
+        self.run_widget.target_hits_at_level_selector.setValue(
+            instructions.target_hits_at_level
+        )
         self.run_widget.auto_hits_checkbox.setChecked(instructions.automatic_hits)
         self.run_widget.manual_hits_checkbox.setChecked(not instructions.automatic_hits)
         self.run_table_dialog.allow_automatic_updates_checkbox.setChecked(
@@ -1694,6 +1940,10 @@ class SDSUI(SysIdEnvironmentUI):
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.setLogMode(True, True)
+        plot_item.setLabel("bottom", "Frequency (Hz)")
+        units = set(self.initialized_control_units)
+        common_unit = units.pop() if len(units) == 1 else None
+        plot_item.setLabel("left", axis_label("amplitude", "SRS", common_unit))
 
         if measured_response_srs is None:
             return
@@ -1744,7 +1994,9 @@ class SDSUI(SysIdEnvironmentUI):
 
     def tile_windows(self):
         screen_rect = QtWidgets.QApplication.desktop().screenGeometry()
-        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
+        self.plot_windows = [
+            window for window in self.plot_windows if window.isVisible()
+        ]
         num_windows = len(self.plot_windows)
         if num_windows == 0:
             return
@@ -1766,7 +2018,9 @@ class SDSUI(SysIdEnvironmentUI):
         self.plot_windows = []
 
     def update_control_windows(self):
-        self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
+        self.plot_windows = [
+            window for window in self.plot_windows if window.isVisible()
+        ]
         for window in self.plot_windows:
             if hasattr(window, "update_plot"):
                 window.update_plot()
@@ -1826,7 +2080,9 @@ class SDSUI(SysIdEnvironmentUI):
 
             if self.run_table is not None:
                 self.run_table.update_control_information(
-                    measured_response_time_history=data["measured_response_time_history"],
+                    measured_response_time_history=data[
+                        "measured_response_time_history"
+                    ],
                     measured_response_srs=data["measured_response_srs"],
                     run_sds_table=data["run_sds_table"],
                 )

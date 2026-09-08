@@ -58,6 +58,23 @@ from rattlesnake.environment.sine_sys_id_environment import (
     SineMetadata,
     SineInstructions,
 )
+from rattlesnake.environment.sds_sys_id_metadata import (
+    SDSMetadata,
+    ToneParameters,
+    ToneStrategy,
+    CompPulseParameters,
+    DecayParameters,
+    DecayStrategy,
+    SRSParameters,
+    SRSType,
+    SRSDisplacementType,
+    SDSParameters,
+    ControlParameters,
+    ControlLawType,
+    SpecParameters,
+)
+from rattlesnake.environment.sds_sys_id_environment import SDSCommands
+from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
 
 # endregion
 
@@ -118,6 +135,21 @@ __all__ = [
     "SineCommands",
     "SineMetadata",
     "SineInstructions",
+    "SDSCommands",
+    "SDSMetadata",
+    "ToneParameters",
+    "ToneStrategy",
+    "CompPulseParameters",
+    "DecayParameters",
+    "DecayStrategy",
+    "SRSParameters",
+    "SRSType",
+    "SRSDisplacementType",
+    "SDSParameters",
+    "ControlParameters",
+    "ControlLawType",
+    "SpecParameters",
+    "SDSInstructions",
     # Process
     "StreamType",
     "StreamMetadata",

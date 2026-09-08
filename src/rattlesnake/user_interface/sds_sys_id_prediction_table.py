@@ -2,7 +2,11 @@ import numpy as np
 from qtpy import uic, QtWidgets, QtGui
 from qtpy.QtCore import Qt
 import os
-from rattlesnake.environment.sds_sys_id_metadata import SRSParameters, SpecParameters, SDSMetadata
+from rattlesnake.environment.sds_sys_id_metadata import (
+    SRSParameters,
+    SpecParameters,
+    SDSMetadata,
+)
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.environment.sds_sys_id_utilities import (
     SDSCommands,
@@ -11,7 +15,7 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     decayed_sine_table,
 )
 from rattlesnake.utilities import DIRECTORY
-from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox
+from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox, axis_label
 
 
 class SDSPredictionTable:
@@ -30,7 +34,9 @@ class SDSPredictionTable:
         other_error_lists=None,
     ):
         uic.loadUi(
-            os.path.join(DIRECTORY, "user_interface", "ui_files", "srs_sds_prediction_table.ui"),
+            os.path.join(
+                DIRECTORY, "user_interface", "ui_files", "srs_sds_prediction_table.ui"
+            ),
             parent_widget,
         )
         # Utility Information
@@ -42,6 +48,8 @@ class SDSPredictionTable:
         self.sds_table = sds_table
         self.drive_names = drive_names
         self.response_names = response_names
+        self.drive_units = None
+        self.response_units = None
         self.sds_parameters = sds_parameters
         self.frequency_locked = False
         self.amplitude_locked = False
@@ -49,7 +57,9 @@ class SDSPredictionTable:
         self.decay_locked = False
         # Keep track of tables and tabs
         self.sds_table_widgets = []
-        self.other_voltage_lists = [] if other_voltage_lists is None else other_voltage_lists
+        self.other_voltage_lists = (
+            [] if other_voltage_lists is None else other_voltage_lists
+        )
         self.other_error_lists = [] if other_error_lists is None else other_error_lists
         # Persistent calculated data
         self.predicted_response_time_history = None
@@ -59,15 +69,21 @@ class SDSPredictionTable:
         self.drive_time_history = None
 
         # Connect callbacks
-        self.parent_widget.excitation_selector.currentIndexChanged.connect(self.update_table_ui)
+        self.parent_widget.excitation_selector.currentIndexChanged.connect(
+            self.update_table_ui
+        )
         self.parent_widget.response_selector.currentIndexChanged.connect(
             self.update_response_plot_ui
         )
-        self.parent_widget.response_error_list.itemClicked.connect(self.update_response_selector)
+        self.parent_widget.response_error_list.itemClicked.connect(
+            self.update_response_selector
+        )
         self.parent_widget.excitation_voltage_list.itemClicked.connect(
             self.update_excitation_selector
         )
-        self.parent_widget.sds_table.itemSelectionChanged.connect(self.update_tone_selection_ui)
+        self.parent_widget.sds_table.itemSelectionChanged.connect(
+            self.update_tone_selection_ui
+        )
 
         # Initialize Plots
         self.plot_data_items = {}
@@ -76,6 +92,7 @@ class SDSPredictionTable:
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.addLegend()
+        plot_item.setLabel("bottom", "Time (s)")
 
         self.plot_data_items = {}
         plot_item = self.parent_widget.response_display_plot.getPlotItem()
@@ -83,12 +100,14 @@ class SDSPredictionTable:
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.addLegend()
+        plot_item.setLabel("bottom", "Time (s)")
 
         plot_item = self.parent_widget.response_srs_plot.getPlotItem()
         plot_item.showGrid(True, True, 0.25)
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.setLogMode(True, True)
+        plot_item.setLabel("bottom", "Frequency (Hz)")
         plot_item.addLegend()
 
         self.plot_data_items[
@@ -206,10 +225,16 @@ class SDSPredictionTable:
         self.update_ui()
 
     def update_names(
-        self, drive_names: None | np.ndarray = None, response_names: None | np.ndarray = None
+        self,
+        drive_names: None | np.ndarray = None,
+        response_names: None | np.ndarray = None,
+        drive_units: None | np.ndarray = None,
+        response_units: None | np.ndarray = None,
     ):
         self.drive_names = drive_names
         self.response_names = response_names
+        self.drive_units = drive_units
+        self.response_units = response_units
         self.update_names_ui()
 
     def update_parameters(self, parameters: SDSMetadata):
@@ -298,7 +323,9 @@ class SDSPredictionTable:
             )
         else:
             self.rattlesnake.send_environment_command(
-                self.environment_name, SDSCommands.SDS_RUN_TABLE_PREDICTION, self.sds_table
+                self.environment_name,
+                SDSCommands.SDS_RUN_TABLE_PREDICTION,
+                self.sds_table,
             )
 
     def synchronize_sds_table(self):
@@ -307,7 +334,9 @@ class SDSPredictionTable:
         index = self.parent_widget.excitation_selector.currentIndex()
         for col_index, name in enumerate(["frequency", "amplitude", "delay", "decay"]):
             for row_index in range(self.parent_widget.sds_table.rowCount()):
-                value = self.parent_widget.sds_table.cellWidget(row_index, col_index).value()
+                value = self.parent_widget.sds_table.cellWidget(
+                    row_index, col_index
+                ).value()
                 if col_index == 0:
                     self.sds_table[name][row_index] = value
                 else:
@@ -480,6 +509,9 @@ class SDSPredictionTable:
             self.parent_widget.sds_table.setCellWidget(row, 3, spinbox)
             self.sds_table_widgets.append(spinbox)
 
+        self.update_drive_plot_ui()
+        self.update_response_plot_ui()
+
     def update_table_ui(self):
         """This function is called to update the table values based on changes to the internal
         sds array of from changing the active drive channel."""
@@ -506,6 +538,14 @@ class SDSPredictionTable:
 
         index = self.parent_widget.response_selector.currentIndex()
 
+        unit = self.response_units[index] if self.response_units is not None else None
+        self.parent_widget.response_display_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Amplitude", unit)
+        )
+        self.parent_widget.response_srs_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "SRS", unit)
+        )
+
         # Specification SRS
         abscissa = self.sds_parameters.specification_data.frequencies
         srs = self.sds_parameters.specification_data.srs_spec[:, index]
@@ -521,7 +561,9 @@ class SDSPredictionTable:
             srs = self.predicted_response_srs[:, index]
             self.plot_data_items["srs_predicted"].setData(abscissa, srs)
         else:
-            self.plot_data_items["srs_predicted"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+            self.plot_data_items["srs_predicted"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
 
         # Measured SRS
         if self.measured_response_srs is not None:
@@ -529,13 +571,17 @@ class SDSPredictionTable:
             srs = self.measured_response_srs[:, index]
             self.plot_data_items["srs_measured"].setData(abscissa, srs)
         else:
-            self.plot_data_items["srs_measured"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+            self.plot_data_items["srs_measured"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
 
         # Predicted response time history
         if self.predicted_response_time_history is not None:
             th = self.predicted_response_time_history[index, :]
             abscissa = np.arange(th.size) / self.sds_parameters.sample_rate
-            self.plot_data_items["full_time_history_response_predicted"].setData(abscissa, th)
+            self.plot_data_items["full_time_history_response_predicted"].setData(
+                abscissa, th
+            )
         else:
             self.plot_data_items["full_time_history_response_predicted"].setData(
                 np.nan * np.ones(2), np.nan * np.ones(2)
@@ -545,7 +591,9 @@ class SDSPredictionTable:
         if self.measured_response_time_history is not None:
             th = self.measured_response_time_history[index, :]
             abscissa = np.arange(th.size) / self.sds_parameters.sample_rate
-            self.plot_data_items["full_time_history_response_measured"].setData(abscissa, th)
+            self.plot_data_items["full_time_history_response_measured"].setData(
+                abscissa, th
+            )
         else:
             self.plot_data_items["full_time_history_response_measured"].setData(
                 np.nan * np.ones(2), np.nan * np.ones(2)
@@ -565,7 +613,12 @@ class SDSPredictionTable:
             self.sds_parameters.block_size,
         )
         self.plot_data_items["full_time_history_excitation"].setData(
-            np.arange(self.sds_parameters.block_size) / self.sds_parameters.sample_rate, signal
+            np.arange(self.sds_parameters.block_size) / self.sds_parameters.sample_rate,
+            signal,
+        )
+        unit = self.drive_units[index] if self.drive_units is not None else None
+        self.parent_widget.excitation_display_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Amplitude", unit)
         )
         self.update_tone_selection_ui()
 
@@ -650,7 +703,9 @@ class SDSPredictionTable:
                 self.sds_parameters.block_size,
             )
             self.plot_data_items["single_tone_time_history_excitation"].setData(
-                np.arange(self.sds_parameters.block_size) / self.sds_parameters.sample_rate, signal
+                np.arange(self.sds_parameters.block_size)
+                / self.sds_parameters.sample_rate,
+                signal,
             )
         else:
             self.plot_data_items["single_tone_time_history_excitation"].setData(
@@ -679,7 +734,9 @@ class SDSPredictionTable:
         if self.sds_parameters is None:
             return None, None
 
-        srs_data = self.measured_response_srs if use_measured else self.predicted_response_srs
+        srs_data = (
+            self.measured_response_srs if use_measured else self.predicted_response_srs
+        )
         if srs_data is None:
             return None, None
 
@@ -696,7 +753,9 @@ class SDSPredictionTable:
 
             valid = (~np.isnan(measured)) & (~np.isnan(target)) & (target > 0)
             if np.any(valid):
-                error_db = np.max(np.abs(20 * np.log10(measured[valid] / target[valid])))
+                error_db = np.max(
+                    np.abs(20 * np.log10(measured[valid] / target[valid]))
+                )
             else:
                 error_db = np.nan
 
@@ -754,7 +813,9 @@ class SDSPredictionTable:
         for error_list in all_lists:
             error_list.clear()
             for err, warn in zip(errors, warnings):
-                item = QtWidgets.QListWidgetItem("nan" if np.isnan(err) else f"{err:0.3f}")
+                item = QtWidgets.QListWidgetItem(
+                    "nan" if np.isnan(err) else f"{err:0.3f}"
+                )
 
                 if text_brush is not None:
                     item.setForeground(text_brush)
@@ -764,11 +825,15 @@ class SDSPredictionTable:
 
                 error_list.addItem(item)
 
-    def update_response_error_ui(self, index, other_error_lists=None, use_measured=True):
+    def update_response_error_ui(
+        self, index, other_error_lists=None, use_measured=True
+    ):
         if other_error_lists is None:
             other_error_lists = []
 
-        err, warn = self.compute_peak_response_error(index=index, use_measured=use_measured)
+        err, warn = self.compute_peak_response_error(
+            index=index, use_measured=use_measured
+        )
         if err is None:
             return
 

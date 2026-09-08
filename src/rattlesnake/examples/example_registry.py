@@ -93,6 +93,14 @@ from rattlesnake.examples.environment.transient.transient_metadata import (
     transient_event_list,
     worksheet_transient_event_list,
 )
+from rattlesnake.examples.environment.sds.sds_metadata import (
+    netcdf_sds_metadata,
+    manual_sds_metadata,
+    worksheet_sds_metadata,
+    sds_instructions,
+    sds_event_list,
+    worksheet_sds_event_list,
+)
 
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -181,6 +189,11 @@ TRANSIENT_DICT = {
     "worksheet": worksheet_transient_metadata,
     "netcdf": netcdf_transient_metadata,
 }
+SDS_DICT = {
+    "manual": manual_sds_metadata,
+    "worksheet": worksheet_sds_metadata,
+    "netcdf": netcdf_sds_metadata,
+}
 ENVIRONMENT_DICT[EnvironmentType.NONE] = BLANK_ENVIRONMENT_DICT
 ENVIRONMENT_DICT[EnvironmentType.SKELETON] = SKELETON_DICT
 ENVIRONMENT_DICT[EnvironmentType.SYSID_SKELETON] = SKELETON_SYSID_DICT
@@ -190,6 +203,7 @@ ENVIRONMENT_DICT[EnvironmentType.MODAL] = MODAL_DICT
 ENVIRONMENT_DICT[EnvironmentType.SINE] = SINE_DICT
 ENVIRONMENT_DICT[EnvironmentType.RANDOM] = RANDOM_DICT
 ENVIRONMENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_DICT
+ENVIRONMENT_DICT[EnvironmentType.SDS] = SDS_DICT
 
 # Example Files for Testing Suite
 EXAMPLE_NETCDF = {
@@ -204,6 +218,7 @@ EXAMPLE_NETCDF = {
     EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/random/random_v4.nc4",
     EnvironmentType.TRANSIENT: defaults.DIRECTORY
     + "/environment/transient/transient_v4.nc4",
+    EnvironmentType.SDS: defaults.DIRECTORY + "/environment/sds/sds_v4.nc4",
 }
 EXAMPLE_WORKSHEET = {
     EnvironmentType.SKELETON: defaults.DIRECTORY
@@ -217,6 +232,7 @@ EXAMPLE_WORKSHEET = {
     EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/random/random_v4.xlsx",
     EnvironmentType.TRANSIENT: defaults.DIRECTORY
     + "/environment/transient/transient_v4.xlsx",
+    EnvironmentType.SDS: defaults.DIRECTORY + "/environment/sds/sds_v4.xlsx",
 }
 
 # System Identification
@@ -282,6 +298,11 @@ TRANSIENT_EVENT_DICT = {
     "netcdf": transient_event_list,
     "worksheet": worksheet_transient_event_list,
 }
+SDS_EVENT_DICT = {
+    "manual": sds_event_list,
+    "netcdf": sds_event_list,
+    "worksheet": worksheet_sds_event_list,
+}
 EVENT_DICT[EnvironmentType.NONE] = BLANK_EVENT_DICT
 EVENT_DICT[EnvironmentType.SKELETON] = SKELETON_EVENT_DICT
 EVENT_DICT[EnvironmentType.SYSID_SKELETON] = SKELETON_SYSID_EVENT_DICT
@@ -291,6 +312,7 @@ EVENT_DICT[EnvironmentType.MODAL] = MODAL_EVENT_DICT
 EVENT_DICT[EnvironmentType.SINE] = SINE_EVENT_DICT
 EVENT_DICT[EnvironmentType.RANDOM] = RANDOM_EVENT_DICT
 EVENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_EVENT_DICT
+EVENT_DICT[EnvironmentType.SDS] = SDS_EVENT_DICT
 
 # Instructions
 INSTRUCTIONS_DICT = {}
@@ -303,3 +325,4 @@ INSTRUCTIONS_DICT[EnvironmentType.MODAL] = modal_instructions
 INSTRUCTIONS_DICT[EnvironmentType.SINE] = sine_instructions
 INSTRUCTIONS_DICT[EnvironmentType.RANDOM] = random_instructions
 INSTRUCTIONS_DICT[EnvironmentType.TRANSIENT] = transient_instructions
+INSTRUCTIONS_DICT[EnvironmentType.SDS] = sds_instructions

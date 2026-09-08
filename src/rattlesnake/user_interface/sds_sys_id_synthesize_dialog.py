@@ -3,7 +3,7 @@ from qtpy.QtCore import Qt
 import os
 import numpy as np
 from typing import TYPE_CHECKING
-from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox
+from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox, axis_label
 from rattlesnake.environment.sds_sys_id_utilities import (
     sum_decayed_sines,
     decayed_sine_table,
@@ -31,13 +31,18 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
         """
         super().__init__(parent.definition_widget)
         uic.loadUi(
-            os.path.join(DIRECTORY, "user_interface", "ui_files", "srs_sds_synthesize_dialog.ui"),
+            os.path.join(
+                DIRECTORY, "user_interface", "ui_files", "srs_sds_synthesize_dialog.ui"
+            ),
             self,
         )
         self.parent_widget = parent
-        self.metadata = parent.get_environment_metadata(parent.hardware_metadata.channel_list)
+        self.metadata = parent.get_environment_metadata(
+            parent.hardware_metadata.channel_list
+        )
         self.setWindowTitle("Sum-of-Decayed-Sines Synthesis")
         self.plot_data_items = {}
+        self.control_units = parent.control_units
         self.sds_tables = [None for _ in parent.control_names]
         self.sds_signals = [None for _ in parent.control_names]
         self.sds_srss = [None for _ in parent.control_names]
@@ -49,6 +54,7 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
         plot_item.enableAutoRange()
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.addLegend()
+        plot_item.setLabel("bottom", "Time (s)")
 
         plot_item = self.srs_plot.getPlotItem()
         plot_item.showGrid(True, True, 0.25)
@@ -56,8 +62,11 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
         plot_item.getViewBox().enableAutoRange(enable=True)
         plot_item.setLogMode(True, True)
         plot_item.addLegend()
+        plot_item.setLabel("bottom", "Frequency (Hz)")
 
-        self.plot_data_items["full_time_history"] = self.time_history_plot.getPlotItem().plot(
+        self.plot_data_items[
+            "full_time_history"
+        ] = self.time_history_plot.getPlotItem().plot(
             np.array([0, self.metadata.block_size / self.metadata.sample_rate]),
             np.nan * np.ones(2),
             pen={"color": "b", "width": 1},
@@ -77,13 +86,17 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
             pen={"color": "b", "width": 1},
             name="Control SRS",
         )
-        self.plot_data_items["specification_lower_limit"] = self.srs_plot.getPlotItem().plot(
+        self.plot_data_items[
+            "specification_lower_limit"
+        ] = self.srs_plot.getPlotItem().plot(
             np.array([0, 1]),
             np.nan * np.ones(2),
             pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
             name="Limit",
         )
-        self.plot_data_items["specification_upper_limit"] = self.srs_plot.getPlotItem().plot(
+        self.plot_data_items[
+            "specification_upper_limit"
+        ] = self.srs_plot.getPlotItem().plot(
             np.array([0, 1]),
             np.zeros(2),
             pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
@@ -163,7 +176,10 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
         decays = np.array(decays)
         frequencies = self.metadata.get_sds_frequencies()
         self.sds_tables[index] = decayed_sine_table(
-            frequencies, amplitudes[:, np.newaxis], decays[:, np.newaxis], delays[:, np.newaxis]
+            frequencies,
+            amplitudes[:, np.newaxis],
+            decays[:, np.newaxis],
+            delays[:, np.newaxis],
         )
         self.sds_signals[index] = sum_decayed_sines_reconstruction(
             self.sds_tables[index]["frequency"][:],
@@ -185,6 +201,15 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
 
     def update_response_channel(self):
         index = self.response_selector.currentIndex()
+        unit = (
+            self.control_units[index] if 0 <= index < len(self.control_units) else None
+        )
+        self.time_history_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "Amplitude", unit)
+        )
+        self.srs_plot.getPlotItem().setLabel(
+            "left", axis_label("amplitude", "SRS", unit)
+        )
         self.plot_data_items["specification_srs"].setData(
             self.metadata.specification_data.frequencies,
             self.metadata.specification_data.srs_spec[:, index],
@@ -202,7 +227,9 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
                 self.sds_srss[index][1], self.sds_srss[index][0]
             )
         else:
-            self.plot_data_items["sds_srs"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+            self.plot_data_items["sds_srs"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
         if self.sds_signals[index] is not None:
             self.plot_data_items["full_time_history"].setData(
                 np.arange(self.sds_signals[index].size) / self.metadata.sample_rate,

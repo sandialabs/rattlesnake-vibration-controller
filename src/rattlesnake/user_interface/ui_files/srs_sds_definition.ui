@@ -814,8 +814,8 @@ All Sine Tones</string>
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>328</width>
-                 <height>165</height>
+                 <width>251</width>
+                 <height>253</height>
                 </rect>
                </property>
                <layout class="QFormLayout" name="control_parameters_widget_layout"/>
@@ -1237,6 +1237,16 @@ Matrices...</string>
                   </property>
                   <property name="text">
                    <string>Load Specification...</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="save_breakpoint_button">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Save Specification&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Saves specification data to a file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                  <property name="text">
+                   <string>Save Specification...</string>
                   </property>
                  </widget>
                 </item>
