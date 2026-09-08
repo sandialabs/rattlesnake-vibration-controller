@@ -558,6 +558,11 @@ class SDSEnvironment(SysIdEnvironment):
         # value from the prediction phase.
         if instructions.sds_table is not None:
             self.run_sds_table = instructions.sds_table.copy()
+        elif self.run_sds_table is None:
+            raise ValueError(
+                "No sds_table was provided in the instructions, and no prior "
+                "system ID / control law prediction has been performed to fall back on."
+            )
 
         self.current_test_level_db = instructions.control_test_level
         self.hits_at_target = self.count_hits_at_level(self.current_test_level_db)

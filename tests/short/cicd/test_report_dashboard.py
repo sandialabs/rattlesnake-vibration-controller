@@ -26,6 +26,7 @@ def test_generate_dashboard_html():
     assert "https://github.com/owner/repo" in html
     assert "main/badges/lint.svg" in html
     assert "dev/badges/coverage.svg" in html
+    assert "dev/badges/tests.svg" in html
     assert "2026-04-24" in html
     assert "(expires 2026-07-23)" in html
 

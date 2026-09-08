@@ -92,16 +92,24 @@ class SDSQueues:
         self.environment_command_queue = environment_command_queue
         self.gui_update_queue = gui_update_queue
         self.data_analysis_command_queue = VerboseMessageQueue(
-            log_file_queue, new_queue(), environment_name + " Data Analysis Command Queue"
+            log_file_queue,
+            new_queue(),
+            environment_name + " Data Analysis Command Queue",
         )
         self.signal_generation_command_queue = VerboseMessageQueue(
-            log_file_queue, new_queue(), environment_name + " Signal Generation Command Queue"
+            log_file_queue,
+            new_queue(),
+            environment_name + " Signal Generation Command Queue",
         )
         self.spectral_command_queue = VerboseMessageQueue(
-            log_file_queue, new_queue(), environment_name + " Spectral Computation Command Queue"
+            log_file_queue,
+            new_queue(),
+            environment_name + " Spectral Computation Command Queue",
         )
         self.collector_command_queue = VerboseMessageQueue(
-            log_file_queue, new_queue(), environment_name + " Data Collector Command Queue"
+            log_file_queue,
+            new_queue(),
+            environment_name + " Data Collector Command Queue",
         )
         self.controller_communication_queue = controller_communication_queue
         self.data_in_queue = data_in_queue
@@ -114,7 +122,9 @@ class SDSQueues:
 
 class DecayedSineTable(np.ndarray):
 
-    def __new__(cls, shape, num_signals, buffer=None, offset=0, strides=None, order=None):
+    def __new__(
+        cls, shape, num_signals, buffer=None, offset=0, strides=None, order=None
+    ):
         # Create the ndarray instance of our type, given the usual
         # ndarray input arguments.  This will call the standard
         # ndarray constructor, but return an object of our type.
@@ -153,15 +163,18 @@ class SDSInstructions(EnvironmentInstructions):
         super().validate()
         if not isinstance(self.control_test_level, (int, float)):
             raise ValueError("control_test_level must be numeric")
-        if not isinstance(self.target_hits_at_level, int) or self.target_hits_at_level < 1:
+        if (
+            not isinstance(self.target_hits_at_level, int)
+            or self.target_hits_at_level < 1
+        ):
             raise ValueError("target_hits_at_level must be a positive integer")
         if not isinstance(self.automatic_hits, bool):
             raise ValueError("automatic_hits must be bool")
         if self.automatic_hits:
             if self.automatic_interval is None or self.automatic_interval <= 0:
-                raise ValueError("automatic_interval must be positive in automatic mode")
-        if self.sds_table is None:
-            raise ValueError("sds_table must not be None")
+                raise ValueError(
+                    "automatic_interval must be positive in automatic mode"
+                )
         if not isinstance(self.allow_automatic_updates, bool):
             raise ValueError("allow_automatic_updates must be bool")
 
@@ -263,7 +276,9 @@ def srs(
     # Compute default parameters
     sample_rate = 1 / dt
     if frequencies is None:
-        frequencies = np.logspace(np.log10(sample_rate / 1e4), np.log10(sample_rate / 4), 50)
+        frequencies = np.logspace(
+            np.log10(sample_rate / 1e4), np.log10(sample_rate / 4), 50
+        )
     else:
         frequencies = np.array(frequencies).flatten()
     if frequencies.size == 0:
@@ -301,7 +316,9 @@ def srs(
         )
 
     srs_output = np.zeros(
-        signal.shape[:-1] + ((9,) if np.abs(spectrum_type) == 10 else ()) + (frequencies.size,)
+        signal.shape[:-1]
+        + ((9,) if np.abs(spectrum_type) == 10 else ())
+        + (frequencies.size,)
     )
     for i_freq, (frequency, b, a) in enumerate(
         zip(frequencies, b_filter_weights, a_filter_weights)
@@ -367,7 +384,9 @@ def srs(
     return srs_output, frequencies
 
 
-def sdof_ramp_invariant_filter_weights(frequencies, sample_rate, damping, spectrum_type):
+def sdof_ramp_invariant_filter_weights(
+    frequencies, sample_rate, damping, spectrum_type
+):
     """
     Computes filter weights for SDOF resonators using a ramp-invariant filter.
 
@@ -408,9 +427,13 @@ def sdof_ramp_invariant_filter_weights(frequencies, sample_rate, damping, spectr
     small_freqs = normalized_frequencies[small_freq_indices]
 
     # 2*z*w + w*w*(1-2*z*z) where z is damping and w is normalized frequencies
-    a[small_freq_indices, 1] = 2 * damping * small_freqs + small_freqs**2 * (1 - 2 * damping**2)
+    a[small_freq_indices, 1] = 2 * damping * small_freqs + small_freqs**2 * (
+        1 - 2 * damping**2
+    )
     # -2*z*w + 2*z*z*w*w where z is damping and w is normalized frequencies
-    a[small_freq_indices, 2] = -2 * damping * small_freqs + 2 * damping**2 * small_freqs**2
+    a[small_freq_indices, 2] = (
+        -2 * damping * small_freqs + 2 * damping**2 * small_freqs**2
+    )
 
     if spectrum_type > 0:
         # Absolute Acceleration Model
@@ -455,7 +478,9 @@ def sdof_ramp_invariant_filter_weights(frequencies, sample_rate, damping, spectr
         b[~small_freq_indices, 2] = e**2 - spwd
     else:
         # Relative Displacement Model
-        b[~small_freq_indices, 0] = -(2 * damping * (c - 1) + fact + large_freqs) / large_freqs
+        b[~small_freq_indices, 0] = (
+            -(2 * damping * (c - 1) + fact + large_freqs) / large_freqs
+        )
         b[~small_freq_indices, 1] = (
             -(-2 * c * large_freqs + 2 * damping * (1 - e**2) - 2 * fact) / large_freqs
         )
@@ -771,7 +796,9 @@ def sum_decayed_sines(
     """
     # Handle the sine tone frequencies
     if sine_frequencies is None and sine_tone_range is None:
-        raise ValueError("Either `sine_frequencies` or `sine_tone_range` must be specified")
+        raise ValueError(
+            "Either `sine_frequencies` or `sine_tone_range` must be specified"
+        )
     if sine_frequencies is not None and sine_tone_range is not None:
         raise ValueError(
             "`sine_frequencies` can not be specified simultaneously with `sine_tone_range`"
@@ -780,7 +807,9 @@ def sum_decayed_sines(
         # Create sine tones
         if sine_tone_per_octave is None:
             sine_tone_per_octave = int(np.floor(9 - srs_damping * 100))
-        sine_frequencies = octspace(sine_tone_range[0], sine_tone_range[1], sine_tone_per_octave)
+        sine_frequencies = octspace(
+            sine_tone_range[0], sine_tone_range[1], sine_tone_per_octave
+        )
     # Now set up the SRS
     if required_srs is None and srs_breakpoints is None:
         raise ValueError("Either `required_srs` or `srs_breakpoints` must be specified")
@@ -789,7 +818,9 @@ def sum_decayed_sines(
             "`required_srs` can not be specified simultaneously with `srs_breakpoints`"
         )
     if required_srs is None:
-        required_srs = loginterp(sine_frequencies, srs_breakpoints[:, 0], srs_breakpoints[:, 1])
+        required_srs = loginterp(
+            sine_frequencies, srs_breakpoints[:, 0], srs_breakpoints[:, 1]
+        )
     if sine_amplitudes is None:
         srs_amplitudes = required_srs.copy()
         srs_amplitudes[np.arange(srs_amplitudes.size) % 2 == 0] *= -1
@@ -814,7 +845,9 @@ def sum_decayed_sines(
     if num_time_constants is not None:
         decay_terms_specified += 1
     if decay_terms_specified == 0:
-        raise ValueError("One of `sine_decays`, `tau`, or `num_time_constants` must be specified")
+        raise ValueError(
+            "One of `sine_decays`, `tau`, or `num_time_constants` must be specified"
+        )
     if decay_terms_specified > 1:
         raise ValueError(
             "Only one of `sine_decays`, `tau`, or `num_time_constants` can be specified"
@@ -1047,7 +1080,9 @@ def _sum_decayed_sines(
             ignore_compensation_pulse=ignore_compensation_pulse,
         )
         # Then computing the SRS of the signal
-        this_srs = srs(this_signal, 1 / sample_rate, sine_frequencies, srs_damping, srs_type)[0]
+        this_srs = srs(
+            this_signal, 1 / sample_rate, sine_frequencies, srs_damping, srs_type
+        )[0]
         srs_error = (this_srs - required_srs) / required_srs
         sine_amplitudes = this_sine_amplitudes
     if verbose:
@@ -1171,7 +1206,9 @@ def _sum_decayed_sines_single_iteration(
     # Reduce the error tolerance so there's a bit of room for round-off
     error_tolerance = error_tolerance * 0.9
     # Get filter weights for SRS calculations
-    b, a = sdof_ramp_invariant_filter_weights(sine_frequencies, sample_rate, damping_srs, srs_type)
+    b, a = sdof_ramp_invariant_filter_weights(
+        sine_frequencies, sample_rate, damping_srs, srs_type
+    )
     # Copy the arrays so we don't overwrite anything
     sine_frequencies = np.array(sine_frequencies).copy()
     sine_amplitudes = np.array(sine_amplitudes).copy()
@@ -1187,8 +1224,12 @@ def _sum_decayed_sines_single_iteration(
         iteration_count = 1
         increment = 0.1
         # Get the pulse without this frequency line
-        other_sine_frequencies = np.concatenate((sine_frequencies[:i], sine_frequencies[i + 1 :]))
-        other_sine_amplitudes = np.concatenate((sine_amplitudes[:i], sine_amplitudes[i + 1 :]))
+        other_sine_frequencies = np.concatenate(
+            (sine_frequencies[:i], sine_frequencies[i + 1 :])
+        )
+        other_sine_amplitudes = np.concatenate(
+            (sine_amplitudes[:i], sine_amplitudes[i + 1 :])
+        )
         other_sine_decays = np.concatenate((sine_decays[:i], sine_decays[i + 1 :]))
         other_sine_delays = np.concatenate((sine_delays[:i], sine_delays[i + 1 :]))
         other_pulse = sum_decayed_sines_reconstruction(
@@ -1245,19 +1286,31 @@ def _sum_decayed_sines_single_iteration(
             # Build the composite waveform, need to shift the signals to align
             if num_shift >= 0:
                 composite_pulse = compensation_pulse + np.concatenate(
-                    (np.zeros(num_shift), (other_pulse + this_pulse)[: block_size - num_shift])
+                    (
+                        np.zeros(num_shift),
+                        (other_pulse + this_pulse)[: block_size - num_shift],
+                    )
                 )
             else:
                 composite_pulse = (
                     other_pulse
                     + this_pulse
                     + +np.concatenate(
-                        (np.zeros(-num_shift), (compensation_pulse)[: block_size + num_shift])
+                        (
+                            np.zeros(-num_shift),
+                            (compensation_pulse)[: block_size + num_shift],
+                        )
                     )
                 )
             # Find the SRS at the current frequency line
             srs_prediction = srs(
-                composite_pulse, 1 / sample_rate, frequency, damping_srs, srs_type, b[i], a[i]
+                composite_pulse,
+                1 / sample_rate,
+                frequency,
+                damping_srs,
+                srs_type,
+                b[i],
+                a[i],
             )[0][
                 0
             ]  # only get the SRS and there should only be one value due to one frequency line
@@ -1271,12 +1324,18 @@ def _sum_decayed_sines_single_iteration(
             # Now we're going to compute the same thing again with a perturbed
             # amplitude, this will allow us to compute the slope change at the
             # current amplitude
-            amplitude_change = np.sign(srs_error) * increment * np.sign(amplitude) * Amax
+            amplitude_change = (
+                np.sign(srs_error) * increment * np.sign(amplitude) * Amax
+            )
             # Now check and see if we need to modify the amplitude
             if abs(srs_error) > error_tolerance:
                 if amplitude_change == 0:  # perturb it a bit
                     amplitude_change = (
-                        np.sign(srs_error) * np.sign(sine_amplitudes[i]) * Amax * increment / 10
+                        np.sign(srs_error)
+                        * np.sign(sine_amplitudes[i])
+                        * Amax
+                        * increment
+                        / 10
                     )
                 new_amplitude = amplitude + amplitude_change
                 # Can't allow the sign of the amplitude to change
@@ -1314,7 +1373,9 @@ def _sum_decayed_sines_single_iteration(
                         + "  The entire pulse will consist of part of the compensation pulse.  "
                         + "Please increase the block_size or compensation frequency."
                     )
-                compensation_delay_corrected = compensation_delay + num_shift / sample_rate
+                compensation_delay_corrected = (
+                    compensation_delay + num_shift / sample_rate
+                )
                 # Find compensating time history
                 compensation_pulse = sum_decayed_sines_reconstruction(
                     compensation_frequency,
@@ -1327,19 +1388,31 @@ def _sum_decayed_sines_single_iteration(
                 # Build the composite waveform, need to shift the signals to align
                 if num_shift >= 0:
                     composite_pulse = compensation_pulse + np.concatenate(
-                        (np.zeros(num_shift), (other_pulse + this_pulse)[: block_size - num_shift])
+                        (
+                            np.zeros(num_shift),
+                            (other_pulse + this_pulse)[: block_size - num_shift],
+                        )
                     )
                 else:
                     composite_pulse = (
                         other_pulse
                         + this_pulse
                         + +np.concatenate(
-                            (np.zeros(-num_shift), (compensation_pulse)[: block_size + num_shift])
+                            (
+                                np.zeros(-num_shift),
+                                (compensation_pulse)[: block_size + num_shift],
+                            )
                         )
                     )
                 # Find the SRS at the current frequency line
                 srs_perturbed = srs(
-                    composite_pulse, 1 / sample_rate, frequency, damping_srs, srs_type, b[i], a[i]
+                    composite_pulse,
+                    1 / sample_rate,
+                    frequency,
+                    damping_srs,
+                    srs_type,
+                    b[i],
+                    a[i],
                 )[0][
                     0
                 ]  # only get the SRS and there should only be one value due to one frequency line
@@ -1399,7 +1472,9 @@ def _sum_decayed_sines_single_iteration(
                             + "  The entire pulse will consist of part of the compensation pulse.  "
                             + "Please increase the block_size or compensation frequency."
                         )
-                    compensation_delay_corrected = compensation_delay + num_shift / sample_rate
+                    compensation_delay_corrected = (
+                        compensation_delay + num_shift / sample_rate
+                    )
                     # Find compensating time history
                     compensation_pulse = sum_decayed_sines_reconstruction(
                         compensation_frequency,
@@ -1458,9 +1533,13 @@ def _sum_decayed_sines_single_iteration(
                 else:
                     # The slope is negative, so we try a bigger increment
                     increment *= 2
-                    amplitude_change = np.sign(srs_error) * increment * np.sign(amplitude) * Amax
+                    amplitude_change = (
+                        np.sign(srs_error) * increment * np.sign(amplitude) * Amax
+                    )
                     if verbose:
-                        print("Slope of correction was negative, trying a bigger increment")
+                        print(
+                            "Slope of correction was negative, trying a bigger increment"
+                        )
                 iteration_count += 1
                 if iteration_count > number_of_iterations:
                     print(
@@ -1509,7 +1588,11 @@ def sum_decayed_sines_compensating_pulse_parameters(
             @ np.linalg.pinv((omegas**2 * (sine_decays**2 + 1) ** 2)[np.newaxis, :])
         )
     ) / compensation_amplitude
-    var2 = 2 * compensation_decay / (omega_comp * omega_comp * (compensation_decay**2 + 1) ** 2)
+    var2 = (
+        2
+        * compensation_decay
+        / (omega_comp * omega_comp * (compensation_decay**2 + 1) ** 2)
+    )
     var3 = omega_comp * (compensation_decay**2 + 1)
     compensation_delay = -var3 * (var2 + var1 + var0)
     return compensation_amplitude, compensation_delay
@@ -1552,7 +1635,9 @@ def sum_decayed_sines_reconstruction(
     this_times = times[:, np.newaxis] - sine_delays
     # print(f"In sum_decayed_sines_reconstruction: {sine_decays=}")
     response = (
-        sine_amplitudes * np.exp(-sine_decays * omegas * this_times) * np.sin(omegas * this_times)
+        sine_amplitudes
+        * np.exp(-sine_decays * omegas * this_times)
+        * np.sin(omegas * this_times)
     )
     response[..., this_times < 0] = 0
     return np.sum(response, axis=-1)
@@ -1629,7 +1714,12 @@ def sum_decayed_sines_reconstruction_with_compensation(
     sine_delays = np.concatenate((sine_delays, [compensation_delay]))
     sine_decays = np.concatenate((sine_decays, [compensation_decay]))
     signal = sum_decayed_sines_reconstruction(
-        sine_frequencies, sine_amplitudes, sine_decays, sine_delays, sample_rate, block_size
+        sine_frequencies,
+        sine_amplitudes,
+        sine_decays,
+        sine_delays,
+        sample_rate,
+        block_size,
     )
     return (
         signal,
@@ -1720,9 +1810,9 @@ def sum_decayed_sines_displacement_velocity(
         v[indices] = v[indices] - tmp1[indices] * tmp2[indices] + Awz1 * x1[indices]
         Awz2 = A[k] / (w2[k] * zp1[k] * zp1[k])
         tmp1[indices] = Awz2 * np.exp(-zw[k] * (t[indices] - tau[k]))
-        tmp2[indices] = zm1[k] * np.sin(w[k] * (t[indices] - tau[k])) + 2 * z[k] * np.cos(
-            w[k] * (t[indices] - tau[k])
-        )
+        tmp2[indices] = zm1[k] * np.sin(w[k] * (t[indices] - tau[k])) + 2 * z[
+            k
+        ] * np.cos(w[k] * (t[indices] - tau[k]))
         tmp3[indices] = Awz1 * (t[indices] - tau[k])
         tmp4 = 2 * z[k] * Awz2
         d[indices] = d[indices] + tmp1[indices] * tmp2[indices] + tmp3[indices] - tmp4
@@ -1894,7 +1984,9 @@ def sum_decayed_sines_minimize(
 ):
     # Handle the sine tone frequencies
     if sine_frequencies is None and sine_tone_range is None:
-        raise ValueError("Either `sine_frequencies` or `sine_tone_range` must be specified")
+        raise ValueError(
+            "Either `sine_frequencies` or `sine_tone_range` must be specified"
+        )
     if sine_frequencies is not None and sine_tone_range is not None:
         raise ValueError(
             "`sine_frequencies` can not be specified simultaneously with `sine_tone_range`"
@@ -1903,10 +1995,14 @@ def sum_decayed_sines_minimize(
         # Create sine tones
         if sine_tone_per_octave is None:
             sine_tone_per_octave = int(np.floor(9 - srs_damping * 100))
-        sine_frequencies = octspace(sine_tone_range[0], sine_tone_range[1], sine_tone_per_octave)
+        sine_frequencies = octspace(
+            sine_tone_range[0], sine_tone_range[1], sine_tone_per_octave
+        )
     # Now set up the SRS
     if control_srs is None and control_breakpoints is None:
-        raise ValueError("Either `control_srs` or `control_breakpoints` must be specified")
+        raise ValueError(
+            "Either `control_srs` or `control_breakpoints` must be specified"
+        )
     if control_srs is not None and control_breakpoints is not None:
         raise ValueError(
             "`control_srs` can not be specified simultaneously with `control_breakpoints`"
@@ -1923,12 +2019,18 @@ def sum_decayed_sines_minimize(
     else:
         control_srs = np.atleast_2d(control_srs)
     if control_transfer_functions is None:
-        control_transfer_functions = np.ones(((control_srs.shape[0] - 1) * 2, block_size // 2 + 1))
-    tf_frequencies = np.fft.rfftfreq(control_transfer_functions.shape[-1] * 2 - 1, 1 / sample_rate)
+        control_transfer_functions = np.ones(
+            ((control_srs.shape[0] - 1) * 2, block_size // 2 + 1)
+        )
+    tf_frequencies = np.fft.rfftfreq(
+        control_transfer_functions.shape[-1] * 2 - 1, 1 / sample_rate
+    )
     if sine_amplitudes is None:
         tf_at_frequencies = np.array(
             [
-                np.interp(sine_frequencies, tf_frequencies, np.abs(control_transfer_function))
+                np.interp(
+                    sine_frequencies, tf_frequencies, np.abs(control_transfer_function)
+                )
                 for control_transfer_function in control_transfer_functions
             ]
         )
@@ -1958,7 +2060,9 @@ def sum_decayed_sines_minimize(
     if num_time_constants is not None:
         decay_terms_specified += 1
     if decay_terms_specified == 0:
-        raise ValueError("One of `sine_decays`, `tau`, or `num_time_constants` must be specified")
+        raise ValueError(
+            "One of `sine_decays`, `tau`, or `num_time_constants` must be specified"
+        )
     if decay_terms_specified > 1:
         raise ValueError(
             "Only one of `sine_decays`, `tau`, or `num_time_constants` can be specified"
@@ -2022,7 +2126,9 @@ def sum_decayed_sines_minimize(
         limit_irfs = np.fft.irfft(limit_transfer_functions, axis=-1)
     else:
         limit_irfs = None
-    b, a = sdof_ramp_invariant_filter_weights(sine_frequencies, sample_rate, srs_damping, srs_type)
+    b, a = sdof_ramp_invariant_filter_weights(
+        sine_frequencies, sample_rate, srs_damping, srs_type
+    )
 
     # Normalize control weights
     control_weights = control_weights / np.linalg.norm(control_weights)
@@ -2066,7 +2172,9 @@ def sum_decayed_sines_minimize(
                 )[0]
 
             def callback(intermediate_result):
-                return optimization_callback(intermediate_result, rms_error_threshold, verbose)
+                return optimization_callback(
+                    intermediate_result, rms_error_threshold, verbose
+                )
 
             optimization_result = minimize(
                 error_function,
@@ -2081,7 +2189,8 @@ def sum_decayed_sines_minimize(
             if verbose:
                 print(
                     "Initial Amplitude: {:}, Updated Amplitude: {:}\n".format(
-                        sine_amplitudes[i], sine_amplitudes[i] * optimization_result.x.squeeze()
+                        sine_amplitudes[i],
+                        sine_amplitudes[i] * optimization_result.x.squeeze(),
                     )
                 )
             sine_amplitudes[i] *= optimization_result.x.squeeze()

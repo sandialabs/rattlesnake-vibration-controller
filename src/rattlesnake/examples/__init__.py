@@ -39,7 +39,7 @@ from rattlesnake.examples.environment.random.random_metadata import (
     worksheet_random_metadata,
     netcdf_random_metadata,
     manual_random_metadata,
-    create_sine_specification as create_random_cpsd_specification,
+    create_random_specification,
     random_instructions,
     random_event_list,
     worksheet_random_event_list,
@@ -52,6 +52,14 @@ from rattlesnake.examples.environment.sine.sine_metadata import (
     sine_instructions,
     sine_event_list,
     worksheet_sine_event_list,
+)
+from rattlesnake.examples.environment.sds.sds_metadata import (
+    worksheet_sds_metadata,
+    netcdf_sds_metadata,
+    manual_sds_metadata,
+    sds_instructions,
+    sds_event_list,
+    worksheet_sds_event_list,
 )
 from rattlesnake.examples.environment.read.read_metadata import (
     manual_read_metadata,
@@ -136,7 +144,7 @@ __all__ = [
     "worksheet_random_metadata",
     "netcdf_random_metadata",
     "manual_random_metadata",
-    "create_random_cpsd_specification",
+    "create_random_specification",
     "random_instructions",
     "random_event_list",
     "worksheet_random_event_list",
@@ -148,6 +156,13 @@ __all__ = [
     "sine_instructions",
     "sine_event_list",
     "worksheet_sine_event_list",
+    # SDS
+    "worksheet_sds_metadata",
+    "netcdf_sds_metadata",
+    "manual_sds_metadata",
+    "sds_instructions",
+    "sds_event_list",
+    "worksheet_sds_event_list",
     # Read
     "manual_read_metadata",
     "worksheet_read_metadata",

@@ -37,7 +37,7 @@ def worksheet_random_metadata(hardware_metadata):
         metadata.specification_cpsd_matrix,
         metadata.specification_warning_matrix,
         metadata.specification_abort_matrix,
-    ) = create_sine_specification(hardware_metadata.sample_rate)
+    ) = create_random_specification(hardware_metadata.sample_rate)
 
     return metadata
 
@@ -88,7 +88,7 @@ def manual_random_metadata(hardware_metadata, **overrides):
         specification_cpsd_matrix,
         specification_warning_matrix,
         specification_abort_matrix,
-    ) = create_sine_specification(hardware_metadata.sample_rate)
+    ) = create_random_specification(hardware_metadata.sample_rate)
     response_transformation_matrix = None
     output_transformation_matrix = None
 
@@ -127,7 +127,7 @@ def manual_random_metadata(hardware_metadata, **overrides):
     return RandomVibrationMetadata(**kwargs)
 
 
-def create_sine_specification(sample_rate):
+def create_random_specification(sample_rate):
     n_freq = int(sample_rate / 2) + 1
     specification_frequency_lines = np.arange(0, n_freq, 1)
     specification_cpsd_matrix = np.zeros((n_freq, 3, 3))

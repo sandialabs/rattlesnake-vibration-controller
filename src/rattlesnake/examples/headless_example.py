@@ -18,11 +18,11 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 TIMEOUT = 20
-IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
+IMPORT_METHOD = "netcdf"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.MODAL
+ENVIRONMENT_TYPE = EnvironmentType.SINE
 STREAM_TYPE = StreamType.NO_STREAM
-LOAD_SYSID = False
+LOAD_SYSID = True
 RUN_SYSID = False
 START_HARDWARE = True
 START_ENVIRONMENT = True
@@ -53,7 +53,9 @@ def build_example_rattlesnake_object(
     # Initialize environment
     if environment_type is EnvironmentType.NONE:
         return rattlesnake
-    environment_metadata = ENVIRONMENT_DICT[environment_type][import_method](hardware_metadata)
+    environment_metadata = ENVIRONMENT_DICT[environment_type][import_method](
+        hardware_metadata
+    )
     environment_name = getattr(environment_metadata, "environment_name", None)
     rattlesnake.initialize_environments([environment_metadata])
 
