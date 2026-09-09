@@ -134,7 +134,7 @@ project:
     - rule: link-resolves
       severity: ignore
       keys:
-        - '{http,https}://www.hbkworld.com/en/knowledge/resource-center/articles/open-api-for-lan-xi
+        - '{http,https}://www.hbkworld.com/en/knowledge/resource-center/articles/open-api-for-lan-xi'
 site:
   template: book-theme
   options:
