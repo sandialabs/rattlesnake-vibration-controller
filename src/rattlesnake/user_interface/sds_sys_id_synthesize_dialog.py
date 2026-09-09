@@ -9,6 +9,8 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     decayed_sine_table,
     srs,
     sum_decayed_sines_reconstruction,
+    normalized_sds_table_for_synthesis,
+    normalize_delays_for_synthesis,
 )
 from rattlesnake.utilities import DIRECTORY
 from rattlesnake.environment.sds_sys_id_metadata import DecayStrategy
@@ -173,6 +175,7 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
             decays.append(self.sds_table.cellWidget(row, 3).value())
         amplitudes = np.array(amplitudes)
         delays = np.array(delays)
+        normalized_delays = normalize_delays_for_synthesis(delays)
         decays = np.array(decays)
         frequencies = self.metadata.get_sds_frequencies()
         self.sds_tables[index] = decayed_sine_table(
@@ -185,7 +188,7 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
             self.sds_tables[index]["frequency"][:],
             self.sds_tables[index]["amplitude"][:, 0],
             self.sds_tables[index]["decay"][:, 0],
-            self.sds_tables[index]["delay"][:, 0],
+            normalized_delays,
             self.metadata.sample_rate,
             self.metadata.block_size,
         )
@@ -331,11 +334,12 @@ class SDSSynthesizeDialog(QtWidgets.QDialog):
         tone = self.sds_table.currentRow()
         sds = self.sds_tables[index]
         if sds is not None:
+            normalized_delays = normalize_delays_for_synthesis(sds["delay"][:, 0])
             signal = sum_decayed_sines_reconstruction(
                 sds["frequency"][tone],
                 sds["amplitude"][tone, 0],
                 sds["decay"][tone, 0],
-                sds["delay"][tone, 0],
+                normalized_delays[tone],
                 self.metadata.sample_rate,
                 self.metadata.block_size,
             )

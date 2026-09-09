@@ -57,6 +57,8 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     decayed_sine_table,
     sum_decayed_sines_reconstruction,
     srs as srs_function,
+    normalized_sds_table_for_synthesis,
+    normalize_delays_for_synthesis,
 )
 from rattlesnake.utilities import save_rattlesnake_to_netcdf
 
@@ -507,6 +509,7 @@ class SDSEnvironment(SysIdEnvironment):
         # Reconstruct drive signals
         amplitudes, decays, delays = data
         frequencies = self.environment_metadata.get_sds_frequencies_w_compensation_pulse()
+        delays = normalize_delays_for_synthesis(delays)
         drive_signals = sum_decayed_sines_reconstruction(
             frequencies,
             amplitudes[:, np.newaxis, :].T,
@@ -679,10 +682,9 @@ class SDSEnvironment(SysIdEnvironment):
         self.log("Launching SDS hit")
         print("Launching SDS hit")
 
-        frequencies = self.run_sds_table["frequency"]
-        amplitudes = self.run_sds_table["amplitude"]
-        decays = self.run_sds_table["decay"]
-        delays = self.run_sds_table["delay"]
+        frequencies, amplitudes, decays, delays = normalized_sds_table_for_synthesis(
+            self.run_sds_table
+        )
 
         drive_signal = sum_decayed_sines_reconstruction(
             frequencies,

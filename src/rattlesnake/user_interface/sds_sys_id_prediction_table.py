@@ -13,6 +13,8 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     sum_decayed_sines_reconstruction,
     DecayedSineTable,
     decayed_sine_table,
+    normalize_delays_for_synthesis,
+    normalized_sds_table_for_synthesis,
 )
 from rattlesnake.utilities import DIRECTORY
 from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox, axis_label
@@ -640,7 +642,7 @@ class SDSPredictionTable:
             self.sds_table["frequency"],
             self.sds_table["amplitude"][:, index],
             self.sds_table["decay"][:, index],
-            self.sds_table["delay"][:, index],
+            normalize_delays_for_synthesis(self.sds_table["delay"])[:, index],
             self.sds_parameters.sample_rate,
             self.sds_parameters.block_size,
         )
@@ -664,7 +666,7 @@ class SDSPredictionTable:
                     self.sds_table["frequency"],
                     self.sds_table["amplitude"][:, index],
                     self.sds_table["decay"][:, index],
-                    self.sds_table["delay"][:, index],
+                    normalize_delays_for_synthesis(self.sds_table["delay"])[:, index],
                     self.sds_parameters.sample_rate,
                     self.sds_parameters.block_size,
                 )
@@ -675,7 +677,7 @@ class SDSPredictionTable:
                 self.sds_table["frequency"],
                 self.sds_table["amplitude"][:, index],
                 self.sds_table["decay"][:, index],
-                self.sds_table["delay"][:, index],
+                normalize_delays_for_synthesis(self.sds_table["delay"])[:, index],
                 self.sds_parameters.sample_rate,
                 self.sds_parameters.block_size,
             )
@@ -728,11 +730,12 @@ class SDSPredictionTable:
         index = self.parent_widget.excitation_selector.currentIndex()
         tone = self.parent_widget.sds_table.currentRow()
         if self.sds_table is not None:
+            normalized_delays = normalize_delays_for_synthesis(self.sds_table["delay"])
             signal = sum_decayed_sines_reconstruction(
                 self.sds_table["frequency"][tone],
                 self.sds_table["amplitude"][tone, index],
                 self.sds_table["decay"][tone, index],
-                self.sds_table["delay"][tone, index],
+                normalized_delays[tone, index],
                 self.sds_parameters.sample_rate,
                 self.sds_parameters.block_size,
             )

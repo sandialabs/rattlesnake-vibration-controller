@@ -1597,6 +1597,38 @@ def sum_decayed_sines_compensating_pulse_parameters(
     compensation_delay = -var3 * (var2 + var1 + var0)
     return compensation_amplitude, compensation_delay
 
+def normalize_delays_for_synthesis(delays):
+    """
+    Shift delays so that the minimum delay is zero.
+
+    This preserves relative delays while ensuring all tones start at or after t=0.
+
+    Parameters
+    ----------
+    delays : np.ndarray
+        Delay array of any broadcastable shape.
+
+    Returns
+    -------
+    np.ndarray
+        Shifted copy of delays.
+    """
+    delays = np.array(delays, copy=True)
+    if np.any(delays < 0):
+        delays = delays - np.min(delays)
+    return delays
+
+
+def normalized_sds_table_for_synthesis(sds_table):
+    """
+    Return frequency, amplitude, decay, and delay arrays suitable for synthesis,
+    with delays globally shifted so the minimum delay is zero.
+    """
+    frequencies = np.array(sds_table["frequency"], copy=True)
+    amplitudes = np.array(sds_table["amplitude"], copy=True)
+    decays = np.array(sds_table["decay"], copy=True)
+    delays = normalize_delays_for_synthesis(np.array(sds_table["delay"], copy=True))
+    return frequencies, amplitudes, decays, delays
 
 def sum_decayed_sines_reconstruction(
     sine_frequencies, sine_amplitudes, sine_decays, sine_delays, sample_rate, block_size
