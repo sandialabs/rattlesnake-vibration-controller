@@ -290,6 +290,32 @@ class SDSEnvironment(SysIdEnvironment):
                 "How did you get here?!"
             )
 
+        # Clear cached prediction and run-time data that depend on the previous
+        # environment definition shape (tone count / spec frequency grid / drive table).
+        self.predicted_response_srs = None
+        self.predicted_response_time_history = None
+        self.predicted_amplitudes = None
+        self.predicted_decays = None
+        self.predicted_delays = None
+        self.predicted_drive_time_history = None
+
+        self.last_response_srs = None
+        self.last_response_signal = None
+        self.last_measured_drive_signal = None
+        self.last_drive_amplitudes = None
+        self.last_drive_decays = None
+        self.last_drive_delays = None
+
+        self.current_hit_control_data = []
+        self.current_hit_output_data = []
+
+        self.hit_in_progress = False
+        self.pending_next_hit_time = None
+        self.sequence_active = False
+        self.stop_requested = False
+
+        self.run_sds_table = None
+
         self.set_ready()
 
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
@@ -428,6 +454,28 @@ class SDSEnvironment(SysIdEnvironment):
         output_amplitudes = sds_table["amplitude"]
         output_decays = sds_table["decay"]
         output_delays = sds_table["delay"]
+
+        expected_rows = len(self.environment_metadata.get_sds_frequencies_w_compensation_pulse())
+
+        if output_amplitudes.shape[0] != expected_rows:
+            raise ValueError(
+                f"SDS table amplitude row count ({output_amplitudes.shape[0]}) does not match "
+                f"current environment frequency count ({expected_rows}). The SDS table was not "
+                "reset after changing the environment definition."
+            )
+        if output_decays.shape[0] != expected_rows:
+            raise ValueError(
+                f"SDS table decay row count ({output_decays.shape[0]}) does not match "
+                f"current environment frequency count ({expected_rows}). The SDS table was not "
+                "reset after changing the environment definition."
+            )
+        if output_delays.shape[0] != expected_rows:
+            raise ValueError(
+                f"SDS table delay row count ({output_delays.shape[0]}) does not match "
+                f"current environment frequency count ({expected_rows}). The SDS table was not "
+                "reset after changing the environment definition."
+            )
+
         (
             predicted_drive_time_history,
             predicted_response_time_history,
@@ -484,18 +532,20 @@ class SDSEnvironment(SysIdEnvironment):
 
         srss = []
         print("Computing SRS")
+        evaluation_frequencies = self.environment_metadata.get_truncated_specification_frequencies()
         for signal in predicted_response_time_history:
             srss.append(
                 srs_function(
                     signal,
                     1 / self.environment_metadata.sample_rate,
-                    self.environment_metadata.get_sds_frequencies(),
+                    evaluation_frequencies,
                     self.environment_metadata.srs_data.srs_damping,
                     self.environment_metadata.srs_data.srs_type.value
                     * self.environment_metadata.srs_data.srs_displacement.value,
                 )[0]
             )
         srss = np.array(srss).T
+
         return drive_signals, predicted_response_time_history, srss
 
     def show_test_prediction(self):
@@ -782,12 +832,13 @@ class SDSEnvironment(SysIdEnvironment):
         self.last_measured_drive_signal = measured_drive_signal
         print("Computing SRS")
         response_srs = []
+        evaluation_frequencies = self.environment_metadata.get_truncated_specification_frequencies()
         for signal in self.last_response_signal:
             response_srs.append(
                 srs_function(
                     signal,
                     1 / self.environment_metadata.sample_rate,
-                    self.environment_metadata.get_sds_frequencies(),
+                    evaluation_frequencies,
                     self.environment_metadata.srs_data.srs_damping,
                     self.environment_metadata.srs_data.srs_type.value
                     * self.environment_metadata.srs_data.srs_displacement.value,

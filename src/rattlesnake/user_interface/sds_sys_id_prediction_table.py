@@ -68,6 +68,9 @@ class SDSPredictionTable:
         self.measured_response_srs = None
         self.drive_time_history = None
 
+        # Guard against widgets firing while rebuilding the table
+        self.rebuilding_table = False
+
         # Connect callbacks
         self.parent_widget.excitation_selector.currentIndexChanged.connect(
             self.update_table_ui
@@ -239,6 +242,8 @@ class SDSPredictionTable:
 
     def update_parameters(self, parameters: SDSMetadata):
         self.sds_parameters = parameters
+        self.reset_state
+
         if self.sds_parameters is not None:
             self.update_frequencies_ui()
 
@@ -316,6 +321,8 @@ class SDSPredictionTable:
             widget.blockSignals(False)
 
     def perform_prediction(self):
+        if self.rebuilding_table:
+            return
         print("Performing Prediction!")
         if self.prediction_mode:
             self.rattlesnake.send_environment_command(
@@ -432,85 +439,106 @@ class SDSPredictionTable:
     def update_frequencies_ui(self):
         if self.sds_parameters is None:
             return
-        frequencies = self.sds_parameters.get_sds_frequencies_w_compensation_pulse()
-        self.sds_table = decayed_sine_table(
-            frequency=frequencies,
-            amplitude=np.zeros((len(frequencies), len(self.drive_names))),
-            decay=np.zeros((len(frequencies), len(self.drive_names))),
-            delay=np.zeros((len(frequencies), len(self.drive_names))),
-        )
-        self.parent_widget.sds_table.clearContents()
-        self.parent_widget.sds_table.setRowCount(len(frequencies))
-        self.sds_table_widgets = []
-        num_rows = len(frequencies)
-        self.parent_widget.sds_table.setRowCount(num_rows)
-        for row in range(num_rows):
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, self.sds_parameters.sample_rate / 2)
-            spinbox.setSingleStep(1)
-            spinbox.setValue(frequencies[row])
-            spinbox.setKeyboardTracking(False)
-            spinbox.setDecimals(4)
-            if self.frequency_locked:
-                spinbox.setReadOnly(True)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-            else:
-                spinbox.setReadOnly(False)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
-            spinbox.valueChanged.connect(self.synchronize_sds_table)
-            self.parent_widget.sds_table.setCellWidget(row, 0, spinbox)
-            self.sds_table_widgets.append(spinbox)
-            # Amplitude
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(-1000000, 1000000)
-            spinbox.setSingleStep(1)
-            spinbox.setValue(0)
-            spinbox.setKeyboardTracking(False)
-            if self.amplitude_locked:
-                spinbox.setReadOnly(True)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-            else:
-                spinbox.setReadOnly(False)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
-            spinbox.valueChanged.connect(self.synchronize_sds_table)
-            self.parent_widget.sds_table.setCellWidget(row, 1, spinbox)
-            self.sds_table_widgets.append(spinbox)
-            # Delay
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(
-                -self.sds_parameters.block_size / self.sds_parameters.sample_rate,
-                self.sds_parameters.block_size / self.sds_parameters.sample_rate,
-            )
-            spinbox.setSingleStep(0.1)
-            spinbox.setValue(0)
-            spinbox.setKeyboardTracking(False)
-            if self.delay_locked:
-                spinbox.setReadOnly(True)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-            else:
-                spinbox.setReadOnly(False)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
-            spinbox.valueChanged.connect(self.synchronize_sds_table)
-            self.parent_widget.sds_table.setCellWidget(row, 2, spinbox)
-            self.sds_table_widgets.append(spinbox)
-            # Decay
-            spinbox = AdaptiveNoWheelSpinBox()
-            spinbox.setRange(0, 10)
-            spinbox.setSingleStep(0.01)
-            spinbox.setValue(0)
-            spinbox.setKeyboardTracking(False)
-            if self.decay_locked:
-                spinbox.setReadOnly(True)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
-            else:
-                spinbox.setReadOnly(False)
-                spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
-            spinbox.valueChanged.connect(self.synchronize_sds_table)
-            self.parent_widget.sds_table.setCellWidget(row, 3, spinbox)
-            self.sds_table_widgets.append(spinbox)
 
-        self.update_drive_plot_ui()
-        self.update_response_plot_ui()
+        # Guard against widgets firing while rebuilding.
+        self.rebuilding_table = True
+        try:
+            # Clear plots tied to prior SDS grid
+            self.plot_data_items["full_time_history_excitation"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
+            self.plot_data_items["single_tone_time_history_excitation"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
+            self.plot_data_items["full_time_history_response_predicted"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
+            self.plot_data_items["full_time_history_response_measured"].setData(
+                np.nan * np.ones(2), np.nan * np.ones(2)
+            )
+            self.plot_data_items["srs_predicted"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+            self.plot_data_items["srs_measured"].setData(np.nan * np.ones(2), np.nan * np.ones(2))
+            frequencies = self.sds_parameters.get_sds_frequencies_w_compensation_pulse()
+            self.sds_table = decayed_sine_table(
+                frequency=frequencies,
+                amplitude=np.zeros((len(frequencies), len(self.drive_names))),
+                decay=np.zeros((len(frequencies), len(self.drive_names))),
+                delay=np.zeros((len(frequencies), len(self.drive_names))),
+            )
+            self.parent_widget.sds_table.clearContents()
+            self.parent_widget.sds_table.setRowCount(len(frequencies))
+            self.sds_table_widgets = []
+            num_rows = len(frequencies)
+            self.parent_widget.sds_table.setRowCount(num_rows)
+            for row in range(num_rows):
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(0, self.sds_parameters.sample_rate / 2)
+                spinbox.setSingleStep(1)
+                spinbox.setValue(frequencies[row])
+                spinbox.setKeyboardTracking(False)
+                spinbox.setDecimals(4)
+                if self.frequency_locked:
+                    spinbox.setReadOnly(True)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+                else:
+                    spinbox.setReadOnly(False)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
+                spinbox.valueChanged.connect(self.synchronize_sds_table)
+                self.parent_widget.sds_table.setCellWidget(row, 0, spinbox)
+                self.sds_table_widgets.append(spinbox)
+                # Amplitude
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(-1000000, 1000000)
+                spinbox.setSingleStep(1)
+                spinbox.setValue(0)
+                spinbox.setKeyboardTracking(False)
+                if self.amplitude_locked:
+                    spinbox.setReadOnly(True)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+                else:
+                    spinbox.setReadOnly(False)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
+                spinbox.valueChanged.connect(self.synchronize_sds_table)
+                self.parent_widget.sds_table.setCellWidget(row, 1, spinbox)
+                self.sds_table_widgets.append(spinbox)
+                # Delay
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(
+                    -self.sds_parameters.block_size / self.sds_parameters.sample_rate,
+                    self.sds_parameters.block_size / self.sds_parameters.sample_rate,
+                )
+                spinbox.setSingleStep(0.1)
+                spinbox.setValue(0)
+                spinbox.setKeyboardTracking(False)
+                if self.delay_locked:
+                    spinbox.setReadOnly(True)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+                else:
+                    spinbox.setReadOnly(False)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
+                spinbox.valueChanged.connect(self.synchronize_sds_table)
+                self.parent_widget.sds_table.setCellWidget(row, 2, spinbox)
+                self.sds_table_widgets.append(spinbox)
+                # Decay
+                spinbox = AdaptiveNoWheelSpinBox()
+                spinbox.setRange(0, 10)
+                spinbox.setSingleStep(0.01)
+                spinbox.setValue(0)
+                spinbox.setKeyboardTracking(False)
+                if self.decay_locked:
+                    spinbox.setReadOnly(True)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.NoButtons)
+                else:
+                    spinbox.setReadOnly(False)
+                    spinbox.setButtonSymbols(AdaptiveNoWheelSpinBox.UpDownArrows)
+                spinbox.valueChanged.connect(self.synchronize_sds_table)
+                self.parent_widget.sds_table.setCellWidget(row, 3, spinbox)
+                self.sds_table_widgets.append(spinbox)
+
+            self.update_drive_plot_ui()
+            self.update_response_plot_ui()
+        finally:
+            self.rebuilding_table = False
 
     def update_table_ui(self):
         """This function is called to update the table values based on changes to the internal
@@ -533,6 +561,8 @@ class SDSPredictionTable:
 
     def update_response_plot_ui(self):
         """This function is called to update the response plots"""
+        if self.rebuilding_table:
+            return
         if self.response_names is None or self.sds_parameters is None:
             return
 
@@ -557,7 +587,7 @@ class SDSPredictionTable:
 
         # Predicted SRS
         if self.predicted_response_srs is not None:
-            abscissa = self.sds_parameters.get_sds_frequencies()
+            abscissa = self.sds_parameters.get_truncated_specification_frequencies()
             srs = self.predicted_response_srs[:, index]
             self.plot_data_items["srs_predicted"].setData(abscissa, srs)
         else:
@@ -567,7 +597,7 @@ class SDSPredictionTable:
 
         # Measured SRS
         if self.measured_response_srs is not None:
-            abscissa = self.sds_parameters.get_sds_frequencies()
+            abscissa = self.sds_parameters.get_truncated_specification_frequencies()
             srs = self.measured_response_srs[:, index]
             self.plot_data_items["srs_measured"].setData(abscissa, srs)
         else:
@@ -601,6 +631,8 @@ class SDSPredictionTable:
 
     def update_drive_plot_ui(self):
         """This function is called to update the drive plots"""
+        if self.rebuilding_table:
+            return
         if self.sds_table is None or self.drive_names is None:
             return
         index = self.parent_widget.excitation_selector.currentIndex()
@@ -689,6 +721,8 @@ class SDSPredictionTable:
 
     def update_tone_selection_ui(self):
         """This gets called when a different row of the table is selected."""
+        if self.rebuilding_table:
+            return
         if self.sds_table is None or self.drive_names is None:
             return
         index = self.parent_widget.excitation_selector.currentIndex()
@@ -715,21 +749,9 @@ class SDSPredictionTable:
 
     def compute_peak_response_error(self, index=None, use_measured=True):
         """
-        Compute the worst-case dB error for each response channel relative to the specification.
-
-        Parameters
-        ----------
-        index : int | None
-            If specified, compute only for one response channel. Otherwise compute for all.
-        use_measured : bool
-            If True, use measured_response_srs. Otherwise use predicted_response_srs.
-
-        Returns
-        -------
-        error_db : float | list[float] | None
-            Worst-case absolute dB error(s)
-        warning_flag : bool | list[bool] | None
-            Whether any limit was exceeded for the channel(s)
+        Compute the worst-case dB error for each response channel relative to the
+        truncated specification. Assumes the environment already computed SRS on
+        the truncated specification frequencies.
         """
         if self.sds_parameters is None:
             return None, None
@@ -740,10 +762,9 @@ class SDSPredictionTable:
         if srs_data is None:
             return None, None
 
-        spec = self.sds_parameters.specification_data
-        target_srs = spec.srs_spec
-        lower_limit = spec.srs_lower_limit
-        upper_limit = spec.srs_upper_limit
+        target_srs = self.sds_parameters.get_truncated_specification_srs()
+        lower_limit = self.sds_parameters.get_truncated_specification_lower_limit()
+        upper_limit = self.sds_parameters.get_truncated_specification_upper_limit()
 
         def _compute_one(channel_index):
             measured = srs_data[:, channel_index]
@@ -779,6 +800,41 @@ class SDSPredictionTable:
             warnings.append(warn)
 
         return errors, warnings
+
+    def reset_state(self):
+        """
+        Reset all cached state that depends on the previous SDS/environment definition.
+        """
+        self.sds_table = None
+        self.predicted_response_time_history = None
+        self.predicted_response_srs = None
+        self.measured_response_time_history = None
+        self.measured_response_srs = None
+        self.drive_time_history = None
+
+        self.parent_widget.sds_table.clearContents()
+        self.parent_widget.sds_table.setRowCount(0)
+        self.parent_widget.sds_table.clearSelection()
+
+        for key in [
+            "full_time_history_excitation",
+            "single_tone_time_history_excitation",
+            "full_time_history_response_predicted",
+            "full_time_history_response_measured",
+            "specification_srs",
+            "specification_lower_limit",
+            "specification_upper_limit",
+            "srs_predicted",
+            "srs_measured",
+        ]:
+            if key in self.plot_data_items:
+                self.plot_data_items[key].setData(
+                    np.nan * np.ones(2),
+                    np.nan * np.ones(2),
+                )
+
+        self.parent_widget.excitation_voltage_list.clear()
+        self.parent_widget.response_error_list.clear()
 
     def update_all_response_errors_ui(self, other_error_lists=None, use_measured=True):
         """

@@ -1395,25 +1395,35 @@ class SDSUI(SysIdEnvironmentUI):
 
     def initialize_environment(self, environment_metadata: SDSMetadata):
         super().initialize_environment(environment_metadata)
-        self.prediction_table.update_names(
-            self.initialized_output_names,
-            self.initialized_control_names,
-            self.initialized_output_units,
-            self.initialized_control_units,
-        )
-        self.run_table.update_names(
-            self.initialized_output_names,
-            self.initialized_control_names,
-            self.initialized_output_units,
-            self.initialized_control_units,
-        )
-        self.run_widget.control_channel_selector.blockSignals(True)
-        self.run_widget.control_channel_selector.clear()
-        for i, control_name in enumerate(self.initialized_control_names):
-            self.run_widget.control_channel_selector.addItem(f"{i + 1}: {control_name}")
-        self.run_widget.control_channel_selector.blockSignals(False)
-        self.prediction_table.update_parameters(environment_metadata)
-        self.run_table.update_parameters(environment_metadata)
+        self.prediction_table.rebuilding_table = True
+        self.run_table.rebuilding_table = True
+        try:
+            self.prediction_table.update_names(
+                self.initialized_output_names,
+                self.initialized_control_names,
+                self.initialized_output_units,
+                self.initialized_control_units,
+            )
+            self.run_table.update_names(
+                self.initialized_output_names,
+                self.initialized_control_names,
+                self.initialized_output_units,
+                self.initialized_control_units,
+            )
+            self.run_widget.control_channel_selector.blockSignals(True)
+            self.run_widget.control_channel_selector.clear()
+            for i, control_name in enumerate(self.initialized_control_names):
+                self.run_widget.control_channel_selector.addItem(f"{i + 1}: {control_name}")
+            self.run_widget.control_channel_selector.blockSignals(False)
+
+            self.prediction_table.sds_table = None
+            self.run_table.sds_table = None
+
+            self.prediction_table.update_parameters(environment_metadata)
+            self.run_table.update_parameters(environment_metadata)
+        finally:
+            self.prediction_table.rebuilding_table = False
+            self.run_table.rebuilding_table = False
         self.update_global_srs_plot(None)
         return self.environment_metadata
 
