@@ -57,6 +57,8 @@ from rattlesnake.environment.sds_sys_id_utilities import (
     decayed_sine_table,
     sum_decayed_sines_reconstruction,
     srs as srs_function,
+    normalized_sds_table_for_synthesis,
+    normalize_delays_for_synthesis,
 )
 from rattlesnake.utilities import save_rattlesnake_to_netcdf
 
@@ -104,6 +106,8 @@ BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 MONITOR_SLEEP_TIME = 0.5
 # region Environment Process
 
+DEBUG = False
+DEBUG_DIRECTORY = "debug_data"
 
 class SDSEnvironment(SysIdEnvironment):
     """Class defining calculations for the SDS environment"""
@@ -507,6 +511,7 @@ class SDSEnvironment(SysIdEnvironment):
         # Reconstruct drive signals
         amplitudes, decays, delays = data
         frequencies = self.environment_metadata.get_sds_frequencies_w_compensation_pulse()
+        delays = normalize_delays_for_synthesis(delays)
         drive_signals = sum_decayed_sines_reconstruction(
             frequencies,
             amplitudes[:, np.newaxis, :].T,
@@ -679,10 +684,9 @@ class SDSEnvironment(SysIdEnvironment):
         self.log("Launching SDS hit")
         print("Launching SDS hit")
 
-        frequencies = self.run_sds_table["frequency"]
-        amplitudes = self.run_sds_table["amplitude"]
-        decays = self.run_sds_table["decay"]
-        delays = self.run_sds_table["delay"]
+        frequencies, amplitudes, decays, delays = normalized_sds_table_for_synthesis(
+            self.run_sds_table
+        )
 
         drive_signal = sum_decayed_sines_reconstruction(
             frequencies,
@@ -771,18 +775,26 @@ class SDSEnvironment(SysIdEnvironment):
             f"Completing Hit, {expected_output.shape=}, {full_control.shape=}, {full_output.shape=}"
         )
 
-        # np.savez(
-        #     "completed_hit_investigation.npz",
-        #     expected_output=expected_output,
-        #     full_control=full_control,
-        #     full_output=full_output,
-        #     last_drive_signal=self.last_drive_signal,
-        #     current_test_level_db=self.current_test_level_db,
-        #     current_test_level_scale=self.current_test_level_scale,
-        #     output_oversample=self.hardware_metadata.output_oversample,
-        #     sample_rate=self.environment_metadata.sample_rate,
-        #     block_size=self.environment_metadata.block_size,
-        # )
+        if DEBUG:
+            os.makedirs(DEBUG_DIRECTORY, exist_ok=True)
+            filename = os.path.join(
+                DEBUG_DIRECTORY,
+                f"completed_hit_investigation_{self.environment_name}_{int(time.time() * 1000)}.npz",
+            )
+
+            np.savez(
+                filename,
+                expected_output=expected_output,
+                predicted_response_time_history=self.predicted_response_time_history,
+                full_control=full_control,
+                full_output=full_output,
+                last_drive_signal=self.last_drive_signal,
+                current_test_level_db=self.current_test_level_db,
+                current_test_level_scale=self.current_test_level_scale,
+                output_oversample=self.hardware_metadata.output_oversample,
+                sample_rate=self.environment_metadata.sample_rate,
+                block_size=self.environment_metadata.block_size,
+            )
 
         aligned_output, sample_delay, phase_change, found_correlation = align_signals(
             full_output,
