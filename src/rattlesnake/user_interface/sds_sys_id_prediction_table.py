@@ -20,7 +20,7 @@ from rattlesnake.environment.sds_sys_id_utilities import (
 from rattlesnake.utilities import DIRECTORY
 from rattlesnake.user_interface.ui_utilities import AdaptiveNoWheelSpinBox, axis_label
 
-DEBUG = True
+DEBUG = False
 DEBUG_DIRECTORY = "debug_data"
 
 

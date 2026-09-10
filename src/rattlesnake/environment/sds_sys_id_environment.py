@@ -106,7 +106,7 @@ BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 MONITOR_SLEEP_TIME = 0.5
 # region Environment Process
 
-DEBUG = True
+DEBUG = False
 DEBUG_DIRECTORY = "debug_data"
 
 class SDSEnvironment(SysIdEnvironment):
