@@ -106,6 +106,8 @@ BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 MONITOR_SLEEP_TIME = 0.5
 # region Environment Process
 
+DEBUG = True
+DEBUG_DIRECTORY = "debug_data"
 
 class SDSEnvironment(SysIdEnvironment):
     """Class defining calculations for the SDS environment"""
@@ -773,18 +775,26 @@ class SDSEnvironment(SysIdEnvironment):
             f"Completing Hit, {expected_output.shape=}, {full_control.shape=}, {full_output.shape=}"
         )
 
-        # np.savez(
-        #     "completed_hit_investigation.npz",
-        #     expected_output=expected_output,
-        #     full_control=full_control,
-        #     full_output=full_output,
-        #     last_drive_signal=self.last_drive_signal,
-        #     current_test_level_db=self.current_test_level_db,
-        #     current_test_level_scale=self.current_test_level_scale,
-        #     output_oversample=self.hardware_metadata.output_oversample,
-        #     sample_rate=self.environment_metadata.sample_rate,
-        #     block_size=self.environment_metadata.block_size,
-        # )
+        if DEBUG:
+            os.makedirs(DEBUG_DIRECTORY, exist_ok=True)
+            filename = os.path.join(
+                DEBUG_DIRECTORY,
+                f"completed_hit_investigation_{self.environment_name}_{int(time.time() * 1000)}.npz",
+            )
+
+            np.savez(
+                filename,
+                expected_output=expected_output,
+                predicted_response_time_history=self.predicted_response_time_history,
+                full_control=full_control,
+                full_output=full_output,
+                last_drive_signal=self.last_drive_signal,
+                current_test_level_db=self.current_test_level_db,
+                current_test_level_scale=self.current_test_level_scale,
+                output_oversample=self.hardware_metadata.output_oversample,
+                sample_rate=self.environment_metadata.sample_rate,
+                block_size=self.environment_metadata.block_size,
+            )
 
         aligned_output, sample_delay, phase_change, found_correlation = align_signals(
             full_output,
