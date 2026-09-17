@@ -1,1 +1,1 @@
-recursive-include src/components *.ui
+graft src/rattlesnake/user_interface
