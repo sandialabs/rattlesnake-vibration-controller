@@ -7,7 +7,7 @@ from rattlesnake.profile_manager import ProfileEvent
 
 
 # region Hardware
-from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
 from rattlesnake.hardware.skeleton_hardware import SkeletonHardwareMetadata
 from rattlesnake.hardware.nidaqmx_hardware_multitask import NIDAQmxMetadata
 from rattlesnake.hardware.lanxi_hardware_multiprocessing import LanXIMetadata
@@ -102,6 +102,7 @@ __all__ = [
     "GlobalCommands",
     "ProfileEvent",
     # Hardware
+    "Channel",
     "HardwareType",
     "SkeletonHardwareMetadata",
     "NIDAQmxMetadata",
