@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_b5abe9a3e0ce4e21_notebook_font_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-09-17 04:31 +0000
+            created at 2026-09-18 14:33 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -89,7 +89,7 @@
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="com"># region Hardware</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="key">from</span> <span class="nam">rattlesnake</span><span class="op">.</span><span class="nam">hardware</span><span class="op">.</span><span class="nam">hardware_utilities</span> <span class="key">import</span> <span class="nam">HardwareType</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="key">from</span> <span class="nam">rattlesnake</span><span class="op">.</span><span class="nam">hardware</span><span class="op">.</span><span class="nam">hardware_utilities</span> <span class="key">import</span> <span class="nam">HardwareType</span><span class="op">,</span> <span class="nam">Channel</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="key">from</span> <span class="nam">rattlesnake</span><span class="op">.</span><span class="nam">hardware</span><span class="op">.</span><span class="nam">skeleton_hardware</span> <span class="key">import</span> <span class="nam">SkeletonHardwareMetadata</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="key">from</span> <span class="nam">rattlesnake</span><span class="op">.</span><span class="nam">hardware</span><span class="op">.</span><span class="nam">nidaqmx_hardware_multitask</span> <span class="key">import</span> <span class="nam">NIDAQmxMetadata</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="key">from</span> <span class="nam">rattlesnake</span><span class="op">.</span><span class="nam">hardware</span><span class="op">.</span><span class="nam">lanxi_hardware_multiprocessing</span> <span class="key">import</span> <span class="nam">LanXIMetadata</span>&nbsp;</span><span class="r"></span></p>
@@ -184,64 +184,65 @@
     <p class="mis mis2 show_mis"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">    <span class="str">"GlobalCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="str">"ProfileEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">    <span class="com"># Hardware</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">    <span class="str">"HardwareType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="str">"SkeletonHardwareMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">    <span class="str">"NIDAQmxMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="str">"LanXIMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="str">"DataPhysicsDP900Metadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="str">"DataPhysicsMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="str">"SDynPySystemMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="str">"SDynPyFRFMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="str">"ExodusMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">    <span class="str">"StateSpaceMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="com"># Environment</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="str">"EnvironmentType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">    <span class="str">"SkeletonCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="str">"SkeletonMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="str">"SkeletonInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="str">"SkeletonSysIdCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="str">"SkeletonSysIdMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="str">"SkeletonSysIdInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="str">"TimeCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="str">"TimeMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="str">"TimeInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="str">"ModalCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="str">"ModalMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="str">"ModalInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="str">"RandomVibrationCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">    <span class="str">"RandomVibrationMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="str">"RandomVibrationInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">    <span class="str">"TransientCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">    <span class="str">"TransientMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="str">"TransientInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">    <span class="str">"SineCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="str">"SineMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="str">"SineInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">    <span class="str">"SDSCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="str">"SDSMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">    <span class="str">"ToneParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">    <span class="str">"ToneStrategy"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">    <span class="str">"CompPulseParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">    <span class="str">"DecayParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">    <span class="str">"DecayStrategy"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">    <span class="str">"SRSParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">    <span class="str">"SRSType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="str">"SRSDisplacementType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">    <span class="str">"SDSParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">    <span class="str">"ControlParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">    <span class="str">"ControlLawType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="str">"SpecParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">    <span class="str">"SDSInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="com"># Process</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">    <span class="str">"StreamType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">    <span class="str">"StreamMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">    <span class="str">"SysIdMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">    <span class="str">"SysIdDataPackage"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="com"># User Interface</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">    <span class="str">"build_rattlesnake_app"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">    <span class="str">"launch_rattlesnake_ui"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">    <span class="str">"notebook_font"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">    <span class="str">"Channel"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="str">"HardwareType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">    <span class="str">"SkeletonHardwareMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="str">"NIDAQmxMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="str">"LanXIMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="str">"DataPhysicsDP900Metadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="str">"DataPhysicsMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="str">"SDynPySystemMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="str">"SDynPyFRFMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">    <span class="str">"ExodusMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="str">"StateSpaceMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="com"># Environment</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">    <span class="str">"EnvironmentType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="str">"SkeletonCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="str">"SkeletonMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="str">"SkeletonInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="str">"SkeletonSysIdCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="str">"SkeletonSysIdMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="str">"SkeletonSysIdInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="str">"TimeCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="str">"TimeMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="str">"TimeInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="str">"ModalCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="str">"ModalMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="str">"ModalInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">    <span class="str">"RandomVibrationCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="str">"RandomVibrationMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">    <span class="str">"RandomVibrationInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">    <span class="str">"TransientCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="str">"TransientMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">    <span class="str">"TransientInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="str">"SineCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="str">"SineMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">    <span class="str">"SineInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="str">"SDSCommands"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">    <span class="str">"SDSMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">    <span class="str">"ToneParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">    <span class="str">"ToneStrategy"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">    <span class="str">"CompPulseParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">    <span class="str">"DecayParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">    <span class="str">"DecayStrategy"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">    <span class="str">"SRSParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="str">"SRSType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">    <span class="str">"SRSDisplacementType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">    <span class="str">"SDSParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">    <span class="str">"ControlParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="str">"ControlLawType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">    <span class="str">"SpecParameters"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="str">"SDSInstructions"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">    <span class="com"># Process</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">    <span class="str">"StreamType"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">    <span class="str">"StreamMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">    <span class="str">"SysIdMetadata"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">    <span class="str">"SysIdDataPackage"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">    <span class="com"># User Interface</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">    <span class="str">"build_rattlesnake_app"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t161" href="#t161">161</a></span><span class="t">    <span class="str">"launch_rattlesnake_ui"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t162" href="#t162">162</a></span><span class="t">    <span class="str">"notebook_font"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t163" href="#t163">163</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -251,7 +252,7 @@
             <a class="nav" href="z_b5abe9a3e0ce4e21_notebook_font_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-09-17 04:31 +0000
+            created at 2026-09-18 14:33 +0000
         </p>
     </div>
 </footer>
