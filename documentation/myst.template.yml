@@ -1,0 +1,162 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: 060cd82a-0b83-4d67-9875-cf6b1b8348eb
+  title:  Rattlesnake Vibration Controller
+  description: User's Manual and Examples for the Rattlesnake Vibration Controller
+  abstract: |
+    Rattlesnake is a combined-environments, multiple input/multiple output control system for
+    dynamic excitation of structures under test.  It provides capabilities to control multiple
+    responses on the part using multiple exciters using various control strategies.  Rattlesnake
+    is written in the Python programming language to facilitate multiple input/multiple output
+    vibration research by allowing users to prescribe custom control laws to the controller.
+    Rattlesnake can target multiple hardware devices, or even perform synthetic control to simulate
+    a test virtually.  Rattlesnake has been used to execute control problems with up to 200
+    response channels and 24 shaker drives.  This document describes the functionality,
+    architecture, and usage of the Rattlesnake controller to perform combined environments testing.
+  keywords:
+    - mimo
+    - vibration
+    - modal
+    - structural-dynamics
+  github: https://github.com/sandialabs/rattlesnake-vibration-controller
+  toc:
+    - file: book/src/introduction.md
+    - file: book/src/document_overview.md
+    - file: book/src/part_1_rattlesnake_overview.md
+      children:
+        - file: book/src/acquiring_and_running_rattlesnake.md
+        - file: book/src/using_rattlesnake.md
+    - file: book/src/part_2_rattlesnake_hardware.md
+      children:
+        - file: book/src/hardware_nidaqmx.md
+        - file: book/src/hardware_lanxi.md
+        - file: book/src/hardware_quattro.md
+        - file: book/src/hardware_dp900.md
+        - file: book/src/hardware_state_space.md
+        - file: book/src/hardware_exodus.md
+        - file: book/src/hardware_sdynpy.md
+        - file: book/src/hardware_new_devices.md
+    - file: book/src/part_3_rattlesnake_environments.md
+      children:
+        - file: book/src/environment_mimo_random.md
+        - file: book/src/environment_mimo_transient.md
+        - file: book/src/environment_mimo_sine.md
+        - file: book/src/environment_mimo_shock.md
+        - file: book/src/environment_modal_testing.md
+        - file: book/src/environment_time_history_generator.md
+        - file: book/src/environment_read_data.md
+        - file: book/src/environment_combined_environments.md
+        - file: book/src/environment_new_environments.md
+    - file: book/src/examples.md
+      children:
+        - file: book/src/example_nidaqmx_cdaq.md
+        - file: book/src/example_sdynpy.md
+        - file: book/src/example_state_space.md
+    - file: book/src/notation.md
+    - file: book/src/contributing.md
+    - title: Developer's Guide
+      children:
+        - file: book/src/code_overview.md
+        # <<PYTHON_API_TOC>>
+    - file: book/src/ui_documentation.md
+      hidden: true
+      children:
+        - file: book/src/_generated/ui/random_vibration_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/random_vibration_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/random_vibration_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/system_identification_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/transient_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/transient_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/transient_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/sine_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/sine_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/sine_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/srs_sds_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/srs_sds_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/srs_sds_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/modal_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/modal_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/time_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/time_run_doc.md
+          hidden: true
+  numbering:
+    headings: true
+    heading_1:
+      continue: false
+    heading_2:
+      template: "Chapter %s"
+    figure:
+      continue: false
+    table:
+      continue: false
+    equation:
+      continue: false
+  thumbnail: book/src/figures/Rattlesnake_Logo_Banner.png
+  abbreviations:
+    6DoF: Six Degree-of-Freedom
+    API: Application Programming Interface
+    APSD: Auto-Power Spectral Density
+    CCLD: Constant Current Line Drive
+    COLA: Constant Overlap and Add
+    CPSD: Cross-Power Spectral Density
+    DTF: Digital Tracking Filter
+    FEM: Finite Element Model
+    FFT: Fast Fourier Transform
+    FRF: Frequency Response Function
+    GUI: Graphical User Interface
+    ICP: Integrated Circuit Piezoelectric
+    IDE: Integrated Development Environment
+    IEPE: Integrated Electronics PiezoElectric
+    IFFT: Inverse Fast Fourier Transform
+    IP: Internet Protocol
+    JSON: Javascript Object Notation
+    MIMO: Multiple Input, Multiple Output
+    PyPI: Python Package Index
+    ReST: Representational State Transfer
+    RMS: Root-Mean-Square
+    SDS: Sum of Decayed Sines
+    SRS: Shock Response Spectrum
+    SVD: Singular Value Decomposition
+    TRAC: Time Response Assurance Criterion
+    UI: User Interface
+    VK: Vold-Kalman (Filter)
+  bibliography:
+    - book/bibliography.bib
+  error_rules:
+    - rule: link-resolves
+      severity: ignore
+      keys:
+        - '{http,https}://www.hbkworld.com/en/knowledge/resource-center/articles/open-api-for-lan-xi'
+site:
+  template: book-theme
+  options:
+    favicon: book/src/figures/Rattlesnake_Icon.ico
+    logo: book/src/figures/Rattlesnake_Icon.ico
+    logo_text: Rattlesnake Vibration Controller
+    hide_authors: false
+    numbered_references: true
+    hide_title_block: false
+  parts:
+    primary_sidebar_footer: |
+      [Github Repository](https://github.com/sandialabs/rattlesnake-vibration-controller)
+
+      [Python Package Index](https://pypi.org/project/rattlesnake-vibration-controller/)
+
+      [Report an Issue](https://github.com/sandialabs/rattlesnake-vibration-controller/issues)
