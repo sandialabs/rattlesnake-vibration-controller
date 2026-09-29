@@ -60,42 +60,24 @@ project:
         - file: book/src/code_overview.md
         # <<PYTHON_API_TOC>>
     - file: book/src/ui_documentation.md
-      hidden: true
       children:
         - file: book/src/_generated/ui/random_vibration_definition_doc.md
-          hidden: true
         - file: book/src/_generated/ui/random_vibration_prediction_doc.md
-          hidden: true
         - file: book/src/_generated/ui/random_vibration_run_doc.md
-          hidden: true
         - file: book/src/_generated/ui/system_identification_doc.md
-          hidden: true
         - file: book/src/_generated/ui/transient_definition_doc.md
-          hidden: true
         - file: book/src/_generated/ui/transient_prediction_doc.md
-          hidden: true
         - file: book/src/_generated/ui/transient_run_doc.md
-          hidden: true
         - file: book/src/_generated/ui/sine_definition_doc.md
-          hidden: true
         - file: book/src/_generated/ui/sine_prediction_doc.md
-          hidden: true
         - file: book/src/_generated/ui/sine_run_doc.md
-          hidden: true
         - file: book/src/_generated/ui/srs_sds_definition_doc.md
-          hidden: true
         - file: book/src/_generated/ui/srs_sds_prediction_doc.md
-          hidden: true
         - file: book/src/_generated/ui/srs_sds_run_doc.md
-          hidden: true
         - file: book/src/_generated/ui/modal_definition_doc.md
-          hidden: true
         - file: book/src/_generated/ui/modal_run_doc.md
-          hidden: true
         - file: book/src/_generated/ui/time_definition_doc.md
-          hidden: true
         - file: book/src/_generated/ui/time_run_doc.md
-          hidden: true
   numbering:
     headings: true
     heading_1:
