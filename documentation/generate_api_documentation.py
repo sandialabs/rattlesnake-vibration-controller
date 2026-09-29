@@ -505,6 +505,27 @@ def immediate_child_modules(parent: str, all_modules: List[str]) -> List[str]:
 def is_defined_in_module(obj: Any, module_name: str) -> bool:
     return obj_module_name(obj) == module_name
 
+def is_excluded_module(module_name: str, excluded_modules: Sequence[str]) -> bool:
+    return any(
+        module_name == ex or module_name.startswith(ex + ".")
+        for ex in excluded_modules
+    )
+
+def is_excluded_class(class_full_name: str, module_name: str,
+                      excluded_modules: Sequence[str],
+                      excluded_classes: Sequence[str]) -> bool:
+    return (
+        class_full_name in excluded_classes
+        or is_excluded_module(module_name, excluded_modules)
+    )
+
+def is_excluded_function(func_full_name: str, module_name: str,
+                         excluded_modules: Sequence[str],
+                         excluded_functions: Sequence[str]) -> bool:
+    return (
+        func_full_name in excluded_functions
+        or is_excluded_module(module_name, excluded_modules)
+    )
 
 def collect_module_info(
     module_name: str,
@@ -1417,6 +1438,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default="Python API",
         help="Sidebar short title for the generated API landing page",
     )
+    ap.add_argument(
+        "--exclude-module",
+        action="append",
+        default=[],
+        help="Module or module prefix to exclude recursively (can be repeated).",
+    )
+    ap.add_argument(
+        "--exclude-class",
+        action="append",
+        default=[],
+        help="Fully qualified class name to exclude (can be repeated).",
+    )
+    ap.add_argument(
+        "--exclude-function",
+        action="append",
+        default=[],
+        help="Fully qualified function name to exclude (can be repeated).",
+    )
     args = ap.parse_args(argv)
 
     package_name = args.package
@@ -1430,7 +1469,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ensure_dir(out_dir / "classes")
     ensure_dir(out_dir / "functions")
 
-    module_names = iter_package_modules(package_name)
+    module_names = [
+        m for m in iter_package_modules(package_name)
+        if not is_excluded_module(m, args.exclude_module)
+    ]
     print("Discovered modules:")
     for name in module_names:
         print("  ", name)
@@ -1469,6 +1511,26 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             out_dir, minfo, repo_url, ref, repo_root, package_name, alias_index
         )
         write_file(module_page_path(out_dir, m), content)
+
+    # Filter items that are excluded
+    class_infos = [
+        c for c in class_infos
+        if not is_excluded_class(
+            c.full_name, c.module_name, args.exclude_module, args.exclude_class
+        )
+    ]
+
+    func_infos = [
+        f for f in func_infos
+        if not is_excluded_function(
+            f.full_name, f.module_name, args.exclude_module, args.exclude_function
+        )
+    ]
+
+    module_infos = {
+        m: minfo for m, minfo in module_infos.items()
+        if not is_excluded_module(m, args.exclude_module)
+    }
 
     # Function pages (module-level only) with preferred alias paths
     written_funcs = set()
