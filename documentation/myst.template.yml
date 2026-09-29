@@ -144,6 +144,7 @@ project:
       severity: ignore
       keys:
         - '{http,https}://www.hbkworld.com/en/knowledge/resource-center/articles/open-api-for-lan-xi'
+        - '{http,https}://github.com/sandialabs/rattlesnake-vibration-controller/**'
 site:
   template: book-theme
   options:
