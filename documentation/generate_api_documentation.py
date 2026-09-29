@@ -48,7 +48,194 @@ import types
 from urllib.parse import urlparse
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Set
+
+# ----------------------------
+# API Structure
+# ----------------------------
+
+DOC_GROUPS = [
+    {
+        "key": "core_runtime",
+        "title": "Main / Engine / Controller",
+        "modules": [
+            "rattlesnake.main",
+            "rattlesnake.engine",
+            "rattlesnake.environment_manager",
+            "rattlesnake.process.controller",
+        ],
+    },
+    {
+        "key": "process_abstract",
+        "title": "Process / Abstract Interface",
+        "modules": [
+            "rattlesnake.process.abstract_message_process",
+        ],
+    },
+    {
+        "key": "process_hardware_interfaces",
+        "title": "Process / Hardware Interfaces",
+        "modules": [
+            "rattlesnake.process.acquisition",
+            "rattlesnake.process.output",
+            "rattlesnake.process.streaming",
+        ],
+    },
+    {
+        "key": "process_signal_processing",
+        "title": "Process / Signal Processing",
+        "modules": [
+            "rattlesnake.process.data_collector",
+            "rattlesnake.process.spectral_processing",
+        ],
+    },
+    {
+        "key": "process_data_analysis",
+        "title": "Process / Data Analysis",
+        "modules": [
+            "rattlesnake.process.abstract_sysid_data_analysis",
+            "rattlesnake.process.random_vibration_sys_id_data_analysis",
+        ],
+    },
+    {
+        "key": "process_signal_generation",
+        "title": "Process / Signal Generation",
+        "modules": [
+            "rattlesnake.process.signal_generation",
+            "rattlesnake.process.signal_generation_process",
+        ],
+    },
+    {
+        "key": "hardware_abstract",
+        "title": "Hardware / Abstract Interface",
+        "modules": [
+            "rattlesnake.hardware.abstract_hardware",
+        ],
+    },
+    {
+        "key": "hardware_registry_utils",
+        "title": "Hardware / Registries and Utilities",
+        "modules": [
+            "rattlesnake.hardware.hardware_registry",
+            "rattlesnake.hardware.hardware_utilities",
+        ],
+    },
+    {
+        "key": "hardware_backends",
+        "title": "Hardware / Implementations",
+        "module_prefixes": [
+            "rattlesnake.hardware.",
+        ],
+        "exclude_modules": [
+            "rattlesnake.hardware.abstract_hardware",
+            "rattlesnake.hardware.hardware_registry",
+            "rattlesnake.hardware.hardware_utilities",
+        ],
+    },
+    {
+        "key": "env_ui_abstract",
+        "title": "Environments and UI / Abstract Interfaces",
+        "modules": [
+            "rattlesnake.environment.abstract_control_law",
+            "rattlesnake.environment.abstract_interactive_control_law",
+            "rattlesnake.environment.abstract_environment",
+            "rattlesnake.environment.abstract_sysid_environment",
+            "rattlesnake.user_interface.abstract_user_interface",
+            "rattlesnake.user_interface.abstract_sys_id_user_interface",
+        ],
+    },
+    {
+        "key": "env_ui_registries",
+        "title": "Environments and UI / Registries",
+        "modules": [
+            "rattlesnake.environment.environment_registry",
+            "rattlesnake.user_interface.ui_registry",
+        ],
+    },
+    {
+        "key": "env_ui_utilities",
+        "title": "Environments and UI / Utilities",
+        "modules": [
+            "rattlesnake.environment.environment_utilities",
+            "rattlesnake.user_interface.ui_utilities",
+            "rattlesnake.user_interface.sds_sys_id_ui_utilities",
+            "rattlesnake.user_interface.sine_sys_id_ui_utilities",
+        ],
+    },
+    {
+        "key": "env_ui_skeletons",
+        "title": "Environments and UI / Skeletons",
+        "module_name_contains": [
+            "skeleton",
+        ],
+    },
+    {
+        "key": "env_ui_random",
+        "title": "Environments and UI / Random",
+        "module_name_contains": [
+            "random_vibration",
+        ],
+    },
+    {
+        "key": "env_ui_transient",
+        "title": "Environments and UI / Transient",
+        "module_name_contains": [
+            "transient",
+        ],
+    },
+    {
+        "key": "env_ui_sine",
+        "title": "Environments and UI / Sine",
+        "module_name_contains": [
+            "sine",
+        ],
+    },
+    {
+        "key": "env_ui_sds",
+        "title": "Environments and UI / SDS",
+        "module_name_contains": [
+            "sds",
+        ],
+    },
+    {
+        "key": "env_ui_time",
+        "title": "Environments and UI / Time",
+        "module_name_contains": [
+            "time_",
+            ".time",
+        ],
+        "modules": [
+            "rattlesnake.environment.time_environment",
+            "rattlesnake.user_interface.time_ui",
+        ],
+    },
+    {
+        "key": "env_ui_modal",
+        "title": "Environments and UI / Modal",
+        "module_name_contains": [
+            "modal",
+        ],
+    },
+    {
+        "key": "env_ui_read",
+        "title": "Environments and UI / Read",
+        "module_name_contains": [
+            "read",
+        ],
+    },
+    {
+        "key": "utilities",
+        "title": "Utilities",
+        "modules": [
+            "rattlesnake.utilities",
+            "rattlesnake.load_utilities",
+            "rattlesnake.profile_manager",
+            "rattlesnake.headless",
+            "rattlesnake.headless.notebook_font",
+            "rattlesnake.hello",
+        ],
+    },
+]
 
 # ----------------------------
 # NumPyDoc parsing (stdlib-only)
@@ -321,6 +508,31 @@ def toc_file_entry(path: Path, out_dir: Path) -> str:
     doc_dir = out_dir.parent.parent.parent.parent
     return path.relative_to(doc_dir).as_posix()
 
+def module_matches_group(module_name: str, group: dict) -> bool:
+    if module_name in group.get("exclude_modules", []):
+        return False
+
+    if module_name in group.get("modules", []):
+        return True
+
+    for prefix in group.get("module_prefixes", []):
+        if module_name.startswith(prefix):
+            return True
+
+    for token in group.get("module_name_contains", []):
+        if token in module_name:
+            return True
+
+    return False
+
+def build_module_group_map(module_names: List[str]) -> Dict[str, str]:
+    assigned: Dict[str, str] = {}
+    for module_name in module_names:
+        for group in DOC_GROUPS:
+            if module_matches_group(module_name, group):
+                assigned[module_name] = group["key"]
+                break
+    return assigned
 
 # ----------------------------
 # GitHub source linking (/src layout supported implicitly)
@@ -340,6 +552,8 @@ def relpath_posix(path: Path, start: Path) -> str:
 
 
 def get_source_ref(obj: Any, repo_root: Optional[Path]) -> Optional[SourceRef]:
+    if inspect.ismodule(obj) and getattr(obj, "__file__", None) is None and getattr(obj, "__path__", None) is not None:
+            return None
     if repo_root is None:
         return None
     try:
@@ -430,7 +644,7 @@ class ObjectInfo:
 @dataclasses.dataclass
 class ModuleInfo:
     name: str
-    module: types.ModuleType
+    module: Optional[types.ModuleType]
     classes: List[ObjectInfo]
     functions: List[ObjectInfo]
     attributes: List[ObjectInfo]
@@ -448,13 +662,29 @@ class ModuleInfo:
 #     return sorted(set(names))
 
 def iter_package_modules(package_name: str) -> List[str]:
+    """
+    Discover Python modules by walking the filesystem under the imported
+    package root, without requiring subdirectories to be Python packages.
+
+    This includes:
+    - real modules from .py files
+    - synthetic intermediate container nodes implied by directories, such as
+      rattlesnake.environment and rattlesnake.user_interface
+    """
     pkg = importlib.import_module(package_name)
     pkg_file = getattr(pkg, "__file__", None)
     if not pkg_file:
         return [package_name]
 
     pkg_root = Path(pkg_file).resolve().parent
-    names = {package_name}
+    names: Set[str] = {package_name}
+
+    def add_module_with_parents(module_name: str) -> None:
+        parts = module_name.split(".")
+        for i in range(1, len(parts) + 1):
+            candidate = ".".join(parts[:i])
+            if candidate == package_name or candidate.startswith(package_name + "."):
+                names.add(candidate)
 
     for py_file in pkg_root.rglob("*.py"):
         if any(part == "__pycache__" for part in py_file.parts):
@@ -472,7 +702,7 @@ def iter_package_modules(package_name: str) -> List[str]:
         else:
             mod_name = package_name + "." + ".".join(rel.with_suffix("").parts)
 
-        names.add(mod_name)
+        add_module_with_parents(mod_name)
 
     return sorted(names)
 
@@ -505,6 +735,9 @@ def immediate_child_modules(parent: str, all_modules: List[str]) -> List[str]:
 def is_defined_in_module(obj: Any, module_name: str) -> bool:
     return obj_module_name(obj) == module_name
 
+def is_namespace_module(mod: Any) -> bool:
+    return inspect.ismodule(mod) and getattr(mod, "__file__", None) is None and getattr(mod, "__path__", None) is not None
+
 def is_excluded_module(module_name: str, excluded_modules: Sequence[str]) -> bool:
     return any(
         module_name == ex or module_name.startswith(ex + ".")
@@ -531,38 +764,32 @@ def collect_module_info(
     module_name: str,
     include_private: bool = False,
     respect_all: bool = True,
-    all_module_names: Optional[List[str]] = None,  # NEW
+    all_module_names: Optional[List[str]] = None,
 ) -> ModuleInfo:
-    mod = importlib.import_module(module_name)
-    all_list = parse_all(mod) if respect_all else None
-    exports = set(all_list) if all_list else None
+    try:
+        mod = importlib.import_module(module_name)
+    except Exception:
+        mod = None
 
     classes: List[ObjectInfo] = []
     functions: List[ObjectInfo] = []
     attributes: List[ObjectInfo] = []
 
-    for name, val in vars(mod).items():
-        if exports is not None and name not in exports:
-            continue
-        if not include_private and is_private_name(name):
-            continue
+    if mod is not None:
+        all_list = parse_all(mod) if respect_all else None
+        exports = set(all_list) if all_list else None
 
-        if inspect.isclass(val) and is_defined_in_module(val, module_name):
-            classes.append(ObjectInfo("class", f"{module_name}.{name}", name, module_name, val))
-        elif inspect.isfunction(val) and is_defined_in_module(val, module_name):
-            functions.append(
-                ObjectInfo("function", f"{module_name}.{name}", name, module_name, val)
-            )
-        else:
-            if isinstance(val, types.ModuleType):
+        for name, val in vars(mod).items():
+            if exports is not None and name not in exports:
                 continue
-            if (inspect.isclass(val) or inspect.isfunction(val)) and not is_defined_in_module(
-                val, module_name
-            ):
+            if not include_private and is_private_name(name):
                 continue
-            if exports is not None and name in exports:
-                attributes.append(
-                    ObjectInfo("attribute", f"{module_name}.{name}", name, module_name, val)
+
+            if inspect.isclass(val) and getattr(val, "__module__", "") == module_name:
+                classes.append(ObjectInfo("class", f"{module_name}.{name}", name, module_name, val))
+            elif inspect.isfunction(val) and getattr(val, "__module__", "") == module_name:
+                functions.append(
+                    ObjectInfo("function", f"{module_name}.{name}", name, module_name, val)
                 )
             else:
                 if isinstance(
@@ -574,7 +801,6 @@ def collect_module_info(
 
     child_modules: List[str] = []
     if all_module_names:
-        # Only meaningful for packages/subpackages, but harmless otherwise.
         child_modules = immediate_child_modules(module_name, all_module_names)
 
     return ModuleInfo(
@@ -583,7 +809,7 @@ def collect_module_info(
         classes=sorted(classes, key=lambda x: x.short_name.lower()),
         functions=sorted(functions, key=lambda x: x.short_name.lower()),
         attributes=sorted(attributes, key=lambda x: x.short_name.lower()),
-        child_modules=child_modules,  # NEW
+        child_modules=child_modules,
     )
 
 
@@ -734,6 +960,122 @@ def link_to_function(out_dir: Path, func_full_name: str) -> str:
     # return function_page_path(out_dir, func_full_name).relative_to(out_dir).as_posix()
     return "#" + myst_target(func_full_name, source=False)
 
+def get_group_title(group_key: str) -> str:
+    for group in DOC_GROUPS:
+        if group["key"] == group_key:
+            return group["title"]
+    return group_key
+
+
+def build_grouped_rows(
+    package_name: str,
+    out_dir: Path,
+    class_infos: List[ObjectInfo],
+    func_infos: List[ObjectInfo],
+    module_infos: Dict[str, ModuleInfo],
+    alias_index: AliasIndex,
+) -> Dict[str, Dict[str, List[Tuple[str, str, str]]]]:
+    module_group_map = build_module_group_map(list(module_infos.keys()))
+
+    grouped: Dict[str, Dict[str, List[Tuple[str, str, str]]]] = {}
+
+    def ensure_group(group_key: str) -> None:
+        if group_key not in grouped:
+            grouped[group_key] = {
+                "modules": [],
+                "classes": [],
+                "functions": [],
+            }
+
+    for group in DOC_GROUPS:
+        ensure_group(group["key"])
+    ensure_group("ungrouped")
+
+    # Modules
+    seen_module_links = set()
+    for module_name, minfo in sorted(
+        module_infos.items(),
+        key=lambda x: (x[0].split(".")[-1].lower(), x[0].lower()),
+    ):
+        group_key = module_group_map.get(module_name, "ungrouped")
+        leaf = module_name.split(".")[-1]
+        link = link_to_module(out_dir, module_name)
+        if link in seen_module_links:
+            continue
+        seen_module_links.add(link)
+        grouped[group_key]["modules"].append(
+            (
+                leaf,
+                link,
+                first_sentence_or_line(get_doc(minfo.module)),
+            )
+        )
+
+    # Classes
+    seen_class_links = set()
+    for c in sorted(
+        class_infos,
+        key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
+    ):
+        pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
+        group_key = module_group_map.get(c.module_name, "ungrouped")
+        link = link_to_class(out_dir, pref)
+        if link in seen_class_links:
+            continue
+        seen_class_links.add(link)
+        grouped[group_key]["classes"].append(
+            (
+                pref.split(".")[-1],
+                link,
+                first_sentence_or_line(get_doc(c.obj)),
+            )
+        )
+
+    # Functions
+    seen_function_links = set()
+    for f in sorted(
+        func_infos,
+        key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
+    ):
+        pref = preferred_name(package_name, f.obj, f.full_name, alias_index)
+        group_key = module_group_map.get(f.module_name, "ungrouped")
+        link = link_to_function(out_dir, pref)
+        if link in seen_function_links:
+            continue
+        seen_function_links.add(link)
+        grouped[group_key]["functions"].append(
+            (
+                pref.split(".")[-1],
+                link,
+                first_sentence_or_line(get_doc(f.obj)),
+            )
+        )
+
+    return grouped
+
+
+def render_grouped_summary_section(
+    title: str,
+    module_rows: List[Tuple[str, str, str]],
+    class_rows: List[Tuple[str, str, str]],
+    function_rows: List[Tuple[str, str, str]],
+) -> str:
+    out: List[str] = []
+    out.append(f"## {title}\n\n")
+
+    if module_rows:
+        out.append("### Modules\n\n")
+        out.append(render_summary_table(module_rows))
+
+    if class_rows:
+        out.append("### Classes\n\n")
+        out.append(render_summary_table(class_rows))
+
+    if function_rows:
+        out.append("### Public Module-Level Functions\n\n")
+        out.append(render_summary_table(function_rows))
+
+    return "".join(out)
 
 def render_object_header(full_name: str, title: str) -> str:
     return f"{myst_target(full_name, source=True)}\n# {title}\n\n"
@@ -1054,14 +1396,30 @@ def render_module_page(
     alias_index: AliasIndex,
 ) -> str:
     mod = minfo.module
-    out: List[str] = ["---\n", f"short_title: {minfo.name.split('.')[-1]}\n", "---\n"]
+    is_container = mod is None or is_namespace_module(mod)
+
+    out = ["---\n", f"short_title: {minfo.name.split('.')[-1]}\n", "---\n"]
     out.append(render_object_header(minfo.name, minfo.name))
-    out.append(render_source_link(repo_url, ref, get_source_ref(mod, repo_root)))
-    out.append("\n")
 
-    out.append(render_numpydoc(parse_numpydoc(get_doc(mod))))
+    if not is_container:
+        out.append(render_source_link(repo_url, ref, get_source_ref(mod, repo_root)))
+        out.append("\n")
+        out.append(render_numpydoc(parse_numpydoc(get_doc(mod))))
+    else:
+        out.append(
+            "This page represents a documentation grouping for related modules under "
+            f"`{minfo.name}`.\n\n"
+        )
+        out.append(
+            f"`{minfo.name}` is not itself a file-backed Python module in this project, "
+            "but it contains related modules that can be imported individually.\n\n"
+        )
+        if minfo.child_modules:
+            out.append("For example:\n\n")
+            out.append("```python\n")
+            out.append(f"import {minfo.child_modules[0]}\n")
+            out.append("```\n\n")
 
-    # NEW: Submodules/Subpackages navigation
     if minfo.child_modules:
         out.append("## Submodules\n\n")
         rows: List[Tuple[str, str, str]] = []
@@ -1234,26 +1592,6 @@ def render_python_api_page(
 ) -> str:
     """
     Render the Python API landing page.
-
-    Parameters
-    ----------
-    package_name : str
-        Top-level package name.
-    out_dir : pathlib.Path
-        Output directory for generated API pages.
-    class_infos : list of ObjectInfo
-        Discovered class objects.
-    func_infos : list of ObjectInfo
-        Discovered module-level function objects.
-    module_infos : dict
-        Mapping from module name to collected module information.
-    alias_index : AliasIndex
-        Alias mapping used to determine preferred public names.
-
-    Returns
-    -------
-    str
-        MyST Markdown content for the Python API landing page.
     """
     out: List[str] = []
     out.append("---\n")
@@ -1265,66 +1603,51 @@ def render_python_api_page(
         "public modules, classes, and module-level functions.\n\n"
     )
 
-    # Classes
-    if class_infos:
-        out.append("## Classes\n\n")
-        class_rows: List[Tuple[str, str, str]] = []
-        emitted = set()
-        for c in sorted(
-            class_infos,
-            key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
-        ):
-            pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
-            if pref in emitted:
-                continue
-            emitted.add(pref)
-            class_rows.append(
-                (
-                    pref.split(".")[-1],
-                    link_to_class(out_dir, pref),
-                    first_sentence_or_line(get_doc(c.obj)),
-                )
-            )
-        out.append(render_summary_table(class_rows))
+    out.append(
+        f"For a top-down view of the codebase, start with \n\n"
+        f"[`{package_name}`]({link_to_module(out_dir, package_name)})\n\n"
+        "the top-level namespace for the project.\n\n"
+    )
+    out.append(
+        "The sections below organize modules, classes, and public module-level "
+        "functions into major parts of the codebase so that related APIs can be "
+        "browsed together.\n\n"
+    )
 
-    # Modules
-    out.append("## Modules\n\n")
-    module_rows: List[Tuple[str, str, str]] = []
-    for module_name, minfo in sorted(
-        module_infos.items(),
-        key=lambda x: (x[0].split(".")[-1].lower(), x[0].lower()),
-    ):
-        leaf = module_name.split(".")[-1]
-        module_rows.append(
-            (
-                leaf,
-                link_to_module(out_dir, module_name),
-                first_sentence_or_line(get_doc(minfo.module)),
+    grouped = build_grouped_rows(
+        package_name=package_name,
+        out_dir=out_dir,
+        class_infos=class_infos,
+        func_infos=func_infos,
+        module_infos=module_infos,
+        alias_index=alias_index,
+    )
+
+    for group in DOC_GROUPS:
+        group_key = group["key"]
+        rows = grouped.get(group_key, {"modules": [], "classes": [], "functions": []})
+        if not rows["modules"] and not rows["classes"] and not rows["functions"]:
+            continue
+
+        out.append(
+            render_grouped_summary_section(
+                title=group["title"],
+                module_rows=rows["modules"],
+                class_rows=rows["classes"],
+                function_rows=rows["functions"],
             )
         )
-    out.append(render_summary_table(module_rows))
 
-    # Functions
-    if func_infos:
-        out.append("## Public Module-Level Functions\n\n")
-        function_rows: List[Tuple[str, str, str]] = []
-        emitted = set()
-        for f in sorted(
-            func_infos,
-            key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
-        ):
-            pref = preferred_name(package_name, f.obj, f.full_name, alias_index)
-            if pref in emitted:
-                continue
-            emitted.add(pref)
-            function_rows.append(
-                (
-                    pref.split(".")[-1],
-                    link_to_function(out_dir, pref),
-                    first_sentence_or_line(get_doc(f.obj)),
-                )
+    ungrouped = grouped.get("ungrouped", {"modules": [], "classes": [], "functions": []})
+    if ungrouped["modules"] or ungrouped["classes"] or ungrouped["functions"]:
+        out.append(
+            render_grouped_summary_section(
+                title="Ungrouped",
+                module_rows=ungrouped["modules"],
+                class_rows=ungrouped["classes"],
+                function_rows=ungrouped["functions"],
             )
-        out.append(render_summary_table(function_rows))
+        )
 
     return "".join(out)
 
