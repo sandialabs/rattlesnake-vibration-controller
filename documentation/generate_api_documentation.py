@@ -1244,76 +1244,35 @@ def render_python_api_page(
         "public modules, classes, and module-level functions.\n\n"
     )
 
-    # Core classes featured prominently
-    core_defaults = [
-    ]
-
-    helper_defaults = [
-    ]
-
-    class_default_map = {c.full_name: c for c in class_infos}
-
-    out.append("## Core Classes\n\n")
-    core_rows: List[Tuple[str, str, str]] = []
-    for full_name in core_defaults:
-        c = class_default_map.get(full_name)
-        if c is None:
-            continue
-        pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
-        core_rows.append(
-            (
-                pref.split(".")[-1],
-                link_to_class(out_dir, pref),
-                first_sentence_or_line(get_doc(c.obj)),
+    # Classes
+    if class_infos:
+        out.append("## Classes\n\n")
+        class_rows: List[Tuple[str, str, str]] = []
+        emitted = set()
+        for c in sorted(
+            class_infos,
+            key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
+        ):
+            pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
+            if pref in emitted:
+                continue
+            emitted.add(pref)
+            class_rows.append(
+                (
+                    pref.split(".")[-1],
+                    link_to_class(out_dir, pref),
+                    first_sentence_or_line(get_doc(c.obj)),
+                )
             )
-        )
-    out.append(render_summary_table(core_rows))
-
-    out.append("## Supporting Classes\n\n")
-    helper_rows: List[Tuple[str, str, str]] = []
-    for full_name in helper_defaults:
-        c = class_default_map.get(full_name)
-        if c is None:
-            continue
-        pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
-        helper_rows.append(
-            (
-                pref.split(".")[-1],
-                link_to_class(out_dir, pref),
-                first_sentence_or_line(get_doc(c.obj)),
-            )
-        )
-    if helper_rows:
-        out.append(render_summary_table(helper_rows))
-    else:
-        out.append("No supporting classes documented.\n\n")
-
-    # Generated and remaining public classes
-    core_and_helper = set(core_defaults + helper_defaults)
-    remaining_rows: List[Tuple[str, str, str]] = []
-    for c in sorted(
-        class_infos,
-        key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
-    ):
-        if c.full_name in core_and_helper:
-            continue
-        pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
-        remaining_rows.append(
-            (
-                pref.split(".")[-1],
-                link_to_class(out_dir, pref),
-                first_sentence_or_line(get_doc(c.obj)),
-            )
-        )
-
-    if remaining_rows:
-        out.append("## Dataset-Specific and Additional Classes\n\n")
-        out.append(render_summary_table(remaining_rows))
+        out.append(render_summary_table(class_rows))
 
     # Modules
     out.append("## Modules\n\n")
     module_rows: List[Tuple[str, str, str]] = []
-    for module_name, minfo in sorted(module_infos.items(), key=lambda x: x[0].lower()):
+    for module_name, minfo in sorted(
+        module_infos.items(),
+        key=lambda x: (x[0].split(".")[-1].lower(), x[0].lower()),
+    ):
         leaf = module_name.split(".")[-1]
         module_rows.append(
             (
