@@ -77,7 +77,10 @@ class SignalGenerationMetadata:
     def __eq__(self, other):
         try:
             return np.all(
-                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
+                [
+                    np.all(value == other.__dict__[field])
+                    for field, value in self.__dict__.items()
+                ]
             )
         except (AttributeError, KeyError):
             return False
@@ -116,16 +119,22 @@ class SignalGenerationProcess(AbstractMessageProcess):
 
         """
         super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
-        self.map_command(SignalGenerationCommands.INITIALIZE_PARAMETERS, self.initialize_parameters)
+        self.map_command(
+            SignalGenerationCommands.INITIALIZE_PARAMETERS, self.initialize_parameters
+        )
         self.map_command(
             SignalGenerationCommands.INITIALIZE_SIGNAL_GENERATOR,
             self.initialize_signal_generator,
         )
-        self.map_command(SignalGenerationCommands.GENERATE_SIGNALS, self.generate_signals)
+        self.map_command(
+            SignalGenerationCommands.GENERATE_SIGNALS, self.generate_signals
+        )
         self.map_command(SignalGenerationCommands.START_SHUTDOWN, self.start_shutdown)
         self.map_command(SignalGenerationCommands.SHUTDOWN, self.shutdown)
         self.map_command(SignalGenerationCommands.MUTE, self.mute)
-        self.map_command(SignalGenerationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level)
+        self.map_command(
+            SignalGenerationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
+        )
         self.map_command(SignalGenerationCommands.SET_TEST_LEVEL, self.set_test_level)
         self.environment_name = environment_name
         self.data_in_queue = data_in_queue
@@ -236,7 +245,9 @@ class SignalGenerationProcess(AbstractMessageProcess):
                 self.signal_remainder = new_signal
             else:
                 # Otherwise we just concatenate the new data at the end
-                self.signal_remainder = np.concatenate((self.signal_remainder, new_signal), axis=-1)
+                self.signal_remainder = np.concatenate(
+                    (self.signal_remainder, new_signal), axis=-1
+                )
         # Now check if we need to send it to the output task
         if (
             self.data_out_queue.empty()
@@ -259,7 +270,9 @@ class SignalGenerationProcess(AbstractMessageProcess):
                 self.log("Received Last Run, Shutting Down")
                 self.shutdown()
                 return
-        self.command_queue.put(self.process_name, (SignalGenerationCommands.GENERATE_SIGNALS, None))
+        self.command_queue.put(
+            self.process_name, (SignalGenerationCommands.GENERATE_SIGNALS, None)
+        )
 
     def output(self, write_data, last_signal=False):
         """Puts data to the data_out_queue and handles test level changes
@@ -320,7 +333,9 @@ class SignalGenerationProcess(AbstractMessageProcess):
         # self.write_index += 1
         # np.savez('signal_generation_output_data_check_{:}.npz'.format(self.write_index),
         #          write_data = write_data,test_level = test_level)
-        self.log(f"Sending Output with RMS \n  {rms_time(write_data * test_level, axis=-1)}")
+        self.log(
+            f"Sending Output with RMS \n  {rms_time(write_data * test_level, axis=-1)}"
+        )
         if DEBUG:
             num_files = len(glob(FILE_OUTPUT.format("*")))
             np.savez(
@@ -342,7 +357,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
         ----------
         data : None
             Unused argument required due to the expectation that functions called
-            by the SignalGenerationProcess.run function will have one argument
+            by the `SignalGenerationProcess.run` function will have one argument
             accepting any data passed along with the instruction.
 
         """
@@ -399,7 +414,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
         ----------
         data : None
             Unused argument required due to the expectation that functions called
-            by the RandomSignalGenerationProcess.Run function will have one argument
+            by the `RandomSignalGenerationProcess.run` function will have one argument
             accepting any data passed along with the instruction.
 
         """
@@ -461,7 +476,11 @@ def signal_generation_process(
     """
 
     signal_generation_instance = SignalGenerationProcess(
-        (environment_name + " Signal Generation" if process_name is None else process_name),
+        (
+            environment_name + " Signal Generation"
+            if process_name is None
+            else process_name
+        ),
         command_queue,
         data_in_queue,
         data_out_queue,

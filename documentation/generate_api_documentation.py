@@ -274,7 +274,11 @@ def _split_numpydoc_sections(doc: str) -> List[Tuple[str, List[str]]]:
     i = 0
     while i < len(lines):
         line = lines[i]
-        if line.strip() and (i + 1) < len(lines) and NUMPY_SECTION_UNDERLINE.match(lines[i + 1]):
+        if (
+            line.strip()
+            and (i + 1) < len(lines)
+            and NUMPY_SECTION_UNDERLINE.match(lines[i + 1])
+        ):
             out.append((cur_title, cur))
             cur_title = line.strip()
             cur = []
@@ -508,6 +512,7 @@ def toc_file_entry(path: Path, out_dir: Path) -> str:
     doc_dir = out_dir.parent.parent.parent.parent
     return path.relative_to(doc_dir).as_posix()
 
+
 def module_matches_group(module_name: str, group: dict) -> bool:
     if module_name in group.get("exclude_modules", []):
         return False
@@ -525,6 +530,7 @@ def module_matches_group(module_name: str, group: dict) -> bool:
 
     return False
 
+
 def build_module_group_map(module_names: List[str]) -> Dict[str, str]:
     assigned: Dict[str, str] = {}
     for module_name in module_names:
@@ -533,6 +539,7 @@ def build_module_group_map(module_names: List[str]) -> Dict[str, str]:
                 assigned[module_name] = group["key"]
                 break
     return assigned
+
 
 # ----------------------------
 # GitHub source linking (/src layout supported implicitly)
@@ -552,8 +559,12 @@ def relpath_posix(path: Path, start: Path) -> str:
 
 
 def get_source_ref(obj: Any, repo_root: Optional[Path]) -> Optional[SourceRef]:
-    if inspect.ismodule(obj) and getattr(obj, "__file__", None) is None and getattr(obj, "__path__", None) is not None:
-            return None
+    if (
+        inspect.ismodule(obj)
+        and getattr(obj, "__file__", None) is None
+        and getattr(obj, "__path__", None) is not None
+    ):
+        return None
     if repo_root is None:
         return None
     try:
@@ -586,7 +597,10 @@ def get_source_ref(obj: Any, repo_root: Optional[Path]) -> Optional[SourceRef]:
             return None
 
         return SourceRef(
-            file_abs=file_abs, file_rel_repo=file_rel_repo, start_line=start, end_line=end
+            file_abs=file_abs,
+            file_rel_repo=file_rel_repo,
+            start_line=start,
+            end_line=end,
         )
     except Exception as e:
         print(f"Generic Exception for {obj=}")
@@ -618,10 +632,14 @@ def source_link(repo_url: str, ref: str, src: SourceRef) -> str:
     base = repo_url.rstrip("/")
 
     if repo_kind == "github":
-        return f"{base}/blob/{ref}/{src.file_rel_repo}#L{src.start_line}-L{src.end_line}"
+        return (
+            f"{base}/blob/{ref}/{src.file_rel_repo}#L{src.start_line}-L{src.end_line}"
+        )
 
     if repo_kind == "gitlab":
-        return f"{base}/-/blob/{ref}/{src.file_rel_repo}#L{src.start_line}-{src.end_line}"
+        return (
+            f"{base}/-/blob/{ref}/{src.file_rel_repo}#L{src.start_line}-{src.end_line}"
+        )
 
     # Generic fallback: GitHub-like path and anchors.
     return f"{base}/blob/{ref}/{src.file_rel_repo}#L{src.start_line}-L{src.end_line}"
@@ -660,6 +678,7 @@ class ModuleInfo:
 #     for m in pkgutil.walk_packages(pkg_path, package_name + "."):
 #         names.append(m.name)
 #     return sorted(set(names))
+
 
 def iter_package_modules(package_name: str) -> List[str]:
     """
@@ -735,30 +754,42 @@ def immediate_child_modules(parent: str, all_modules: List[str]) -> List[str]:
 def is_defined_in_module(obj: Any, module_name: str) -> bool:
     return obj_module_name(obj) == module_name
 
+
 def is_namespace_module(mod: Any) -> bool:
-    return inspect.ismodule(mod) and getattr(mod, "__file__", None) is None and getattr(mod, "__path__", None) is not None
+    return (
+        inspect.ismodule(mod)
+        and getattr(mod, "__file__", None) is None
+        and getattr(mod, "__path__", None) is not None
+    )
+
 
 def is_excluded_module(module_name: str, excluded_modules: Sequence[str]) -> bool:
     return any(
-        module_name == ex or module_name.startswith(ex + ".")
-        for ex in excluded_modules
+        module_name == ex or module_name.startswith(ex + ".") for ex in excluded_modules
     )
 
-def is_excluded_class(class_full_name: str, module_name: str,
-                      excluded_modules: Sequence[str],
-                      excluded_classes: Sequence[str]) -> bool:
-    return (
-        class_full_name in excluded_classes
-        or is_excluded_module(module_name, excluded_modules)
+
+def is_excluded_class(
+    class_full_name: str,
+    module_name: str,
+    excluded_modules: Sequence[str],
+    excluded_classes: Sequence[str],
+) -> bool:
+    return class_full_name in excluded_classes or is_excluded_module(
+        module_name, excluded_modules
     )
 
-def is_excluded_function(func_full_name: str, module_name: str,
-                         excluded_modules: Sequence[str],
-                         excluded_functions: Sequence[str]) -> bool:
-    return (
-        func_full_name in excluded_functions
-        or is_excluded_module(module_name, excluded_modules)
+
+def is_excluded_function(
+    func_full_name: str,
+    module_name: str,
+    excluded_modules: Sequence[str],
+    excluded_functions: Sequence[str],
+) -> bool:
+    return func_full_name in excluded_functions or is_excluded_module(
+        module_name, excluded_modules
     )
+
 
 def collect_module_info(
     module_name: str,
@@ -786,17 +817,38 @@ def collect_module_info(
                 continue
 
             if inspect.isclass(val) and getattr(val, "__module__", "") == module_name:
-                classes.append(ObjectInfo("class", f"{module_name}.{name}", name, module_name, val))
-            elif inspect.isfunction(val) and getattr(val, "__module__", "") == module_name:
+                classes.append(
+                    ObjectInfo("class", f"{module_name}.{name}", name, module_name, val)
+                )
+            elif (
+                inspect.isfunction(val)
+                and getattr(val, "__module__", "") == module_name
+            ):
                 functions.append(
-                    ObjectInfo("function", f"{module_name}.{name}", name, module_name, val)
+                    ObjectInfo(
+                        "function", f"{module_name}.{name}", name, module_name, val
+                    )
                 )
             else:
                 if isinstance(
-                    val, (str, int, float, bool, tuple, list, dict, set, frozenset, type(None))
+                    val,
+                    (
+                        str,
+                        int,
+                        float,
+                        bool,
+                        tuple,
+                        list,
+                        dict,
+                        set,
+                        frozenset,
+                        type(None),
+                    ),
                 ):
                     attributes.append(
-                        ObjectInfo("attribute", f"{module_name}.{name}", name, module_name, val)
+                        ObjectInfo(
+                            "attribute", f"{module_name}.{name}", name, module_name, val
+                        )
                     )
 
     child_modules: List[str] = []
@@ -873,7 +925,9 @@ def build_alias_index(
             export_names = list(all_list)
         else:
             export_names = [
-                n for n in vars(mod).keys() if (include_private or not is_private_name(n))
+                n
+                for n in vars(mod).keys()
+                if (include_private or not is_private_name(n))
             ]
 
         for n in export_names:
@@ -892,11 +946,18 @@ def build_alias_index(
                     val, "__name__", ""
                 ).startswith(package_name):
                     alias.add(
-                        val, f"{mname}.{n}" if mname != package_name else f"{package_name}.{n}"
+                        val,
+                        (
+                            f"{mname}.{n}"
+                            if mname != package_name
+                            else f"{package_name}.{n}"
+                        ),
                     )
                 continue
 
-            alias_full = f"{mname}.{n}" if mname != package_name else f"{package_name}.{n}"
+            alias_full = (
+                f"{mname}.{n}" if mname != package_name else f"{package_name}.{n}"
+            )
             alias.add(val, alias_full)
 
     return alias
@@ -922,17 +983,20 @@ def preferred_name(
 # Rendering: MyST Markdown
 # ----------------------------
 
+
 def sanitize_target_name(full_name: str) -> str:
     parts = full_name.split(".")
     if len(parts) >= 2:
         return ".".join(parts[-2:])
     return parts[0]
 
+
 def myst_target(full_name: str, source: bool) -> str:
     target = sanitize_target_name(full_name)
     if source:
         return f"(api-py:{target})="
     return f"api-py:{target}"
+
 
 def module_page_path(out_dir: Path, module_name: str) -> Path:
     return out_dir / "modules" / f"{slugify(module_name)}_py.md"
@@ -959,6 +1023,7 @@ def link_to_class(out_dir: Path, class_full_name: str) -> str:
 def link_to_function(out_dir: Path, func_full_name: str) -> str:
     # return function_page_path(out_dir, func_full_name).relative_to(out_dir).as_posix()
     return "#" + myst_target(func_full_name, source=False)
+
 
 def get_group_title(group_key: str) -> str:
     for group in DOC_GROUPS:
@@ -1015,7 +1080,9 @@ def build_grouped_rows(
     seen_class_links = set()
     for c in sorted(
         class_infos,
-        key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
+        key=lambda x: preferred_name(
+            package_name, x.obj, x.full_name, alias_index
+        ).lower(),
     ):
         pref = preferred_name(package_name, c.obj, c.full_name, alias_index)
         group_key = module_group_map.get(c.module_name, "ungrouped")
@@ -1035,7 +1102,9 @@ def build_grouped_rows(
     seen_function_links = set()
     for f in sorted(
         func_infos,
-        key=lambda x: preferred_name(package_name, x.obj, x.full_name, alias_index).lower(),
+        key=lambda x: preferred_name(
+            package_name, x.obj, x.full_name, alias_index
+        ).lower(),
     ):
         pref = preferred_name(package_name, f.obj, f.full_name, alias_index)
         group_key = module_group_map.get(f.module_name, "ungrouped")
@@ -1076,6 +1145,7 @@ def render_grouped_summary_section(
         out.append(render_summary_table(function_rows))
 
     return "".join(out)
+
 
 def render_object_header(full_name: str, title: str) -> str:
     return f"{myst_target(full_name, source=True)}\n# {title}\n\n"
@@ -1155,7 +1225,7 @@ def render_numpydoc(nd: NumpyDoc, extra_title_depth: int = 0) -> str:
             for p in sec.params:
                 head = f"- **{p.name}**"
                 if p.type:
-                    head += f" : *{p.type}*"
+                    head += f" : `{p.type}`"
                 lines.append(head)
                 if p.desc:
                     lines.append(indent_md(p.desc, 2))
@@ -1372,7 +1442,8 @@ def iter_class_members(
             attrs.append((name, val))
         else:
             if isinstance(
-                val, (str, int, float, bool, tuple, list, dict, set, frozenset, type(None))
+                val,
+                (str, int, float, bool, tuple, list, dict, set, frozenset, type(None)),
             ):
                 attrs.append((name, val))
 
@@ -1491,7 +1562,9 @@ def render_function_page(
         out.append("- Also available as:\n")
         for a in aliases:
             out.append(f"  - `{a}`\n")
-    out.append(f"- Module: [`{finfo.module_name}`]({link_to_module(out_dir, finfo.module_name)})\n")
+    out.append(
+        f"- Module: [`{finfo.module_name}`]({link_to_module(out_dir, finfo.module_name)})\n"
+    )
     out.append(render_source_link(repo_url, ref, get_source_ref(fn, repo_root)))
     out.append("\n")
 
@@ -1526,7 +1599,9 @@ def render_class_page(
         out.append("- Also available as:\n")
         for a in aliases:
             out.append(f"  - `{a}`\n")
-    out.append(f"- Module: [`{cinfo.module_name}`]({link_to_module(out_dir, cinfo.module_name)})\n")
+    out.append(
+        f"- Module: [`{cinfo.module_name}`]({link_to_module(out_dir, cinfo.module_name)})\n"
+    )
     out.append(render_source_link(repo_url, ref, get_source_ref(cls, repo_root)))
     out.append("\n")
 
@@ -1545,7 +1620,11 @@ def render_class_page(
         for name, obj in attrs:
             full = f"{pref}.{name}"
             rows.append(
-                (name, f"#{myst_target(full, source=False)}", first_sentence_or_line(get_doc(obj)))
+                (
+                    name,
+                    f"#{myst_target(full, source=False)}",
+                    first_sentence_or_line(get_doc(obj)),
+                )
             )
         out.append(render_summary_table(rows))
 
@@ -1556,7 +1635,8 @@ def render_class_page(
             if isinstance(obj, property):
                 out.append(
                     render_numpydoc(
-                        parse_numpydoc(inspect.getdoc(obj.fget) or ""), extra_title_depth=2
+                        parse_numpydoc(inspect.getdoc(obj.fget) or ""),
+                        extra_title_depth=2,
                     )
                 )
 
@@ -1566,7 +1646,11 @@ def render_class_page(
         for name, func in methods:
             full = f"{pref}.{name}"
             rows.append(
-                (name, f"#{myst_target(full, source=False)}", first_sentence_or_line(get_doc(func)))
+                (
+                    name,
+                    f"#{myst_target(full, source=False)}",
+                    first_sentence_or_line(get_doc(func)),
+                )
             )
         out.append(render_summary_table(rows))
 
@@ -1574,10 +1658,14 @@ def render_class_page(
             full = f"{pref}.{name}"
             out.append(f"{myst_target(full, source=True)}\n")
             out.append(f"### `{name}`\n\n")
-            out.append(render_source_link(repo_url, ref, get_source_ref(func, repo_root)))
+            out.append(
+                render_source_link(repo_url, ref, get_source_ref(func, repo_root))
+            )
             out.append("\n")
             out.append(render_signature_block("def", full, format_signature(func)))
-            out.append(render_numpydoc(parse_numpydoc(get_doc(func)), extra_title_depth=2))
+            out.append(
+                render_numpydoc(parse_numpydoc(get_doc(func)), extra_title_depth=2)
+            )
 
     return "".join(out)
 
@@ -1638,7 +1726,9 @@ def render_python_api_page(
             )
         )
 
-    ungrouped = grouped.get("ungrouped", {"modules": [], "classes": [], "functions": []})
+    ungrouped = grouped.get(
+        "ungrouped", {"modules": [], "classes": [], "functions": []}
+    )
     if ungrouped["modules"] or ungrouped["classes"] or ungrouped["functions"]:
         out.append(
             render_grouped_summary_section(
@@ -1670,7 +1760,9 @@ def write_toc_snippet(
     lines: List[str] = []
 
     # Root of the Python API subtree
-    lines.append(f"        - file: {toc_file_entry(python_api_page_path(out_dir), out_dir)}")
+    lines.append(
+        f"        - file: {toc_file_entry(python_api_page_path(out_dir), out_dir)}"
+    )
     lines.append("          children:")
 
     entries: List[Tuple[str, str, str]] = []
@@ -1713,6 +1805,7 @@ def write_toc_snippet(
 
     write_file(out_dir / "_toc.yml.inc", "\n".join(lines) + "\n")
 
+
 # ----------------------------
 # Main
 # ----------------------------
@@ -1730,11 +1823,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument(
         "--package", required=True, help="Top-level importable package name, e.g. mypkg"
     )
-    ap.add_argument("--out", required=True, help="Output directory for .md files, e.g. docs/api")
     ap.add_argument(
-        "--repo", default="", help="GitHub/Gitlab repo URL, e.g. https://github.com/ORG/REPO"
+        "--out", required=True, help="Output directory for .md files, e.g. docs/api"
     )
-    ap.add_argument("--ref", default="main", help="Git ref for links, e.g. main or a tag")
+    ap.add_argument(
+        "--repo",
+        default="",
+        help="GitHub/Gitlab repo URL, e.g. https://github.com/ORG/REPO",
+    )
+    ap.add_argument(
+        "--ref", default="main", help="Git ref for links, e.g. main or a tag"
+    )
     ap.add_argument(
         "--repo-root",
         default="",
@@ -1746,10 +1845,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="Include private members (leading underscore)",
     )
     ap.add_argument(
-        "--no-respect-all", action="store_true", help="Ignore __all__ and scan all public names"
+        "--no-respect-all",
+        action="store_true",
+        help="Ignore __all__ and scan all public names",
     )
     ap.add_argument(
-        "--no-index", action="store_true", help="Do not generate the Python API landing page"
+        "--no-index",
+        action="store_true",
+        help="Do not generate the Python API landing page",
     )
     ap.add_argument(
         "--title",
@@ -1793,7 +1896,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ensure_dir(out_dir / "functions")
 
     module_names = [
-        m for m in iter_package_modules(package_name)
+        m
+        for m in iter_package_modules(package_name)
         if not is_excluded_module(m, args.exclude_module)
     ]
     print("Discovered modules:")
@@ -1837,21 +1941,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     # Filter items that are excluded
     class_infos = [
-        c for c in class_infos
+        c
+        for c in class_infos
         if not is_excluded_class(
             c.full_name, c.module_name, args.exclude_module, args.exclude_class
         )
     ]
 
     func_infos = [
-        f for f in func_infos
+        f
+        for f in func_infos
         if not is_excluded_function(
             f.full_name, f.module_name, args.exclude_module, args.exclude_function
         )
     ]
 
     module_infos = {
-        m: minfo for m, minfo in module_infos.items()
+        m: minfo
+        for m, minfo in module_infos.items()
         if not is_excluded_module(m, args.exclude_module)
     }
 
@@ -1870,9 +1977,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         except Exception as e:
             nm = f.full_name
             content = render_object_header(nm, nm)
-            content += (
-                f"**Error inspecting function** `{nm}`:\n\n```text\n{type(e).__name__}: {e}\n```\n"
-            )
+            content += f"**Error inspecting function** `{nm}`:\n\n```text\n{type(e).__name__}: {e}\n```\n"
             write_file(function_page_path(out_dir, nm), content)
 
     # Class pages with preferred alias paths
@@ -1897,9 +2002,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         except Exception as e:
             nm = c.full_name
             content = render_object_header(nm, nm)
-            content += (
-                f"**Error inspecting class** `{nm}`:\n\n```text\n{type(e).__name__}: {e}\n```\n"
-            )
+            content += f"**Error inspecting class** `{nm}`:\n\n```text\n{type(e).__name__}: {e}\n```\n"
             write_file(class_page_path(out_dir, nm), content)
 
     if not args.no_index:

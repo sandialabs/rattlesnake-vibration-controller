@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Mar 31 10:19:37 2025
-
-@author: dprohe
+Utilities for the sine environment.
 """
 
 import os

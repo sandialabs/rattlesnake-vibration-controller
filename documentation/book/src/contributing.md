@@ -133,6 +133,7 @@ deactivate
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
 
+(development)=
 ## Development
 
 Before pushing changes, contributors should check code quality locally rather than relying solely on CI to catch problems. This means running the test suite (pytest), linting (pylint), format checking (ruff), code coverage, and confirming that the Jupyter Book documentation still builds — all on your own machine. Catching issues locally is faster than waiting on a CI run, and it keeps the CI pipeline green for everyone else.
@@ -367,6 +368,7 @@ jupyter book build
 
 The CI/CD pipeline comprises two GitHub Actions workflows, `ci.yml` and `release.yml`, described in detail below.
 
+(synopsis)=
 ### Synopsis
 
 `ci.yml` — Continuous Integration
