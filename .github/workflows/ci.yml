@@ -416,6 +416,11 @@ jobs:
   # 3. Run `uv run python src/rattlesnake/cicd/toc.py --myst_file documentation/myst.yml` from the root of the repository to check the table of contents
   # 4. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
   #
+  # DPR Note 9/29/2026 - MystMD/Jupyter Book's --strict seems very broken.
+  # It's detecting things like "Colors.RED" and "netCDF4.Group" as links,
+  # trying to resolve them and then failing.  Until they get that fixed,
+  # I think the --strict flag is more trouble than it's worth.
+  # 
   # Note that step 3 is not redundant. `--strict` does not fail on a missing
   # table of contents entry. MyST records that error against myst.yml, and the
   # strict check only inspects errors recorded against pages that made it into
@@ -495,9 +500,10 @@ jobs:
           set -o pipefail
 
           # Build the book. We use --strict to ensure any page errors fail the job.
+          # DPR Note 9/29/2026, removing --strict, see above.
           BUILD_LOG="${RUNNER_TEMP:-/tmp}/jupyter_book_build.log"
           cd documentation
-          uv run jupyter book build --html --strict 2>&1 | tee "$BUILD_LOG"
+          uv run jupyter book build --html 2>&1 | tee "$BUILD_LOG"
           cd ..
 
           # --strict only inspects errors recorded against pages that made it
