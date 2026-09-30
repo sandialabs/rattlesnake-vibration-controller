@@ -788,7 +788,7 @@ class DataCollectorProcess(AbstractMessageProcess):
         ----------
         data : Ignored
             Unused argument required due to the expectation that functions called
-            by the `RandomDataCollector.run` function will have one argument
+            by the RandomDataCollector.run function will have one argument
             accepting any data passed along with the instruction.
         """
         try:
@@ -942,7 +942,7 @@ class DataCollectorProcess(AbstractMessageProcess):
         ----------
         data : Ignored
             Unused argument required due to the expectation that functions called
-            by the `RandomDataCollector.run` function will have one argument
+            by the RandomDataCollector.run function will have one argument
             accepting any data passed along with the instruction.
         """
         sleep(0.05)
