@@ -1594,6 +1594,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pooch"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "platformdirs" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/83/43/85ef45e8b36c6a48546af7b266592dc32d7f67837a6514d111bced6d7d75/pooch-1.9.0.tar.gz", hash = "sha256:de46729579b9857ffd3e741987a2f6d5e0e03219892c167c6578c0091fb511ed", size = 61788, upload-time = "2026-01-30T19:15:09.649Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2a/2d/d4bf65e47cea8ff2c794a600c4fd1273a7902f268757c531e0ee9f18aa58/pooch-1.9.0-py3-none-any.whl", hash = "sha256:f265597baa9f760d25ceb29d0beb8186c243d6607b0f60b83ecf14078dbc703b", size = 67175, upload-time = "2026-01-30T19:15:08.36Z" },
+]
+
+[[package]]
 name = "prometheus-client"
 version = "0.24.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2081,6 +2095,7 @@ dependencies = [
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "openpyxl" },
     { name = "packaging" },
+    { name = "pooch" },
     { name = "pyqt5", marker = "sys_platform != 'darwin'" },
     { name = "pyqt6", marker = "sys_platform == 'darwin'" },
     { name = "pyqtgraph" },
@@ -2118,6 +2133,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "packaging" },
+    { name = "pooch", specifier = ">=1.6" },
     { name = "pylint", marker = "extra == 'dev'" },
     { name = "pyqt5", marker = "sys_platform != 'darwin'" },
     { name = "pyqt6", marker = "sys_platform == 'darwin'" },

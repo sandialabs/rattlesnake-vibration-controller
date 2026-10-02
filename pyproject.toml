@@ -31,6 +31,7 @@ dependencies = [
   "packaging",
   "PyQt5; sys_platform!='darwin'",
   "PyQt6; sys_platform=='darwin'",
+  "pooch>=1.6",
   "pyqtgraph",
   "pytz",
   "qtpy",
@@ -70,6 +71,16 @@ local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead o
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rattlesnake"]
+# TODO: This single-file exclusion is temporary. Once every data file is listed in
+# src/rattlesnake/data/registry.txt, replace it with the general exclusion:
+#   exclude = [
+#     "/src/rattlesnake/examples/**/*.nc4",
+#     "/src/rattlesnake/examples/**/*.npz",
+#     "/src/rattlesnake/examples/**/*.npy",
+#   ]
+exclude = [
+  "/src/rattlesnake/examples/hardware/sdynpy_system/sdynpy_system.npz",
+]
 
 [tool.hatch.build.targets.sdist]
 # Explicit allowlist: without this, hatchling's default sdist packaging sweeps
@@ -83,6 +94,16 @@ include = [
   "/LICENSE",
   "/pyproject.toml",
   "/uv.lock",
+]
+# TODO: This single-file exclusion is temporary. Once every data file is listed in
+# src/rattlesnake/data/registry.txt, replace it with the general exclusion:
+#   exclude = [
+#     "/src/rattlesnake/examples/**/*.nc4",
+#     "/src/rattlesnake/examples/**/*.npz",
+#     "/src/rattlesnake/examples/**/*.npy",
+#   ]
+exclude = [
+  "/src/rattlesnake/examples/hardware/sdynpy_system/sdynpy_system.npz",
 ]
 
 [tool.pytest.ini_options]

@@ -3,19 +3,20 @@ import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
 
+from rattlesnake import data
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system_virtual_hardware import (
     SDynPySystemMetadata,
 )
 
-HARDWARE_FILE = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system.npz"
+HARDWARE_FILE_NAME = "hardware/sdynpy_system/sdynpy_system.npz"
 
 
 def worksheet_sdynpy_system_metadata():
     worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = SDynPySystemMetadata.load_metadata_from_workbook(workbook)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     workbook.close()
     return metadata
 
@@ -24,7 +25,7 @@ def netcdf_sdynpy_system_metadata():
     netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.nc4"
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = SDynPySystemMetadata.load_metadata_from_netcdf(netcdf_dataset)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     netcdf_dataset.close()
     return metadata
 
@@ -66,7 +67,7 @@ def manual_sdynpy_system_metadata(**overrides):
         time_per_read=defaults.BUFFER_SIZE,
         time_per_write=defaults.BUFFER_SIZE,
         output_oversample=defaults.OUTPUT_OVERSAMPLE,
-        hardware_file=HARDWARE_FILE,
+        hardware_file=data.fetch(name=HARDWARE_FILE_NAME),
     )
     kwargs.update(overrides)
     return SDynPySystemMetadata(**kwargs)
