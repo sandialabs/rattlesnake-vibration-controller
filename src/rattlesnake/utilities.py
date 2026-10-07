@@ -1038,9 +1038,14 @@ def load_python_module(module_path):
     module : module:
         A reference to the loaded module
     """
-    _, file = os.path.split(module_path)
-    file, _ = os.path.splitext(file)
-    spec = importlib.util.spec_from_file_location(file, module_path)
+    if os.path.isfile(module_path):
+        _, file = os.path.split(module_path)
+        file, _ = os.path.splitext(file)
+        spec = importlib.util.spec_from_file_location(file, module_path)
+    else:
+        spec = importlib.util.find_spec(module_path)
+        if spec is None:
+            raise ImportError(f'Could not find spec for module at: {module_path}')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

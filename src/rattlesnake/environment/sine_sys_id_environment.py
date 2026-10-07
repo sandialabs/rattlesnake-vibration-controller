@@ -1387,13 +1387,7 @@ class SineEnvironment(SysIdEnvironment):
                 environment_metadata.control_python_parameters
             )
         else:
-            _, file = os.path.split(environment_metadata.control_python_script)
-            file, _ = os.path.splitext(file)
-            spec = importlib.util.spec_from_file_location(
-                file, environment_metadata.control_python_script
-            )
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            module = load_python_module(environment_metadata.control_python_script)
             self.extra_control_parameters = (
                 environment_metadata.control_python_parameters
             )
