@@ -911,6 +911,19 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                     )
                 )
             ]
+            # inspect class control laws for a property
+            # this will be used to pre-fill the 'Extra Parameters' textbox
+            default_property_name = "default_extra_parameters"
+            defaults = [""] * len(functions)
+            for i, function in enumerate(functions):
+                if inspect.isclass(function[1]) and hasattr(
+                    function[1], default_property_name
+                ):
+                    prop = getattr(function[1], default_property_name)
+                    if isinstance(prop, property):
+                        value = prop.fget(function[1].__new__(function[1]))
+                        if isinstance(value, str):
+                            defaults[i] = value
         except Exception as e:
             self.display_error(e)
             return
@@ -920,8 +933,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         self.definition_widget.control_function_input.clear()
         self.definition_widget.control_script_file_path_input.setText(filename)
-        for function in functions:
-            self.definition_widget.control_function_input.addItem(function[0])
+        for function, default in zip(functions, defaults):
+            self.definition_widget.control_function_input.addItem(function[0], default)
 
     def update_generator_selector(self):
         """Updates the function/generator selector based on the function selected"""
@@ -936,6 +949,16 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
         except AttributeError:
             return
+        default_text = self.definition_widget.control_function_input.itemData(
+            self.definition_widget.control_function_input.currentIndex(), Qt.UserRole
+        )
+        if self.definition_widget.control_parameters_text_input.toPlainText() in [
+            "",
+            default_text,
+        ]:
+            self.definition_widget.control_parameters_text_input.setPlainText(
+                default_text
+            )
         if inspect.isgeneratorfunction(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
                 1
