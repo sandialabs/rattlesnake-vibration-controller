@@ -35,6 +35,8 @@ test_file_list
     Keeps only the registered suffixes, from every subdirectory, sorted.
 test_file_list_missing_directory
     Raises ``FileNotFoundError`` for a directory that does not exist.
+test_file_list_skips_output_files
+    Leaves out ``OUTPUT_FILES`` names even when the files exist on disk.
 test_build
     Maps each file name to the SHA-256 hash of its content.
 test_render
@@ -162,6 +164,26 @@ def test_file_list_missing_directory(tmp_path: pathlib.Path) -> None:
     """
     with pytest.raises(FileNotFoundError):
         registry.file_list(directory=tmp_path / "missing")
+
+
+def test_file_list_skips_output_files(examples: pathlib.Path) -> None:
+    """
+    Leave out ``OUTPUT_FILES`` names even when the files exist on disk.
+
+    A ``SAVE_CONTROL_DATA`` example run writes these files under the examples
+    directory. They change on every run, so they must never be registered.
+    """
+    for name in registry.OUTPUT_FILES:
+        (examples / name).parent.mkdir(parents=True, exist_ok=True)
+        (examples / name).write_bytes(b"run output")
+    assert registry.file_list(directory=examples) == [
+        "a/one.npz",
+        "b/deep/two.nc4",
+        "zero.npy",
+    ]
+    assert set(registry.file_list(directory=examples, excluded=frozenset())) >= (
+        registry.OUTPUT_FILES
+    )
 
 
 def test_build(examples: pathlib.Path) -> None:

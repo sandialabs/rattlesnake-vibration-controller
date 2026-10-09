@@ -40,6 +40,8 @@ test_git_ref_installed_version
     Returns ``dev`` or a ``v``-prefixed tag for the installed version.
 test_hash_check
     Accepts, rejects, and handles a missing file.
+test_cache_directory_default
+    Matches the per-platform cache path that the Contributing page documents.
 test_package_directory_is_examples_package
     Compares ``PACKAGE_DIRECTORY`` with the import system's answer.
 test_registry_entries_are_well_formed
@@ -60,10 +62,12 @@ test_fetch_rejects_corrupt_download
 
 import functools
 import hashlib
+import os
 import http.server
 import importlib.util
 import pathlib
 import re
+import sys
 import threading
 from collections.abc import Callable, Iterator
 from typing import NoReturn
@@ -129,6 +133,27 @@ def test_git_ref_installed_version() -> None:
     """
     ref = data.git_ref()
     assert ref == "dev" or ref.startswith("v")
+
+
+def test_cache_directory_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Match the per-platform cache path that the Contributing page documents.
+
+    The Large Data Files section of ``contributing.md`` lists one default cache
+    directory per operating system. CI runs this test on macOS, Linux, and
+    Windows, so a wrong row in that table fails on the matching runner.
+    """
+    monkeypatch.delenv(data.ENV_VAR, raising=False)
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    path = data.cache_directory(ref="dev")
+    home = pathlib.Path.home()
+    if sys.platform == "darwin":
+        assert path == home / "Library" / "Caches" / "rattlesnake" / "dev"
+    elif sys.platform == "win32":
+        local = pathlib.Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local"))
+        assert path == local / "rattlesnake" / "rattlesnake" / "Cache" / "dev"
+    else:
+        assert path == home / ".cache" / "rattlesnake" / "dev"
 
 
 def test_hash_check(tmp_path: pathlib.Path) -> None:

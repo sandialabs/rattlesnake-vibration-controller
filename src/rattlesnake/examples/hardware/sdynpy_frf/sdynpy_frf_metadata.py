@@ -7,24 +7,25 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_frf_virtual_hardware import (
     SDynPyFRFMetadata,
 )
+from rattlesnake import data
 
-HARDWARE_FILE = defaults.DIRECTORY + "/hardware/sdynpy_frf/sdynpy_frf.npz"
+HARDWARE_FILE_NAME = "hardware/sdynpy_frf/sdynpy_frf.npz"
 
 
 def worksheet_sdynpy_frf_metadata():
     worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_frf/sdynpy_frf_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = SDynPyFRFMetadata.load_metadata_from_workbook(workbook)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     workbook.close()
     return metadata
 
 
 def netcdf_sdynpy_frf_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/sdynpy_frf/sdynpy_frf_v4.nc4"
+    netcdf_dir = data.fetch(name="hardware/sdynpy_frf/sdynpy_frf_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = SDynPyFRFMetadata.load_metadata_from_netcdf(netcdf_dataset)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     netcdf_dataset.close()
     return metadata
 
@@ -64,7 +65,7 @@ def manual_sdynpy_frf_metadata(**overrides):
         sample_rate=defaults.SAMPLE_RATE,
         time_per_read=defaults.BUFFER_SIZE,
         time_per_write=defaults.BUFFER_SIZE,
-        hardware_file=HARDWARE_FILE,
+        hardware_file=data.fetch(name=HARDWARE_FILE_NAME),
     )
     kwargs.update(overrides)
     return SDynPyFRFMetadata(**kwargs)

@@ -13,6 +13,7 @@ from rattlesnake.environment.time_environment import (
     TimeMetadata,
     TimeInstructions,
 )
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Time 0"
 
@@ -43,12 +44,12 @@ def worksheet_time_metadata(hardware_metadata):
 
     signal = create_time_signal(hardware_metadata)
     metadata.output_signal = signal
-    metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
+    metadata._signal_file = data.fetch(name="environment/time/time_signal.npy")
     return metadata
 
 
 def netcdf_time_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/time/time_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/time/time_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -56,7 +57,7 @@ def netcdf_time_metadata(hardware_metadata):
     metadata = TimeMetadata.load_metadata_from_netcdf(
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
-    metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
+    metadata._signal_file = data.fetch(name="environment/time/time_signal.npy")
 
     return metadata
 
@@ -79,7 +80,7 @@ def manual_time_metadata(hardware_metadata, **overrides):
     )
     kwargs.update(overrides)
     metadata = TimeMetadata(**kwargs)
-    metadata._signal_file = defaults.DIRECTORY + "/environment/time/time_signal.npy"
+    metadata._signal_file = data.fetch(name="environment/time/time_signal.npy")
 
     return metadata
 
@@ -128,8 +129,8 @@ def time_event_list():
 
     timestamp = 7
     command = TimeCommands.SET_TEST_LEVEL
-    data = 5
-    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 10
     command = GlobalCommands.STOP_STREAMING

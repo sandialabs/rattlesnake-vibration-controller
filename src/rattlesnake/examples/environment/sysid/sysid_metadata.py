@@ -7,10 +7,11 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
     SysIdDataPackage,
 )
+from rattlesnake import data
 
 
 def netcdf_sysid_data_package():
-    netcdf_dir = defaults.DIRECTORY + "/environment/sysid/sysid_data.nc4"
+    netcdf_dir = data.fetch(name="environment/sysid/sysid_data.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups["sysid"]
     data_package = SysIdDataPackage.load_package_from_netcdf(netcdf_group)
@@ -19,7 +20,7 @@ def netcdf_sysid_data_package():
 
 
 def netcdf_sysid_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sysid/sysid.nc4"
+    netcdf_dir = data.fetch(name="environment/sysid/sysid.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups["sysid"]
     metadata = SysIdMetadata.load_metadata_from_netcdf(netcdf_group, hardware_metadata)

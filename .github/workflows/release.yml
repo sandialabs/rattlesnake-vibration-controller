@@ -31,7 +31,9 @@ jobs:
       - name: Verify tag is on main or dev branch
         run: |
           TAG="${{ github.ref_name }}"
-          BRANCHES=$(git branch -r --contains "refs/tags/$TAG" | grep -E '^\s*origin/(main|dev)\s*$' || true)
+          # TODO: remove dev-large-files before merging to dev. It is a temporary
+          # exception that lets v4.0.0rc4 publish to TestPyPI from that branch (issue #139).
+          BRANCHES=$(git branch -r --contains "refs/tags/$TAG" | grep -E '^\s*origin/(main|dev|dev-large-files)\s*$' || true)
           if [ -z "$BRANCHES" ]; then
             echo "ERROR: Tag '$TAG' must be created on the 'main' or 'dev' branch."
             echo "Tag is reachable from:"

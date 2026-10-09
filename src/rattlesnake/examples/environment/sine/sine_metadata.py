@@ -14,6 +14,7 @@ from rattlesnake.environment.sine_sys_id_environment import (
     SineInstructions,
 )
 from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Sine 0"
 
@@ -34,7 +35,7 @@ def worksheet_sine_metadata(hardware_metadata):
 
 
 def netcdf_sine_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/sine/sine_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -171,8 +172,8 @@ def sine_event_list():
 
     timestamp = 0
     command = SineCommands.SET_TEST_LEVEL
-    data = 5
-    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 0.5
     command = GlobalCommands.START_ENVIRONMENT
@@ -188,8 +189,8 @@ def sine_event_list():
 
     timestamp = 10
     command = SineCommands.SAVE_CONTROL_DATA
-    data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
-    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 10
     command = GlobalCommands.STOP_STREAMING

@@ -12,6 +12,7 @@ from rattlesnake.environment.skeleton_environment import (
     SkeletonMetadata,
     SkeletonInstructions,
 )
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Skeleton 0"
 
@@ -29,7 +30,7 @@ def worksheet_skeleton_metadata(hardware_metadata):
 
 
 def netcdf_skeleton_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/skeleton/skeleton_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/skeleton/skeleton_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -76,13 +77,13 @@ def skeleton_event_list():
 
     timestamp = 1
     command = SkeletonCommands.EXAMPLE_SET_TEST_LEVEL
-    data = 2
-    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 2
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 1
     command = SkeletonCommands.EXAMPLE_FLOAT_COMMAND
-    data = 3.5
-    example_float_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 3.5
+    example_float_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 10
     command = GlobalCommands.STOP_ENVIRONMENT

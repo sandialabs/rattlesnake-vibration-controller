@@ -21,10 +21,20 @@ its module docstring satisfies pylint's ``missing-module-docstring`` check.
 ``SUFFIXES`` must match the ``exclude`` globs in ``pyproject.toml``. A suffix
 that is excluded from the wheel but missing here is a file that ships nowhere.
 
+Files that Rattlesnake writes do not belong in the registry. A
+``SAVE_CONTROL_DATA`` profile event, for example, writes control data to a
+path. Such a file changes on every run, so its hash never stays fixed, and
+nothing reads it back. ``OUTPUT_FILES`` lists the output names that example
+runs used to leave under the examples directory. The generator skips them even
+when a stray copy exists on disk.
+
 Attributes
 ----------
 SUFFIXES : tuple of str
     File suffixes that belong in the registry.
+OUTPUT_FILES : frozenset of str
+    Names, relative to the examples directory, of files that Rattlesnake
+    writes. The generator never registers them.
 HEADER : str
     Pylint directive and module docstring at the top of the generated file.
 REGISTRY_PATH : pathlib.Path
@@ -41,6 +51,12 @@ import sys
 from rattlesnake import data
 
 SUFFIXES = (".nc4", ".npz", ".npy")
+OUTPUT_FILES = frozenset(
+    {
+        "environment/random/random_control_data.nc4",
+        "environment/sine/sine_control_data.npz",
+    }
+)
 HEADER = (
     "# pylint: disable=line-too-long\n"
     '"""\n'
@@ -51,6 +67,9 @@ HEADER = (
     "\n"
     "Each key is a file name relative to src/rattlesnake/examples/.\n"
     "Each value is the SHA-256 hash of that file.\n"
+    "\n"
+    "Files that Rattlesnake writes, such as SAVE_CONTROL_DATA outputs, do not\n"
+    "belong here. See OUTPUT_FILES in rattlesnake/data/registry.py.\n"
     '"""\n'
     "\n"
 )
@@ -61,6 +80,7 @@ def file_list(
     *,
     directory: str | os.PathLike[str],
     suffixes: tuple[str, ...] = SUFFIXES,
+    excluded: frozenset[str] = OUTPUT_FILES,
 ) -> list[str]:
     """
     List the files under a directory that have one of the given suffixes.
@@ -71,6 +91,8 @@ def file_list(
         Directory to search, including all subdirectories.
     suffixes : tuple of str, optional
         File suffixes to keep, with the leading dot. Defaults to ``SUFFIXES``.
+    excluded : frozenset of str, optional
+        Relative names to skip. Defaults to ``OUTPUT_FILES``.
 
     Returns
     -------
@@ -86,11 +108,12 @@ def file_list(
     directory = pathlib.Path(directory)
     if not directory.is_dir():
         raise FileNotFoundError(f"not a directory: {directory}")
-    return sorted(
+    names = (
         path.relative_to(directory).as_posix()
         for path in directory.rglob("*")
         if path.is_file() and path.suffix in suffixes
     )
+    return sorted(name for name in names if name not in excluded)
 
 
 def build(

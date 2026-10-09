@@ -13,6 +13,7 @@ from rattlesnake.environment.transient_sys_id_environment import (
     TransientMetadata,
     TransientInstructions,
 )
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Transient 0"
 
@@ -37,7 +38,7 @@ def worksheet_transient_metadata(hardware_metadata):
 
 
 def netcdf_transient_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/transient/transient_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/transient/transient_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -132,8 +133,8 @@ def transient_event_list():
 
     timestamp = 5
     command = TransientCommands.SET_TEST_LEVEL
-    data = 5
-    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 6.5
     command = GlobalCommands.START_ENVIRONMENT

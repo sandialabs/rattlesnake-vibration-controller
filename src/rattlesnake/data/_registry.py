@@ -7,19 +7,20 @@ Do not edit by hand. Run the command above to regenerate this file.
 
 Each key is a file name relative to src/rattlesnake/examples/.
 Each value is the SHA-256 hash of that file.
+
+Files that Rattlesnake writes, such as SAVE_CONTROL_DATA outputs, do not
+belong here. See OUTPUT_FILES in rattlesnake/data/registry.py.
 """
 
 registry = {
     "environment/modal/modal_v3.nc4": "f202a695c6242671f986b742933b552f41c44bfb5fb83a4fce516c56daadc8af",
     "environment/modal/modal_v4.nc4": "d57b160a852d22651b70d741b06a95bf1e05ebc57bd25224e13411d126038049",
-    "environment/random/random_control_data.nc4": "21e6e9255033569b6a8143afab6b81ecfdd7028e5ba2a9bcac5704c62fbebf6a",
     "environment/random/random_spec.npz": "645afecee211fc54a53cc8c8bc410185eb025b9d536d945692dc834d95e8536f",
     "environment/random/random_v3.nc4": "6e917101aca2ccf2726e6c45e86ca9256cf3206a28d4ac2f130cf3e6d38ba0b3",
     "environment/random/random_v4.nc4": "ec853199983d857777da3c03dbced95706da5e25b0e6aea57b9d35844a60a0cd",
     "environment/read/read_v4.nc4": "7feb09f4e2a843538b35e20ecd746dd6036b7a0597be8f7771983a566bc67423",
     "environment/sds/sds_spec.npz": "699f501b5247d15300e62c8f738052060352952c8435cdac8060ba27f5a84aa1",
     "environment/sds/sds_v4.nc4": "09f03945ef4fe864faea09fcac5be80afa675ac619f1c3682926157b49ae126e",
-    "environment/sine/sine_control_data.npz": "ed6e8681d42fa6cb7333dca978067eb3a8fc97cf7e92b39aa7fd256407d0413c",
     "environment/sine/sine_spec.npz": "76dbba31baf26d7fa4166d01c1457eacf8b1dbe95835f6c903fde4729fca547e",
     "environment/sine/sine_v3.nc4": "dca1efe30dfef5a94f7430f3f26d0d217aebf08216fa2c5078b7a94ef0daf9a0",
     "environment/sine/sine_v4.nc4": "85bcff3ff94a4e7d1fe70e822f37ecba3a6cf9e12e05a8f27ef2b76551201fad",

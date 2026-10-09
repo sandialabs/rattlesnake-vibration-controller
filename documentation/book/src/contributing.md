@@ -363,6 +363,124 @@ cd documentation
 jupyter book build
 ```
 
+(sec:large-data-files)=
+## Large Data Files
+
+Rattlesnake downloads its large example data files on demand.  The files stay in the repository under version control.  They are left out of the wheel and sdist that we publish to PyPI.  The `rattlesnake.data` module fetches each file the first time code needs it.  The module uses the [Pooch](https://www.fatiando.org/pooch/) library.  This section explains the reasons for this design and how it works.  It also lists the safeguards we verified.  Issue [#139](https://github.com/sandialabs/rattlesnake-vibration-controller/issues/139) records the original discussion.
+
+### Motivation
+
+The repository holds 39 example data files under `src/rattlesnake/examples`: 23 `.nc4`, 13 `.npz`, and 3 `.npy`.  Together they take 47.6 MB on disk.  We want to keep them in the repository.  Tests, examples, and the documentation use them, and Git records every change to them.
+
+We do not want them in the published distribution.  Every release uploads a new wheel and sdist to PyPI, and PyPI keeps every past release.  Release 4.0.0rc3 shipped 41 data files.  Two of them were run outputs that the repository no longer tracks.  The 41 files took 19.9 MB of its 20.9 MB wheel, or 96%.  The other 244 files in that wheel took 1.0 MB.  Each new release would add another 20 MB copy of unchanged data.
+
+### Alternatives considered
+
+| Approach | Decision |
+|---|---|
+| Keep shipping the files in the wheel | Rejected.  Every release adds about 20 MB to PyPI. |
+| Download at install time | Not possible.  pip runs no package code when it installs a wheel.  A build hook could download files during an sdist install.  We rejected that, because a build should not depend on the network, and many build environments block it. |
+| Separate data package, installed as an extra (`pip install "rattlesnake-vibration-controller[examples]"`) | Rejected.  It needs a second PyPI project, a second Trusted Publisher entry, and a second publish job in `release.yml`.  Our version comes from the git tag through `hatch-vcs`, so pinning the data package to the main package's version needs extra build code.  Both wheels would also write into the same `rattlesnake/` directory. |
+| Archive on a GitHub release, plus a `download-data` command | Rejected for now.  Users must remember to run an extra command before the examples work.  A single archive suits datasets too large to fetch file by file.  Our largest file is 7.7 MB (`frame_wing/data/sdynpy_fem_shapes.npy`). |
+| Git LFS | Rejected.  A raw GitHub URL for an LFS file returns a small pointer file, not the data.  The team has also had bad experiences with LFS. |
+| Write our own downloader | Rejected.  It would need hash checks, retries, atomic writes, and a cache directory on each operating system.  Pooch already provides all four, and SciPy and scikit-image rely on it. |
+| Download on demand with Pooch | **Chosen.** |
+
+Pooch adds two packages to an install, `pooch` and `platformdirs`.  Pooch's other dependencies, `requests` and `packaging`, are already Rattlesnake dependencies.  Both new packages are pure Python.
+
+### Who else uses Pooch
+
+[Fatiando a Terra](https://www.fatiando.org) maintains Pooch.  The Pooch [README](https://github.com/fatiando/pooch) lists 40 projects that use it:
+
+| | | | |
+|---|---|---|---|
+| [SciPy](https://github.com/scipy/scipy) | [scikit-image](https://github.com/scikit-image/scikit-image) | [xarray](https://github.com/pydata/xarray) | [MetPy](https://github.com/Unidata/MetPy) |
+| [napari](https://github.com/napari/napari) | [MNE-Python](https://github.com/mne-tools/mne-python) | [PyVista](https://github.com/pyvista/pyvista) | [yt](https://github.com/yt-project/yt) |
+| [Satpy](https://github.com/pytroll/satpy) | [HyperSpy](https://github.com/hyperspy/hyperspy) | [RosettaSciIO](https://github.com/hyperspy/rosettasciio) | [eXSpy](https://github.com/hyperspy/exspy) |
+| [Py-ART](https://github.com/ARM-DOE/pyart) | [GeoViews](https://github.com/holoviz/geoviews) | [cf-xarray](https://github.com/xarray-contrib/cf-xarray) | [xclim](https://github.com/Ouranosinc/xclim) |
+| [SHTOOLS](https://github.com/SHTOOLS/SHTOOLS) | [GemPy](https://github.com/cgre-aachen/gempy) | [GemGIS](https://github.com/cgre-aachen/gemgis) | [Open AR-Sandbox](https://github.com/cgre-aachen/open_AR_Sandbox) |
+| [Ensaio](https://github.com/fatiando/ensaio) | [icepack](https://github.com/icepack/icepack) | [climlab](https://github.com/climlab/climlab) | [CLISOPS](https://github.com/roocs/clisops) |
+| [histolab](https://github.com/histolab/histolab) | [seaborn-image](https://github.com/SarthakJariwala/seaborn-image) | [Brainrender](https://github.com/brainglobe/brainrender) | [cellfinder](https://github.com/brainglobe/cellfinder) |
+| [MOABB](https://github.com/NeuroTechX/moabb) | [ScopeSim](https://github.com/AstarVienna/ScopeSim) | [pyxem](https://github.com/pyxem/pyxem) | [PVGeo](https://github.com/OpenGeoVis/PVGeo) |
+| [geosnap](https://github.com/oturns/geosnap) | [BioCypher](https://github.com/biocypher/biocypher) | [Scirpy](https://github.com/scverse/scirpy) | [rembg](https://github.com/danielgatis/rembg) |
+| [DASCore](https://github.com/DASDAE/dascore) | [scikit-mobility](https://github.com/scikit-mobility/scikit-mobility) | [SPLASH](https://github.com/Adam-Boesky/astro_SPLASH) | [scXpand](https://github.com/yizhak-lab-ccg/scXpand) |
+
+scikit-image adopted Pooch in [PR #3945](https://github.com/scikit-image/scikit-image/pull/3945), merged in March 2020.  That PR moved its test data and new datasets onto Pooch and kept 7 MB of legacy data in the wheel.  The PR author measured the wheel at 41 MB before the change and 27 MB after it.
+
+### How `rattlesnake.data.fetch` works
+
+Code asks for a file by its path relative to `src/rattlesnake/examples`:
+
+```python
+from rattlesnake import data
+
+path = data.fetch(name="hardware/sdynpy_system/sdynpy_system.npz")
+```
+
+`data.fetch` returns the local path of a file whose SHA-256 hash matches the registry.  It looks in three places, in order:
+
+1. **The package tree.**  A git checkout still contains every data file.  If the file is there and its hash matches, `fetch` returns it with no network access.  Developers and CI therefore never download anything.
+2. **The local cache.**  Pooch returns a cached copy if its hash matches.
+3. **GitHub.**  Pooch downloads the file, checks its hash, and saves it to the cache.
+
+The download URL depends on the installed version.  A tagged release such as `4.0.0rc4` downloads from the git tag `v4.0.0rc4`.  An old install therefore keeps receiving the data that matches its own code.  A development version, such as `4.0.0rc4.dev4`, downloads from the `dev` branch.
+
+`src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.
+
+The cache lives in a per-ref directory under the user cache:
+
+| Operating system | Cache directory |
+|---|---|
+| macOS | `~/Library/Caches/rattlesnake/<ref>` |
+| Linux | `~/.cache/rattlesnake/<ref>`, or `$XDG_CACHE_HOME/rattlesnake/<ref>` |
+| Windows | `C:\Users\<user>\AppData\Local\rattlesnake\rattlesnake\Cache\<ref>` |
+
+`<ref>` is the git ref, such as `v4.0.0rc4` or `dev`.  Set the `RATTLESNAKE_DATADIR` environment variable to use a different directory.  On a machine without network access, copy a filled cache directory onto the machine and point `RATTLESNAKE_DATADIR` at it.
+
+### Safeguards
+
+We installed a locally built wheel into a clean virtual environment and checked each safeguard below.  The wheel excluded all three file types.  These checks used Pooch 1.9.0 on macOS.  At the time, the registry held 41 entries.  Two of them were run outputs, which we later removed from the registry.
+
+| Safeguard | What happens | What we verified |
+|---|---|---|
+| Files are not in the distribution | The `exclude` globs in `pyproject.toml` drop every `.nc4`, `.npz`, and `.npy` file under `examples/`. | The wheel and sdist contain 0 of the 41 data files. |
+| Download on first use | `fetch` downloads a file only when code asks for it.  Importing an example module downloads nothing. | The first pass over all 41 names downloaded 40 files in 59.7 s.  The 41st file was already cached from an earlier test. |
+| Hash check on download | Pooch computes the SHA-256 of each download and compares it with the registry. | All 41 downloaded files matched the registry. |
+| Cache reuse | A second `fetch` returns the cached file without contacting GitHub. | The second pass over all 41 names took 0.1 s and downloaded nothing. |
+| Corrupt cache repair | Pooch hashes the cached file before it returns it.  On a mismatch it downloads a fresh copy. | We overwrote a cached file with junk.  The next `fetch` downloaded the original file again, and its hash matched. |
+| Wrong hash rejected | Pooch retries a download whose hash does not match.  After the last attempt it raises `ValueError`. | We replaced a registry hash with 64 zeros.  Pooch made four download attempts, then raised `ValueError: SHA256 hash of downloaded file (srs_specification.npz) does not match the known hash`. |
+| Retries | `fetch` sets `retry_if_failed=3`.  Pooch makes 1 + 3 = 4 attempts.  It waits 1 s, 2 s, then 3 s between them. | We counted four calls to Pooch's HTTP downloader in the wrong-hash test. |
+| Atomic writes | Pooch downloads to a temporary file in the cache directory.  It moves the file into place only after the hash matches. | After the failed wrong-hash test, the good cached file was unchanged. |
+
+### Distribution size
+
+| Release | Data files in package | Wheel | sdist |
+|---|---|---|---|
+| 4.0.0rc3 (TestPyPI) | 41 | 20,907,340 bytes | 20,964,518 bytes |
+| Local build with all three globs | 0 | 972,599 bytes | 897,051 bytes |
+| 4.0.0rc4 (TestPyPI) | 0 | *pending release* | *pending release* |
+
+The local build is 95.3% smaller than the rc3 wheel and 95.7% smaller than the rc3 sdist.  We will replace the local-build row with the published 4.0.0rc4 sizes once that release reaches TestPyPI.
+
+### Adding or changing a data file
+
+1. Put the file under `src/rattlesnake/examples`.
+2. Regenerate the registry from the repository root:
+
+   ```sh
+   uv run python -m rattlesnake.data.registry
+   ```
+
+   To check the registry without writing it, add `--check`.  The command exits non-zero when the registry is out of date.
+
+3. Read the file through `data.fetch(name=...)`.  Do not build its path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.
+4. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.
+5. Commit the data file and the updated `_registry.py` together.
+
+```{note}
+Use `data.fetch` only for files that Rattlesnake reads.  The registry never lists a file that Rattlesnake writes.  `OUTPUT_FILES` in `src/rattlesnake/data/registry.py` names the known output files, and the generator skips them.  Some examples also name a file that Rattlesnake writes, such as the destination of a `SAVE_CONTROL_DATA` profile event.  Build those paths the usual way.  If `fetch` returned a cache path for an output file, Rattlesnake would overwrite the cached copy, and its hash would no longer match.
+```
+
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
 The CI/CD pipeline comprises two GitHub Actions workflows, `ci.yml` and `release.yml`, described in detail below.

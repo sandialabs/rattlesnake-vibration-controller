@@ -28,6 +28,7 @@ from rattlesnake.environment.sds_sys_id_utilities import (
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.utilities import DIRECTORY
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "SDS 0"
 
@@ -108,7 +109,7 @@ def manual_sds_metadata(hardware_metadata, **overrides):
 
 
 def netcdf_sds_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/sds/sds_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/sds/sds_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -128,7 +129,7 @@ def worksheet_sds_metadata(hardware_metadata):
     workbook = openpyxl.load_workbook(worksheet_dir)
     worksheet = workbook[ENVIRONMENT_NAME]
 
-    worksheet.cell(18, 2, defaults.DIRECTORY + "/environment/sds/sds_spec.npz")
+    worksheet.cell(18, 2, data.fetch(name="environment/sds/sds_spec.npz"))
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     metadata = SDSMetadata.load_metadata_from_worksheet(

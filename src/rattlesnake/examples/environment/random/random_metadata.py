@@ -12,6 +12,7 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
 )
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Random 0"
 
@@ -43,7 +44,7 @@ def worksheet_random_metadata(hardware_metadata):
 
 
 def netcdf_random_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/random/random_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/random/random_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -165,8 +166,8 @@ def random_event_list():
 
     timestamp = 5
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = 5
-    adjust_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 5
+    adjust_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 15
     command = GlobalCommands.STOP_ENVIRONMENT
@@ -174,13 +175,13 @@ def random_event_list():
 
     timestamp = 16
     command = RandomVibrationCommands.SAVE_CONTROL_DATA
-    data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
-    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 17
     command = RandomVibrationCommands.CHANGE_SPECIFICATION
-    data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
-    change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = data.fetch(name="environment/random/random_spec.npz")
+    change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 20
     command = GlobalCommands.START_ENVIRONMENT
@@ -229,5 +230,5 @@ def worksheet_random_event_list():
     save_event = event_list[4]
     save_event.data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
     change_spec_event = event_list[5]
-    change_spec_event.data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
+    change_spec_event.data = data.fetch(name="environment/random/random_spec.npz")
     return event_list

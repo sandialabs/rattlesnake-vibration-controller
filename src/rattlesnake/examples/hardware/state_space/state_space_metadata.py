@@ -7,24 +7,25 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.state_space_virtual_hardware import (
     StateSpaceMetadata,
 )
+from rattlesnake import data
 
-HARDWARE_FILE = defaults.DIRECTORY + "/hardware/state_space/state_space.npz"
+HARDWARE_FILE_NAME = "hardware/state_space/state_space.npz"
 
 
 def worksheet_state_space_metadata():
     worksheet_dir = defaults.DIRECTORY + "/hardware/state_space/state_space_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     metadata = StateSpaceMetadata.load_metadata_from_workbook(workbook)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     workbook.close()
     return metadata
 
 
 def netcdf_state_space_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/state_space/state_space_v4.nc4"
+    netcdf_dir = data.fetch(name="hardware/state_space/state_space_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = StateSpaceMetadata.load_metadata_from_netcdf(netcdf_dataset)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     netcdf_dataset.close()
     return metadata
 
@@ -66,7 +67,7 @@ def manual_state_space_metadata(**overrides):
         time_per_read=defaults.BUFFER_SIZE,
         time_per_write=defaults.BUFFER_SIZE,
         output_oversample=defaults.OUTPUT_OVERSAMPLE,
-        hardware_file=HARDWARE_FILE,
+        hardware_file=data.fetch(name=HARDWARE_FILE_NAME),
     )
     kwargs.update(overrides)
     return StateSpaceMetadata(**kwargs)

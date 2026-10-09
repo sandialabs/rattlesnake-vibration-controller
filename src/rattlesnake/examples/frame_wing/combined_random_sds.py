@@ -33,6 +33,7 @@ from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+from rattlesnake import data
 
 
 
@@ -58,7 +59,7 @@ def build_combined_controller(threaded=False):
         time_per_read=0.25,
         time_per_write=0.25,
         output_oversample=10,
-        hardware_file=rattlesnake_directory + "/frame_wing/data/rattlesnake_state_space_system.npz",
+        hardware_file=data.fetch(name="frame_wing/data/rattlesnake_state_space_system.npz"),
     )
 
     rattlesnake.initialize_hardware(hardware_metadata)
@@ -85,7 +86,7 @@ def build_combined_controller(threaded=False):
     )
 
     spec_freq_lines, spec_cpsd_matrix, spec_warning_matrix, spec_abort_matrix = load_specification(
-        spec_path=rattlesnake_directory + "/frame_wing/data/random_vibration_specification.npz",
+        spec_path=data.fetch(name="frame_wing/data/random_vibration_specification.npz"),
         n_freq_lines=sysid_parameters.sysid_frame_size // 2 + 1,
         df=sysid_parameters.sample_rate / sysid_parameters.sysid_frame_size,
     )
@@ -190,7 +191,7 @@ def build_combined_controller(threaded=False):
         error_tolerance=0.05,
     )
 
-    spec_data = np.load(rattlesnake_directory + "/frame_wing/data/srs_specification.npz")
+    spec_data = np.load(data.fetch(name="frame_wing/data/srs_specification.npz"))
     specification = SpecParameters(
         frequencies=spec_data["f"],
         srs_spec=spec_data["srs"],
@@ -237,9 +238,9 @@ def build_combined_controller(threaded=False):
     profile_event_list = []
     timestamp = 0
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = -6
+    event_data = -6
     profile_event_list.append(
-        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, event_data)
     )
 
     timestamp = 0
@@ -253,16 +254,16 @@ def build_combined_controller(threaded=False):
 
     timestamp = 5
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = -3
+    event_data = -3
     profile_event_list.append(
-        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, event_data)
     )
 
     timestamp = 10
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = 0
+    event_data = 0
     profile_event_list.append(
-        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, event_data)
     )
 
     timestamp = 20

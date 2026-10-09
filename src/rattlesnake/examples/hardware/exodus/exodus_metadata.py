@@ -7,6 +7,7 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.exodus_modal_solution_hardware import (
     ExodusMetadata,
 )
+from rattlesnake import data
 
 HARDWARE_FILE = defaults.DIRECTORY + "/hardware/exodus/exodus.exo"
 
@@ -21,7 +22,7 @@ def worksheet_exodus_metadata():
 
 
 def netcdf_exodus_metadata():
-    netcdf_dir = defaults.DIRECTORY + "/hardware/exodus/exodus_v4.nc4"
+    netcdf_dir = data.fetch(name="hardware/exodus/exodus_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     metadata = ExodusMetadata.load_metadata_from_netcdf(netcdf_dataset)
     metadata.hardware_file = HARDWARE_FILE

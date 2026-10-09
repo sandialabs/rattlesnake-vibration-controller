@@ -12,6 +12,7 @@ from rattlesnake.environment.read_environment import (
     ReadMetadata,
     ReadInstructions,
 )
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Read 0"
 
@@ -29,7 +30,7 @@ def worksheet_read_metadata(hardware_metadata):
 
 
 def netcdf_read_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/read/read_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/read/read_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -72,8 +73,8 @@ def read_event_list():
 
     timestamp = 5
     command = ReadCommands.CHANGE_WINDOW_SIZE
-    data = 2
-    set_window_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
+    event_data = 2
+    set_window_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 10
     command = GlobalCommands.STOP_ENVIRONMENT

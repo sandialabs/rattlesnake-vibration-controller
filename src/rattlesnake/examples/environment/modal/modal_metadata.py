@@ -12,6 +12,7 @@ from rattlesnake.environment.modal_environment import (
     ModalMetadata,
     ModalInstructions,
 )
+from rattlesnake import data
 
 ENVIRONMENT_NAME = "Modal 0"
 
@@ -30,7 +31,7 @@ def worksheet_modal_metadata(hardware_metadata):
 
 
 def netcdf_modal_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/modal/modal_v4.nc4"
+    netcdf_dir = data.fetch(name="environment/modal/modal_v4.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 

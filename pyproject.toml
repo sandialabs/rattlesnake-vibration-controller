@@ -71,15 +71,12 @@ local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead o
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rattlesnake"]
-# TODO: This single-file exclusion is temporary. Once every data file is listed in
-# src/rattlesnake/data/registry.txt, replace it with the general exclusion:
-#   exclude = [
-#     "/src/rattlesnake/examples/**/*.nc4",
-#     "/src/rattlesnake/examples/**/*.npz",
-#     "/src/rattlesnake/examples/**/*.npy",
-#   ]
+# Large example data files are fetched on demand by rattlesnake.data.fetch.
+# Every excluded file must be listed in src/rattlesnake/data/_registry.py.
 exclude = [
-  "/src/rattlesnake/examples/hardware/sdynpy_system/sdynpy_system.npz",
+  "/src/rattlesnake/examples/**/*.nc4",
+  "/src/rattlesnake/examples/**/*.npz",
+  "/src/rattlesnake/examples/**/*.npy",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -95,15 +92,12 @@ include = [
   "/pyproject.toml",
   "/uv.lock",
 ]
-# TODO: This single-file exclusion is temporary. Once every data file is listed in
-# src/rattlesnake/data/registry.txt, replace it with the general exclusion:
-#   exclude = [
-#     "/src/rattlesnake/examples/**/*.nc4",
-#     "/src/rattlesnake/examples/**/*.npz",
-#     "/src/rattlesnake/examples/**/*.npy",
-#   ]
+# Large example data files are fetched on demand by rattlesnake.data.fetch.
+# Every excluded file must be listed in src/rattlesnake/data/_registry.py.
 exclude = [
-  "/src/rattlesnake/examples/hardware/sdynpy_system/sdynpy_system.npz",
+  "/src/rattlesnake/examples/**/*.nc4",
+  "/src/rattlesnake/examples/**/*.npz",
+  "/src/rattlesnake/examples/**/*.npy",
 ]
 
 [tool.pytest.ini_options]
