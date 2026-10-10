@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import netCDF4 as nc4
 import openpyxl
@@ -152,7 +154,8 @@ def random_instructions():
     return instructions
 
 
-def random_event_list():
+def random_event_list(*, output_directory: str | os.PathLike[str] | None = None):
+    """Build profile events, saving control data in output_directory or the cwd."""
     timestamp = 0
     command = GlobalCommands.START_STREAMING
     start_stream_event = ProfileEvent(timestamp, "Global", command)
@@ -173,9 +176,11 @@ def random_event_list():
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
+    if output_directory is None:
+        output_directory = os.getcwd()
     timestamp = 16
     command = RandomVibrationCommands.SAVE_CONTROL_DATA
-    event_data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
+    event_data = os.path.join(output_directory, "random_control_data.nc4")
     save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 17
@@ -219,7 +224,12 @@ def random_event_list():
     return event_list
 
 
-def worksheet_random_event_list():
+def worksheet_random_event_list(
+    *, output_directory: str | os.PathLike[str] | None = None
+):
+    """Load profile events, saving control data in output_directory or the cwd."""
+    if output_directory is None:
+        output_directory = os.getcwd()
     worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     environment_types = {
@@ -228,7 +238,7 @@ def worksheet_random_event_list():
     }
     event_list = load_profile_from_workbook(workbook, environment_types)
     save_event = event_list[4]
-    save_event.data = defaults.DIRECTORY + "/environment/random/random_control_data.nc4"
+    save_event.data = os.path.join(output_directory, "random_control_data.nc4")
     change_spec_event = event_list[5]
     change_spec_event.data = data.fetch(name="environment/random/random_spec.npz")
     return event_list
