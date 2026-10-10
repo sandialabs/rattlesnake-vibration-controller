@@ -450,6 +450,7 @@ We installed a locally built wheel into a clean virtual environment and checked 
 | Corrupt cache repair | Pooch hashes the cached file before it returns it.  On a mismatch it downloads a fresh copy. | We overwrote a cached file with junk.  The next `fetch` downloaded the original file again, and its hash matched. |
 | Wrong hash rejected | Pooch retries a download whose hash does not match.  After the last attempt it raises `ValueError`. | We replaced a registry hash with 64 zeros.  Pooch made four download attempts, then raised `ValueError: SHA256 hash of downloaded file (srs_specification.npz) does not match the known hash`. |
 | Retries | `fetch` sets `retry_if_failed=3`.  Pooch makes 1 + 3 = 4 attempts.  It waits 1 s, 2 s, then 3 s between them. | We counted four calls to Pooch's HTTP downloader in the wrong-hash test. |
+| Download from the release tag | A tagged release downloads from its own git tag. | We installed 4.0.0rc4 from TestPyPI into a clean virtual environment.  `fetch` downloaded `frame_wing/data/transient_specification.npz` from the `v4.0.0rc4` tag in 3.9 s, into `~/Library/Caches/rattlesnake/v4.0.0rc4`.  Its hash matched, and a second `fetch` took 0.01 s. |
 | Atomic writes | Pooch downloads to a temporary file in the cache directory.  It moves the file into place only after the hash matches. | After the failed wrong-hash test, the good cached file was unchanged. |
 
 ### Distribution size
@@ -457,10 +458,9 @@ We installed a locally built wheel into a clean virtual environment and checked 
 | Release | Data files in package | Wheel | sdist |
 |---|---|---|---|
 | 4.0.0rc3 (TestPyPI) | 41 | 20,907,340 bytes | 20,964,518 bytes |
-| Local build with all three globs | 0 | 972,599 bytes | 897,051 bytes |
-| 4.0.0rc4 (TestPyPI) | 0 | *pending release* | *pending release* |
+| 4.0.0rc4 (TestPyPI) | 0 | 972,909 bytes | 895,879 bytes |
 
-The local build is 95.3% smaller than the rc3 wheel and 95.7% smaller than the rc3 sdist.  We will replace the local-build row with the published 4.0.0rc4 sizes once that release reaches TestPyPI.
+The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist is 95.7% smaller than the 4.0.0rc3 sdist.  The 4.0.0rc4 registry lists 39 data files, none of which ship in either archive.
 
 ### Adding or changing a data file
 
