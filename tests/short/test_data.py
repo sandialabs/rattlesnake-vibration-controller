@@ -9,9 +9,10 @@ The tests cover five areas.
 Keyword-only signatures
     Every public function takes keyword arguments only, so a positional call
     raises ``TypeError``.
-``git_ref``
-    Maps a package version to the git ref that holds its data files. A tagged
-    version maps to ``v<version>``. A development version maps to ``dev``.
+``git_ref`` and ``commit_installed``
+    Map a package build to the git ref that holds its data files. A release
+    version maps to ``v<version>``. A development version maps to the commit
+    SHA that ``hatch_build.py`` recorded, or to ``dev`` without one.
 ``hash_check``
     Accepts a matching SHA-256 hash and rejects a wrong hash or a missing file.
 ``PACKAGE_DIRECTORY``
@@ -35,13 +36,19 @@ Unit Tests
 test_functions_require_keyword_arguments
     Raises ``TypeError`` when a public function receives a positional argument.
 test_git_ref
-    Maps tagged and development versions to the expected git ref.
+    Maps release and development versions to the expected git ref.
+test_git_ref_without_commit
+    Falls back to ``dev`` for a development version with no recorded commit.
 test_git_ref_installed_version
-    Returns ``dev`` or a ``v``-prefixed tag for the installed version.
+    Returns a ``v``-prefixed tag, a commit SHA, or ``dev`` for this install.
+test_commit_installed
+    Reads the SHA from ``rattlesnake._commit``.
+test_commit_installed_missing_module
+    Returns ``None`` when ``rattlesnake._commit`` does not exist.
 test_hash_check
     Accepts, rejects, and handles a missing file.
 test_cache_directory_default
-    Matches the per-platform cache path that the Contributing page documents.
+    Matches the per-platform cache path that the installation page documents.
 test_package_directory_is_examples_package
     Compares ``PACKAGE_DIRECTORY`` with the import system's answer.
 test_registry_entries_are_well_formed
@@ -69,6 +76,7 @@ import pathlib
 import re
 import sys
 import threading
+import types
 from collections.abc import Callable, Iterator
 from typing import NoReturn
 
@@ -78,6 +86,7 @@ from rattlesnake import data
 
 REPOSITORY_ROOT = pathlib.Path(data.__file__).resolve().parents[3]
 IN_CHECKOUT = (REPOSITORY_ROOT / "pyproject.toml").is_file()
+SHA = "6c7224ca3fdb489fad2b3f53637634a0cf5906f2"
 
 
 @pytest.mark.parametrize(
@@ -108,8 +117,8 @@ def test_functions_require_keyword_arguments(function: Callable[..., object]) ->
     [
         ("4.0.0rc4", "v4.0.0rc4"),
         ("4.0.0", "v4.0.0"),
-        ("4.0.0rc4.dev2", "dev"),
-        ("4.0.0rc4.dev2+g1234567", "dev"),
+        ("4.0.0rc5.dev5", SHA),
+        ("4.0.0rc5.dev5+g6c7224c", SHA),
     ],
 )
 def test_git_ref(version: str, expected: str) -> None:
@@ -119,28 +128,58 @@ def test_git_ref(version: str, expected: str) -> None:
     Parameters
     ----------
     version : str
-        Package version passed to ``git_ref``.
+        Package version passed to ``git_ref``, with ``commit=SHA``.
     expected : str
-        Expected ref. A tagged version maps to ``v<version>``. A development
-        version maps to ``dev``.
+        Expected ref. A release version maps to ``v<version>`` and ignores the
+        commit. A development version maps to the commit SHA.
     """
-    assert data.git_ref(version=version) == expected
+    assert data.git_ref(version=version, commit=SHA) == expected
+
+
+def test_git_ref_without_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Fall back to ``dev`` for a development version with no recorded commit.
+    """
+    monkeypatch.setattr(data, "commit_installed", lambda: None)
+    assert data.git_ref(version="4.0.0rc5.dev5") == data.DEV_REF
 
 
 def test_git_ref_installed_version() -> None:
     """
-    Return either ``dev`` or a ``v``-prefixed tag for the installed version.
+    Return a ``v``-prefixed tag, a 40-character commit SHA, or ``dev``.
     """
     ref = data.git_ref()
-    assert ref == "dev" or ref.startswith("v")
+    assert (
+        ref == data.DEV_REF or ref.startswith("v") or re.fullmatch(r"[0-9a-f]{40}", ref)
+    )
+
+
+def test_commit_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Read the SHA from ``rattlesnake._commit``.
+    """
+    module = types.ModuleType("rattlesnake._commit")
+    module.commit = SHA  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "rattlesnake._commit", module)
+    assert data.commit_installed() == SHA
+
+
+def test_commit_installed_missing_module(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Return ``None`` when ``rattlesnake._commit`` does not exist.
+
+    A ``None`` entry in ``sys.modules`` makes the import raise ``ImportError``.
+    """
+    monkeypatch.setitem(sys.modules, "rattlesnake._commit", None)
+    assert data.commit_installed() is None
 
 
 def test_cache_directory_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Match the per-platform cache path that the Contributing page documents.
+    Match the per-platform cache path that the installation page documents.
 
-    The Large Data Files section of ``contributing.md`` lists one default cache
-    directory per operating system. CI runs this test on macOS, Linux, and
+    The Example Data Files section of ``acquiring_and_running_rattlesnake.md``
+    lists one default cache directory per operating system. CI runs this test on macOS, Linux, and
     Windows, so a wrong row in that table fails on the matching runner.
     """
     monkeypatch.delenv(data.ENV_VAR, raising=False)

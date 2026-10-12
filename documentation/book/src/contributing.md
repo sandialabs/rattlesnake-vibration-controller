@@ -392,18 +392,15 @@ Pooch adds two packages to an install, `pooch` and `platformdirs`.  Pooch's othe
 
 [Fatiando a Terra](https://www.fatiando.org) maintains Pooch.  The Pooch [README](https://github.com/fatiando/pooch) lists 40 projects that use it:
 
-| | | | |
-|---|---|---|---|
-| [SciPy](https://github.com/scipy/scipy) | [scikit-image](https://github.com/scikit-image/scikit-image) | [xarray](https://github.com/pydata/xarray) | [MetPy](https://github.com/Unidata/MetPy) |
-| [napari](https://github.com/napari/napari) | [MNE-Python](https://github.com/mne-tools/mne-python) | [PyVista](https://github.com/pyvista/pyvista) | [yt](https://github.com/yt-project/yt) |
-| [Satpy](https://github.com/pytroll/satpy) | [HyperSpy](https://github.com/hyperspy/hyperspy) | [RosettaSciIO](https://github.com/hyperspy/rosettasciio) | [eXSpy](https://github.com/hyperspy/exspy) |
-| [Py-ART](https://github.com/ARM-DOE/pyart) | [GeoViews](https://github.com/holoviz/geoviews) | [cf-xarray](https://github.com/xarray-contrib/cf-xarray) | [xclim](https://github.com/Ouranosinc/xclim) |
-| [SHTOOLS](https://github.com/SHTOOLS/SHTOOLS) | [GemPy](https://github.com/cgre-aachen/gempy) | [GemGIS](https://github.com/cgre-aachen/gemgis) | [Open AR-Sandbox](https://github.com/cgre-aachen/open_AR_Sandbox) |
-| [Ensaio](https://github.com/fatiando/ensaio) | [icepack](https://github.com/icepack/icepack) | [climlab](https://github.com/climlab/climlab) | [CLISOPS](https://github.com/roocs/clisops) |
-| [histolab](https://github.com/histolab/histolab) | [seaborn-image](https://github.com/SarthakJariwala/seaborn-image) | [Brainrender](https://github.com/brainglobe/brainrender) | [cellfinder](https://github.com/brainglobe/cellfinder) |
-| [MOABB](https://github.com/NeuroTechX/moabb) | [ScopeSim](https://github.com/AstarVienna/ScopeSim) | [pyxem](https://github.com/pyxem/pyxem) | [PVGeo](https://github.com/OpenGeoVis/PVGeo) |
-| [geosnap](https://github.com/oturns/geosnap) | [BioCypher](https://github.com/biocypher/biocypher) | [Scirpy](https://github.com/scverse/scirpy) | [rembg](https://github.com/danielgatis/rembg) |
-| [DASCore](https://github.com/DASDAE/dascore) | [scikit-mobility](https://github.com/scikit-mobility/scikit-mobility) | [SPLASH](https://github.com/Adam-Boesky/astro_SPLASH) | [scXpand](https://github.com/yizhak-lab-ccg/scXpand) |
+- **Core scientific Python (4):** [SciPy](https://github.com/scipy/scipy), [scikit-image](https://github.com/scikit-image/scikit-image), [xarray](https://github.com/pydata/xarray), and [napari](https://github.com/napari/napari)
+- **Earth sciences and geospatial analysis (17):**
+  - Weather and climate (7): [MetPy](https://github.com/Unidata/MetPy), [Satpy](https://github.com/pytroll/satpy), [Py-ART](https://github.com/ARM-DOE/pyart), [cf-xarray](https://github.com/xarray-contrib/cf-xarray), [xclim](https://github.com/Ouranosinc/xclim), [climlab](https://github.com/climlab/climlab), and [CLISOPS](https://github.com/roocs/clisops)
+  - Geology and geophysics (8): [SHTOOLS](https://github.com/SHTOOLS/SHTOOLS), [GemPy](https://github.com/cgre-aachen/gempy), [GemGIS](https://github.com/cgre-aachen/gemgis), [Open AR-Sandbox](https://github.com/cgre-aachen/open_AR_Sandbox), [Ensaio](https://github.com/fatiando/ensaio), [icepack](https://github.com/icepack/icepack), [PVGeo](https://github.com/OpenGeoVis/PVGeo), and [DASCore](https://github.com/DASDAE/dascore)
+  - Spatial analysis of people and places (2): [geosnap](https://github.com/oturns/geosnap) and [scikit-mobility](https://github.com/scikit-mobility/scikit-mobility)
+- **Neuroscience and biology (8):** [MNE-Python](https://github.com/mne-tools/mne-python), [MOABB](https://github.com/NeuroTechX/moabb), [Brainrender](https://github.com/brainglobe/brainrender), [cellfinder](https://github.com/brainglobe/cellfinder), [histolab](https://github.com/histolab/histolab), [Scirpy](https://github.com/scverse/scirpy), [scXpand](https://github.com/yizhak-lab-ccg/scXpand), and [BioCypher](https://github.com/biocypher/biocypher)
+- **Electron microscopy (4):** [HyperSpy](https://github.com/hyperspy/hyperspy), [RosettaSciIO](https://github.com/hyperspy/rosettasciio), [eXSpy](https://github.com/hyperspy/exspy), and [pyxem](https://github.com/pyxem/pyxem)
+- **Astronomy (3):** [yt](https://github.com/yt-project/yt), [ScopeSim](https://github.com/AstarVienna/ScopeSim), and [SPLASH](https://github.com/Adam-Boesky/astro_SPLASH)
+- **Visualization and images (4):** [PyVista](https://github.com/pyvista/pyvista), [GeoViews](https://github.com/holoviz/geoviews), [seaborn-image](https://github.com/SarthakJariwala/seaborn-image), and [rembg](https://github.com/danielgatis/rembg)
 
 scikit-image adopted Pooch in [PR #3945](https://github.com/scikit-image/scikit-image/pull/3945), merged in March 2020.  That PR moved its test data and new datasets onto Pooch and kept 7 MB of legacy data in the wheel.  The PR author measured the wheel at 41 MB before the change and 27 MB after it.
 
@@ -423,7 +420,20 @@ path = data.fetch(name="hardware/sdynpy_system/sdynpy_system.npz")
 2. **The local cache.**  Pooch returns a cached copy if its hash matches.
 3. **GitHub.**  Pooch downloads the file, checks its hash, and saves it to the cache.
 
-The download URL depends on the installed version.  A tagged release such as `4.0.0rc4` downloads from the git tag `v4.0.0rc4`.  An old install therefore keeps receiving the data that matches its own code.  A development version, such as `4.0.0rc4.dev4`, downloads from the `dev` branch.
+The download URL depends on the installed version:
+
+| Version | Example | Downloads from |
+|---|---|---|
+| No `.dev` segment, a release built at its tag | `4.0.0rc4` | The git tag `v4.0.0rc4` |
+| Has a `.dev` segment, every other build | `4.0.0rc5.dev5` | The commit the build came from, such as `6c7224ca3fdb489fad2b3f53637634a0cf5906f2` |
+
+`hatch-vcs` adds the `.dev` segment to any build made from a commit after the latest tag.  That covers `pip install .` on any branch, including `main`, `dev`, and feature branches.  A release tag that has its own `.dev` segment, such as `v4.1.0.dev1`, also downloads from its commit.
+
+Downloads never come from a branch name.  A branch moves, so its files can stop matching the registry of an older build.  A tag or a commit names fixed file contents.  An old install therefore keeps receiving the data that matches its own code.
+
+`hatch_build.py` at the repository root records the commit.  This Hatch build hook runs `git rev-parse HEAD` during every build.  It writes the full SHA to `src/rattlesnake/_commit.py`, which `.gitignore` lists.  The sdist carries that file, so a wheel built from the sdist records the same SHA.  A build with no recorded commit falls back to the `dev` branch.
+
+A development build can download a file only after its commit is on GitHub.  A checkout or an editable install rarely downloads at all, because `fetch` finds the files in the package tree first.
 
 `src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.
 
@@ -443,6 +453,7 @@ We installed a locally built wheel into a clean virtual environment and checked 
 | Wrong hash rejected | Pooch retries a download whose hash does not match.  After the last attempt it raises `ValueError`. | We replaced a registry hash with 64 zeros.  Pooch made four download attempts, then raised `ValueError: SHA256 hash of downloaded file (srs_specification.npz) does not match the known hash`. |
 | Retries | `fetch` sets `retry_if_failed=3`.  Pooch makes 1 + 3 = 4 attempts.  It waits 1 s, 2 s, then 3 s between them. | We counted four calls to Pooch's HTTP downloader in the wrong-hash test. |
 | Download from the release tag | A tagged release downloads from its own git tag. | We installed 4.0.0rc4 from TestPyPI into a clean virtual environment.  `fetch` downloaded `frame_wing/data/transient_specification.npz` from the `v4.0.0rc4` tag in 3.9 s, into `~/Library/Caches/rattlesnake/v4.0.0rc4`.  Its hash matched, and a second `fetch` took 0.01 s. |
+| Download from the build's commit | A development build downloads from the commit it was built from. | We built a wheel and an sdist with `uv build` at commit `6c7224ca`, version `4.0.0rc5.dev5`.  Both recorded the full SHA, and so did a second wheel built from the sdist.  In a clean virtual environment, `fetch` downloaded `environment/time/time_signal.npy` from `raw/6c7224ca3fdb489fad2b3f53637634a0cf5906f2/` in 1.5 s.  Its hash matched. |
 | Atomic writes | Pooch downloads to a temporary file in the cache directory.  It moves the file into place only after the hash matches. | After the failed wrong-hash test, the good cached file was unchanged. |
 
 ### Distribution size
@@ -465,7 +476,11 @@ The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist
 
    To check the registry without writing it, add `--check`.  The command exits non-zero when the registry is out of date.
 
-   The test `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` runs the same comparison in CI.  It guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
+   Three tests run the same comparison in CI:
+
+   - `test_registry_matches_repository_file` in `tests/short/test_data.py` guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
+   - `test_registry_file_exists_in_checkout` in `tests/short/test_data.py` fails when someone removes a registered file.
+   - `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` fails when someone adds a data file and forgets to register it.  The wheel leaves the file out, and the registry does not list it, so the file would ship nowhere.
 
 3. Read the file through `data.fetch(name=...)`.  Do not build its path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.
 4. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.

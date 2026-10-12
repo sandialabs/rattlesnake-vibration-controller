@@ -153,11 +153,11 @@ The first run of an example downloads the files that example reads.  Later runs 
 
 Each release downloads the files from its own git tag.  Version 4.0.0rc4, for example, reads from the tag `v4.0.0rc4`.  An older install therefore keeps receiving the files that match its own code.
 
-A `pip install .` from a clone also leaves the files out, so it downloads them too.  An editable install (`pip install -e .`) and running from the source tree both read the files straight from the clone and download nothing.
+A `pip install .` from a clone also leaves the files out, so it downloads them too.  It downloads them from the exact commit it was built from, so that commit must be on GitHub.  An editable install (`pip install -e .`) and running from the source tree both read the files straight from the clone and download nothing.
 
 ### Where the files are stored
 
-Rattlesnake stores downloaded files in a per-version directory in the user cache:
+Rattlesnake stores downloaded files in the user cache, in a separate directory for each release or commit:
 
 | Operating system | Cache directory |
 |---|---|
@@ -165,7 +165,7 @@ Rattlesnake stores downloaded files in a per-version directory in the user cache
 | Linux | `~/.cache/rattlesnake/<ref>`, or `$XDG_CACHE_HOME/rattlesnake/<ref>` |
 | Windows | `C:\Users\<user>\AppData\Local\rattlesnake\rattlesnake\Cache\<ref>` |
 
-`<ref>` is the git ref for the installed version, such as `v4.0.0rc4`.  Development versions use `dev`.  To print the directory for your install, run:
+`<ref>` is the git tag for a release, such as `v4.0.0rc4`.  For any other build, `<ref>` is the full commit SHA.  To print the directory for your install, run:
 
 ```sh
 python -c "from rattlesnake import data; print(data.cache_directory(ref=data.git_ref()))"

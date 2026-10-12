@@ -69,6 +69,10 @@ source = "vcs"
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead of 0.0.9+g1234567
 
+[tool.hatch.build.hooks.custom]
+# hatch_build.py writes src/rattlesnake/_commit.py with the git commit SHA.
+# rattlesnake.data downloads a development build's data files from that commit.
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/rattlesnake"]
 # Large example data files are fetched on demand by rattlesnake.data.fetch.
@@ -89,6 +93,7 @@ include = [
   "/tests",
   "/README.md",
   "/LICENSE",
+  "/hatch_build.py",
   "/pyproject.toml",
   "/uv.lock",
 ]

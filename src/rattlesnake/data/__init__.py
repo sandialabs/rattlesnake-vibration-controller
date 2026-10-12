@@ -5,9 +5,10 @@ Each file listed in ``_registry.py`` is resolved in this order. First, the copy 
 the installed package tree, when its SHA-256 hash matches. Second, the local
 cache. Third, a download from the GitHub repository with Pooch.
 
-The download URL pins the file to the installed release. A tagged version
-``X.Y.Z`` reads from the tag ``vX.Y.Z``. An untagged development version reads
-from the ``dev`` branch.
+The download URL pins the file to the installed build. A release version
+``X.Y.Z`` reads from the tag ``vX.Y.Z``. A development version reads from the
+commit it was built from. ``hatch_build.py`` records that commit SHA in
+``rattlesnake._commit`` at build time.
 
 Set ``RATTLESNAKE_DATADIR`` to use a different cache directory, for example a
 directory that was staged ahead of time on a machine without network access.
@@ -18,7 +19,8 @@ BASE_URL : str
     Download URL template. The ``{ref}`` field takes the value from ``git_ref``.
     The path after ``raw/{ref}/`` is the examples directory in the repository.
 DEV_REF : str
-    Git ref that development versions download from.
+    Git ref that a development version downloads from when it has no recorded
+    commit SHA.
 ENV_VAR : str
     Name of the environment variable that overrides the cache directory.
 PACKAGE_DIRECTORY : pathlib.Path
@@ -30,6 +32,7 @@ REGISTRY : dict of str to str
 """
 
 import hashlib
+import importlib
 import importlib.metadata
 import os
 import pathlib
@@ -47,27 +50,50 @@ ENV_VAR = "RATTLESNAKE_DATADIR"
 PACKAGE_DIRECTORY = pathlib.Path(__file__).resolve().parents[1] / "examples"
 
 
-def git_ref(*, version: str | None = None) -> str:
+def commit_installed() -> str | None:
     """
-    Return the git ref that holds the data files for a package version.
+    Return the commit SHA that ``hatch_build.py`` recorded at build time.
+
+    Returns
+    -------
+    str or None
+        Full SHA from ``rattlesnake._commit``. ``None`` when that module is
+        missing, as in a source tree that was never built or installed, or when
+        the build had no git repository.
+    """
+    try:
+        module = importlib.import_module("rattlesnake._commit")
+    except ImportError:
+        return None
+    return getattr(module, "commit", None)
+
+
+def git_ref(*, version: str | None = None, commit: str | None = None) -> str:
+    """
+    Return the git ref that holds the data files for a package build.
 
     Parameters
     ----------
     version : str, optional
         Package version. Defaults to the installed version of
         ``rattlesnake-vibration-controller``.
+    commit : str, optional
+        Commit SHA of the build. Defaults to ``commit_installed()``.
 
     Returns
     -------
     str
-        ``"dev"`` for a development version, such as ``4.0.0rc2.dev70``.
-        ``"v" + version`` for a tagged version, such as ``v4.0.0rc4``.
+        ``"v" + version`` for a release version, such as ``v4.0.0rc4``. The
+        commit SHA for a development version, such as ``4.0.0rc5.dev5``.
+        ``"dev"`` for a development version with no recorded commit.
     """
     if version is None:
         version = importlib.metadata.version("rattlesnake-vibration-controller")
-    if ".dev" in version or "+" in version:
-        return DEV_REF
-    return f"v{version}"
+    if ".dev" not in version and "+" not in version:
+        return f"v{version}"
+    if commit is None:
+        commit = commit_installed()
+    return commit or DEV_REF
 
 
 def hash_compute(*, path: str | os.PathLike[str]) -> str:

@@ -50,3 +50,5 @@ output.html
 # They are run outputs, not inputs. See OUTPUT_FILES in src/rattlesnake/data/registry.py.
 src/rattlesnake/examples/environment/random/random_control_data.nc4
 src/rattlesnake/examples/environment/sine/sine_control_data.npz
+# Written by hatch_build.py at build time.
+src/rattlesnake/_commit.py
