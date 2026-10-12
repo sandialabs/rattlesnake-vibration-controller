@@ -427,15 +427,7 @@ The download URL depends on the installed version.  A tagged release such as `4.
 
 `src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.
 
-The cache lives in a per-ref directory under the user cache:
-
-| Operating system | Cache directory |
-|---|---|
-| macOS | `~/Library/Caches/rattlesnake/<ref>` |
-| Linux | `~/.cache/rattlesnake/<ref>`, or `$XDG_CACHE_HOME/rattlesnake/<ref>` |
-| Windows | `C:\Users\<user>\AppData\Local\rattlesnake\rattlesnake\Cache\<ref>` |
-
-`<ref>` is the git ref, such as `v4.0.0rc4` or `dev`.  Set the `RATTLESNAKE_DATADIR` environment variable to use a different directory.  On a machine without network access, copy a filled cache directory onto the machine and point `RATTLESNAKE_DATADIR` at it.
+Downloads go to a per-ref directory in the user cache, or to the directory named by the `RATTLESNAKE_DATADIR` environment variable.  The user-facing section [](#sec:example-data-files) lists the cache directory for each operating system and explains how to work offline.
 
 ### Safeguards
 
@@ -472,6 +464,8 @@ The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist
    ```
 
    To check the registry without writing it, add `--check`.  The command exits non-zero when the registry is out of date.
+
+   The test `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` runs the same comparison in CI.  It guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
 
 3. Read the file through `data.fetch(name=...)`.  Do not build its path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.
 4. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.

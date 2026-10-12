@@ -142,6 +142,50 @@ source .venv/bin/activate.fish  # fish shell
 .\.venv\Scripts\activate        # Windows PowerShell / CMD
 ```
 
+(sec:example-data-files)=
+## Example Data Files
+
+The bundled examples in `rattlesnake.examples` read 39 data files, such as specifications, system models, and saved NetCDF setups.  The package on PyPI does not contain these files.  Rattlesnake downloads each file from GitHub the first time an example needs it.  The Rattlesnake application itself needs no data files and never downloads anything.
+
+### First use needs network access
+
+The first run of an example downloads the files that example reads.  Later runs reuse the downloaded copies and need no network access.  Rattlesnake checks the SHA-256 hash of every file against a list built into the package, so a corrupt or altered download is rejected.
+
+Each release downloads the files from its own git tag.  Version 4.0.0rc4, for example, reads from the tag `v4.0.0rc4`.  An older install therefore keeps receiving the files that match its own code.
+
+A `pip install .` from a clone also leaves the files out, so it downloads them too.  An editable install (`pip install -e .`) and running from the source tree both read the files straight from the clone and download nothing.
+
+### Where the files are stored
+
+Rattlesnake stores downloaded files in a per-version directory in the user cache:
+
+| Operating system | Cache directory |
+|---|---|
+| macOS | `~/Library/Caches/rattlesnake/<ref>` |
+| Linux | `~/.cache/rattlesnake/<ref>`, or `$XDG_CACHE_HOME/rattlesnake/<ref>` |
+| Windows | `C:\Users\<user>\AppData\Local\rattlesnake\rattlesnake\Cache\<ref>` |
+
+`<ref>` is the git ref for the installed version, such as `v4.0.0rc4`.  Development versions use `dev`.  To print the directory for your install, run:
+
+```sh
+python -c "from rattlesnake import data; print(data.cache_directory(ref=data.git_ref()))"
+```
+
+Deleting the directory is safe.  Rattlesnake downloads the files again the next time an example needs them.
+
+### Working offline
+
+Set the `RATTLESNAKE_DATADIR` environment variable to store the files in a directory of your choice.  Rattlesnake then reads and writes that directory instead of the user cache.
+
+To use the examples on a machine without network access:
+
+1. On a machine with network access, set `RATTLESNAKE_DATADIR` to an empty directory.
+2. Run the examples you need.  Each run downloads its files into that directory.
+3. Copy the directory to the offline machine.
+4. On the offline machine, set `RATTLESNAKE_DATADIR` to the copied directory.
+
+Both machines must have the same Rattlesnake version installed, because each version checks for its own file hashes.
+
 ## Running the Software
 
 ### Running via Standard Python Execution

@@ -1,9 +1,11 @@
 """
 Unit tests for ``rattlesnake.data.registry``, which generates ``_registry.py``.
 
-Every test builds its own small directory in ``tmp_path``. Only
-``test_committed_registry_matches_generated_format`` reads the real registry,
-and it reads the dictionary that ``rattlesnake.data`` already imported.
+Every test builds its own small directory in ``tmp_path``, except two. Both
+read the dictionary that ``rattlesnake.data`` already imported.
+``test_committed_registry_matches_generated_format`` compares it with the
+committed text. ``test_committed_registry_matches_files_on_disk`` compares it
+with the data files in the checkout.
 
 The tests cover six areas.
 
@@ -49,6 +51,8 @@ test_generate_round_trip
     Reads the generated file back into the dictionary that ``build`` returns.
 test_committed_registry_matches_generated_format
     Confirms the committed ``_registry.py`` has exactly the generated text.
+test_committed_registry_matches_files_on_disk
+    Confirms the committed registry lists every data file with its current hash.
 test_read_rejects_other_files
     Raises ``ValueError`` when no string dictionary named ``registry`` exists.
 test_read_does_not_execute
@@ -279,6 +283,25 @@ def test_committed_registry_matches_generated_format() -> None:
     """
     text = registry.REGISTRY_PATH.read_text(encoding="utf-8")
     assert text == registry.render(entries=data.REGISTRY)
+
+
+def test_committed_registry_matches_files_on_disk() -> None:
+    """
+    Confirm the committed registry lists every data file with its current hash.
+
+    This test catches a data file that someone added, removed, or changed
+    without regenerating ``_registry.py``. Otherwise CI stays green, the release
+    ships the old hash, and every user's ``fetch`` fails with ``ValueError``
+    after four attempts. A git checkout holds every data file, so the test needs
+    no network access.
+    """
+    differences = registry.difference_list(
+        current=data.REGISTRY, generated=registry.build()
+    )
+    assert differences == [], (
+        "_registry.py is stale. Run: uv run python -m rattlesnake.data.registry\n"
+        + "\n".join(differences)
+    )
 
 
 @pytest.mark.parametrize(
