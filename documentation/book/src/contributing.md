@@ -456,7 +456,7 @@ We installed a locally built wheel into a clean virtual environment and checked 
 ### Distribution size
 
 | Release | Data files in package | Wheel | sdist |
-|---|---|---|---|
+|---|:---:|---:|---:|
 | 4.0.0rc3 (TestPyPI) | 41 | 20,907,340 bytes | 20,964,518 bytes |
 | 4.0.0rc4 (TestPyPI) | 0 | 972,909 bytes | 895,879 bytes |
 
