@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import openpyxl
 import netCDF4 as nc4
@@ -165,7 +167,8 @@ def sine_instructions():
     return instructions
 
 
-def sine_event_list():
+def sine_event_list(*, output_directory: str | os.PathLike[str] | None = None):
+    """Build profile events, saving control data in output_directory or the cwd."""
     timestamp = 0
     command = GlobalCommands.START_STREAMING
     start_stream_event = ProfileEvent(timestamp, "Global", command)
@@ -187,9 +190,11 @@ def sine_event_list():
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
 
+    if output_directory is None:
+        output_directory = os.getcwd()
     timestamp = 10
     command = SineCommands.SAVE_CONTROL_DATA
-    event_data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
+    event_data = os.path.join(output_directory, "sine_control_data.npz")
     save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 10
@@ -212,7 +217,12 @@ def sine_event_list():
     return event_list
 
 
-def worksheet_sine_event_list():
+def worksheet_sine_event_list(
+    *, output_directory: str | os.PathLike[str] | None = None
+):
+    """Load profile events, saving control data in output_directory or the cwd."""
+    if output_directory is None:
+        output_directory = os.getcwd()
     worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     environment_types = {
@@ -220,6 +230,8 @@ def worksheet_sine_event_list():
         ENVIRONMENT_NAME: EnvironmentType.SINE,
     }
     event_list = load_profile_from_workbook(workbook, environment_types)
-    save_event = event_list[3]
-    save_event.data = defaults.DIRECTORY + "/environment/sine/sine_control_data.npz"
+    save_event = next(
+        event for event in event_list if event.command == SineCommands.SAVE_CONTROL_DATA
+    )
+    save_event.data = os.path.join(output_directory, "sine_control_data.npz")
     return event_list
