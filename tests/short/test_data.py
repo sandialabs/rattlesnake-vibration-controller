@@ -386,8 +386,8 @@ def test_fetch_prefers_packaged_file(
     assert data.fetch(name=name) == str(packaged)
 
 
-@pytest.fixture
-def http_server(tmp_path: pathlib.Path) -> Iterator[str]:
+@pytest.fixture(name="http_server")
+def http_server_fixture(tmp_path: pathlib.Path) -> Iterator[str]:
     """
     Serve ``tmp_path`` over HTTP on a free local port.
 

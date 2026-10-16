@@ -78,8 +78,8 @@ def hatch_build_load() -> types.ModuleType:
 hatch_build = hatch_build_load()
 
 
-@pytest.fixture
-def repository(tmp_path: pathlib.Path) -> tuple[pathlib.Path, str]:
+@pytest.fixture(name="repository")
+def repository_fixture(tmp_path: pathlib.Path) -> tuple[pathlib.Path, str]:
     """
     Create a git repository with one commit.
 
