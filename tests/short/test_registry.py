@@ -24,7 +24,7 @@ Keyword-only signatures
 ``SUFFIXES``
     Matches the ``exclude`` globs of the wheel and sdist targets in
     ``pyproject.toml``. The test skips without ``pyproject.toml``, as in an
-    installed wheel, and on Python 3.10, which lacks ``tomllib``.
+    installed wheel.
 ``read``
     Loads the dictionary with ``ast.literal_eval`` and never runs the file.
 ``difference_list``
@@ -79,6 +79,7 @@ import importlib.util
 import pathlib
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable
 
 import pytest
@@ -89,8 +90,8 @@ from rattlesnake.data import registry
 PYPROJECT_PATH = pathlib.Path(registry.__file__).resolve().parents[3] / "pyproject.toml"
 
 
-@pytest.fixture
-def examples(tmp_path: pathlib.Path) -> pathlib.Path:
+@pytest.fixture(name="examples")
+def examples_fixture(tmp_path: pathlib.Path) -> pathlib.Path:
     """
     Build a small examples directory with data files and other files.
 
@@ -311,7 +312,6 @@ def test_suffixes_match_pyproject_exclude(target: str) -> None:
     target : str
         Hatchling build target under ``[tool.hatch.build.targets]``.
     """
-    tomllib = pytest.importorskip("tomllib", reason="tomllib needs Python 3.11")
     with PYPROJECT_PATH.open("rb") as file:
         pyproject = tomllib.load(file)
     exclude = pyproject["tool"]["hatch"]["build"]["targets"][target]["exclude"]

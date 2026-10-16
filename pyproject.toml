@@ -7,7 +7,7 @@ name = "rattlesnake-vibration-controller"
 # version = "3.1.1"  # Deprecate use of hard-coded version numbers, now hatch-vcs
 dynamic = ["version"]  # Removed static version, now determined by hatch-vcs
 description = "Multiple-Input Multiple-Output Vibration Controller"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [

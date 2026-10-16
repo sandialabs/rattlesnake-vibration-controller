@@ -26,6 +26,8 @@ Users can acquire Rattlesnake in three ways, depending on the use case:
 
 Create and activate a **virtual environment** before you install Rattlesnake from PyPI or from a clone.  The standalone executable needs no Python environment.
 
+Rattlesnake requires Python 3.11 or later.  CI tests Python 3.11 and 3.12.
+
 A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer. This helps avoid version conflicts and makes upgrades or removal easier.
 
 Examples:

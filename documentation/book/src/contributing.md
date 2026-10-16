@@ -476,14 +476,13 @@ The registry lists every file under `src/rattlesnake/examples` whose suffix is `
 
 A suffix in `exclude` but not in `SUFFIXES` would leave its files out of the wheel and out of the registry, so they would ship nowhere.
 
-The suffixes live in both `registry.py` and `pyproject.toml` because of two constraints:
+The list must live in `pyproject.toml`.  Hatchling reads `exclude` as static TOML when it builds the wheel and the sdist.  It cannot import the list from Python code.  A build hook such as `hatch_build.py` can add files to an archive, but hatchling gives a hook no way to remove them.
 
-- **Hatchling needs the list in `pyproject.toml`.**  Hatchling reads `exclude` as static TOML when it builds the wheel and the sdist.  It cannot import the list from Python code.  A build hook such as `hatch_build.py` can add files to an archive, but hatchling gives a hook no way to remove them.
-- **`registry.py` does not read `pyproject.toml`.**  Python reads TOML with the `tomllib` module, which arrived in Python 3.11.  Rattlesnake supports Python 3.10, so `registry.py` would need the extra `tomli` package to read the list.  We chose a duplicate list and a test over a new dependency.
+`registry.py` keeps its own copy of the list in `SUFFIXES`.  Rattlesnake requires Python 3.11 or later, so `registry.py` could instead read the list from `pyproject.toml` with the standard-library `tomllib` module.  It does not do so yet.
 
-The `pyproject.toml` file repeats its list for the wheel and the sdist because each build target sets its own `exclude`.  One shared list under `[tool.hatch.build]` might replace both, but we have not tested that change.
+The `pyproject.toml` file repeats its list for the wheel and the sdist because each build target sets its own `exclude`.
 
-The test `test_suffixes_match_pyproject_exclude` in `tests/short/test_registry.py` makes sure these lists agree.  It builds one glob per suffix in `SUFFIXES`, such as `/src/rattlesnake/examples/**/*.nc4`.  It then compares those globs with the wheel's `exclude` list and the sdist's `exclude` list in `pyproject.toml`.  If either list misses a suffix or adds an extra glob, the test fails and names the target.  The test skips on Python 3.10, which lacks the `tomllib` module that reads `pyproject.toml`.
+The test `test_suffixes_match_pyproject_exclude` in `tests/short/test_registry.py` makes sure these lists agree.  It builds one glob per suffix in `SUFFIXES`, such as `/src/rattlesnake/examples/**/*.nc4`.  It then compares those globs with the wheel's `exclude` list and the sdist's `exclude` list in `pyproject.toml`.  If either list misses a suffix or adds an extra glob, the test fails and names the target.
 
 Git keeps every version of a binary file in the repository history.  Every clone downloads all of those versions.  Commit a new version of a large file only when its contents matter, and avoid a series of small edits.
 
