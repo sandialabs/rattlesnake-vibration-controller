@@ -1,10 +1,10 @@
 """
 Generate ``_registry.py``, the SHA-256 registry of large example data files.
 
-The generator walks the examples directory and hashes every file whose suffix
-is in ``SUFFIXES``. It writes a ``registry`` dictionary that maps each name to
-its hash, sorted by name. Run it from the repository root after any data file
-is added, removed, or changed::
+This module walks the examples directory and hashes every file whose suffix
+``pyproject.toml`` excludes from the wheel and the sdist. It writes a
+``registry`` dictionary that maps each name to its hash, sorted by name. Run it
+from the repository root after any data file is added, removed, or changed::
 
     uv run python -m rattlesnake.data.registry
     uv run python -m rattlesnake.data.registry --check
@@ -18,25 +18,29 @@ produces no diff. Each entry stays on one line because ruff cannot split a
 string. The header disables pylint's ``line-too-long`` check for that reason, and
 its module docstring satisfies pylint's ``missing-module-docstring`` check.
 
-``SUFFIXES`` must match the ``exclude`` globs in ``pyproject.toml``. A suffix
-that is excluded from the wheel but missing here is a file that ships nowhere.
-``test_suffixes_match_pyproject_exclude`` in ``tests/short/test_registry.py``
-fails when the two disagree.
+``pyproject.toml`` is the only list of registered suffixes. Hatchling reads
+the ``exclude`` globs in ``[tool.hatch.build]`` to leave the files out of the
+wheel and the sdist. ``suffixes_read`` reads the same globs, so every excluded
+file is registered and none ships nowhere. ``pyproject.toml`` does not ship in
+the wheel, so ``suffixes_read`` opens it only when called, never when this
+module is imported.
 
 Files that Rattlesnake writes do not belong in the registry. A
 ``SAVE_CONTROL_DATA`` profile event, for example, writes control data to a
 path. Such a file changes on every run, so its hash never stays fixed, and
 nothing reads it back. ``OUTPUT_FILES`` lists the output names that example
-runs used to leave under the examples directory. The generator skips them even
-when a stray copy exists on disk.
+runs used to leave under the examples directory. ``file_list`` skips them
+even when a stray copy exists on disk.
 
 Attributes
 ----------
-SUFFIXES : tuple of str
-    File suffixes that belong in the registry.
+EXCLUDE_PREFIX : str
+    Start of every ``exclude`` glob in ``pyproject.toml``. The suffix follows.
+PYPROJECT_PATH : pathlib.Path
+    The ``pyproject.toml`` at the root of a source checkout.
 OUTPUT_FILES : frozenset of str
     Names, relative to the examples directory, of files that Rattlesnake
-    writes. The generator never registers them.
+    writes. ``file_list`` skips them, so the registry never lists them.
 HEADER : str
     Pylint directive and module docstring at the top of the generated file.
 REGISTRY_PATH : pathlib.Path
@@ -49,10 +53,11 @@ import json
 import os
 import pathlib
 import sys
+import tomllib
 
 from rattlesnake import data
 
-SUFFIXES = (".nc4", ".npz", ".npy")
+EXCLUDE_PREFIX = "/src/rattlesnake/examples/**/*"
 OUTPUT_FILES = frozenset(
     {
         "environment/random/random_control_data.nc4",
@@ -76,12 +81,67 @@ HEADER = (
     "\n"
 )
 REGISTRY_PATH = pathlib.Path(data.__file__).with_name("_registry.py")
+PYPROJECT_PATH = pathlib.Path(__file__).resolve().parents[3] / "pyproject.toml"
+
+
+def suffixes_read(*, path: str | os.PathLike[str] | None = None) -> tuple[str, ...]:
+    """
+    Read the registered file suffixes from the shared ``exclude`` globs.
+
+    The globs live in ``[tool.hatch.build]``, where hatchling applies them to
+    every build target. An ``exclude`` list on one target replaces the shared
+    list for that target instead of adding to it, so the data files would ship
+    in that archive. This function rejects such a list.
+
+    Parameters
+    ----------
+    path : str or os.PathLike, optional
+        A ``pyproject.toml`` file. Defaults to ``PYPROJECT_PATH``.
+
+    Returns
+    -------
+    tuple of str
+        Suffixes with the leading dot, sorted, such as ``(".nc4", ".npy")``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``path`` does not exist, as in an installed wheel.
+    ValueError
+        If a build target sets its own ``exclude`` list, or if a glob does not
+        have the form ``EXCLUDE_PREFIX`` followed by a suffix such as ``.nc4``.
+    """
+    if path is None:
+        path = PYPROJECT_PATH
+    with pathlib.Path(path).open("rb") as file:
+        build_options = tomllib.load(file)["tool"]["hatch"]["build"]
+    for target, options in build_options.get("targets", {}).items():
+        if "exclude" in options:
+            raise ValueError(
+                f"{path}: [tool.hatch.build.targets.{target}] sets its own exclude "
+                "list, which replaces [tool.hatch.build] exclude for that target"
+            )
+    suffixes = []
+    for glob in sorted(build_options["exclude"]):
+        suffix = glob.removeprefix(EXCLUDE_PREFIX)
+        if (
+            suffix == glob
+            or len(suffix) < 2
+            or not suffix.startswith(".")
+            or any(character in suffix[1:] for character in "./*?[")
+        ):
+            raise ValueError(
+                f"{path}: exclude glob {glob!r} is not {EXCLUDE_PREFIX!r} "
+                "followed by a suffix such as '.nc4'"
+            )
+        suffixes.append(suffix)
+    return tuple(suffixes)
 
 
 def file_list(
     *,
     directory: str | os.PathLike[str],
-    suffixes: tuple[str, ...] = SUFFIXES,
+    suffixes: tuple[str, ...] | None = None,
     excluded: frozenset[str] = OUTPUT_FILES,
 ) -> list[str]:
     """
@@ -92,7 +152,8 @@ def file_list(
     directory : str or os.PathLike
         Directory to search, including all subdirectories.
     suffixes : tuple of str, optional
-        File suffixes to keep, with the leading dot. Defaults to ``SUFFIXES``.
+        File suffixes to keep, with the leading dot. Defaults to the suffixes
+        that ``suffixes_read`` returns.
     excluded : frozenset of str, optional
         Relative names to skip. Defaults to ``OUTPUT_FILES``.
 
@@ -105,11 +166,17 @@ def file_list(
     Raises
     ------
     FileNotFoundError
-        If ``directory`` is not a directory.
+        If ``directory`` is not a directory, or if ``suffixes`` is ``None`` and
+        ``PYPROJECT_PATH`` does not exist.
+    ValueError
+        If ``suffixes`` is ``None`` and ``suffixes_read`` rejects the
+        ``exclude`` globs.
     """
     directory = pathlib.Path(directory)
     if not directory.is_dir():
         raise FileNotFoundError(f"not a directory: {directory}")
+    if suffixes is None:
+        suffixes = suffixes_read()
     names = (
         path.relative_to(directory).as_posix()
         for path in directory.rglob("*")
@@ -121,7 +188,7 @@ def file_list(
 def build(
     *,
     directory: str | os.PathLike[str] | None = None,
-    suffixes: tuple[str, ...] = SUFFIXES,
+    suffixes: tuple[str, ...] | None = None,
 ) -> dict[str, str]:
     """
     Hash the data files under a directory.
@@ -131,7 +198,8 @@ def build(
     directory : str or os.PathLike, optional
         Directory to search. Defaults to ``data.PACKAGE_DIRECTORY``.
     suffixes : tuple of str, optional
-        File suffixes to register. Defaults to ``SUFFIXES``.
+        File suffixes to register. Defaults to the suffixes that
+        ``suffixes_read`` returns.
 
     Returns
     -------
@@ -175,7 +243,7 @@ def render(*, entries: dict[str, str]) -> str:
 def generate(
     *,
     directory: str | os.PathLike[str] | None = None,
-    suffixes: tuple[str, ...] = SUFFIXES,
+    suffixes: tuple[str, ...] | None = None,
 ) -> str:
     """
     Build the source text of ``_registry.py`` from the files on disk.
@@ -185,7 +253,8 @@ def generate(
     directory : str or os.PathLike, optional
         Directory to search. Defaults to ``data.PACKAGE_DIRECTORY``.
     suffixes : tuple of str, optional
-        File suffixes to register. Defaults to ``SUFFIXES``.
+        File suffixes to register. Defaults to the suffixes that
+        ``suffixes_read`` returns.
 
     Returns
     -------
@@ -279,7 +348,9 @@ def main(argv: list[str] | None = None) -> int:
     -------
     int
         0 after a write, or after a check that finds no differences. 1 after a
-        check that finds differences. 2 if the search directory is missing.
+        check that finds differences. 2 if the search directory or
+        ``pyproject.toml`` is missing, or if ``suffixes_read`` rejects the
+        ``exclude`` globs.
     """
     parser = argparse.ArgumentParser(
         description="Generate _registry.py for the large example data files."
@@ -291,7 +362,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         generated = build(directory=args.directory)
-    except FileNotFoundError as error:
+    except (FileNotFoundError, ValueError) as error:
         print(error, file=sys.stderr)
         return 2
 

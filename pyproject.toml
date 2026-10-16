@@ -69,19 +69,22 @@ source = "vcs"
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead of 0.0.9+g1234567
 
+[tool.hatch.build]
+# Large example data files are fetched on demand by rattlesnake.data.fetch.
+# Hatchling applies this exclude list to every build target, the wheel and the
+# sdist. rattlesnake.data.registry reads the suffixes from it.
+exclude = [
+  "/src/rattlesnake/examples/**/*.nc4",
+  "/src/rattlesnake/examples/**/*.npz",
+  "/src/rattlesnake/examples/**/*.npy",
+]
+
 [tool.hatch.build.hooks.custom]
 # hatch_build.py writes src/rattlesnake/_commit.py with the git commit SHA.
 # rattlesnake.data downloads a development build's data files from that commit.
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rattlesnake"]
-# Large example data files are fetched on demand by rattlesnake.data.fetch.
-# Every excluded file must be listed in src/rattlesnake/data/_registry.py.
-exclude = [
-  "/src/rattlesnake/examples/**/*.nc4",
-  "/src/rattlesnake/examples/**/*.npz",
-  "/src/rattlesnake/examples/**/*.npy",
-]
 
 [tool.hatch.build.targets.sdist]
 # Explicit allowlist: without this, hatchling's default sdist packaging sweeps
@@ -96,13 +99,6 @@ include = [
   "/hatch_build.py",
   "/pyproject.toml",
   "/uv.lock",
-]
-# Large example data files are fetched on demand by rattlesnake.data.fetch.
-# Every excluded file must be listed in src/rattlesnake/data/_registry.py.
-exclude = [
-  "/src/rattlesnake/examples/**/*.nc4",
-  "/src/rattlesnake/examples/**/*.npz",
-  "/src/rattlesnake/examples/**/*.npy",
 ]
 
 [tool.pytest.ini_options]

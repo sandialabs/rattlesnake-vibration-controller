@@ -5,8 +5,10 @@ Every test builds its own small directory in ``tmp_path``, except three. Two
 read the dictionary that ``rattlesnake.data`` already imported.
 ``test_committed_registry_matches_generated_format`` compares it with the
 committed text. ``test_committed_registry_matches_files_on_disk`` compares it
-with the data files in the checkout. ``test_suffixes_match_pyproject_exclude``
-reads ``pyproject.toml`` in the checkout.
+with the data files in the checkout. ``test_suffixes_read_repository`` reads
+``pyproject.toml`` in the checkout.
+
+Tests that rely on the default suffixes also read that ``pyproject.toml``.
 
 The tests cover seven areas.
 
@@ -21,10 +23,10 @@ Keyword-only signatures
     Python, ``read`` loads it back, and ``ruff format`` leaves it unchanged.
     The formatting test is the guard against a formatting diff. It skips when
     ruff is not installed.
-``SUFFIXES``
-    Matches the ``exclude`` globs of the wheel and sdist targets in
-    ``pyproject.toml``. The test skips without ``pyproject.toml``, as in an
-    installed wheel.
+``suffixes_read``
+    Reads the suffixes from the shared ``exclude`` globs in
+    ``pyproject.toml``. It rejects a build target with its own ``exclude``
+    list and a glob that is not ``EXCLUDE_PREFIX`` followed by a suffix.
 ``read``
     Loads the dictionary with ``ast.literal_eval`` and never runs the file.
 ``difference_list``
@@ -32,7 +34,8 @@ Keyword-only signatures
     whose file is gone, and a ``changed`` hash.
 ``main``
     Writes the file by default. With ``--check`` it leaves the file alone and
-    returns 1 for a stale registry. It returns 2 for a missing directory.
+    returns 1 for a stale registry. It returns 2 for a missing directory or a
+    rejected ``pyproject.toml``.
 
 Unit Tests
 ----------
@@ -58,8 +61,14 @@ test_committed_registry_matches_generated_format
     Confirms the committed ``_registry.py`` has exactly the generated text.
 test_committed_registry_matches_files_on_disk
     Confirms the committed registry lists every data file with its current hash.
-test_suffixes_match_pyproject_exclude
-    Confirms ``SUFFIXES`` and each target's ``exclude`` globs list the same suffixes.
+test_suffixes_read
+    Returns the sorted suffixes from the shared ``exclude`` list.
+test_suffixes_read_repository
+    Reads the checkout's ``pyproject.toml`` without an error.
+test_suffixes_read_rejects_target_exclude
+    Raises ``ValueError`` when the wheel or sdist sets its own ``exclude``.
+test_suffixes_read_rejects_glob
+    Raises ``ValueError`` for a glob that does not end in a plain suffix.
 test_read_rejects_other_files
     Raises ``ValueError`` when no string dictionary named ``registry`` exists.
 test_read_does_not_execute
@@ -72,22 +81,22 @@ test_main_check
     Returns 0 for a current file, 1 for a stale file, and never writes.
 test_main_missing_directory
     Returns 2 for a directory that does not exist.
+test_main_rejected_pyproject
+    Returns 2 when ``suffixes_read`` rejects ``pyproject.toml``.
 """
 
 import hashlib
 import importlib.util
+import json
 import pathlib
 import subprocess
 import sys
-import tomllib
 from collections.abc import Callable
 
 import pytest
 
 from rattlesnake import data
 from rattlesnake.data import registry
-
-PYPROJECT_PATH = pathlib.Path(registry.__file__).resolve().parents[3] / "pyproject.toml"
 
 
 @pytest.fixture(name="examples")
@@ -135,6 +144,37 @@ def sha256(*, content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def pyproject_write(
+    *, path: pathlib.Path, exclude: list[str], target: str | None = None
+) -> pathlib.Path:
+    """
+    Write a ``pyproject.toml`` that holds only hatchling ``exclude`` lists.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        File to write.
+    exclude : list of str
+        Globs for the shared ``[tool.hatch.build]`` list.
+    target : str, optional
+        Build target, such as ``"wheel"``, that also gets its own ``exclude``
+        list with one ``.xlsx`` glob. Defaults to no target list.
+
+    Returns
+    -------
+    pathlib.Path
+        ``path``, for chaining.
+    """
+    text = f"[tool.hatch.build]\nexclude = {json.dumps(exclude)}\n"
+    if target is not None:
+        text += (
+            f"[tool.hatch.build.targets.{target}]\n"
+            f'exclude = ["{registry.EXCLUDE_PREFIX}.xlsx"]\n'
+        )
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 @pytest.mark.parametrize(
     "function",
     [
@@ -144,6 +184,7 @@ def sha256(*, content: bytes) -> str:
         registry.generate,
         registry.read,
         registry.difference_list,
+        registry.suffixes_read,
     ],
 )
 def test_functions_require_keyword_arguments(function: Callable[..., object]) -> None:
@@ -295,33 +336,83 @@ def test_committed_registry_matches_generated_format() -> None:
     assert text == registry.render(entries=data.REGISTRY)
 
 
-@pytest.mark.skipif(not PYPROJECT_PATH.is_file(), reason="no pyproject.toml")
-@pytest.mark.parametrize("target", ["wheel", "sdist"])
-def test_suffixes_match_pyproject_exclude(target: str) -> None:
+def test_suffixes_read(tmp_path: pathlib.Path) -> None:
     """
-    Confirm that ``SUFFIXES`` and a build target's ``exclude`` globs agree.
+    Return the sorted suffixes from the shared ``exclude`` list.
 
-    Hatchling reads ``exclude`` from ``pyproject.toml``, so the suffixes live
-    in two places. A suffix in ``exclude`` but not in ``SUFFIXES`` leaves its
-    files out of the archive and out of the registry, so they ship nowhere. A
-    suffix in ``SUFFIXES`` but not in ``exclude`` ships its files in the
-    archive and also downloads them.
+    The list holds ``.npz`` before ``.nc4``, so the test also checks the sort.
+    """
+    globs = [registry.EXCLUDE_PREFIX + suffix for suffix in (".npz", ".nc4")]
+    path = pyproject_write(path=tmp_path / "pyproject.toml", exclude=globs)
+    assert registry.suffixes_read(path=path) == (".nc4", ".npz")
+
+
+@pytest.mark.skipif(
+    not registry.PYPROJECT_PATH.is_file(), reason="not running from a source checkout"
+)
+def test_suffixes_read_repository() -> None:
+    """
+    Read the checkout's ``pyproject.toml`` without an error.
+
+    ``suffixes_read`` raises when a build target sets its own ``exclude`` list,
+    so this test fails when someone adds one. Such a list would put every data
+    file back into that archive.
+    """
+    suffixes = registry.suffixes_read()
+    assert suffixes
+    assert all(suffix.startswith(".") for suffix in suffixes)
+
+
+@pytest.mark.parametrize("target", ["wheel", "sdist"])
+def test_suffixes_read_rejects_target_exclude(
+    target: str, tmp_path: pathlib.Path
+) -> None:
+    """
+    Raise ``ValueError`` when the wheel or sdist sets its own ``exclude``.
+
+    Hatchling uses a target's own ``exclude`` list in place of the shared one.
+    A wheel built that way held all 39 data files.
 
     Parameters
     ----------
     target : str
-        Hatchling build target under ``[tool.hatch.build.targets]``.
+        Build target that gets its own ``exclude`` list.
     """
-    with PYPROJECT_PATH.open("rb") as file:
-        pyproject = tomllib.load(file)
-    exclude = pyproject["tool"]["hatch"]["build"]["targets"][target]["exclude"]
-    expected = [
-        f"/src/rattlesnake/examples/**/*{suffix}" for suffix in registry.SUFFIXES
-    ]
-    assert sorted(exclude) == sorted(expected), (
-        f"[tool.hatch.build.targets.{target}] exclude in pyproject.toml must "
-        "hold one glob per suffix in SUFFIXES in rattlesnake/data/registry.py"
+    path = pyproject_write(
+        path=tmp_path / "pyproject.toml",
+        exclude=[registry.EXCLUDE_PREFIX + ".nc4"],
+        target=target,
     )
+    with pytest.raises(ValueError, match=f"targets.{target}"):
+        registry.suffixes_read(path=path)
+
+
+@pytest.mark.parametrize(
+    "glob",
+    [
+        "/src/rattlesnake/examples/*.nc4",
+        "/src/rattlesnake/examples/**/*nc4",
+        "/src/rattlesnake/examples/**/*.tar.gz",
+        "/src/rattlesnake/examples/**/*.np?",
+        "/src/rattlesnake/examples/**/*.",
+    ],
+)
+def test_suffixes_read_rejects_glob(glob: str, tmp_path: pathlib.Path) -> None:
+    """
+    Raise ``ValueError`` for a glob that does not end in a plain suffix.
+
+    The cases cover a wrong prefix, a missing dot, a two-part suffix, a
+    wildcard, and an empty suffix. ``pathlib`` reports only the last suffix of
+    a name, so ``file_list`` could never match ``.tar.gz``.
+
+    Parameters
+    ----------
+    glob : str
+        Glob to put in the shared ``exclude`` list.
+    """
+    path = pyproject_write(path=tmp_path / "pyproject.toml", exclude=[glob])
+    with pytest.raises(ValueError, match="is not"):
+        registry.suffixes_read(path=path)
 
 
 def test_committed_registry_matches_files_on_disk() -> None:
@@ -450,3 +541,25 @@ def test_main_missing_directory(
     )
     assert status == 2
     assert "not a directory" in capsys.readouterr().err
+
+
+def test_main_rejected_pyproject(
+    examples: pathlib.Path,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    Return 2 when ``suffixes_read`` rejects ``pyproject.toml``, and write nothing.
+    """
+    path = pyproject_write(
+        path=tmp_path / "pyproject.toml",
+        exclude=[registry.EXCLUDE_PREFIX + ".nc4"],
+        target="wheel",
+    )
+    monkeypatch.setattr(registry, "PYPROJECT_PATH", path)
+    output = tmp_path / "_registry.py"
+    status = registry.main(["--directory", str(examples), "--output", str(output)])
+    assert status == 2
+    assert "own exclude" in capsys.readouterr().err
+    assert not output.exists()
