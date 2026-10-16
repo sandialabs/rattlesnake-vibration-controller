@@ -1,8 +1,9 @@
 """
 Generate ``_registry.py``, the SHA-256 registry of large example data files.
 
-This module walks the examples directory and hashes every file whose suffix
-``pyproject.toml`` excludes from the wheel and the sdist. It writes a
+This module hashes every file that git tracks under the examples directory
+and whose suffix ``pyproject.toml`` excludes from the wheel and the sdist. It
+writes a
 ``registry`` dictionary that maps each name to its hash, sorted by name. Run it
 from the repository root after any data file is added, removed, or changed::
 
@@ -25,12 +26,8 @@ file is registered and none ships nowhere. ``pyproject.toml`` does not ship in
 the wheel, so ``suffixes_read`` opens it only when called, never when this
 module is imported.
 
-Files that Rattlesnake writes do not belong in the registry. A
-``SAVE_CONTROL_DATA`` profile event, for example, writes control data to a
-path. Such a file changes on every run, so its hash never stays fixed, and
-nothing reads it back. ``OUTPUT_FILES`` lists the output names that example
-runs used to leave under the examples directory. ``file_list`` skips them
-even when a stray copy exists on disk.
+The registry lists only files that git tracks, so an untracked file, such as
+a run output, never enters it. The command therefore needs a git checkout.
 
 Attributes
 ----------
@@ -38,9 +35,6 @@ EXCLUDE_PREFIX : str
     Start of every ``exclude`` glob in ``pyproject.toml``. The suffix follows.
 PYPROJECT_PATH : pathlib.Path
     The ``pyproject.toml`` at the root of a source checkout.
-OUTPUT_FILES : frozenset of str
-    Names, relative to the examples directory, of files that Rattlesnake
-    writes. ``file_list`` skips them, so the registry never lists them.
 HEADER : str
     Pylint directive and module docstring at the top of the generated file.
 REGISTRY_PATH : pathlib.Path
@@ -52,18 +46,13 @@ import ast
 import json
 import os
 import pathlib
+import subprocess
 import sys
 import tomllib
 
 from rattlesnake import data
 
 EXCLUDE_PREFIX = "/src/rattlesnake/examples/**/*"
-OUTPUT_FILES = frozenset(
-    {
-        "environment/random/random_control_data.nc4",
-        "environment/sine/sine_control_data.npz",
-    }
-)
 HEADER = (
     "# pylint: disable=line-too-long\n"
     '"""\n'
@@ -75,8 +64,7 @@ HEADER = (
     "Each key is a file name relative to src/rattlesnake/examples/.\n"
     "Each value is the SHA-256 hash of that file.\n"
     "\n"
-    "Files that Rattlesnake writes, such as SAVE_CONTROL_DATA outputs, do not\n"
-    "belong here. See OUTPUT_FILES in rattlesnake/data/registry.py.\n"
+    "Only files that git tracks belong here.\n"
     '"""\n'
     "\n"
 )
@@ -142,20 +130,22 @@ def file_list(
     *,
     directory: str | os.PathLike[str],
     suffixes: tuple[str, ...] | None = None,
-    excluded: frozenset[str] = OUTPUT_FILES,
 ) -> list[str]:
     """
-    List the files under a directory that have one of the given suffixes.
+    List the files that git tracks under a directory and that have a suffix.
+
+    An untracked file, such as a run output, is never listed. Neither is a
+    tracked file that is missing from disk, so ``--check`` reports it as
+    ``stale``.
 
     Parameters
     ----------
     directory : str or os.PathLike
-        Directory to search, including all subdirectories.
+        Directory to search, including all subdirectories. It must be inside a
+        git checkout.
     suffixes : tuple of str, optional
         File suffixes to keep, with the leading dot. Defaults to the suffixes
         that ``suffixes_read`` returns.
-    excluded : frozenset of str, optional
-        Relative names to skip. Defaults to ``OUTPUT_FILES``.
 
     Returns
     -------
@@ -166,7 +156,8 @@ def file_list(
     Raises
     ------
     FileNotFoundError
-        If ``directory`` is not a directory, or if ``suffixes`` is ``None`` and
+        If ``directory`` is not a directory, if it is not inside a git
+        checkout, if git is not installed, or if ``suffixes`` is ``None`` and
         ``PYPROJECT_PATH`` does not exist.
     ValueError
         If ``suffixes`` is ``None`` and ``suffixes_read`` rejects the
@@ -177,12 +168,24 @@ def file_list(
         raise FileNotFoundError(f"not a directory: {directory}")
     if suffixes is None:
         suffixes = suffixes_read()
-    names = (
-        path.relative_to(directory).as_posix()
-        for path in directory.rglob("*")
-        if path.is_file() and path.suffix in suffixes
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=directory,
+            capture_output=True,
+            check=True,
+        )
+    except FileNotFoundError as error:
+        raise FileNotFoundError("git is not installed") from error
+    except subprocess.CalledProcessError as error:
+        raise FileNotFoundError(f"not a git checkout: {directory}") from error
+    names = result.stdout.decode("utf-8").split("\0")
+    return sorted(
+        name
+        for name in names
+        if pathlib.PurePosixPath(name).suffix in suffixes
+        and (directory / name).is_file()
     )
-    return sorted(name for name in names if name not in excluded)
 
 
 def build(
@@ -349,8 +352,8 @@ def main(argv: list[str] | None = None) -> int:
     int
         0 after a write, or after a check that finds no differences. 1 after a
         check that finds differences. 2 if the search directory or
-        ``pyproject.toml`` is missing, or if ``suffixes_read`` rejects the
-        ``exclude`` globs.
+        ``pyproject.toml`` is missing, if the search directory is not in a git
+        checkout, or if ``suffixes_read`` rejects the ``exclude`` globs.
     """
     parser = argparse.ArgumentParser(
         description="Generate _registry.py for the large example data files."

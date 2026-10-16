@@ -467,7 +467,7 @@ The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist
 
 ### Managing data files
 
-The registry lists every file under `src/rattlesnake/examples` whose suffix the `exclude` list in `pyproject.toml` names, currently `.nc4`, `.npz`, and `.npy`.  A file with any other suffix, such as `.xlsx`, ships in the wheel and the sdist and stays out of the registry.  To fetch a new file type, add a glob for its suffix, such as `"/src/rattlesnake/examples/**/*.xlsx"`, to the `exclude` list under `[tool.hatch.build]` in `pyproject.toml`.  Then follow the [steps for every change](#sec:steps-for-every-change) below.  The regenerated registry picks up the new files.
+The registry lists every file that git tracks under `src/rattlesnake/examples` and whose suffix the `exclude` list in `pyproject.toml` names, currently `.nc4`, `.npz`, and `.npy`.  An untracked file, such as a run output, never enters the registry.  A file with any other suffix, such as `.xlsx`, ships in the wheel and the sdist and stays out of the registry.  To fetch a new file type, add a glob for its suffix, such as `"/src/rattlesnake/examples/**/*.xlsx"`, to the `exclude` list under `[tool.hatch.build]` in `pyproject.toml`.  Then follow the [steps for every change](#sec:steps-for-every-change) below.  The regenerated registry picks up the new files.
 
 `pyproject.toml` is the *single source of truth* for the suffixes.  Hatchling reads `exclude` as static TOML when it builds the wheel and the sdist.  It cannot import the list from Python code.  A build hook such as `hatch_build.py` can add files to an archive, but hatchling gives a hook no way to remove them.  So the list lives in `pyproject.toml`, and `registry.py` reads it from there.
 
@@ -525,9 +525,10 @@ Each change below ends with these three steps:
 #### Add a file
 
 1. Put the file under `src/rattlesnake/examples`.
-2. Read the file through `data.fetch(name=...)`.  The name is the path relative to `src/rattlesnake/examples`.  Do not build the path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.
-3. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.
-4. Follow the [steps for every change](#sec:steps-for-every-change).
+2. Stage the file with `git add`.  The registry lists only files that git tracks, so the next step would skip an unstaged file.
+3. Read the file through `data.fetch(name=...)`.  The name is the path relative to `src/rattlesnake/examples`.  Do not build the path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.  Use `data.fetch` only for a file that Rattlesnake reads, never for a path that Rattlesnake writes, such as the destination of a `SAVE_CONTROL_DATA` profile event.  Rattlesnake would overwrite the cached copy, and its hash would no longer match.
+4. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.
+5. Follow the [steps for every change](#sec:steps-for-every-change).
 
 #### Change a file
 
@@ -560,12 +561,8 @@ Four tests catch a missed step in CI:
 
 - `test_registry_matches_repository_file` in `tests/short/test_data.py` guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
 - `test_registry_file_exists_in_checkout` in `tests/short/test_data.py` fails when someone renames or deletes a registered file and forgets to regenerate the registry.
-- `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` fails when someone adds a data file and forgets to register it.  The wheel leaves the file out, and the registry does not list it, so the file would ship nowhere.
+- `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` fails when someone stages a data file with `git add` and forgets to regenerate the registry.  The wheel leaves the file out, and the registry does not list it, so the file would ship nowhere.
 - `test_fetch_names_are_registered` in `tests/short/test_data.py` fails when a `data.fetch` call uses a name that the registry lacks.  After a rename or delete, a missed call site would otherwise fail only when its example runs, with a `KeyError`.
-
-```{note}
-Use `data.fetch` only for files that Rattlesnake **reads**.  The registry never lists a file that Rattlesnake **writes**.  `OUTPUT_FILES` in `src/rattlesnake/data/registry.py` names the known output files, and `python -m rattlesnake.data.registry` skips them.  Some examples also name a file that Rattlesnake writes, such as the destination of a `SAVE_CONTROL_DATA` profile event.  Build those paths the usual way.  If `fetch` returned a cache path for an output file, Rattlesnake would overwrite the cached copy, and its hash would no longer match.
-```
 
 ## Continuous Integration/Continuous Deployment (CI/CD)
 

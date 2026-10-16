@@ -8,8 +8,7 @@ Do not edit by hand. Run the command above to regenerate this file.
 Each key is a file name relative to src/rattlesnake/examples/.
 Each value is the SHA-256 hash of that file.
 
-Files that Rattlesnake writes, such as SAVE_CONTROL_DATA outputs, do not
-belong here. See OUTPUT_FILES in rattlesnake/data/registry.py.
+Only files that git tracks belong here.
 """
 
 registry = {

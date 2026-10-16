@@ -1,11 +1,17 @@
 """
 Unit tests for ``rattlesnake.data.registry``, which generates ``_registry.py``.
 
-Every test builds its own small directory in ``tmp_path``, except three. Two
-read the dictionary that ``rattlesnake.data`` already imported.
+Every test builds its own small directory in ``tmp_path``, except three. The
+``examples`` fixture makes its directory a git repository and stages its files,
+because ``file_list`` lists only files that git tracks. Tests that use it skip
+when git is not installed.
+
+Two of the three exceptions read the dictionary that ``rattlesnake.data``
+already imported.
 ``test_committed_registry_matches_generated_format`` compares it with the
 committed text. ``test_committed_registry_matches_files_on_disk`` compares it
-with the data files in the checkout. ``test_suffixes_read_repository`` reads
+with the data files in the checkout, and skips outside a git checkout, as in an
+extracted sdist. ``test_suffixes_read_repository`` reads
 ``pyproject.toml`` in the checkout.
 
 Tests that rely on the default suffixes also read that ``pyproject.toml``.
@@ -16,8 +22,9 @@ Keyword-only signatures
     Every public function except ``main`` takes keyword arguments only, so a
     positional call raises ``TypeError``.
 ``file_list`` and ``build``
-    Select files by suffix, search subdirectories, sort names, use ``/``
-    separators, and hash each file.
+    Select tracked files by suffix, search subdirectories, sort names, use
+    ``/`` separators, and hash each file. Skip untracked files and tracked
+    files that are missing from disk. Reject a directory outside git.
 ``render`` and ``generate``
     Write a ``registry`` dictionary with one line per file. The text is valid
     Python, ``read`` loads it back, and ``ruff format`` leaves it unchanged.
@@ -45,8 +52,12 @@ test_file_list
     Keeps only the registered suffixes, from every subdirectory, sorted.
 test_file_list_missing_directory
     Raises ``FileNotFoundError`` for a directory that does not exist.
-test_file_list_skips_output_files
-    Leaves out ``OUTPUT_FILES`` names even when the files exist on disk.
+test_file_list_skips_untracked
+    Leaves out a file with a registered suffix that git does not track.
+test_file_list_skips_deleted
+    Leaves out a tracked file that is missing from disk.
+test_file_list_outside_git
+    Raises ``FileNotFoundError`` for a directory that is not in a git checkout.
 test_build
     Maps each file name to the SHA-256 hash of its content.
 test_render
@@ -89,6 +100,7 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -98,11 +110,31 @@ import pytest
 from rattlesnake import data
 from rattlesnake.data import registry
 
+IN_GIT_CHECKOUT = (registry.PYPROJECT_PATH.parent / ".git").exists()
+
+
+def git_run(*, directory: pathlib.Path, arguments: list[str]) -> None:
+    """
+    Run a git command in a directory.
+
+    Parameters
+    ----------
+    directory : pathlib.Path
+        Working directory for git.
+    arguments : list of str
+        Arguments after ``git``, such as ``["add", "--all"]``.
+    """
+    subprocess.run(["git", *arguments], cwd=directory, capture_output=True, check=True)
+
 
 @pytest.fixture(name="examples")
 def examples_fixture(tmp_path: pathlib.Path) -> pathlib.Path:
     """
-    Build a small examples directory with data files and other files.
+    Build a small examples directory as a git repository with staged files.
+
+    The fixture stages the files but never commits them. ``git ls-files``
+    reads the index, so staging is enough, and a commit would need a git user
+    name and email that a fresh CI runner lacks.
 
     Parameters
     ----------
@@ -116,6 +148,8 @@ def examples_fixture(tmp_path: pathlib.Path) -> pathlib.Path:
         registered file at the top level, and two files that the registry
         must ignore.
     """
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
     directory = tmp_path / "examples"
     (directory / "b" / "deep").mkdir(parents=True)
     (directory / "a").mkdir()
@@ -124,6 +158,8 @@ def examples_fixture(tmp_path: pathlib.Path) -> pathlib.Path:
     (directory / "zero.npy").write_bytes(b"zero")
     (directory / "a" / "sheet.xlsx").write_bytes(b"ignored")
     (directory / "a" / "code.py").write_bytes(b"ignored")
+    git_run(directory=directory, arguments=["init", "--quiet"])
+    git_run(directory=directory, arguments=["add", "--all"])
     return directory
 
 
@@ -221,24 +257,47 @@ def test_file_list_missing_directory(tmp_path: pathlib.Path) -> None:
         registry.file_list(directory=tmp_path / "missing")
 
 
-def test_file_list_skips_output_files(examples: pathlib.Path) -> None:
+def test_file_list_skips_untracked(examples: pathlib.Path) -> None:
     """
-    Leave out ``OUTPUT_FILES`` names even when the files exist on disk.
+    Leave out a file with a registered suffix that git does not track.
 
-    A ``SAVE_CONTROL_DATA`` example run writes these files under the examples
-    directory. They change on every run, so they must never be registered.
+    A run output, such as a ``SAVE_CONTROL_DATA`` file, is untracked. Its hash
+    changes on every run, so it must never be registered.
     """
-    for name in registry.OUTPUT_FILES:
-        (examples / name).parent.mkdir(parents=True, exist_ok=True)
-        (examples / name).write_bytes(b"run output")
+    (examples / "a" / "run_output.nc4").write_bytes(b"run output")
     assert registry.file_list(directory=examples) == [
         "a/one.npz",
         "b/deep/two.nc4",
         "zero.npy",
     ]
-    assert set(registry.file_list(directory=examples, excluded=frozenset())) >= (
-        registry.OUTPUT_FILES
-    )
+
+
+def test_file_list_skips_deleted(examples: pathlib.Path) -> None:
+    """
+    Leave out a tracked file that is missing from disk.
+
+    Git still lists a file deleted with ``rm`` instead of ``git rm``. There is
+    nothing to hash, so ``--check`` reports the entry as ``stale``.
+    """
+    (examples / "zero.npy").unlink()
+    assert registry.file_list(directory=examples) == ["a/one.npz", "b/deep/two.nc4"]
+
+
+def test_file_list_outside_git(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Raise ``FileNotFoundError`` for a directory that is not in a git checkout.
+
+    ``GIT_CEILING_DIRECTORIES`` stops git from finding a repository above
+    ``tmp_path``, in case the temporary directory sits inside one.
+    """
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    (tmp_path / "one.nc4").write_bytes(b"one")
+    with pytest.raises(FileNotFoundError, match="not a git checkout"):
+        registry.file_list(directory=tmp_path, suffixes=(".nc4",))
 
 
 def test_build(examples: pathlib.Path) -> None:
@@ -279,7 +338,7 @@ def test_render_empty() -> None:
 )
 @pytest.mark.parametrize("populated", [True, False])
 def test_generated_source_is_ruff_formatted(
-    populated: bool, examples: pathlib.Path, tmp_path: pathlib.Path
+    populated: bool, examples: pathlib.Path
 ) -> None:
     """
     Confirm that ``ruff format`` leaves the generated text unchanged.
@@ -292,9 +351,9 @@ def test_generated_source_is_ruff_formatted(
     ----------
     populated : bool
         ``True`` to generate from files, ``False`` to generate an empty
-        registry.
+        registry from a directory in the same repository with no tracked files.
     """
-    empty = tmp_path / "empty"
+    empty = examples / "empty"
     empty.mkdir()
     text = registry.generate(directory=examples if populated else empty)
     assert ("registry = {}" in text) is not populated
@@ -415,6 +474,7 @@ def test_suffixes_read_rejects_glob(glob: str, tmp_path: pathlib.Path) -> None:
         registry.suffixes_read(path=path)
 
 
+@pytest.mark.skipif(not IN_GIT_CHECKOUT, reason="not running from a git checkout")
 def test_committed_registry_matches_files_on_disk() -> None:
     """
     Confirm the committed registry lists every data file with its current hash.
@@ -423,7 +483,8 @@ def test_committed_registry_matches_files_on_disk() -> None:
     without regenerating ``_registry.py``. Otherwise CI stays green, the release
     ships the old hash, and every user's ``fetch`` fails with ``ValueError``
     after four attempts. A git checkout holds every data file, so the test needs
-    no network access.
+    no network access. An extracted sdist holds no data files and no ``.git``,
+    so the test skips there.
     """
     differences = registry.difference_list(
         current=data.REGISTRY, generated=registry.build()
