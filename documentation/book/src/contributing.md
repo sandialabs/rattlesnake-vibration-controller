@@ -433,7 +433,9 @@ Downloads come from a branch only as the fallback described in the next paragrap
 
 `hatch_build.py` at the repository root records the commit.  This Hatch build hook runs `git rev-parse HEAD` during every build.  It writes the full SHA to `src/rattlesnake/_commit.py`, which `.gitignore` lists.  The sdist carries that file, so a wheel built from the sdist records the same SHA.  A build with no recorded commit falls back to the `dev` branch.
 
-A development build can download a file only after its commit is on GitHub.  A checkout or an editable install rarely downloads at all, because `fetch` finds the files in the package tree first.
+```{warning}
+A non-editable build, such as `pip install .` or a wheel from `uv build`, contains no data files.  It downloads them from the commit it was built from.  Commit and push before you build one.  Otherwise each download fails, with HTTP 404 for an unpushed commit, or with a hash mismatch for an uncommitted data change.  The build also loses its data source if its commit later leaves GitHub, for example after a force-push to a feature branch.  An editable install, such as `uv sync`, rarely downloads at all, because `fetch` finds the files in the package tree first.
+```
 
 `src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.  A tag ruleset stops anyone from deleting or moving a release tag.  See [Release Tag Protection](#sec:release-tag-protection).
 
