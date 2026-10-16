@@ -67,8 +67,8 @@ def manual_sine_metadata(hardware_metadata, **overrides):
     vk_filter_bandwidth = 2
     vk_filter_blocksize = 1000
     vk_filter_overlap = 0.15
-    control_python_script = None
-    control_python_class = None
+    control_python_script = "rattlesnake.environment.sine_sys_id_control_law"
+    control_python_class = "DefaultSineControlLaw"
     control_python_parameters = ""
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]

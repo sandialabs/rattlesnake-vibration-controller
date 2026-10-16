@@ -11,12 +11,14 @@ from rattlesnake.utilities import (
     DIRECTORY,
     GlobalCommands,
     db2scale,
-    load_python_module,
+    load_control_module,
     rms_time,
     load_time_history,
 )
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.transient_sys_id_environment import (
+    DEFAULT_CONTROL_FUNCTION,
+    DEFAULT_CONTROL_SCRIPT,
     TransientCommands,
     TransientUICommands,
     TransientMetadata,
@@ -39,6 +41,7 @@ from rattlesnake.user_interface.ui_utilities import (
 )
 
 CONTROL_TYPE = EnvironmentType.TRANSIENT
+CONTROL_FUNCTION_TYPE_NAMES = ["Function", "Generator", "Class", "Interactive"]
 MAXIMUM_NAME_LENGTH = 50
 
 
@@ -78,6 +81,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.python_control_module = None
+        self.control_function_type = None
         self.physical_channel_names = None
         self.physical_output_indices = None
         self.excitation_prediction = None
@@ -132,7 +136,7 @@ class TransientUI(SysIdEnvironmentUI):
             self.select_python_module
         )
         self.definition_widget.control_function_input.currentIndexChanged.connect(
-            self.update_generator_selector
+            self.update_control_function_type
         )
         self.definition_widget.check_selected_button.clicked.connect(
             self.check_selected_control_channels
@@ -318,10 +322,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.definition_widget.control_channels_display.setValue(0)
 
         if not self.definition_widget.control_script_file_path_input.text():
-            control_law_path = os.path.join(
-                DIRECTORY, "examples", "control_laws", "transient_control_laws.py"
-            )
-            self.select_python_module(clicked=False, filename=control_law_path)
+            self.select_python_module(clicked=False, default=True)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
@@ -425,10 +426,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.run_widget.response_signal_plot.getPlotItem().setLabel(
             "left", axis_label("amplitude", "Drive", output_unit)
         )
-        if (
-            self.definition_widget.control_function_generator_selector.currentIndex()
-            == 3
-        ):
+        if self.control_function_type == 3:
             control_class = getattr(
                 self.python_control_module,
                 self.definition_widget.control_function_input.itemText(
@@ -477,9 +475,7 @@ class TransientUI(SysIdEnvironmentUI):
             control_function = self.definition_widget.control_function_input.itemText(
                 self.definition_widget.control_function_input.currentIndex()
             )
-            control_function_type = (
-                self.definition_widget.control_function_generator_selector.currentIndex()
-            )
+            control_function_type = self.control_function_type
             control_function_parameters = (
                 self.definition_widget.control_parameters_text_input.toPlainText()
             )
@@ -526,11 +522,6 @@ class TransientUI(SysIdEnvironmentUI):
                 self.definition_widget.control_function_input.setCurrentIndex(
                     func_index
                 )
-
-            # Set the generator type selector
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                metadata.control_python_function_type
-            )
 
             # Set the parameters text
             self.definition_widget.control_parameters_text_input.setPlainText(
@@ -768,7 +759,7 @@ class TransientUI(SysIdEnvironmentUI):
             self.output_transformation_matrix = output_transformation
 
     def select_python_module(
-        self, clicked, filename=None
+        self, clicked, filename=None, default=False
     ):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
@@ -779,9 +770,15 @@ class TransientUI(SysIdEnvironmentUI):
         filename :
             File name defining the Python module for bypassing the callback when
             loading from a file (Default value = None).
+        default :
+            If True, loads the default control law module (Default value = False).
 
         """
-        if filename is None or not os.path.isfile(filename):
+        if default:
+            filename = DEFAULT_CONTROL_SCRIPT
+        if filename is None or (
+            filename != DEFAULT_CONTROL_SCRIPT and not os.path.isfile(filename)
+        ):
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
                 "Select Python Module",
@@ -790,7 +787,7 @@ class TransientUI(SysIdEnvironmentUI):
             if filename == "":
                 return
         try:
-            self.python_control_module = load_python_module(filename)
+            self.python_control_module = load_control_module(filename)
             functions = [
                 function
                 for function in inspect.getmembers(self.python_control_module)
@@ -831,9 +828,20 @@ class TransientUI(SysIdEnvironmentUI):
         self.definition_widget.control_script_file_path_input.setText(filename)
         for function in functions:
             self.definition_widget.control_function_input.addItem(function[0])
+        if filename == DEFAULT_CONTROL_SCRIPT:
+            function_index = self.definition_widget.control_function_input.findText(
+                DEFAULT_CONTROL_FUNCTION
+            )
+            if function_index >= 0:
+                self.definition_widget.control_function_input.setCurrentIndex(
+                    function_index
+                )
+        self.update_control_function_type()
 
-    def update_generator_selector(self):
-        """Updates the function/generator selector based on the function selected"""
+    def update_control_function_type(self):
+        """Detects and displays the type of the selected control law"""
+        self.control_function_type = None
+        self.definition_widget.control_function_type_display.setText("")
         if self.python_control_module is None:
             return
         try:
@@ -846,23 +854,18 @@ class TransientUI(SysIdEnvironmentUI):
         except AttributeError:
             return
         if inspect.isgeneratorfunction(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                1
-            )
+            self.control_function_type = 1
         elif inspect.isclass(function) and issubclass(
             function, AbstractControlLawComputation
         ):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                3
-            )
+            self.control_function_type = 3
         elif inspect.isclass(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                2
-            )
+            self.control_function_type = 2
         else:
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                0
-            )
+            self.control_function_type = 0
+        self.definition_widget.control_function_type_display.setText(
+            CONTROL_FUNCTION_TYPE_NAMES[self.control_function_type]
+        )
 
     def check_selected_control_channels(self):
         """Callback to check control channels that are selected"""
