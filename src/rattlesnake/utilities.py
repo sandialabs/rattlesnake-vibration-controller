@@ -1046,6 +1046,12 @@ def load_python_module(module_path):
     return module
 
 
+def load_control_module(control_script):
+    if not control_script.endswith(".py") and not os.path.isfile(control_script):
+        return importlib.import_module(control_script)
+    return load_python_module(control_script)
+
+
 def worksheet_cell_str(value, default=""):
     """
     This is used to cleanse inputs before writing them to excel as

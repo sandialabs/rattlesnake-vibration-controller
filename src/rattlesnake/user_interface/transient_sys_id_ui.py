@@ -11,12 +11,14 @@ from rattlesnake.utilities import (
     DIRECTORY,
     GlobalCommands,
     db2scale,
-    load_python_module,
+    load_control_module,
     rms_time,
     load_time_history,
 )
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.transient_sys_id_environment import (
+    DEFAULT_CONTROL_FUNCTION,
+    DEFAULT_CONTROL_SCRIPT,
     TransientCommands,
     TransientUICommands,
     TransientMetadata,
@@ -318,10 +320,7 @@ class TransientUI(SysIdEnvironmentUI):
         self.definition_widget.control_channels_display.setValue(0)
 
         if not self.definition_widget.control_script_file_path_input.text():
-            control_law_path = os.path.join(
-                DIRECTORY, "examples", "control_laws", "transient_control_laws.py"
-            )
-            self.select_python_module(clicked=False, filename=control_law_path)
+            self.select_python_module(clicked=False, default=True)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
@@ -768,7 +767,7 @@ class TransientUI(SysIdEnvironmentUI):
             self.output_transformation_matrix = output_transformation
 
     def select_python_module(
-        self, clicked, filename=None
+        self, clicked, filename=None, default=False
     ):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
@@ -779,9 +778,15 @@ class TransientUI(SysIdEnvironmentUI):
         filename :
             File name defining the Python module for bypassing the callback when
             loading from a file (Default value = None).
+        default :
+            If True, loads the default control law module (Default value = False).
 
         """
-        if filename is None or not os.path.isfile(filename):
+        if default:
+            filename = DEFAULT_CONTROL_SCRIPT
+        if filename is None or (
+            filename != DEFAULT_CONTROL_SCRIPT and not os.path.isfile(filename)
+        ):
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
                 "Select Python Module",
@@ -790,7 +795,7 @@ class TransientUI(SysIdEnvironmentUI):
             if filename == "":
                 return
         try:
-            self.python_control_module = load_python_module(filename)
+            self.python_control_module = load_control_module(filename)
             functions = [
                 function
                 for function in inspect.getmembers(self.python_control_module)
@@ -831,6 +836,14 @@ class TransientUI(SysIdEnvironmentUI):
         self.definition_widget.control_script_file_path_input.setText(filename)
         for function in functions:
             self.definition_widget.control_function_input.addItem(function[0])
+        if filename == DEFAULT_CONTROL_SCRIPT:
+            function_index = self.definition_widget.control_function_input.findText(
+                DEFAULT_CONTROL_FUNCTION
+            )
+            if function_index >= 0:
+                self.definition_widget.control_function_input.setCurrentIndex(
+                    function_index
+                )
 
     def update_generator_selector(self):
         """Updates the function/generator selector based on the function selected"""

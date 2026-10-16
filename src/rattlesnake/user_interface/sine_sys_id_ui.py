@@ -8,10 +8,12 @@ from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor  # pylint: disable=no-name-in-module
 
-from rattlesnake.utilities import DIRECTORY, load_python_module, db2scale
+from rattlesnake.utilities import DIRECTORY, load_control_module, db2scale
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sine_sys_id_environment import (
+    DEFAULT_CONTROL_CLASS,
+    DEFAULT_CONTROL_SCRIPT,
     SineCommands,
     SineUICommands,
     SineMetadata,
@@ -465,6 +467,9 @@ class SineUI(SysIdEnvironmentUI):
                 )
             )
         self.clear_and_update_specification_table()
+        # Set the default control law if needed
+        if not self.definition_widget.script_file_path_input.text():
+            self.select_python_module(clicked=False, default=True)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
@@ -770,6 +775,9 @@ class SineUI(SysIdEnvironmentUI):
                     metadata.control_python_class
                 )
             )
+        else:
+            # No control script means the default control law is used
+            self.select_python_module(None, default=True)
         self.definition_widget.control_parameters_text_input.setText(
             ""
             if metadata.control_python_parameters is None
@@ -1127,7 +1135,7 @@ class SineUI(SysIdEnvironmentUI):
         return result
 
     def select_python_module(
-        self, clicked, filename=None
+        self, clicked, filename=None, default=False
     ):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
@@ -1138,8 +1146,12 @@ class SineUI(SysIdEnvironmentUI):
         filename :
             File name defining the Python module for bypassing the callback when
             loading from a file (Default value = None).
+        default :
+            If True, loads the default control law module (Default value = False).
 
         """
+        if default:
+            filename = DEFAULT_CONTROL_SCRIPT
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
@@ -1149,7 +1161,15 @@ class SineUI(SysIdEnvironmentUI):
             if filename == "":
                 return
         try:
-            self.python_control_module = load_python_module(filename)
+            self.python_control_module = load_control_module(filename)
+            # These are the methods the sine environment calls on the control law
+            required_methods = [
+                "system_id_update",
+                "initialize_control",
+                "update_control",
+                "finalize_control",
+                "generate_signal",
+            ]
             classes = [
                 function
                 for function in inspect.getmembers(self.python_control_module)
@@ -1157,8 +1177,8 @@ class SineUI(SysIdEnvironmentUI):
                     inspect.isclass(function[1])
                     and all(
                         [
-                            method in function[1].__dict__
-                            for method in ["system_id_update", "control"]
+                            callable(getattr(function[1], method, None))
+                            for method in required_methods
                         ]
                     )
                 )
@@ -1174,6 +1194,12 @@ class SineUI(SysIdEnvironmentUI):
         self.definition_widget.script_file_path_input.setText(filename)
         for control_class in classes:
             self.definition_widget.python_class_input.addItem(control_class[0])
+        if filename == DEFAULT_CONTROL_SCRIPT:
+            class_index = self.definition_widget.python_class_input.findText(
+                DEFAULT_CONTROL_CLASS
+            )
+            if class_index >= 0:
+                self.definition_widget.python_class_input.setCurrentIndex(class_index)
 
     def define_transformation_matrices(
         self, clicked, dialog=True

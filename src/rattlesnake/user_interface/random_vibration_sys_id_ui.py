@@ -18,6 +18,8 @@ from rattlesnake.environment.abstract_interactive_control_law import (
 )
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.random_vibration_sys_id_environment import (
+    DEFAULT_CONTROL_FUNCTION,
+    DEFAULT_CONTROL_SCRIPT,
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationUICommands,
@@ -44,7 +46,7 @@ from rattlesnake.user_interface.ui_utilities import (
 from rattlesnake.utilities import (
     _direction_map,
     DIRECTORY,
-    load_python_module,
+    load_control_module,
 )
 
 CONTROL_TYPE = EnvironmentType.RANDOM
@@ -492,10 +494,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.define_transformation_matrices(None, False)
         # Set the default control law if needed
         if not self.definition_widget.control_script_file_path_input.text():
-            control_law_path = os.path.join(
-                DIRECTORY, "examples", "control_laws", "control_laws.py"
-            )
-            self.select_python_module(clicked=False, filename=control_law_path)
+            self.select_python_module(clicked=False, default=True)
 
     def initialize_environment(self, environment_metadata):
         super().initialize_environment(environment_metadata)
@@ -859,7 +858,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.show_specification()
 
     def select_python_module(
-        self, clicked, filename=None
+        self, clicked, filename=None, default=False
     ):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
@@ -870,8 +869,12 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         filename :
             File name defining the Python module for bypassing the callback when
             loading from a file (Default value = None).
+        default :
+            If True, loads the default control law module (Default value = False).
 
         """
+        if default:
+            filename = DEFAULT_CONTROL_SCRIPT
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
@@ -881,7 +884,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             if filename == "":
                 return
         try:
-            self.python_control_module = load_python_module(filename)
+            self.python_control_module = load_control_module(filename)
             functions = [
                 function
                 for function in inspect.getmembers(self.python_control_module)
@@ -922,6 +925,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.definition_widget.control_script_file_path_input.setText(filename)
         for function in functions:
             self.definition_widget.control_function_input.addItem(function[0])
+        if filename == DEFAULT_CONTROL_SCRIPT:
+            function_index = self.definition_widget.control_function_input.findText(
+                DEFAULT_CONTROL_FUNCTION
+            )
+            if function_index >= 0:
+                self.definition_widget.control_function_input.setCurrentIndex(
+                    function_index
+                )
 
     def update_generator_selector(self):
         """Updates the function/generator selector based on the function selected"""

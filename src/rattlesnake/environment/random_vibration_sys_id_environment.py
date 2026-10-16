@@ -64,7 +64,7 @@ from rattlesnake.utilities import (
     RattlesnakeError,
     VerboseMessageQueue,
     db2scale,
-    load_python_module,
+    load_control_module,
     worksheet_cell_str,
     _direction_map,
 )
@@ -96,6 +96,8 @@ from rattlesnake.process.spectral_processing import (
 from rattlesnake.user_interface.ui_utilities import UICommands
 
 CONTROL_TYPE = EnvironmentType.RANDOM
+DEFAULT_CONTROL_SCRIPT = "rattlesnake.environment.random_vibration_sys_id_control_law"
+DEFAULT_CONTROL_FUNCTION = "pseudoinverse_control"
 
 
 # region Commands
@@ -435,7 +437,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             )
 
         try:
-            module = load_python_module(self.control_python_script)
+            module = load_control_module(self.control_python_script)
         except Exception as e:
             raise RattlesnakeError(
                 f"{self.environment_name} could not load control script "
@@ -949,7 +951,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
 
         # Find python module type
         if control_python_script:
-            python_control_module = load_python_module(control_python_script)
+            python_control_module = load_control_module(control_python_script)
             function = getattr(python_control_module, control_python_function)
             control_python_function_type = None
             if inspect.isgeneratorfunction(function):

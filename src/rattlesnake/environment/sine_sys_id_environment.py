@@ -22,9 +22,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import importlib
 import multiprocessing as mp
-import os
 import threading
 import time
 import traceback
@@ -41,7 +39,7 @@ from rattlesnake.utilities import (
     GlobalCommands,
     RattlesnakeError,
     flush_queue,
-    load_python_module,
+    load_control_module,
     scale2db,
     wrap,
     db2scale,
@@ -58,7 +56,6 @@ from rattlesnake.environment.abstract_sysid_environment import (
 )
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.sine_sys_id_utilities import (
-    DefaultSineControlLaw,
     SineSpecification,
     digital_tracking_filter_generator,
     sine_sweep,
@@ -84,6 +81,8 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 
 # %% Global Variables
 CONTROL_TYPE = EnvironmentType.SINE
+DEFAULT_CONTROL_SCRIPT = "rattlesnake.environment.sine_sys_id_control_law"
+DEFAULT_CONTROL_CLASS = "DefaultSineControlLaw"
 MAXIMUM_SAMPLES_TO_PLOT = 1000000
 
 DEBUG = False
@@ -475,7 +474,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             return
 
         try:
-            module = load_python_module(self.control_python_script)
+            module = load_control_module(self.control_python_script)
         except Exception as e:
             raise RattlesnakeError(
                 f"{self.environment_name} could not load control script "
@@ -1382,22 +1381,13 @@ class SineEnvironment(SysIdEnvironment):
             self.ramp_samples = None
         super().initialize_environment(environment_metadata)
         if not environment_metadata.control_python_script:
-            control_class = DefaultSineControlLaw
-            self.extra_control_parameters = (
-                environment_metadata.control_python_parameters
-            )
+            # No control script specified, so fall back to the default control law
+            module = load_control_module(DEFAULT_CONTROL_SCRIPT)
+            control_class = getattr(module, DEFAULT_CONTROL_CLASS)
         else:
-            _, file = os.path.split(environment_metadata.control_python_script)
-            file, _ = os.path.splitext(file)
-            spec = importlib.util.spec_from_file_location(
-                file, environment_metadata.control_python_script
-            )
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            self.extra_control_parameters = (
-                environment_metadata.control_python_parameters
-            )
+            module = load_control_module(environment_metadata.control_python_script)
             control_class = getattr(module, environment_metadata.control_python_class)
+        self.extra_control_parameters = environment_metadata.control_python_parameters
         self.control_class = control_class(
             self.environment_metadata.sample_rate,
             self.environment_metadata.specifications,
