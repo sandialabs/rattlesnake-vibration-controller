@@ -801,15 +801,15 @@ class TransientUI(SysIdEnvironmentUI):
                     and all(
                         [
                             (
-                                method in function[1].__dict__
+                                method in dict(inspect.getmembers(function[1]))
                                 and not (
                                     hasattr(
-                                        function[1].__dict__[method],
+                                        dict(inspect.getmembers(function[1]))[method],
                                         "__isabstractmethod__",
                                     )
-                                    and function[1]
-                                    .__dict__[method]
-                                    .__isabstractmethod__
+                                    and dict(inspect.getmembers(function[1]))[
+                                        method
+                                    ].__isabstractmethod__
                                 )
                             )
                             for method in ["system_id_update", "control"]

@@ -1037,7 +1037,7 @@ class SDSUI(SysIdEnvironmentUI):
     def create_widget_for_type(arg_type, default_value):
         if arg_type == int:
             widget = QtWidgets.QSpinBox()
-            widget.setMinimum(1000000)
+            widget.setMinimum(-1000000)
             widget.setMaximum(1000000)
             widget.setValue(default_value)
         elif arg_type == float:
