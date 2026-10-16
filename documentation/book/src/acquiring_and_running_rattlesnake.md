@@ -22,30 +22,33 @@ Users can acquire Rattlesnake in three ways, depending on the use case:
 2. **Clone the GitHub repository** and install from source.  Choose this to read the source, contribute changes, or write custom control laws.
 3. **Download a standalone executable** from the GitHub Releases page *(coming soon)*.  Choose this to avoid installing Python.
 
-## Setting Up a Python Environment
+Installing from PyPI and installing from a clone both need Python 3.11 or later.  CI tests Python 3.11 and 3.12.  The standalone executable needs no Python.
 
-Create and activate a **virtual environment** before you install Rattlesnake from PyPI or from a clone.  The standalone executable needs no Python environment.
+## Choosing `pip` or `uv`
 
-Rattlesnake requires Python 3.11 or later.  CI tests Python 3.11 and 3.12.
+Python ships with the two tools that this guide uses.  `venv` creates a virtual environment, and `pip` installs packages into it.  [`uv`](https://docs.astral.sh/uv/) is an optional alternative to both.  It is a fast, modern Python package and project manager, written in Rust.  It replaces `pip`, `venv`, and several other tools with a single command-line interface.
 
-A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer. This helps avoid version conflicts and makes upgrades or removal easier.
+Each install step below shows the standard command first and its `uv` equivalent second.  Both give the same result.  Pick one tool and use it for every step.  Do not mix them.  `uv venv` creates an environment without `pip` in it, so after `uv venv`, install with `uv pip install`.
 
-Examples:
+Compared to `pip` and `venv`, `uv`:
+
+- Is **significantly faster** at resolving and installing dependencies, thanks to a Rust-based resolver and aggressive caching.
+- Can **install Python itself**.  If your computer lacks Python 3.11 or later, `uv python install 3.12` installs it, so a separate Python version manager is not required.
+
+Contributors should use `uv`.  The [Contributing](#sec:contributing) chapter recommends it, and its commands for testing, linting, and formatting assume it.
+
+### Installing `uv`
+
+Follow the official [installation guide](https://docs.astral.sh/uv/getting-started/installation/) for your platform, or use one of the quick install commands:
 
 ```sh
-# Option 1: standard library venv
-python -m venv .venv
-
-# Option 2: uv-managed venv
-uv venv
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Activate the environment before installing:
-
-```sh
-source .venv/bin/activate       # bash / zsh
-source .venv/bin/activate.fish  # fish shell
-.\.venv\Scripts\activate        # Windows PowerShell / CMD
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 ## Acquiring the Software
@@ -58,23 +61,50 @@ Rattlesnake is published on PyPI under the package name:
 rattlesnake-vibration-controller
 ```
 
-The simplest installation method is therefore:
-
-```sh
-pip install rattlesnake-vibration-controller
-```
-
 This is the recommended option for users who:
 
 - already have a Python installation available,
 - want the easiest Python-based installation route, and
 - do not need to modify the Rattlesnake source code directly.
 
-Other Python package managers may also be used as long as they can install from PyPI. For example, users of `uv` may prefer:
+Install it in three steps.
 
-```sh
-uv pip install rattlesnake-vibration-controller
-```
+1. **Create a working folder, and move into it.**  Any folder name works.  `my_project` is an example.  The virtual environment in the next step goes in this folder.
+
+   ```sh
+   mkdir my_project
+   cd my_project
+   ```
+
+2. **Create and activate a virtual environment, before you install anything.**  A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer.  This avoids version conflicts and makes upgrades or removal easier.  Create it with one of two equivalent commands:
+
+   ```sh
+   # Run only one of these two commands.  Both create the same .venv folder.
+   python -m venv .venv   # Option 1: Python's built-in venv module
+   uv venv                # Option 2: uv, if you have it installed
+   ```
+
+   Then activate it with the command for your shell:
+
+   ```sh
+   source .venv/bin/activate       # bash / zsh
+   source .venv/bin/activate.fish  # fish
+   .\.venv\Scripts\activate        # Windows PowerShell / CMD
+   ```
+
+   Activate it again in every new terminal before you run Rattlesnake.
+
+3. **Install Rattlesnake into the active environment.**
+
+   ```sh
+   pip install rattlesnake-vibration-controller
+   ```
+
+   Users of `uv` may prefer:
+
+   ```sh
+   uv pip install rattlesnake-vibration-controller
+   ```
 
 Once installed, the package exposes a console entry point named:
 
@@ -86,24 +116,48 @@ which launches the main application.
 
 ### Installing from a GitHub Clone
 
-Users who intend to inspect the source, contribute changes, or develop custom control laws may prefer installing from a clone of the repository.
+Users who intend to inspect the source, contribute changes, or develop custom control laws may prefer installing from a clone of the repository.  The source code is hosted at https://github.com/sandialabs/rattlesnake-vibration-controller
 
-The source code is hosted at https://github.com/sandialabs/rattlesnake-vibration-controller
+Install it in three steps.
 
-Clone it with Git:
+1. **Clone the repository, and move into it.**
 
-```sh
-git clone https://github.com/sandialabs/rattlesnake-vibration-controller.git
-cd rattlesnake-vibration-controller
-```
+   ```sh
+   git clone https://github.com/sandialabs/rattlesnake-vibration-controller.git
+   cd rattlesnake-vibration-controller  # Important for the next steps
+   ```
 
-Then install it from the repository directory:
+2. **Create and activate a virtual environment inside the clone, before you install anything.**  Run these commands from the repository directory, so that `.venv` sits inside it.  `uv sync` and the development tools in [Contributing](#sec:contributing) expect `.venv` there.  A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer.  Create it with one of two equivalent commands:
 
-```sh
-pip install .
-```
+   ```sh
+   # Run only one of these two commands.  Both create the same .venv folder.
+   python -m venv .venv   # Option 1: Python's built-in venv module
+   uv venv                # Option 2: uv, if you have it installed
+   ```
 
-This installs the package and its dependencies from the local checkout.
+   Then activate it with the command for your shell:
+
+   ```sh
+   source .venv/bin/activate       # bash / zsh
+   source .venv/bin/activate.fish  # fish
+   .\.venv\Scripts\activate        # Windows PowerShell / CMD
+   ```
+
+   Activate it again in every new terminal before you run Rattlesnake.
+
+3. **Install Rattlesnake from the repository directory.**
+
+   ```sh
+   pip install .
+   ```
+
+   Users of `uv` may prefer:
+
+   ```sh
+   uv pip install .
+   ```
+
+   This installs the package and its dependencies from the local checkout.
 
 #### Editable Installation
 
@@ -111,6 +165,12 @@ For development work, it is often preferable to install in **editable mode**:
 
 ```sh
 pip install -e .
+```
+
+or with `uv`:
+
+```sh
+uv pip install -e .
 ```
 
 The `-e` (`--editable`) flag tells Python to install the package in a way that points back to the source tree rather than copying the files into site-packages. This means:
