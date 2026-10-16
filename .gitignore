@@ -46,10 +46,5 @@ coverage.xml
 documentation/_build/**
 _build/
 output.html
-# Files that the example SAVE_CONTROL_DATA profile events write.
-# They are run outputs, not inputs. Git ignores them, so the data registry,
-# which lists only files that git tracks, ignores them too.
-src/rattlesnake/examples/environment/random/random_control_data.nc4
-src/rattlesnake/examples/environment/sine/sine_control_data.npz
 # Written by hatch_build.py at build time.
 src/rattlesnake/_commit.py
