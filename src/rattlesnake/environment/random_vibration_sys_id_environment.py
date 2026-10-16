@@ -46,6 +46,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
 )
 from rattlesnake.environment.environment_utilities import (
     EnvironmentType,
+)
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.utilities import (
     GlobalCommands,

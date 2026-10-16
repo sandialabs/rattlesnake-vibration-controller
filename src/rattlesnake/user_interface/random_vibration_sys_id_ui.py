@@ -1172,9 +1172,6 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.definition_widget.control_function_input.setCurrentIndex(index)
         else:
             raise ValueError("Control function/class was not found.")
-        self.definition_widget.control_function_generator_selector.setCurrentIndex(
-            control_data.control_type.value
-        )
         self.set_control_extra_parameters(control_data.control_parameters)
 
 
