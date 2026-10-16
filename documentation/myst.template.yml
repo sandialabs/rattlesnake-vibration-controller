@@ -19,16 +19,6 @@ project:
     - vibration
     - modal
     - structural-dynamics
-  # authors:
-  #   - name: Daniel Rohe
-  #     affiliation: Sandia National Laboratories
-  #     email: dprohe@sandia.gov
-  #   - name: Ryan Schultz
-  #     affiliation: Sandia National Laboratories
-  #     email: rschult@sandia.gov
-  #   - name: Norman Hunter
-  #     affiliation: Sandia National Laboratories
-  #     email: nfhunte@sandia.gov
   github: https://github.com/sandialabs/rattlesnake-vibration-controller
   toc:
     - file: book/src/introduction.md
@@ -68,25 +58,44 @@ project:
     - title: Developer's Guide
       children:
         - file: book/src/code_overview.md
+        # <<PYTHON_API_TOC>>
     - file: book/src/ui_documentation.md
+      hidden: true
       children:
-        - file: book/src/_generated/random_vibration_definition_doc.md
-        - file: book/src/_generated/random_vibration_prediction_doc.md
-        - file: book/src/_generated/random_vibration_run_doc.md
-        - file: book/src/_generated/system_identification_doc.md
-        - file: book/src/_generated/transient_definition_doc.md
-        - file: book/src/_generated/transient_prediction_doc.md
-        - file: book/src/_generated/transient_run_doc.md
-        - file: book/src/_generated/sine_definition_doc.md
-        - file: book/src/_generated/sine_prediction_doc.md
-        - file: book/src/_generated/sine_run_doc.md
-        - file: book/src/_generated/srs_sds_definition_doc.md
-        - file: book/src/_generated/srs_sds_prediction_doc.md
-        - file: book/src/_generated/srs_sds_run_doc.md
-        - file: book/src/_generated/modal_definition_doc.md
-        - file: book/src/_generated/modal_run_doc.md
-        - file: book/src/_generated/time_definition_doc.md
-        - file: book/src/_generated/time_run_doc.md
+        - file: book/src/_generated/ui/random_vibration_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/random_vibration_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/random_vibration_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/system_identification_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/transient_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/transient_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/transient_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/sine_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/sine_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/sine_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/srs_sds_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/srs_sds_prediction_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/srs_sds_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/modal_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/modal_run_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/time_definition_doc.md
+          hidden: true
+        - file: book/src/_generated/ui/time_run_doc.md
+          hidden: true
   numbering:
     headings: true
     heading_1:
@@ -135,6 +144,7 @@ project:
       severity: ignore
       keys:
         - '{http,https}://www.hbkworld.com/en/knowledge/resource-center/articles/open-api-for-lan-xi'
+        - '{http,https}://github.com/sandialabs/rattlesnake-vibration-controller/**'
 site:
   template: book-theme
   options:

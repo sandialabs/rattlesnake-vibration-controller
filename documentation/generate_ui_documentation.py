@@ -36,7 +36,7 @@ try:
 except NameError:
     dir_path = "."
 
-generated_dir = os.path.join(dir_path, "book", "src", "_generated")
+generated_dir = os.path.join(dir_path, "book", "src", "_generated", "ui")
 figures_dir = os.path.join(generated_dir, "figures")
 
 os.makedirs(generated_dir, exist_ok=True)
@@ -45,23 +45,23 @@ os.makedirs(figures_dir, exist_ok=True)
 files = [
     dir_path + "/" + v
     for v in [
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/sine_run.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/modal_run.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/transient_run.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_run.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/time_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/system_identification.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
-        "../src/rattlesnake/src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
+        "../src/rattlesnake/user_interface/ui_files/sine_definition.ui",
+        "../src/rattlesnake/user_interface/ui_files/sine_prediction.ui",
+        "../src/rattlesnake/user_interface/ui_files/sine_run.ui",
+        "../src/rattlesnake/user_interface/ui_files/random_vibration_definition.ui",
+        "../src/rattlesnake/user_interface/ui_files/random_vibration_prediction.ui",
+        "../src/rattlesnake/user_interface/ui_files/random_vibration_run.ui",
+        "../src/rattlesnake/user_interface/ui_files/modal_definition.ui",
+        "../src/rattlesnake/user_interface/ui_files/modal_run.ui",
+        "../src/rattlesnake/user_interface/ui_files/transient_definition.ui",
+        "../src/rattlesnake/user_interface/ui_files/transient_prediction.ui",
+        "../src/rattlesnake/user_interface/ui_files/transient_run.ui",
+        "../src/rattlesnake/user_interface/ui_files/time_run.ui",
+        "../src/rattlesnake/user_interface/ui_files/time_definition.ui",
+        "../src/rattlesnake/user_interface/ui_files/system_identification.ui",
+        "../src/rattlesnake/user_interface/ui_files/srs_sds_definition.ui",
+        "../src/rattlesnake/user_interface/ui_files/srs_sds_prediction.ui",
+        "../src/rattlesnake/user_interface/ui_files/srs_sds_run.ui",
     ]
 ]
 
@@ -1486,7 +1486,7 @@ if __name__ == "__main__":
 
                     filename = os.path.splitext(os.path.split(file)[1])[0]
                     output_md = os.path.join(
-                        dir_path, "book", "src", "_generated", f"{filename}_doc.md"
+                        dir_path, "book", "src", "_generated", "ui", f"{filename}_doc.md"
                     )
 
                     with open(output_md, "w", encoding="utf-8") as f:
@@ -1509,7 +1509,7 @@ if __name__ == "__main__":
             )
 
             filename = os.path.splitext(os.path.split(file)[1])[0]
-            output_md = os.path.join(dir_path, "book", "src", "_generated", f"{filename}_doc.md")
+            output_md = os.path.join(dir_path, "book", "src", "_generated", "ui", f"{filename}_doc.md")
 
             with open(output_md, "w", encoding="utf-8") as f:
                 f.write(markdown_text)
