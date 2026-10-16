@@ -435,7 +435,7 @@ Downloads come from a branch only as the fallback described in the next paragrap
 
 A development build can download a file only after its commit is on GitHub.  A checkout or an editable install rarely downloads at all, because `fetch` finds the files in the package tree first.
 
-`src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.
+`src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.  A tag ruleset stops anyone from deleting or moving a release tag.  See [Release Tag Protection](#sec:release-tag-protection).
 
 Downloads go to a per-ref directory in the user cache, or to the directory named by the `RATTLESNAKE_DATADIR` environment variable.  The user-facing section [](#sec:example-data-files) lists the cache directory for each operating system and explains how to work offline.
 
@@ -903,6 +903,30 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 # On the main branch, push the tag to GitHub
 git push origin v1.0.0
 ```
+
+(sec:release-tag-protection)=
+### Release Tag Protection
+
+A GitHub tag ruleset named `release tags` protects every release tag.  The ruleset matches tags that start with `v`, the same pattern that triggers `release.yml`.  GitHub refuses any push that deletes or moves a matching tag, and it blocks deleting one in the web interface.  Tags that do not start with `v` are not protected.
+
+The ruleset does not restrict creating a tag, so the release steps above work unchanged.
+
+Each release downloads its data files from its own tag (see [Large Data Files](#sec:large-data-files)).  A deleted or moved tag would break every install of that release.  Each `data.fetch` call would fail after four attempts, and users could not repair it.
+
+The ruleset has no bypass list, so it also blocks repository admins.  To fix a wrong tag, such as one pushed on the wrong commit, an admin must turn the ruleset off first:
+
+1. Go to **Settings → Rules → Rulesets → release tags**.
+2. Set **Enforcement status** to **Disabled**, and save.
+3. Delete the tag on GitHub and locally:
+
+   ```sh
+   git push origin :refs/tags/v1.0.0rc1
+   git tag -d v1.0.0rc1
+   ```
+
+4. Set **Enforcement status** back to **Active**, and save.
+
+We accept this extra effort as the cost of the protection.  Fix a wrong tag right after you push it, before anyone installs that release.  A pushed tag also starts `release.yml`, so check whether the run published the version.  PyPI and TestPyPI never accept the same version twice.  If a release was published, leave its tag alone, and release a new version instead.
 
 ### Manual Approval Gate
 
