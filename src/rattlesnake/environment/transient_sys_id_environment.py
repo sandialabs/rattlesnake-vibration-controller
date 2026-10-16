@@ -22,10 +22,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import importlib
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-import os
 import threading
 import traceback
 import inspect
@@ -45,7 +43,7 @@ from rattlesnake.utilities import (
     db2scale,
     align_signals,
     shift_signal,
-    load_python_module,
+    load_control_module,
     load_time_history,
     trac,
 )
@@ -89,6 +87,8 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 
 # %% Global Variables
 CONTROL_TYPE = EnvironmentType.TRANSIENT
+DEFAULT_CONTROL_SCRIPT = "rattlesnake.environment.transient_sys_id_control_law"
+DEFAULT_CONTROL_FUNCTION = "pseudoinverse_control"
 BUFFER_SIZE_SAMPLES_PER_READ_MULTIPLIER = 2
 
 
@@ -347,7 +347,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
             )
 
         try:
-            module = load_python_module(self.control_python_script)
+            module = load_control_module(self.control_python_script)
         except Exception as e:
             raise RattlesnakeError(
                 f"{self.environment_name} could not load control script "
@@ -655,7 +655,7 @@ class TransientMetadata(SysIdEnvironmentMetadata):
 
         # Find python module type
         if control_python_script:
-            python_control_module = load_python_module(control_python_script)
+            python_control_module = load_control_module(control_python_script)
             function = getattr(python_control_module, control_python_function)
             control_python_function_type = None
             if inspect.isgeneratorfunction(function):
@@ -896,7 +896,7 @@ class TransientEnvironment(SysIdEnvironment):
             self.predicted_response = None
         super().initialize_environment(environment_metadata)
         # Load in the control law
-        module = load_python_module(environment_metadata.control_python_script)
+        module = load_control_module(environment_metadata.control_python_script)
         self.control_function_type = environment_metadata.control_python_function_type
         self.extra_control_parameters = (
             environment_metadata.control_python_function_parameters

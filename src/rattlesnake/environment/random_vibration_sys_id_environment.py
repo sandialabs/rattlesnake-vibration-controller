@@ -46,6 +46,15 @@ from rattlesnake.environment.abstract_sysid_environment import (
 )
 from rattlesnake.environment.environment_utilities import (
     EnvironmentType,
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
+from rattlesnake.utilities import (
+    GlobalCommands,
+    RattlesnakeError,
+    VerboseMessageQueue,
+    db2scale,
+    load_control_module,
+    worksheet_cell_str,
+    _direction_map,
 )
 from rattlesnake.environment.random_vibration_sys_id_metadata import (
     RandomControlLawType,
@@ -83,6 +92,8 @@ from rattlesnake.utilities import (
 )
 
 CONTROL_TYPE = EnvironmentType.RANDOM
+DEFAULT_CONTROL_SCRIPT = "rattlesnake.environment.random_vibration_sys_id_control_law"
+DEFAULT_CONTROL_FUNCTION = "pseudoinverse_control"
 
 
 # region Commands

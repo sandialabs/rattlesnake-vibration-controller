@@ -20,6 +20,8 @@ from rattlesnake.environment.abstract_interactive_control_law import (
 )
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.random_vibration_sys_id_environment import (
+    DEFAULT_CONTROL_FUNCTION,
+    DEFAULT_CONTROL_SCRIPT,
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationUICommands,
@@ -51,10 +53,11 @@ from rattlesnake.user_interface.ui_utilities import (
 from rattlesnake.utilities import (
     _direction_map,
     DIRECTORY,
-    load_python_module,
+    load_control_module,
 )
 
 CONTROL_TYPE = EnvironmentType.RANDOM
+CONTROL_FUNCTION_TYPE_NAMES = ["Function", "Generator", "Class", "Interactive"]
 MAXIMUM_NAME_LENGTH = 50
 
 
@@ -136,6 +139,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.output_transformation_matrix = None
         self.transformation_matrix_dialog = None
         self.python_control_module = None
+        self.control_function_type = None
         self.python_function_extra_arguments = []
         self.python_function_extra_argument_widgets = {}
         self.specification_frequency_lines = None
@@ -244,7 +248,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.set_up_widgets
         )
         self.definition_widget.control_function_input.currentIndexChanged.connect(
-            self.update_generator_selector
+            self.update_control_function_type
         )
         self.definition_widget.load_spec_button.clicked.connect(self.select_spec_file)
         self.definition_widget.specification_row_selector.currentIndexChanged.connect(
@@ -609,10 +613,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             names=["Real Prediction", "Imag Prediction"],
         )
         # Create the interactive control law if necessary
-        if (
-            self.definition_widget.control_function_generator_selector.currentIndex()
-            == 3
-        ):
+        if self.control_function_type == RandomControlLawType.INTERACTIVE_CLASS.value:
             control_class = getattr(
                 self.python_control_module,
                 self.definition_widget.control_function_input.itemText(
@@ -1025,7 +1026,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
             if filename == "":
                 return
-        self.python_control_module = load_python_module(filename)
+        self.python_control_module = load_control_module(filename)
         self.python_function_extra_arguments = RandomVibrationUI.get_valid_control_laws(
             self.python_control_module
         )
@@ -1041,8 +1042,15 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.definition_widget.control_script_file_path_input.setText(filename)
         for function in self.python_function_extra_arguments:
             self.definition_widget.control_function_input.addItem(function[0])
-        self.set_up_widgets()
-        self.update_generator_selector()
+        if filename == DEFAULT_CONTROL_SCRIPT:
+            function_index = self.definition_widget.control_function_input.findText(
+                DEFAULT_CONTROL_FUNCTION
+            )
+            if function_index >= 0:
+                self.definition_widget.control_function_input.setCurrentIndex(
+                    function_index
+                )
+        self.update_control_function_type()
 
     @staticmethod
     def create_widget_for_type(arg_type, default_value):
@@ -1145,9 +1153,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         control_function = self.definition_widget.control_function_input.itemText(
             self.definition_widget.control_function_input.currentIndex()
         )
-        control_function_type = RandomControlLawType(
-            self.definition_widget.control_function_generator_selector.currentIndex()
-        )
+        control_function_type = self.control_function_type
         control_function_parameters = self.collect_control_extra_parameters()
         control_data = RandomControlParameters(
             control_module,
@@ -1171,8 +1177,11 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         self.set_control_extra_parameters(control_data.control_parameters)
 
-    def update_generator_selector(self):
-        """Updates the function/generator selector based on the function selected"""
+
+    def update_control_function_type(self):
+        """Detects and displays the type of the selected control law"""
+        self.control_function_type = None
+        self.definition_widget.control_function_type_display.setText("")
         if self.python_control_module is None:
             return
         try:
@@ -1185,23 +1194,18 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         except AttributeError:
             return
         if inspect.isgeneratorfunction(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                RandomControlLawType.GENERATOR.value
-            )
+            self.control_function_type = RandomControlLawType.GENERATOR.value
         elif inspect.isclass(function) and issubclass(
             function, AbstractControlLawComputation
         ):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                RandomControlLawType.INTERACTIVE_CLASS.value
-            )
+            self.control_function_type = RandomControlLawType.INTERACTIVE_CLASS.value
         elif inspect.isclass(function):
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                RandomControlLawType.CLASS.value
-            )
+            self.control_function_type = RandomControlLawType.CLASS.value
         else:
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                RandomControlLawType.FUNCTION.value
-            )
+            self.control_function_type = RandomControlLawType.FUNCTION.value
+        self.definition_widget.control_function_type_display.setText(
+            CONTROL_FUNCTION_TYPE_NAMES[self.control_function_type]
+        )
 
     def specification_selector_unit(self, selector_index):
         """Engineering unit of the control channel at a specification row/column index"""

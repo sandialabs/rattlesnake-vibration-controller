@@ -23,7 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import multiprocessing as mp
-import os
 import time
 from enum import Enum
 
@@ -44,6 +43,7 @@ from rattlesnake.utilities import (
     power2db,
     rms_csd,
     rms_time,
+    load_control_module,
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import load_python_module
@@ -157,7 +157,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.environment_metadata.fft_lines
         )
         # Load in the control script
-        module = load_python_module(self.environment_metadata.control_python_script)
+        module = load_control_module(self.environment_metadata.control_python_script)
         # Pull out the function from the loaded module
         if self.environment_metadata.control_python_function_type == RandomControlLawType.GENERATOR:  # Generator
             # Get the generator function
