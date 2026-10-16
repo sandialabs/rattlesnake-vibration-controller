@@ -26,49 +26,31 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import inspect
-import threading
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import threading
 import time
 from enum import Enum
 from multiprocessing.queues import Queue
-from typing import List
 
 import netCDF4 as nc4
 import numpy as np
-import openpyxl
-import scipy.signal as sig
 
-from rattlesnake.environment.random_vibration_sys_id_utilities import (
-    load_specification,
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentCommands,
+    EnvironmentInstructions,
 )
-from rattlesnake.environment.abstract_interactive_control_law import (
-    AbstractControlLawComputation,
+from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
+from rattlesnake.environment.abstract_sysid_environment import (
+    SysIdEnvironment,
 )
 from rattlesnake.environment.environment_utilities import (
     EnvironmentType,
 )
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.abstract_environment import (
-    EnvironmentInstructions,
-    EnvironmentCommands,
+from rattlesnake.environment.random_vibration_sys_id_metadata import (
+    RandomControlLawType,
+    RandomVibrationMetadata,
 )
-from rattlesnake.environment.abstract_sysid_environment import (
-    SysIdEnvironment,
-    SysIdEnvironmentMetadata,
-)
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
-from rattlesnake.utilities import (
-    GlobalCommands,
-    RattlesnakeError,
-    VerboseMessageQueue,
-    db2scale,
-    load_python_module,
-    worksheet_cell_str,
-    _direction_map,
-)
-from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.process.data_collector import (
     Acceptance,
     AcquisitionType,
@@ -94,6 +76,11 @@ from rattlesnake.process.spectral_processing import (
     spectral_processing_process,
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import (
+    GlobalCommands,
+    VerboseMessageQueue,
+    db2scale,
+)
 
 CONTROL_TYPE = EnvironmentType.RANDOM
 
@@ -478,7 +465,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
     def send_interactive_command(self, command):
         """General method that can be used by an interactive UI object to pass commands and data to
         its corresponding computation object"""
-        if self.environment_metadata.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_python_function_type == RandomControlLawType.INTERACTIVE_CLASS:  # Interactive
             self.queue_container.data_analysis_command_queue.put(
                 self.environment_name,
                 (ControlLawCommands.SEND_INTERACTIVE_COMMAND, command),

@@ -10,6 +10,9 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
     RandomVibrationInstructions,
 )
+from rattlesnake.environment.random_vibration_sys_id_metadata import (
+    RandomControlLawType
+)
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
 
@@ -30,7 +33,7 @@ def worksheet_random_metadata(hardware_metadata):
         defaults.DIRECTORY + "/control_laws/control_laws.py"
     )
     metadata.control_python_function = "buzz_control"
-    metadata.control_python_function_type = 0
+    metadata.control_python_function_type = RandomControlLawType.FUNCTION
     metadata.control_python_function_parameters = ""
     (
         metadata.specification_frequency_lines,
@@ -53,6 +56,9 @@ def netcdf_random_metadata(hardware_metadata):
     )
     metadata.control_python_script = (
         defaults.DIRECTORY + "/control_laws/control_laws.py"
+    )
+    metadata.control_python_function_type = RandomControlLawType(
+        metadata.control_python_function_type
     )
 
     return metadata
@@ -78,8 +84,8 @@ def manual_random_metadata(hardware_metadata, **overrides):
     allow_automatic_aborts = False
     control_python_script = defaults.DIRECTORY + "/control_laws/control_laws.py"
     control_python_function = "buzz_control"
-    control_python_function_type = 0
-    control_python_function_parameters = ""
+    control_python_function_type = RandomControlLawType.FUNCTION
+    control_python_function_parameters = {}
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
 
