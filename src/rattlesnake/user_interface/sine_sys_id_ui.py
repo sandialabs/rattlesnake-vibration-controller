@@ -1157,7 +1157,7 @@ class SineUI(SysIdEnvironmentUI):
                     inspect.isclass(function[1])
                     and all(
                         [
-                            method in function[1].__dict__
+                            method in dict(inspect.getmembers(function[1]))
                             for method in ["system_id_update", "control"]
                         ]
                     )
