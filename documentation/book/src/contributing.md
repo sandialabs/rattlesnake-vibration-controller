@@ -106,7 +106,7 @@ Once activated, your terminal prompt will typically show `(.venv)`. You can now 
 
 ```bash
 # Install Rattlesnake in editable mode, with its development dependencies
-pip install -e .[dev]
+pip install -e ".[dev]"
 
 # Additional packages can be installed on an as-needed basis.  For example, to install
 # the "requests" package

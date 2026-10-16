@@ -122,13 +122,13 @@ The `-e` (`--editable`) flag tells Python to install the package in a way that p
 If developer tools are also needed, such as `pytest`, `pylint`, or documentation tooling, the optional development dependencies can be installed with:
 
 ```sh
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
 or with `uv`:
 
 ```sh
-uv pip install -e .[dev]
+uv pip install -e ".[dev]"
 ```
 
 The `[dev]` install is the recommended setup for developers and advanced users.
