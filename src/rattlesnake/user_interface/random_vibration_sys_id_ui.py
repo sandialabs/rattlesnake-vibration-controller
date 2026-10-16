@@ -4,12 +4,14 @@ import time
 import os
 from multiprocessing.queues import Queue
 
+from enum import Enum
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor
+from typing import Literal, get_args, get_origin
 
 from rattlesnake.engine import RattlesnakeController
 from rattlesnake.environment.abstract_interactive_control_law import (
@@ -23,6 +25,10 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationUICommands,
     RandomVibrationInstructions,
 )
+from rattlesnake.environment.random_vibration_sys_id_metadata import (
+    RandomControlLawType,
+    RandomControlParameters,
+)
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.random_vibration_sys_id_data_analysis import (
@@ -35,6 +41,7 @@ from rattlesnake.environment.random_vibration_sys_id_utilities import (
 from rattlesnake.user_interface.ui_utilities import (
     PlotWindow,
     TransformationMatrixWindow,
+    ScientificDoubleSpinBox,
     UICommands,
     channel_unit_label,
     error_message_qt,
@@ -129,6 +136,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.output_transformation_matrix = None
         self.transformation_matrix_dialog = None
         self.python_control_module = None
+        self.python_function_extra_arguments = []
+        self.python_function_extra_argument_widgets = {}
         self.specification_frequency_lines = None
         self.specification_cpsd_matrix = None
         self.specification_warning_matrix = None
@@ -230,6 +239,9 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         self.definition_widget.control_script_load_file_button.clicked.connect(
             self.select_python_module
+        )
+        self.definition_widget.control_function_input.currentIndexChanged.connect(
+            self.set_up_widgets
         )
         self.definition_widget.control_function_input.currentIndexChanged.connect(
             self.update_generator_selector
@@ -381,75 +393,75 @@ class RandomVibrationUI(SysIdEnvironmentUI):
 
         # Now add initial lines that we can update later
         self.definition_widget.specification_single_plot.getPlotItem().addLegend()
-        self.plot_data_items[
-            "specification_real"
-        ] = self.definition_widget.specification_single_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": "b", "width": 1},
-            name="Real Part",
+        self.plot_data_items["specification_real"] = (
+            self.definition_widget.specification_single_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": "b", "width": 1},
+                name="Real Part",
+            )
         )
-        self.plot_data_items[
-            "specification_imag"
-        ] = self.definition_widget.specification_single_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": "r", "width": 1},
-            name="Imaginary Part",
+        self.plot_data_items["specification_imag"] = (
+            self.definition_widget.specification_single_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": "r", "width": 1},
+                name="Imaginary Part",
+            )
         )
-        self.plot_data_items[
-            "specification_warning_upper"
-        ] = self.definition_widget.specification_single_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": PlotWindow.WARNING_COLOR, "width": 0.25},
-            name="Warning",
+        self.plot_data_items["specification_warning_upper"] = (
+            self.definition_widget.specification_single_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": PlotWindow.WARNING_COLOR, "width": 0.25},
+                name="Warning",
+            )
         )
-        self.plot_data_items[
-            "specification_warning_lower"
-        ] = self.definition_widget.specification_single_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": PlotWindow.WARNING_COLOR, "width": 0.25},
+        self.plot_data_items["specification_warning_lower"] = (
+            self.definition_widget.specification_single_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": PlotWindow.WARNING_COLOR, "width": 0.25},
+            )
         )
-        self.plot_data_items[
-            "specification_abort_upper"
-        ] = self.definition_widget.specification_single_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": PlotWindow.ABORT_COLOR, "width": 0.25},
-            name="Abort",
+        self.plot_data_items["specification_abort_upper"] = (
+            self.definition_widget.specification_single_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": PlotWindow.ABORT_COLOR, "width": 0.25},
+                name="Abort",
+            )
         )
-        self.plot_data_items[
-            "specification_abort_lower"
-        ] = self.definition_widget.specification_single_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": PlotWindow.ABORT_COLOR, "width": 0.25},
+        self.plot_data_items["specification_abort_lower"] = (
+            self.definition_widget.specification_single_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": PlotWindow.ABORT_COLOR, "width": 0.25},
+            )
         )
-        self.plot_data_items[
-            "specification_sum"
-        ] = self.definition_widget.specification_sum_asds_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": "b", "width": 1},
+        self.plot_data_items["specification_sum"] = (
+            self.definition_widget.specification_sum_asds_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": "b", "width": 1},
+            )
         )
         self.run_widget.global_test_performance_plot.getPlotItem().addLegend()
-        self.plot_data_items[
-            "specification_sum_control"
-        ] = self.run_widget.global_test_performance_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": "b", "width": 1},
-            name="Specification",
+        self.plot_data_items["specification_sum_control"] = (
+            self.run_widget.global_test_performance_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": "b", "width": 1},
+                name="Specification",
+            )
         )
-        self.plot_data_items[
-            "sum_asds_control"
-        ] = self.run_widget.global_test_performance_plot.getPlotItem().plot(
-            np.array([0, hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={"color": "r", "width": 1},
-            name="Response",
+        self.plot_data_items["sum_asds_control"] = (
+            self.run_widget.global_test_performance_plot.getPlotItem().plot(
+                np.array([0, hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={"color": "r", "width": 1},
+                name="Response",
+            )
         )
 
         # Set up channel names
@@ -542,51 +554,51 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             other_pen_options={"width": 2},
             names=["Real Prediction", "Real Spec", "Imag Prediction", "Imag Spec"],
         )
-        self.plot_data_items[
-            "prediction_warning_upper"
-        ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={
-                "color": PlotWindow.WARNING_COLOR,
-                "width": PlotWindow.WARNING_LINEWIDTH,
-                "style": PlotWindow.WARNING_LINESTYLE,
-            },
-            name="Warning",
+        self.plot_data_items["prediction_warning_upper"] = (
+            self.prediction_widget.response_display_plot.getPlotItem().plot(
+                np.array([0, self.hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={
+                    "color": PlotWindow.WARNING_COLOR,
+                    "width": PlotWindow.WARNING_LINEWIDTH,
+                    "style": PlotWindow.WARNING_LINESTYLE,
+                },
+                name="Warning",
+            )
         )
-        self.plot_data_items[
-            "prediction_warning_lower"
-        ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={
-                "color": PlotWindow.WARNING_COLOR,
-                "width": PlotWindow.WARNING_LINEWIDTH,
-                "style": PlotWindow.WARNING_LINESTYLE,
-            },
+        self.plot_data_items["prediction_warning_lower"] = (
+            self.prediction_widget.response_display_plot.getPlotItem().plot(
+                np.array([0, self.hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={
+                    "color": PlotWindow.WARNING_COLOR,
+                    "width": PlotWindow.WARNING_LINEWIDTH,
+                    "style": PlotWindow.WARNING_LINESTYLE,
+                },
+            )
         )
-        self.plot_data_items[
-            "prediction_abort_upper"
-        ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={
-                "color": PlotWindow.ABORT_COLOR,
-                "width": PlotWindow.ABORT_LINEWIDTH,
-                "style": PlotWindow.ABORT_LINESTYLE,
-            },
-            name="Abort",
+        self.plot_data_items["prediction_abort_upper"] = (
+            self.prediction_widget.response_display_plot.getPlotItem().plot(
+                np.array([0, self.hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={
+                    "color": PlotWindow.ABORT_COLOR,
+                    "width": PlotWindow.ABORT_LINEWIDTH,
+                    "style": PlotWindow.ABORT_LINESTYLE,
+                },
+                name="Abort",
+            )
         )
-        self.plot_data_items[
-            "prediction_abort_lower"
-        ] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, self.hardware_metadata.sample_rate / 2]),
-            np.zeros(2),
-            pen={
-                "color": PlotWindow.ABORT_COLOR,
-                "width": PlotWindow.ABORT_LINEWIDTH,
-                "style": PlotWindow.ABORT_LINESTYLE,
-            },
+        self.plot_data_items["prediction_abort_lower"] = (
+            self.prediction_widget.response_display_plot.getPlotItem().plot(
+                np.array([0, self.hardware_metadata.sample_rate / 2]),
+                np.zeros(2),
+                pen={
+                    "color": PlotWindow.ABORT_COLOR,
+                    "width": PlotWindow.ABORT_LINEWIDTH,
+                    "style": PlotWindow.ABORT_LINESTYLE,
+                },
+            )
         )
         self.plot_data_items["excitation_prediction"] = multiline_plotter(
             np.arange(self.environment_metadata.fft_lines)
@@ -637,23 +649,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             channel_list_bools = []
 
         if self.python_control_module is None:
-            control_module = None
-            control_function = None
-            control_function_type = None
-            control_function_parameters = None
+            control_data = RandomControlParameters(
+                control_script=None,
+                control_object=None,
+                control_type=None,
+                control_parameters=None,
+            )
         else:
-            control_module = (
-                self.definition_widget.control_script_file_path_input.text()
-            )
-            control_function = self.definition_widget.control_function_input.itemText(
-                self.definition_widget.control_function_input.currentIndex()
-            )
-            control_function_type = (
-                self.definition_widget.control_function_generator_selector.currentIndex()
-            )
-            control_function_parameters = (
-                self.definition_widget.control_parameters_text_input.toPlainText()
-            )
+            control_data: RandomControlParameters = self.collect_control_data()
         metadata = RandomVibrationMetadata(
             environment_name=self.environment_name,
             channel_list_bools=channel_list_bools,
@@ -676,10 +679,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             cpsd_overlap=self.definition_widget.cpsd_overlap_selector.value() / 100,
             response_transformation_matrix=self.response_transformation_matrix,
             output_transformation_matrix=self.output_transformation_matrix,
-            control_python_script=control_module,
-            control_python_function=control_function,
-            control_python_function_type=control_function_type,
-            control_python_function_parameters=control_function_parameters,
+            control_python_script=control_data.control_script,
+            control_python_function=control_data.control_object,
+            control_python_function_type=control_data.control_type,
+            control_python_function_parameters=control_data.control_parameters,
             control_channel_indices=self.physical_control_indices,
             output_channel_indices=self.physical_output_indices,
             specification_frequency_lines=self.specification_frequency_lines,
@@ -731,21 +734,18 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.definition_widget.cpsd_overlap_selector.setValue(
             metadata.cpsd_overlap * 100
         )
-        if metadata.control_python_script:
-            self.select_python_module(None, metadata.control_python_script)
-            function_index = self.definition_widget.control_function_input.findText(
-                metadata.control_python_function
-            )
-            if function_index >= 0:
-                self.definition_widget.control_function_input.setCurrentIndex(
-                    function_index
-                )
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                metadata.control_python_function_type
-            )
-        self.definition_widget.control_parameters_text_input.setPlainText(
-            metadata.control_python_function_parameters or ""
+        control_data = RandomControlParameters(
+            control_script=metadata.control_python_script,
+            control_object=metadata.control_python_function,
+            control_type=metadata.control_python_function_type
+            if isinstance(metadata.control_python_function_type, RandomControlLawType)
+            else RandomControlLawType(metadata.control_python_function_type),
+            control_parameters=metadata.control_python_function_parameters,
         )
+        self.set_control_data(control_data)
+        # self.definition_widget.control_parameters_text_input.setPlainText(
+        #     metadata.control_python_function_parameters or ""
+        # ) #### TODO: re-implement for backward compatibility
         self.definition_widget.frequency_lines_out_spinbox.setValue(
             metadata.percent_lines_out
         )
@@ -759,7 +759,6 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.definition_widget.control_channels_selector.item(i).setCheckState(
                 state
             )
-
         self.response_transformation_matrix = metadata.response_transformation_matrix
         self.output_transformation_matrix = metadata.reference_transformation_matrix
         self.specification_frequency_lines = metadata.specification_frequency_lines
@@ -792,9 +791,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
     # endregion
 
     # region Definition
-    def select_spec_file(
-        self, clicked, filename=None
-    ):  # pylint: disable=unused-argument
+    def select_spec_file(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a specification using a dialog or the specified filename
 
         Parameters
@@ -858,9 +855,157 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             self.definition_widget.auto_abort_checkbox.setEnabled(True)
         self.show_specification()
 
-    def select_python_module(
-        self, clicked, filename=None
-    ):  # pylint: disable=unused-argument
+    @staticmethod
+    def valid_annotation(annotation):
+        if annotation is int:
+            return True
+        if annotation is float:
+            return True
+        if annotation is str:
+            return True
+        if annotation is bool:
+            return True
+        if get_origin(annotation) is Literal:
+            return True
+        if issubclass(annotation, Enum):
+            return True
+        return False
+
+    @staticmethod
+    def get_valid_control_laws(module):
+        required_function_arguments = {
+            "specification",
+            "warning_levels",
+            "abort_levels",
+            "transfer_function",
+            "noise_response_cpsd",
+            "noise_reference_cpsd",
+            "sysid_response_cpsd",
+            "sysid_reference_cpsd",
+            "multiple_coherence",
+            "frames",
+            "total_frames",
+            "extra_parameters",
+            "last_response_cpsd",
+            "last_output_cpsd",
+        }
+        required_class_init_arguments = required_function_arguments.copy()
+        valid_control_laws = []
+        members = inspect.getmembers(module)
+        for objname, obj in members:
+            valid_control_law = True
+            extra_arguments = []
+            # Generator-based control law
+            if inspect.isgenerator(obj):
+                valid_control_laws.append([objname, extra_arguments])
+            # Function-based control law
+            elif inspect.isfunction(obj):
+                signature = inspect.signature(obj)
+                parameters = signature.parameters
+
+                if not all(arg in parameters for arg in required_function_arguments):
+                    continue
+
+                for name, parameter in parameters.items():
+                    if name in required_function_arguments:
+                        continue
+
+                    # only expose keyword-capable extra arguments
+                    if parameter.kind in (
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY,
+                    ):
+                        annotation = parameter.annotation
+                        default = parameter.default
+
+                        if (
+                            annotation is inspect.Parameter.empty
+                            or not RandomVibrationUI.valid_annotation(annotation)
+                        ):
+                            if default is inspect.Parameter.empty:
+                                valid_control_law = False
+                                break
+                            continue
+                        print(name, annotation, default)  # DELETEME
+                        extra_arguments.append([name, annotation, default])
+
+                    elif (
+                        parameter.kind == inspect.Parameter.POSITIONAL_ONLY
+                        and parameter.default == inspect.Parameter.empty
+                    ):
+                        valid_control_law = False
+                        break
+
+                if valid_control_law:
+                    valid_control_laws.append([objname, extra_arguments])
+            # Class-based control law
+            elif inspect.isclass(obj):
+                # Must provide the methods used by environment
+                if not hasattr(obj, "control") or not callable(getattr(obj, "control")):
+                    continue
+                if not hasattr(obj, "system_id_update") or not callable(
+                    getattr(obj, "system_id_update")
+                ):
+                    continue
+
+                try:
+                    init_parameters = {
+                        k: v
+                        for d in [
+                            inspect.signature(cls.__init__).parameters
+                            for cls in obj.mro()
+                        ]
+                        for k, v in d.items()
+                    }
+                except (TypeError, ValueError):
+                    continue
+
+                if not all(
+                    arg in init_parameters for arg in required_class_init_arguments
+                ):
+                    continue
+
+                for name, parameter in init_parameters.items():
+                    if name == "self":
+                        continue
+                    if name in required_class_init_arguments:
+                        continue
+
+                    # These are runtime-provided optional environment values, not GUI extras
+                    if name in {"environment_name", "gui_update_queue"}:
+                        continue
+
+                    if parameter.kind in (
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY,
+                    ):
+                        annotation = parameter.annotation
+                        default = parameter.default
+
+                        if (
+                            annotation is inspect.Parameter.empty
+                            or not RandomVibrationUI.valid_annotation(annotation)
+                        ):
+                            if default is inspect.Parameter.empty:
+                                valid_control_law = False
+                                break
+                            continue
+
+                        extra_arguments.append([name, annotation, default])
+
+                    elif (
+                        parameter.kind == inspect.Parameter.POSITIONAL_ONLY
+                        and parameter.default == inspect.Parameter.empty
+                    ):
+                        valid_control_law = False
+                        break
+
+                if valid_control_law:
+                    valid_control_laws.append([objname, extra_arguments])
+
+        return valid_control_laws
+
+    def select_python_module(self, clicked=None, filename=None):  # pylint: disable=unused-argument
         """Loads a Python module using a dialog or the specified filename
 
         Parameters
@@ -880,61 +1025,151 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
             if filename == "":
                 return
-        try:
-            self.python_control_module = load_python_module(filename)
-            functions = [
-                function
-                for function in inspect.getmembers(self.python_control_module)
-                if (
-                    inspect.isfunction(function[1])
-                    and len(inspect.signature(function[1]).parameters) >= 12
-                )
-                or inspect.isgeneratorfunction(function[1])
-                or (
-                    inspect.isclass(function[1])
-                    and all(
-                        [
-                            (
-                                method in dict(inspect.getmembers(function[1]))
-                                and not (
-                                    hasattr(
-                                        dict(inspect.getmembers(function[1]))[method],
-                                        "__isabstractmethod__",
-                                    )
-                                    and dict(inspect.getmembers(function[1]))[
-                                        method
-                                    ].__isabstractmethod__
-                                )
-                            )
-                            for method in ["system_id_update", "control"]
-                        ]
-                    )
-                )
-            ]
-            # inspect class control laws for a property
-            # this will be used to pre-fill the 'Extra Parameters' textbox
-            default_property_name = "default_extra_parameters"
-            defaults = [""] * len(functions)
-            for i, function in enumerate(functions):
-                if inspect.isclass(function[1]) and hasattr(
-                    function[1], default_property_name
-                ):
-                    prop = getattr(function[1], default_property_name)
-                    if isinstance(prop, property):
-                        value = prop.fget(function[1].__new__(function[1]))
-                        if isinstance(value, str):
-                            defaults[i] = value
-        except Exception as e:
-            self.display_error(e)
-            return
+        self.python_control_module = load_python_module(filename)
+        self.python_function_extra_arguments = RandomVibrationUI.get_valid_control_laws(
+            self.python_control_module
+        )
+        if not self.python_function_extra_arguments:
+            raise ImportError(
+                f"No valid control laws found in module: {self.python_control_module}"
+            )
         self.log(
             f"Loaded module {self.python_control_module.__name__} with "
-            f"functions {[function[0] for function in functions]}"
+            f"functions {[function[0] for function in self.python_function_extra_arguments]}"
         )
         self.definition_widget.control_function_input.clear()
         self.definition_widget.control_script_file_path_input.setText(filename)
-        for function, default in zip(functions, defaults):
-            self.definition_widget.control_function_input.addItem(function[0], default)
+        for function in self.python_function_extra_arguments:
+            self.definition_widget.control_function_input.addItem(function[0])
+        self.set_up_widgets()
+        self.update_generator_selector()
+
+    @staticmethod
+    def create_widget_for_type(arg_type, default_value):
+        if arg_type is int:
+            widget = QtWidgets.QSpinBox()
+            widget.setMinimum(-1000000)
+            widget.setMaximum(1000000)
+            widget.setValue(default_value)
+        elif arg_type is float:
+            widget = ScientificDoubleSpinBox()
+            widget.setValue(default_value)
+        elif arg_type is str:
+            widget = QtWidgets.QTextEdit()
+            widget.setText(default_value)
+        elif arg_type is bool:
+            widget = QtWidgets.QCheckBox()
+            widget.setChecked(default_value)
+        elif get_origin(arg_type) is Literal:
+            widget = QtWidgets.QComboBox()
+            for e in get_args(arg_type):
+                widget.addItem(e, e)
+            widget.setCurrentText(default_value)
+        elif issubclass(arg_type, Enum):
+            widget = QtWidgets.QComboBox()
+            for e in arg_type:
+                widget.addItem(e.name, e)
+            widget.setCurrentText(default_value.name)
+        else:
+            raise ValueError(f"Unsupported argument type: {arg_type}")
+        return widget
+
+    def set_up_widgets(self):
+        # Clear out existing widgets
+        layout = self.definition_widget.control_parameters_widget_layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.python_function_extra_argument_widgets.clear()
+        index = self.definition_widget.control_function_input.currentIndex()
+        _, extra_arguments = self.python_function_extra_arguments[index]
+        for arg_name, arg_type, arg_default in extra_arguments:
+            widget = RandomVibrationUI.create_widget_for_type(arg_type, arg_default)
+            layout.addRow(arg_name, widget)
+            self.python_function_extra_argument_widgets[arg_name] = widget
+        # maintain legacy support for control parameters text entry
+        if len(extra_arguments) == 0:
+            widget = QtWidgets.QTextEdit()
+            layout.addRow(widget)
+            self.python_function_extra_argument_widgets["extra_parameters"] = widget
+
+    def collect_control_extra_parameters(self):
+        kwargs = {}
+        for arg_name, widget in self.python_function_extra_argument_widgets.items():
+            if isinstance(widget, QtWidgets.QSpinBox):
+                kwargs[arg_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+                kwargs[arg_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QTextEdit):
+                kwargs[arg_name] = widget.toPlainText()
+            elif isinstance(widget, QtWidgets.QCheckBox):
+                kwargs[arg_name] = widget.isChecked()
+            elif isinstance(widget, QtWidgets.QComboBox):
+                kwargs[arg_name] = widget.currentData()
+            else:
+                raise ValueError(f"Unsupported widget type: {type(widget)}")
+        # print(f"Got Arguments {kwargs=}")
+        return kwargs
+
+    def set_control_extra_parameters(self, kwargs: dict):
+        for key, value in kwargs.items():
+            try:
+                widget = self.python_function_extra_argument_widgets[key]
+            except KeyError:
+                raise ValueError(
+                    f"Parameter {key} not found in extra parameter widget list."
+                )
+            if isinstance(widget, QtWidgets.QSpinBox):
+                widget.setValue(value)
+            elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+                widget.setValue(value)
+            elif isinstance(widget, QtWidgets.QTextEdit):
+                widget.setPlainText(value)
+            elif isinstance(widget, QtWidgets.QCheckBox):
+                widget.setChecked(value)
+            elif isinstance(widget, QtWidgets.QComboBox):
+                index = widget.findData(value)
+                if index >= 0:
+                    widget.setCurrentIndex(index)
+                else:
+                    raise ValueError(
+                        f"Data {value} not found in combobox for parameter {key}"
+                    )
+            else:
+                raise ValueError(f"Unsupported widget type: {type(widget)}")
+
+    def collect_control_data(self):
+        control_module = self.definition_widget.control_script_file_path_input.text()
+        control_function = self.definition_widget.control_function_input.itemText(
+            self.definition_widget.control_function_input.currentIndex()
+        )
+        control_function_type = RandomControlLawType(
+            self.definition_widget.control_function_generator_selector.currentIndex()
+        )
+        control_function_parameters = self.collect_control_extra_parameters()
+        control_data = RandomControlParameters(
+            control_module,
+            control_function,
+            control_function_type,
+            control_function_parameters,
+        )
+        return control_data
+
+    def set_control_data(self, control_data: RandomControlParameters):
+        self.select_python_module(filename=control_data.control_script)
+        index = self.definition_widget.control_function_input.findText(
+            control_data.control_object
+        )
+        if index != -1:
+            self.definition_widget.control_function_input.setCurrentIndex(index)
+        else:
+            raise ValueError("Control function/class was not found.")
+        self.definition_widget.control_function_generator_selector.setCurrentIndex(
+            control_data.control_type.value
+        )
+        self.set_control_extra_parameters(control_data.control_parameters)
 
     def update_generator_selector(self):
         """Updates the function/generator selector based on the function selected"""
@@ -949,33 +1184,23 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             )
         except AttributeError:
             return
-        default_text = self.definition_widget.control_function_input.itemData(
-            self.definition_widget.control_function_input.currentIndex(), Qt.UserRole
-        )
-        if self.definition_widget.control_parameters_text_input.toPlainText() in [
-            "",
-            default_text,
-        ]:
-            self.definition_widget.control_parameters_text_input.setPlainText(
-                default_text
-            )
         if inspect.isgeneratorfunction(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                1
+                RandomControlLawType.GENERATOR.value
             )
         elif inspect.isclass(function) and issubclass(
             function, AbstractControlLawComputation
         ):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                3
+                RandomControlLawType.INTERACTIVE_CLASS.value
             )
         elif inspect.isclass(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                2
+                RandomControlLawType.CLASS.value
             )
         else:
             self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                0
+                RandomControlLawType.FUNCTION.value
             )
 
     def specification_selector_unit(self, selector_index):
