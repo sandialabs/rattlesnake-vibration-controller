@@ -20,6 +20,8 @@ its module docstring satisfies pylint's ``missing-module-docstring`` check.
 
 ``SUFFIXES`` must match the ``exclude`` globs in ``pyproject.toml``. A suffix
 that is excluded from the wheel but missing here is a file that ships nowhere.
+``test_suffixes_match_pyproject_exclude`` in ``tests/short/test_registry.py``
+fails when the two disagree.
 
 Files that Rattlesnake writes do not belong in the registry. A
 ``SAVE_CONTROL_DATA`` profile event, for example, writes control data to a

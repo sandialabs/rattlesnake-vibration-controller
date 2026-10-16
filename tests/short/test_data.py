@@ -57,6 +57,8 @@ test_registry_file_exists_in_checkout
     Fails when a registered file is missing from a source checkout.
 test_registry_matches_repository_file
     Confirms each registry hash matches the file in the repository.
+test_fetch_names_are_registered
+    Fails when source code calls ``fetch`` with a name the registry lacks.
 test_fetch_unknown_name
     Raises ``KeyError`` for an unregistered name.
 test_fetch_prefers_packaged_file
@@ -67,6 +69,7 @@ test_fetch_rejects_corrupt_download
     Raises ``ValueError`` and caches nothing on a hash mismatch.
 """
 
+import ast
 import functools
 import hashlib
 import os
@@ -270,6 +273,85 @@ def test_registry_matches_repository_file(name: str) -> None:
     if not path.is_file():
         pytest.skip(f"{name} is not in this installation")
     assert data.hash_check(path=path, expected=data.REGISTRY[name])
+
+
+def fetch_name_list(*, path: pathlib.Path) -> list[tuple[int, str | None]]:
+    """
+    List the ``name`` arguments of every ``fetch`` call in a source file.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        Python source file.
+
+    Returns
+    -------
+    list of tuple of int and (str or None)
+        Line number and name for each call. A name passed as a module-level
+        string constant, such as ``HARDWARE_FILE_NAME``, resolves to its value.
+        A name that is neither a literal nor such a constant is ``None``.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    constants = {
+        target.id: node.value.value
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    }
+    names = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        function = node.func
+        called = (
+            function.attr
+            if isinstance(function, ast.Attribute)
+            else getattr(function, "id", None)
+        )
+        if called != "fetch":
+            continue
+        for keyword in node.keywords:
+            if keyword.arg != "name":
+                continue
+            value = keyword.value
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                names.append((node.lineno, value.value))
+            elif isinstance(value, ast.Name):
+                names.append((node.lineno, constants.get(value.id)))
+            else:
+                names.append((node.lineno, None))
+    return names
+
+
+def test_fetch_names_are_registered() -> None:
+    """
+    Fail when source code calls ``fetch`` with a name the registry lacks.
+
+    A renamed or deleted data file leaves the registry consistent with the
+    files on disk, so the registry tests pass. A ``fetch`` call that still uses
+    the old name fails only when that example runs, with ``KeyError``. This
+    test scans every module outside ``rattlesnake.data`` and catches the
+    stale name in CI instead. A name the test cannot resolve also fails, so
+    every call stays checkable.
+    """
+    source = pathlib.Path(data.__file__).resolve().parents[1]
+    problems = []
+    count = 0
+    for path in sorted(source.rglob("*.py")):
+        if path.parent.name == "data" and path.parent.parent == source:
+            continue
+        for line, name in fetch_name_list(path=path):
+            count += 1
+            location = f"{path.relative_to(source.parent)}:{line}"
+            if name is None:
+                problems.append(f"{location}: name is not a literal or module constant")
+            elif name not in data.REGISTRY:
+                problems.append(f"{location}: {name!r} is not in the registry")
+    assert count > 0, "found no fetch calls; the scan is looking in the wrong place"
+    assert problems == [], "\n".join(problems)
 
 
 def test_fetch_unknown_name() -> None:

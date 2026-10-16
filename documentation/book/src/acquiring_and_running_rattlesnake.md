@@ -16,14 +16,35 @@ numbering:
 (sec:acquiring_and_running_rattlesnake)=
 # Acquiring and Running Rattlesnake
 
-Rattlesnake can now be acquired in several ways depending on how a user intends to use the software:
+Users can acquire Rattlesnake in three ways, depending on the use case:
 
-1. **Install from PyPI** as a Python package
-2. **Clone the GitHub repository** and install from source
-3. **Download a standalone executable** from the GitHub Releases page  
-   *(coming soon)*
+1. **Install from PyPI** as a Python package.  Choose this to run Rattlesnake without changing its source code.
+2. **Clone the GitHub repository** and install from source.  Choose this to read the source, contribute changes, or write custom control laws.
+3. **Download a standalone executable** from the GitHub Releases page *(coming soon)*.  Choose this to avoid installing Python.
 
-The best choice depends on whether the user simply wants to run the software or also wants to inspect, modify, or extend the codebase.
+## Setting Up a Python Environment
+
+Create and activate a **virtual environment** before you install Rattlesnake from PyPI or from a clone.  The standalone executable needs no Python environment.
+
+A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer. This helps avoid version conflicts and makes upgrades or removal easier.
+
+Examples:
+
+```sh
+# Option 1: standard library venv
+python -m venv .venv
+
+# Option 2: uv-managed venv
+uv venv
+```
+
+Activate the environment before installing:
+
+```sh
+source .venv/bin/activate       # bash / zsh
+source .venv/bin/activate.fish  # fish shell
+.\.venv\Scripts\activate        # Windows PowerShell / CMD
+```
 
 ## Acquiring the Software
 
@@ -47,7 +68,7 @@ This is the recommended option for users who:
 - want the easiest Python-based installation route, and
 - do not need to modify the Rattlesnake source code directly.
 
-If desired, other Python package managers may also be used as long as they can install from PyPI. For example, users of `uv` may prefer:
+Other Python package managers may also be used as long as they can install from PyPI. For example, users of `uv` may prefer:
 
 ```sh
 uv pip install rattlesnake-vibration-controller
@@ -90,7 +111,7 @@ For development work, it is often preferable to install in **editable mode**:
 pip install -e .
 ```
 
-The `-e` flag tells Python to install the package in a way that points back to the source tree rather than copying the files into site-packages. This means:
+The `-e` (`--editable`) flag tells Python to install the package in a way that points back to the source tree rather than copying the files into site-packages. This means:
 
 - edits to the source code take effect immediately,
 - reinstalling after every small code change is unnecessary,
@@ -108,7 +129,7 @@ or with `uv`:
 uv pip install -e .[dev]
 ```
 
-This is the recommended setup for developers and advanced users.
+The `[dev]` install is the recommended setup for developers and advanced users.
 
 ### Downloading a Standalone Executable
 
@@ -118,34 +139,10 @@ When available, executables will be distributed through the GitHub Releases page
 
 This is intended to be the most accessible option for non-Python users.
 
-## Setting Up a Python Environment
-
-When using the Python-package or source-install approaches, it is strongly recommended to use a **virtual environment**.
-
-A virtual environment isolates Rattlesnake and its dependencies from the rest of the Python installation on the computer. This helps avoid version conflicts and makes upgrades or removal easier.
-
-Examples:
-
-```sh
-# Option 1: standard library venv
-python -m venv .venv
-
-# Option 2: uv-managed venv
-uv venv
-```
-
-Activate the environment before installing:
-
-```sh
-source .venv/bin/activate       # bash / zsh
-source .venv/bin/activate.fish  # fish shell
-.\.venv\Scripts\activate        # Windows PowerShell / CMD
-```
-
 (sec:example-data-files)=
 ## Example Data Files
 
-The bundled examples in `rattlesnake.examples` read 39 data files, such as specifications, system models, and saved NetCDF setups.  The package on PyPI does not contain these files.  Rattlesnake downloads each file from GitHub the first time an example needs it.  The Rattlesnake application itself needs no data files and never downloads anything.
+The bundled examples in `rattlesnake.examples` read data files, such as specifications, system models, and saved NetCDF setups.  Together the files take about 48 MB.  The package on PyPI does not contain these files.  Rattlesnake downloads each file from GitHub the first time an example needs it.  The Rattlesnake application itself needs no data files and never downloads anything.
 
 ### First use needs network access
 
@@ -165,14 +162,27 @@ Rattlesnake stores downloaded files in the user cache, in a separate directory f
 | Linux | `~/.cache/rattlesnake/<ref>`, or `$XDG_CACHE_HOME/rattlesnake/<ref>` |
 | Windows | `C:\Users\<user>\AppData\Local\rattlesnake\rattlesnake\Cache\<ref>` |
 
-`<ref>` is the git tag for a release, such as `v4.0.0rc4`.  For any other build, `<ref>` is the full commit SHA.  To print the directory for your install, run:
+`<ref>` is the git tag for a release, such as `v4.0.0rc4`.  For any other build, `<ref>` is the full 40-character SHA of the commit the build came from.  To print the `<ref>` for your install, run:
+
+```sh
+python -c "from rattlesnake import data; print(data.git_ref())"
+```
+
+For example, a build of commit [`f998f9ac20a5031b3e2e4a3360db9514694b13ff`](https://github.com/sandialabs/rattlesnake-vibration-controller/commit/f998f9ac20a5031b3e2e4a3360db9514694b13ff), which merged pull request #149 into `dev`, the command prints that full SHA.  The cache directory on macOS is then `~/Library/Caches/rattlesnake/f998f9ac20a5031b3e2e4a3360db9514694b13ff`.
+
+To print the full cache directory for your install, run:
 
 ```sh
 python -c "from rattlesnake import data; print(data.cache_directory(ref=data.git_ref()))"
 ```
 
-Deleting the directory is safe.  Rattlesnake downloads the files again the next time an example needs them.
+Releases and other builds share no downloads.  Each release or commit gets its own directory, because a file can change from one commit to the next.  A release directory takes a readable name, such as `v4.0.0rc4`.  Any other build's directory takes a 40-character commit SHA, such as `f998f9ac20a5031b3e2e4a3360db9514694b13ff`.
 
+This matters if you install from a clone with `pip install .` more than once.  Suppose you install at one commit, pull new commits, and install again.  The second install gets a new directory and downloads every file again, even the unchanged ones.  The old directory stays on disk, at up to 48 MB each.  An editable install avoids this, because it reads the files from the clone.
+
+Deleting any of these directories is safe.  Rattlesnake downloads the files again the next time an example needs them.
+
+(sec:working-offline)=
 ### Working offline
 
 Set the `RATTLESNAKE_DATADIR` environment variable to store the files in a directory of your choice.  Rattlesnake then reads and writes that directory instead of the user cache.
@@ -184,7 +194,25 @@ To use the examples on a machine without network access:
 3. Copy the directory to the offline machine.
 4. On the offline machine, set `RATTLESNAKE_DATADIR` to the copied directory.
 
-Both machines must have the same Rattlesnake version installed, because each version checks for its own file hashes.
+Both machines must run the same build of Rattlesnake, because each build checks for its own file hashes.  For a release, that means the same version.  For any other build, it means a build from the same commit.
+
+### Troubleshooting downloads
+
+Each download prints a line such as:
+
+```text
+Downloading file 'environment/time/time_signal.npy' from 'https://github.com/sandialabs/rattlesnake-vibration-controller/raw/v4.0.0rc4/src/rattlesnake/examples/environment/time/time_signal.npy' to '/Users/<user>/Library/Caches/rattlesnake/v4.0.0rc4'.
+```
+
+This line is normal and is not an error.
+
+A failed download is retried three times, with waits of 1 s, 2 s, and 3 s, so a failure takes about 7 s to report.  Each retry prints `Failed to download '<file>'. Will attempt the download again N more times.`  After the last attempt, the example stops with one of three errors:
+
+| Error | Likely cause | What to do |
+|---|---|---|
+| `requests.exceptions.ConnectionError` | The machine cannot reach `github.com`.  It may be offline, or a firewall may block it. | Connect to a network.  Behind a proxy, set the `HTTPS_PROXY` environment variable.  Without any network, follow [](#sec:working-offline). |
+| `requests.exceptions.HTTPError: 404 Client Error` | GitHub does not have the tag or commit.  This happens for a build made from a commit that was never pushed. | Push the commit, or use an editable install, which reads the files from the clone. |
+| `ValueError: SHA256 hash of downloaded file ... does not match the known hash` | The downloaded file differs from the one this build expects. | Report it as a bug.  The file on GitHub no longer matches this build's registry. |
 
 ## Running the Software
 

@@ -1,13 +1,14 @@
 """
 Unit tests for ``rattlesnake.data.registry``, which generates ``_registry.py``.
 
-Every test builds its own small directory in ``tmp_path``, except two. Both
+Every test builds its own small directory in ``tmp_path``, except three. Two
 read the dictionary that ``rattlesnake.data`` already imported.
 ``test_committed_registry_matches_generated_format`` compares it with the
 committed text. ``test_committed_registry_matches_files_on_disk`` compares it
-with the data files in the checkout.
+with the data files in the checkout. ``test_suffixes_match_pyproject_exclude``
+reads ``pyproject.toml`` in the checkout.
 
-The tests cover six areas.
+The tests cover seven areas.
 
 Keyword-only signatures
     Every public function except ``main`` takes keyword arguments only, so a
@@ -20,6 +21,10 @@ Keyword-only signatures
     Python, ``read`` loads it back, and ``ruff format`` leaves it unchanged.
     The formatting test is the guard against a formatting diff. It skips when
     ruff is not installed.
+``SUFFIXES``
+    Matches the ``exclude`` globs of the wheel and sdist targets in
+    ``pyproject.toml``. The test skips without ``pyproject.toml``, as in an
+    installed wheel, and on Python 3.10, which lacks ``tomllib``.
 ``read``
     Loads the dictionary with ``ast.literal_eval`` and never runs the file.
 ``difference_list``
@@ -53,6 +58,8 @@ test_committed_registry_matches_generated_format
     Confirms the committed ``_registry.py`` has exactly the generated text.
 test_committed_registry_matches_files_on_disk
     Confirms the committed registry lists every data file with its current hash.
+test_suffixes_match_pyproject_exclude
+    Confirms ``SUFFIXES`` and each target's ``exclude`` globs list the same suffixes.
 test_read_rejects_other_files
     Raises ``ValueError`` when no string dictionary named ``registry`` exists.
 test_read_does_not_execute
@@ -78,6 +85,8 @@ import pytest
 
 from rattlesnake import data
 from rattlesnake.data import registry
+
+PYPROJECT_PATH = pathlib.Path(registry.__file__).resolve().parents[3] / "pyproject.toml"
 
 
 @pytest.fixture
@@ -283,6 +292,36 @@ def test_committed_registry_matches_generated_format() -> None:
     """
     text = registry.REGISTRY_PATH.read_text(encoding="utf-8")
     assert text == registry.render(entries=data.REGISTRY)
+
+
+@pytest.mark.skipif(not PYPROJECT_PATH.is_file(), reason="no pyproject.toml")
+@pytest.mark.parametrize("target", ["wheel", "sdist"])
+def test_suffixes_match_pyproject_exclude(target: str) -> None:
+    """
+    Confirm that ``SUFFIXES`` and a build target's ``exclude`` globs agree.
+
+    Hatchling reads ``exclude`` from ``pyproject.toml``, so the suffixes live
+    in two places. A suffix in ``exclude`` but not in ``SUFFIXES`` leaves its
+    files out of the archive and out of the registry, so they ship nowhere. A
+    suffix in ``SUFFIXES`` but not in ``exclude`` ships its files in the
+    archive and also downloads them.
+
+    Parameters
+    ----------
+    target : str
+        Hatchling build target under ``[tool.hatch.build.targets]``.
+    """
+    tomllib = pytest.importorskip("tomllib", reason="tomllib needs Python 3.11")
+    with PYPROJECT_PATH.open("rb") as file:
+        pyproject = tomllib.load(file)
+    exclude = pyproject["tool"]["hatch"]["build"]["targets"][target]["exclude"]
+    expected = [
+        f"/src/rattlesnake/examples/**/*{suffix}" for suffix in registry.SUFFIXES
+    ]
+    assert sorted(exclude) == sorted(expected), (
+        f"[tool.hatch.build.targets.{target}] exclude in pyproject.toml must "
+        "hold one glob per suffix in SUFFIXES in rattlesnake/data/registry.py"
+    )
 
 
 def test_committed_registry_matches_files_on_disk() -> None:

@@ -370,7 +370,8 @@ Rattlesnake downloads its large example data files on demand.  The files stay in
 
 ### Motivation
 
-The repository holds 39 example data files under `src/rattlesnake/examples`: 23 `.nc4`, 13 `.npz`, and 3 `.npy`.  Together they take 47.6 MB on disk.  We want to keep them in the repository.  Tests, examples, and the documentation use them, and Git records every change to them.
+The repository holds 39 example data files under `src/rattlesnake/examples`: 23 `.nc4` (20.2 MB), 13 `.npz` (12.9 MB), 3 `.npy` (14.5 MB).
+Together they take 47.6 MB on disk.  We want to keep them in the repository.  Tests, examples, and the documentation use them, and Git records every change to them.
 
 We do not want them in the published distribution.  Every release uploads a new wheel and sdist to PyPI, and PyPI keeps every past release.  Release 4.0.0rc3 shipped 41 data files.  Two of them were run outputs that the repository no longer tracks.  The 41 files took 19.9 MB of its 20.9 MB wheel, or 96%.  The other 244 files in that wheel took 1.0 MB.  Each new release would add another 20 MB copy of unchanged data.
 
@@ -382,7 +383,7 @@ We do not want them in the published distribution.  Every release uploads a new 
 | Download at install time | Not possible.  pip runs no package code when it installs a wheel.  A build hook could download files during an sdist install.  We rejected that, because a build should not depend on the network, and many build environments block it. |
 | Separate data package, installed as an extra (`pip install "rattlesnake-vibration-controller[examples]"`) | Rejected.  It needs a second PyPI project, a second Trusted Publisher entry, and a second publish job in `release.yml`.  Our version comes from the git tag through `hatch-vcs`, so pinning the data package to the main package's version needs extra build code.  Both wheels would also write into the same `rattlesnake/` directory. |
 | Archive on a GitHub release, plus a `download-data` command | Rejected for now.  Users must remember to run an extra command before the examples work.  A single archive suits datasets too large to fetch file by file.  Our largest file is 7.7 MB (`frame_wing/data/sdynpy_fem_shapes.npy`). |
-| Git LFS | Rejected.  A raw GitHub URL for an LFS file returns a small pointer file, not the data.  The team has also had bad experiences with LFS. |
+| Git LFS | Rejected.  A raw GitHub URL for an LFS file returns a small pointer file, not the data.  The development team has also had experiences with LFS acting unreliably. |
 | Write our own downloader | Rejected.  It would need hash checks, retries, atomic writes, and a cache directory on each operating system.  Pooch already provides all four, and SciPy and scikit-image rely on it. |
 | Download on demand with Pooch | **Chosen.** |
 
@@ -402,7 +403,7 @@ Pooch adds two packages to an install, `pooch` and `platformdirs`.  Pooch's othe
 - **Astronomy (3):** [yt](https://github.com/yt-project/yt), [ScopeSim](https://github.com/AstarVienna/ScopeSim), and [SPLASH](https://github.com/Adam-Boesky/astro_SPLASH)
 - **Visualization and images (4):** [PyVista](https://github.com/pyvista/pyvista), [GeoViews](https://github.com/holoviz/geoviews), [seaborn-image](https://github.com/SarthakJariwala/seaborn-image), and [rembg](https://github.com/danielgatis/rembg)
 
-scikit-image adopted Pooch in [PR #3945](https://github.com/scikit-image/scikit-image/pull/3945), merged in March 2020.  That PR moved its test data and new datasets onto Pooch and kept 7 MB of legacy data in the wheel.  The PR author measured the wheel at 41 MB before the change and 27 MB after it.
+As an illustrative example, scikit-image adopted Pooch in [PR #3945](https://github.com/scikit-image/scikit-image/pull/3945), merged in March 2020.  That PR moved its test data and new datasets onto Pooch and kept 7 MB of legacy data in the wheel.  The PR author measured the wheel at 41 MB before the change and 27 MB after it.
 
 ### How `rattlesnake.data.fetch` works
 
@@ -425,7 +426,7 @@ The download URL depends on the installed version:
 | Version | Example | Downloads from |
 |---|---|---|
 | No `.dev` segment, a release built at its tag | `4.0.0rc4` | The git tag `v4.0.0rc4` |
-| Has a `.dev` segment, every other build | `4.0.0rc5.dev5` | The commit the build came from, such as `6c7224ca3fdb489fad2b3f53637634a0cf5906f2` |
+| Has a `.dev` segment, every other build | `4.0.0rc4.dev2` | The commit the build came from, such as [`f998f9ac20a5031b3e2e4a3360db9514694b13ff`](https://github.com/sandialabs/rattlesnake-vibration-controller/commit/f998f9ac20a5031b3e2e4a3360db9514694b13ff) |
 
 `hatch-vcs` adds the `.dev` segment to any build made from a commit after the latest tag.  That covers `pip install .` on any branch, including `main`, `dev`, and feature branches.  A release tag that has its own `.dev` segment, such as `v4.1.0.dev1`, also downloads from its commit.
 
@@ -441,7 +442,7 @@ Downloads go to a per-ref directory in the user cache, or to the directory named
 
 ### Safeguards
 
-We installed a locally built wheel into a clean virtual environment and checked each safeguard below.  The wheel excluded all three file types.  These checks used Pooch 1.9.0 on macOS.  At the time, the registry held 41 entries.  Two of them were run outputs, which we later removed from the registry.
+We checked each safeguard below on macOS, with Pooch 1.9.0, in a clean virtual environment.  Most rows used a locally built wheel that excluded all three file types.  At the time, the registry held 41 entries.  Two of them were run outputs, which we later removed from the registry.  The two rows about the download source describe their own setups.
 
 | Safeguard | What happens | What we verified |
 |---|---|---|
@@ -463,28 +464,82 @@ We installed a locally built wheel into a clean virtual environment and checked 
 | 4.0.0rc3 (TestPyPI) | 41 | 20,907,340 bytes | 20,964,518 bytes |
 | 4.0.0rc4 (TestPyPI) | 0 | 972,909 bytes | 895,879 bytes |
 
-The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist is 95.7% smaller than the 4.0.0rc3 sdist.  The 4.0.0rc4 registry lists 39 data files, none of which ship in either archive.
+The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist is 95.7% smaller than the 4.0.0rc3 sdist.  The 4.0.0rc4 registry lists 39 data files (41 original files less the two output files that were removed), none of which ship in either archive.
 
-### Adding or changing a data file
+### Managing data files
 
-1. Put the file under `src/rattlesnake/examples`.
-2. Regenerate the registry from the repository root:
+The registry lists every file under `src/rattlesnake/examples` whose suffix is `.nc4`, `.npz`, or `.npy`.  A file with any other suffix, such as `.xlsx`, ships in the wheel and stays out of the registry.  To fetch a new file type, add its suffix in *three places* in the same commit:
+
+- `SUFFIXES` in `src/rattlesnake/data/registry.py`
+- the `exclude` list under `[tool.hatch.build.targets.wheel]` in `pyproject.toml`
+- the `exclude` list under `[tool.hatch.build.targets.sdist]` in `pyproject.toml`
+
+A suffix in `exclude` but not in `SUFFIXES` would leave its files out of the wheel and out of the registry, so they would ship nowhere.
+
+The suffixes live in both `registry.py` and `pyproject.toml` because of two constraints:
+
+- **Hatchling needs the list in `pyproject.toml`.**  Hatchling reads `exclude` as static TOML when it builds the wheel and the sdist.  It cannot import the list from Python code.  A build hook such as `hatch_build.py` can add files to an archive, but hatchling gives a hook no way to remove them.
+- **`registry.py` does not read `pyproject.toml`.**  Python reads TOML with the `tomllib` module, which arrived in Python 3.11.  Rattlesnake supports Python 3.10, so `registry.py` would need the extra `tomli` package to read the list.  We chose a duplicate list and a test over a new dependency.
+
+The `pyproject.toml` file repeats its list for the wheel and the sdist because each build target sets its own `exclude`.  One shared list under `[tool.hatch.build]` might replace both, but we have not tested that change.
+
+The test `test_suffixes_match_pyproject_exclude` in `tests/short/test_registry.py` makes sure these lists agree.  It builds one glob per suffix in `SUFFIXES`, such as `/src/rattlesnake/examples/**/*.nc4`.  It then compares those globs with the wheel's `exclude` list and the sdist's `exclude` list in `pyproject.toml`.  If either list misses a suffix or adds an extra glob, the test fails and names the target.  The test skips on Python 3.10, which lacks the `tomllib` module that reads `pyproject.toml`.
+
+Git keeps every version of a binary file in the repository history.  Every clone downloads all of those versions.  Commit a new version of a large file only when its contents matter, and avoid a series of small edits.
+
+#### Steps for every change
+
+Each change below ends with these three steps:
+
+1. Regenerate the registry from the repository root:
 
    ```sh
    uv run python -m rattlesnake.data.registry
    ```
 
-   To check the registry without writing it, add `--check`.  The command exits non-zero when the registry is out of date.
+   To check the registry without writing it, add `--check`.  The command prints each difference as `missing`, `stale`, or `changed`.  It exits non-zero when the registry is out of date.
 
-   Three tests run the same comparison in CI:
+2. Commit the data files and `_registry.py` together.
+3. Push the commit.  A non-editable build can download a file only from a commit that GitHub has.
 
-   - `test_registry_matches_repository_file` in `tests/short/test_data.py` guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
-   - `test_registry_file_exists_in_checkout` in `tests/short/test_data.py` fails when someone removes a registered file.
-   - `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` fails when someone adds a data file and forgets to register it.  The wheel leaves the file out, and the registry does not list it, so the file would ship nowhere.
+#### Add a file
 
-3. Read the file through `data.fetch(name=...)`.  Do not build its path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.
-4. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.
-5. Commit the data file and the updated `_registry.py` together.
+1. Put the file under `src/rattlesnake/examples`.
+2. Read the file through `data.fetch(name=...)`.  The name is the path relative to `src/rattlesnake/examples`.  Do not build the path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.
+3. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.
+4. Follow the steps for every change.
+
+#### Change a file
+
+1. Replace the file in place, under the same name.
+2. Follow the steps for every change.
+
+Older releases keep downloading the old version from their own tag.  Changing a file never breaks them.
+
+#### Rename or move a file
+
+1. Move the file with `git mv`.
+2. Update every `data.fetch(name=...)` call that uses the old name.  `grep -rn "<old name>" src` finds them.
+3. Follow the steps for every change.  `--check` reports the old name as `stale` and the new name as `missing` until you regenerate the registry.
+
+Older releases keep downloading the old name from their own tag.  The repository needs no alias for the old name.
+
+#### Delete a file
+
+1. Remove the file with `git rm`.
+2. Remove or replace every `data.fetch(name=...)` call that uses its name.
+3. Follow the steps for every change.
+
+Older releases keep downloading the file from their own tag.
+
+#### Tests that catch a missed step
+
+Four tests compare the registry with the checkout in CI:
+
+- `test_registry_matches_repository_file` in `tests/short/test_data.py` guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
+- `test_registry_file_exists_in_checkout` in `tests/short/test_data.py` fails when someone renames or deletes a registered file and forgets to regenerate the registry.
+- `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` fails when someone adds a data file and forgets to register it.  The wheel leaves the file out, and the registry does not list it, so the file would ship nowhere.
+- `test_fetch_names_are_registered` in `tests/short/test_data.py` fails when a `data.fetch` call uses a name that the registry lacks.  After a rename or delete, a missed call site would otherwise fail only when its example runs, with a `KeyError`.
 
 ```{note}
 Use `data.fetch` only for files that Rattlesnake reads.  The registry never lists a file that Rattlesnake writes.  `OUTPUT_FILES` in `src/rattlesnake/data/registry.py` names the known output files, and the generator skips them.  Some examples also name a file that Rattlesnake writes, such as the destination of a `SAVE_CONTROL_DATA` profile event.  Build those paths the usual way.  If `fetch` returned a cache path for an output file, Rattlesnake would overwrite the cached copy, and its hash would no longer match.

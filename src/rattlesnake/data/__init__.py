@@ -178,8 +178,12 @@ def fetch(*, name: str) -> str:
     ------
     KeyError
         If ``name`` is not in ``REGISTRY``.
-    ConnectionError
-        If the file is not available locally and the download fails.
+    requests.exceptions.ConnectionError
+        If the file is not available locally and GitHub cannot be reached.
+    requests.exceptions.HTTPError
+        If GitHub returns an error, such as 404 for a commit it does not have.
+    ValueError
+        If every download attempt returns a file whose hash does not match.
     """
     expected = REGISTRY[name]
     packaged = PACKAGE_DIRECTORY / name
