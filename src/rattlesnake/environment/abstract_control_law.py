@@ -24,7 +24,49 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from abc import ABC, abstractmethod
 import numpy as np
+from enum import Enum
 
+class ControlParameters:
+    """Class to store control law data"""
+
+    def __init__(
+        self,
+        control_script: str | None,
+        control_object: str | None,
+        control_type: Enum | None,
+        control_parameters: dict | None,
+    ):
+        """Initializes an object to store information about the custom control law
+
+        Parameters
+        ----------
+        control_script : str
+            The path to the python script containing the control law
+        control_object : str
+            The name of the item (function, generator, class) containing the control law
+        control_type : ControlLawType
+            The type of item defining the control law
+        control_parameters : dict
+            Any extra keyword arguments to pass to the control law.
+        """
+        self.control_script = control_script
+        self.control_object = control_object
+        self.control_type = control_type
+        if isinstance(
+            control_parameters, str
+        ):  # attempting to retain backward compatibility
+            try:
+                self.control_parameters = {
+                    s.split("=")[0].strip(): s.split("=")[1].strip()
+                    for s in control_parameters.splitlines()
+                }
+            except Exception as e:
+                print(
+                    f"Could not interpret legacy `extra_parameters` as `key=value` pairs: {e}"
+                )
+                self.control_parameters = None
+        else:
+            self.control_parameters = control_parameters
 
 class AbstractControlClass(ABC):
     """Abstract class to define a random vibration control law"""

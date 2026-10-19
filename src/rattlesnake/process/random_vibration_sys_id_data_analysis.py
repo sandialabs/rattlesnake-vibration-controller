@@ -34,6 +34,7 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataAnalysisCommands,
     SysIdMetadata,
 )
+from rattlesnake.environment.random_vibration_sys_id_metadata import RandomControlLawType
 from rattlesnake.environment.abstract_interactive_control_law import ControlLawCommands
 from rattlesnake.utilities import (
     GlobalCommands,
@@ -45,6 +46,7 @@ from rattlesnake.utilities import (
     load_control_module,
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import load_python_module
 
 
 # region Commands
@@ -155,18 +157,18 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             self.environment_metadata.fft_lines
         )
         # Load in the control script
-        module = load_control_module(self.environment_metadata.control_python_script)
+        module = load_control_module(self.environment_metadata.control_script_data.control_script)
         # Pull out the function from the loaded module
-        if self.environment_metadata.control_python_function_type == 1:  # Generator
+        if self.environment_metadata.control_script_data.control_type == RandomControlLawType.GENERATOR:  # Generator
             # Get the generator function
             generator_function = getattr(
-                module, self.environment_metadata.control_python_function
+                module, self.environment_metadata.control_script_data.control_object
             )()
             # Get us to the first yield statement
             next(generator_function)
             # Define the control function as the generator's send function
             self.control_function = generator_function.send
-        elif self.environment_metadata.control_python_function_type == 2:  # Class
+        elif self.environment_metadata.control_script_data.control_type == RandomControlLawType.CLASS:  # Class
             control_frf = (
                 self.control_frf
                 if self.environment_metadata.update_tf_during_control
@@ -178,12 +180,12 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 else self.sysid_data.sysid_coherence
             )
             self.control_function = getattr(
-                module, self.environment_metadata.control_python_function
+                module, self.environment_metadata.control_script_data.control_object
             )(
                 self.environment_metadata.specification_cpsd_matrix,  # Specifications
                 self.environment_metadata.specification_warning_matrix,  # Warning levels
                 self.environment_metadata.specification_abort_matrix,  # Abort Levels
-                self.environment_metadata.control_python_function_parameters,  # Extra parameters for the control law
+                self.environment_metadata.control_script_data.control_parameters,  # Extra parameters for the control law
                 control_frf,  # Transfer Functions
                 self.sysid_data.sysid_response_noise,  # Noise levels and correlation
                 self.sysid_data.sysid_reference_noise,  # from the system identification
@@ -195,7 +197,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 self.last_response_cpsd,  # Last Control Response for Error Correction
                 self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
             )
-        elif self.environment_metadata.control_python_function_type == 3:  # Interactive
+        elif self.environment_metadata.control_script_data.control_type == RandomControlLawType.INTERACTIVE_CLASS:  # Interactive
             control_frf = (
                 self.control_frf
                 if self.environment_metadata.update_tf_during_control
@@ -207,7 +209,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 else self.sysid_data.sysid_coherence
             )
             control_class = getattr(
-                module, self.environment_metadata.control_python_function
+                module, self.environment_metadata.control_script_data.control_object
             )
             self.control_function = control_class(
                 self.environment_name,
@@ -215,7 +217,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 self.environment_metadata.specification_cpsd_matrix,  # Specifications
                 self.environment_metadata.specification_warning_matrix,  # Warning levels
                 self.environment_metadata.specification_abort_matrix,  # Abort Levels
-                self.environment_metadata.control_python_function_parameters,  # Extra parameters for the control law
+                self.environment_metadata.control_script_data.control_parameters,  # Extra parameters for the control law
                 control_frf,  # Transfer Functions
                 self.sysid_data.sysid_response_noise,  # Noise levels and correlation
                 self.sysid_data.sysid_reference_noise,  # from the system identification
@@ -229,9 +231,14 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             )
             self.last_interactive_parameters = None
             self.has_sent_interactive_control_transfer_function_results = False
-        else:  # Function
+        elif self.environment_metadata.control_script_data.control_type == RandomControlLawType.FUNCTION:  # Function
             self.control_function = getattr(
-                module, self.environment_metadata.control_python_function
+                module, self.environment_metadata.control_script_data.control_object
+            )
+        else:
+            raise ValueError(
+                f"Invalid type {self.environment_metadata.control_script_data.control_type}. "
+                "How did you get here?!"
             )
 
     # endregion
@@ -241,7 +248,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
         """Runs the control law with system identification information to predict control"""
         if self.sysid_data.sysid_frf is None:
             return
-        if self.environment_metadata.control_python_function_type == 1:  # Generator
+        if self.environment_metadata.control_script_data.control_type == RandomControlLawType.GENERATOR:  # Generator
             output_cpsd = self.control_function(
                 (
                     self.environment_metadata.specification_cpsd_matrix,  # Specifications
@@ -255,17 +262,17 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     self.sysid_data.sysid_coherence,  # Coherence from the system identification
                     self.parameters.sysid_averages,  # Number of frames in the CPSD
                     self.parameters.sysid_averages,  # Total number of frames
-                    self.environment_metadata.control_python_function_parameters,  # Extra parameters
+                    self.environment_metadata.control_script_data.control_parameters,  # Extra parameters
                     None,  # Last Control Response for Error Correction
                     None,  # Last Control Excitation for Drive-based control
                 )
             )
-        elif self.environment_metadata.control_python_function_type in [
-            2,
-            3,
+        elif self.environment_metadata.control_script_data.control_type in [
+            RandomControlLawType.CLASS,
+            RandomControlLawType.INTERACTIVE_CLASS,
         ]:  # Class or Interactive
             if (
-                self.environment_metadata.control_python_function == 2
+                self.environment_metadata.control_script_data.control_object == RandomControlLawType.CLASS
                 or not self.has_sent_interactive_control_transfer_function_results
             ):
                 self.control_function.system_id_update(
@@ -278,7 +285,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     self.parameters.sysid_averages,  # Number of frames in the CPSD
                     self.parameters.sysid_averages,  # Total number of frames
                 )
-                if self.environment_metadata.control_python_function_type == 3:
+                if self.environment_metadata.control_script_data.control_type == RandomControlLawType.INTERACTIVE_CLASS:
                     self.gui_update_queue.put(
                         (
                             self.environment_name,
@@ -297,7 +304,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     )
                     self.has_sent_interactive_control_transfer_function_results = True
             if (
-                self.environment_metadata.control_python_function_type == 2
+                self.environment_metadata.control_script_data.control_type == RandomControlLawType.CLASS
                 or self.last_interactive_parameters is not None
             ):
                 output_cpsd = self.control_function.control(
@@ -321,7 +328,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 )
                 time.sleep(0.25)
                 return
-        else:  # Function
+        elif self.environment_metadata.control_script_data.control_object == RandomControlLawType.FUNCTION:  # Function
             output_cpsd = self.control_function(
                 self.environment_metadata.specification_cpsd_matrix,  # Specifications
                 self.environment_metadata.specification_warning_matrix,  # Warning levels
@@ -334,9 +341,14 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 self.sysid_data.sysid_coherence,  # Coherence from the system identification
                 self.parameters.sysid_averages,  # Number of frames in the CPSD
                 self.parameters.sysid_averages,  # Total number of frames
-                self.environment_metadata.control_python_function_parameters,  # Extra parameters
+                self.environment_metadata.control_script_data.control_parameters,  # Extra parameters
                 None,  # Last Control Response for Error Correction
                 None,  # Last Control Excitation for Drive-based control
+            )
+        else:
+            raise ValueError(
+                f"Invalid type {self.environment_metadata.control_script_data.control_object}. "
+                "How did you get here?!"
             )
         response_cpsd = (
             self.sysid_data.sysid_frf
@@ -373,7 +385,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 ),
             )
         )
-        if self.environment_metadata.control_python_function_type == 3:
+        if self.environment_metadata.control_script_data.control_type == RandomControlLawType.INTERACTIVE_CLASS:
             self.has_sent_interactive_control_transfer_function_results = False
 
     def run_control(self, data):  # pylint: disable=unused-argument
@@ -504,7 +516,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 if self.environment_metadata.update_tf_during_control
                 else self.sysid_data.sysid_coherence
             )
-            if self.environment_metadata.control_python_function_type == 1:  # Generator
+            if self.environment_metadata.control_script_data.control_type == RandomControlLawType.GENERATOR:  # Generator
                 output_cpsd = self.control_function(
                     (
                         self.environment_metadata.specification_cpsd_matrix,  # Specifications
@@ -518,14 +530,14 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                         control_coherence,  # Coherence
                         self.frames,  # Number of frames in the CPSD
                         self.environment_metadata.frames_in_cpsd,  # Total number of frames
-                        self.environment_metadata.control_python_function_parameters,  # Extra parameters
+                        self.environment_metadata.control_script_data.control_parameters,  # Extra parameters
                         self.last_response_cpsd,  # Last Control Response for Error Correction
                         self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
                     )
                 )
-            elif self.environment_metadata.control_python_function_type in [
-                2,
-                3,
+            elif self.environment_metadata.control_script_data.control_type in [
+                RandomControlLawType.CLASS,
+                RandomControlLawType.INTERACTIVE_CLASS,
             ]:  # Class or interactive class
                 output_cpsd = self.control_function.control(
                     control_frf,  # Transfer Functions
@@ -535,7 +547,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     self.last_response_cpsd,  # Last Control Response for Error Correction
                     self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
                 )
-            else:  # Function
+            elif self.environment_metadata.control_script_data.control_type == RandomControlLawType.FUNCTION:  # Function
                 output_cpsd = self.control_function(
                     self.environment_metadata.specification_cpsd_matrix,  # Specifications
                     self.environment_metadata.specification_warning_matrix,  # Warning levels
@@ -548,9 +560,14 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                     control_coherence,  # Coherence
                     self.frames,  # Number of frames in the CPSD
                     self.environment_metadata.frames_in_cpsd,  # Total number of frames
-                    self.environment_metadata.control_python_function_parameters,  # Extra parameters
+                    self.environment_metadata.control_script_data.control_parameters,  # Extra parameters
                     self.last_response_cpsd,  # Last Control Response for Error Correction
                     self.last_drive_cpsd,  # Last Control Excitation for Drive-based control
+                )
+            else:
+                raise ValueError(
+                    f"Invalid type {self.environment_metadata.control_script_data.control_type}. "
+                    "How did you get here?!"
                 )
             self.log(
                 f"RMS Outputs from Control \n  "
@@ -573,7 +590,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
     def update_interactive_control_parameters(self, interactive_control_parameters):
         """Updates parameters for the interactive control law"""
-        if self.environment_metadata.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_script_data.control_type == RandomControlLawType.INTERACTIVE_CLASS:  # Interactive
             self.control_function.update_parameters(interactive_control_parameters)
             self.last_interactive_parameters = interactive_control_parameters
         else:
@@ -584,7 +601,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
 
     def send_interactive_command(self, command):
         """Sends a command to the interactive control law"""
-        if self.environment_metadata.control_python_function_type == 3:  # Interactive
+        if self.environment_metadata.control_script_data.control_type == RandomControlLawType.INTERACTIVE_CLASS:  # Interactive
             self.control_function.send_command(command)
         else:
             raise ValueError(

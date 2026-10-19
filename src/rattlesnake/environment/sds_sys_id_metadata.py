@@ -30,6 +30,7 @@ import openpyxl
 from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentMetadata
 from rattlesnake.environment.sds_sys_id_utilities import octspace, DecayedSineTable
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 
@@ -321,41 +322,12 @@ class SpecParameters:
         self.num_hits = num_hits
 
 
-class ControlLawType(Enum):
+class SDSControlLawType(Enum):
     """Enumeration containing acceptable types of objects to use for a control law"""
 
     FUNCTION = 0
     CLASS = 1
     INTERACTIVE_CLASS = 2
-
-
-class ControlParameters:
-    """Class to store control law data"""
-
-    def __init__(
-        self,
-        control_script: str | None,
-        control_object: str | None,
-        control_type: ControlLawType | None,
-        control_parameters: dict | None,
-    ):
-        """Initializes an object to store information about the custom control law
-
-        Parameters
-        ----------
-        control_script : str
-            The path to the python script containing the control law
-        control_object : str
-            The name of the item (function, generator, class) containing the control law
-        control_type : ControlLawType
-            The type of item defining the control law
-        control_parameters : dict
-            Any extra keyword arguments to pass to the control law.
-        """
-        self.control_script = control_script
-        self.control_object = control_object
-        self.control_type = control_type
-        self.control_parameters = control_parameters
 
 
 def _parse_scalar_string(value):
@@ -820,11 +792,11 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         control_object = worksheet.cell(20, 2).value
         control_type_text = str(worksheet.cell(21, 2).value).strip().lower()
         if control_type_text == "function":
-            control_type = ControlLawType.FUNCTION
+            control_type = SDSControlLawType.FUNCTION
         elif control_type_text == "class":
-            control_type = ControlLawType.CLASS
+            control_type = SDSControlLawType.CLASS
         elif control_type_text == "interactive":
-            control_type = ControlLawType.INTERACTIVE_CLASS
+            control_type = SDSControlLawType.INTERACTIVE_CLASS
         else:
             raise ValueError(f"Unknown control type {worksheet.cell(21, 2).value}")
 
@@ -1073,7 +1045,7 @@ class SDSMetadata(SysIdEnvironmentMetadata):
         # Control parameters
         # ----------------------------
         control_grp = netcdf_group_handle.groups["control_parameters"]
-        control_type = ControlLawType(control_grp.control_type)
+        control_type = SDSControlLawType(control_grp.control_type)
         control_script = control_grp.control_script
         control_object = control_grp.control_object
 
