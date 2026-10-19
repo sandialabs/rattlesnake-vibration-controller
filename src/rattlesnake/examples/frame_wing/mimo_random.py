@@ -11,6 +11,7 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
 from rattlesnake.environment.random_vibration_sys_id_metadata import (
     RandomControlLawType
 )
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.random_vibration_sys_id_utilities import load_specification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
@@ -88,10 +89,12 @@ def build_mimo_random_controller(threaded=False):
         cpsd_overlap=0.5,
         percent_lines_out=10.0,
         allow_automatic_aborts=False,
-        control_python_script="rattlesnake.environment.random_vibration_sys_id_control_law",
-        control_python_function="buzz_control",
-        control_python_function_type=RandomControlLawType.FUNCTION,
-        control_python_function_parameters="",
+        control_script_data=ControlParameters(
+            control_script="rattlesnake.environment.random_vibration_sys_id_control_law",
+            control_object="buzz_control",
+            control_type=RandomControlLawType.FUNCTION,
+            control_parameters=""
+        ),
         control_channel_indices=[
             index
             for index, channel in enumerate(channel_list)
