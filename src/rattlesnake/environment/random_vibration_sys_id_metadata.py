@@ -106,32 +106,29 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         environment_name: str,
         channel_list_bools: list,
         sample_rate: int,
-        number_of_channels,
-        samples_per_frame,
-        test_level_ramp_time,
-        cola_window,
-        cola_overlap,
-        cola_window_exponent,
-        sigma_clip,
-        update_tf_during_control,
-        frames_in_cpsd,
-        cpsd_window,
-        cpsd_overlap,
-        percent_lines_out,
-        allow_automatic_aborts,
-        control_python_script,
-        control_python_function,
-        control_python_function_type,
-        control_python_function_parameters,
-        control_channel_indices,
-        output_channel_indices,
-        specification_frequency_lines,
-        specification_cpsd_matrix,
-        specification_warning_matrix,
-        specification_abort_matrix,
-        response_transformation_matrix,
-        output_transformation_matrix,
-        sysid_metadata=None,
+        number_of_channels: int,
+        samples_per_frame: int,
+        test_level_ramp_time: float,
+        cola_window: str,
+        cola_overlap: float,
+        cola_window_exponent: float,
+        sigma_clip: float,
+        update_tf_during_control: bool,
+        frames_in_cpsd: int,
+        cpsd_window: str,
+        cpsd_overlap: float,
+        percent_lines_out: float,
+        allow_automatic_aborts: bool,
+        control_script_data: ControlParameters,
+        control_channel_indices: np.ndarray,
+        output_channel_indices: np.ndarray,
+        specification_frequency_lines: np.ndarray,
+        specification_cpsd_matrix: np.ndarray,
+        specification_warning_matrix: np.ndarray,
+        specification_abort_matrix: np.ndarray,
+        response_transformation_matrix: None | np.ndarray,
+        output_transformation_matrix: None | np.ndarray,
+        sysid_metadata: SysIdMetadata = None,
     ):
         super().__init__(
             CONTROL_TYPE,
@@ -154,10 +151,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         self.cpsd_window = cpsd_window
         self.response_transformation_matrix = response_transformation_matrix
         self.reference_transformation_matrix = output_transformation_matrix
-        self.control_python_script = control_python_script
-        self.control_python_function = control_python_function
-        self.control_python_function_type = control_python_function_type
-        self.control_python_function_parameters = control_python_function_parameters
+        self.control_script_data = control_script_data
         self.control_channel_indices = control_channel_indices
         self.output_channel_indices = output_channel_indices
         self.specification_frequency_lines = specification_frequency_lines
@@ -390,29 +384,29 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             )
 
     def _validate_control_law(self):
-        if not self.control_python_script:
+        if not self.control_script_data.control_script:
             raise RattlesnakeError(
-                f"{self.environment_name} has no control_python_script set"
+                f"{self.environment_name} has no control_script_data.control_script set"
             )
-        if not self.control_python_function:
+        if not self.control_script_data.control_object:
             raise RattlesnakeError(
-                f"{self.environment_name} has no control_python_function set"
+                f"{self.environment_name} has no control_script_data.control_object set"
             )
 
         try:
-            module = load_python_module(self.control_python_script)
+            module = load_python_module(self.control_script_data.control_script)
         except Exception as e:
             raise RattlesnakeError(
                 f"{self.environment_name} could not load control script "
-                f"{self.control_python_script}: {e}"
+                f"{self.control_script_data.control_script}: {e}"
             ) from e
 
-        function = getattr(module, self.control_python_function, None)
+        function = getattr(module, self.control_script_data.control_object, None)
         if function is None:
             raise RattlesnakeError(
                 f"{self.environment_name} control script "
-                f"{self.control_python_script} has no function or class "
-                f"named {self.control_python_function}"
+                f"{self.control_script_data.control_script} has no function or class "
+                f"named {self.control_script_data.control_object}"
             )
 
         if inspect.isgeneratorfunction(function):
@@ -427,15 +421,15 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             if not callable(function):
                 raise RattlesnakeError(
                     f"{self.environment_name} control function "
-                    f"{self.control_python_function} is not callable"
+                    f"{self.control_script_data.control_object} is not callable"
                 )
             actual_type = RandomControlLawType.FUNCTION
 
-        if actual_type != RandomControlLawType(self.control_python_function_type):
+        if actual_type != RandomControlLawType(self.control_script_data.control_type):
             raise RattlesnakeError(
-                f"{self.environment_name} control_python_function_type "
-                f"({self.control_python_function_type}) does not match what "
-                f"{self.control_python_function} actually is (detected type "
+                f"{self.environment_name} control_script_data.control_type "
+                f"({self.control_script_data.control_type}) does not match what "
+                f"{self.control_script_data.control_object} actually is (detected type "
                 f"{actual_type}); reload the control script"
             )
 
@@ -511,11 +505,11 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         )
         # Control group
         control_grp = netcdf_group_handle.createGroup("control_parameters")
-        control_grp.control_type = self.control_python_function_type.value
-        control_grp.control_script = self.control_python_script
-        control_grp.control_object = self.control_python_function
+        control_grp.control_type = self.control_script_data.control_type.value
+        control_grp.control_script = self.control_script_data.control_script
+        control_grp.control_object = self.control_script_data.control_object
         control_grp_params = control_grp.createGroup("control_extra_parameters")
-        for key, value in self.control_python_function_parameters.items():
+        for key, value in self.control_script_data.control_parameters.items():
             setattr(control_grp_params, key, value)
         # Specifications
         netcdf_group_handle.createDimension("fft_lines", self.fft_lines)
@@ -711,10 +705,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             cpsd_overlap=cpsd_overlap,
             percent_lines_out=percent_lines_out,
             allow_automatic_aborts=allow_automatic_aborts,
-            control_python_script=control_script_data.control_script,
-            control_python_function=control_script_data.control_object,
-            control_python_function_type=control_script_data.control_type,
-            control_python_function_parameters=control_script_data.control_parameters,
+            control_script_data=control_script_data,
             control_channel_indices=control_channel_indices,
             output_channel_indices=output_channel_indices,
             specification_frequency_lines=specification_frequency_lines,
@@ -832,13 +823,13 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             worksheet.cell(11, 2, self.percent_lines_out)
         if self.allow_automatic_aborts is not None:
             worksheet.cell(12, 2, "Y" if self.allow_automatic_aborts else "N")
-        if self.control_python_script is not None:
-            worksheet.cell(13, 2, self.control_python_script)
-        if self.control_python_function is not None:
-            worksheet.cell(14, 2, self.control_python_function)
-        if self.control_python_function_parameters is not None:
+        if self.control_script_data.control_script is not None:
+            worksheet.cell(13, 2, self.control_script_data.control_script)
+        if self.control_script_data.control_object is not None:
+            worksheet.cell(14, 2, self.control_script_data.control_object)
+        if self.control_script_data.control_parameters is not None:
             for idx, (key, value) in enumerate(
-                self.control_python_function_parameters.items()
+                self.control_script_data.control_parameters.items()
             ):
                 worksheet.cell(15, 2 + idx, f"{key}={value}")
         if self.control_channel_indices is not None:
@@ -1002,10 +993,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
             cpsd_overlap=cpsd_overlap,
             percent_lines_out=percent_lines_out,
             allow_automatic_aborts=allow_automatic_aborts,
-            control_python_script=control_script_data.control_script,
-            control_python_function=control_script_data.control_object,
-            control_python_function_type=control_script_data.control_type,
-            control_python_function_parameters=control_script_data.control_parameters,
+            control_script_data=control_script_data,
             control_channel_indices=control_channel_indices,
             output_channel_indices=output_channel_indices,
             specification_frequency_lines=None,

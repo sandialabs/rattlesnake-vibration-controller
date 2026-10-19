@@ -477,7 +477,7 @@ class RandomVibrationEnvironment(SysIdEnvironment):
     def send_interactive_command(self, command):
         """General method that can be used by an interactive UI object to pass commands and data to
         its corresponding computation object"""
-        if self.environment_metadata.control_python_function_type == RandomControlLawType.INTERACTIVE_CLASS:  # Interactive
+        if self.environment_metadata.control_script_data.control_type == RandomControlLawType.INTERACTIVE_CLASS:  # Interactive
             self.queue_container.data_analysis_command_queue.put(
                 self.environment_name,
                 (ControlLawCommands.SEND_INTERACTIVE_COMMAND, command),

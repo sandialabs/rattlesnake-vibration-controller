@@ -679,10 +679,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             cpsd_overlap=self.definition_widget.cpsd_overlap_selector.value() / 100,
             response_transformation_matrix=self.response_transformation_matrix,
             output_transformation_matrix=self.output_transformation_matrix,
-            control_python_script=control_data.control_script,
-            control_python_function=control_data.control_object,
-            control_python_function_type=control_data.control_type,
-            control_python_function_parameters=control_data.control_parameters,
+            control_script_data=control_data,
             control_channel_indices=self.physical_control_indices,
             output_channel_indices=self.physical_output_indices,
             specification_frequency_lines=self.specification_frequency_lines,
@@ -734,18 +731,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.definition_widget.cpsd_overlap_selector.setValue(
             metadata.cpsd_overlap * 100
         )
-        control_data = ControlParameters(
-            control_script=metadata.control_python_script,
-            control_object=metadata.control_python_function,
-            control_type=metadata.control_python_function_type
-            if isinstance(metadata.control_python_function_type, RandomControlLawType)
-            else RandomControlLawType(metadata.control_python_function_type),
-            control_parameters=metadata.control_python_function_parameters,
-        )
-        self.set_control_data(control_data)
-        # self.definition_widget.control_parameters_text_input.setPlainText(
-        #     metadata.control_python_function_parameters or ""
-        # ) #### TODO: re-implement for backward compatibility
+        self.set_control_data(metadata.control_script_data)
         self.definition_widget.frequency_lines_out_spinbox.setValue(
             metadata.percent_lines_out
         )
