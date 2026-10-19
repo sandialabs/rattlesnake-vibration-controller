@@ -93,7 +93,7 @@ def build_mimo_random_controller(threaded=False):
             control_script="rattlesnake.environment.random_vibration_sys_id_control_law",
             control_object="buzz_control",
             control_type=RandomControlLawType.FUNCTION,
-            control_parameters=""
+            control_parameters={}
         ),
         control_channel_indices=[
             index
