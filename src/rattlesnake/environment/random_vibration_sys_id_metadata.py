@@ -29,6 +29,9 @@ import numpy as np
 import openpyxl
 import scipy.signal as sig
 
+from rattlesnake.environment.abstract_control_law import (
+    ControlParameters
+)
 from rattlesnake.environment.abstract_interactive_control_law import (
     AbstractControlLawComputation,
 )
@@ -59,50 +62,6 @@ class RandomControlLawType(Enum):
     GENERATOR = 1
     CLASS = 2
     INTERACTIVE_CLASS = 3
-
-
-class RandomControlParameters:
-    """Class to store control law data"""
-
-    def __init__(
-        self,
-        control_script: str | None,
-        control_object: str | None,
-        control_type: RandomControlLawType | None,
-        control_parameters: dict | None,
-    ):
-        """Initializes an object to store information about the custom control law
-
-        Parameters
-        ----------
-        control_script : str
-            The path to the python script containing the control law
-        control_object : str
-            The name of the item (function, generator, class) containing the control law
-        control_type : ControlLawType
-            The type of item defining the control law
-        control_parameters : dict
-            Any extra keyword arguments to pass to the control law.
-        """
-        self.control_script = control_script
-        self.control_object = control_object
-        self.control_type = control_type
-        if isinstance(
-            control_parameters, str
-        ):  # attempting to retain backward compatibility
-            try:
-                self.control_parameters = {
-                    s.split("=")[0].strip(): s.split("=")[1].strip()
-                    for s in control_parameters.splitlines()
-                }
-            except Exception as e:
-                print(
-                    f"Could not interpret legacy `extra_parameters` as `key=value` pairs: {e}"
-                )
-                self.control_parameters = None
-        else:
-            self.control_parameters = control_parameters
-
 
 # endregion
 
@@ -687,14 +646,14 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
                 for key in control_grp_params.ncattrs():
                     control_parameters[key] = getattr(control_grp_params, key)
 
-            control_script_data = RandomControlParameters(
+            control_script_data = ControlParameters(
                 control_script=control_script,
                 control_object=control_object,
                 control_type=control_type,
                 control_parameters=control_parameters,
             )
         else:
-            control_script_data = RandomControlParameters(
+            control_script_data = ControlParameters(
                 control_script=netcdf_group_handle.control_python_script,
                 control_object=netcdf_group_handle.control_python_function,
                 control_type=RandomControlLawType(netcdf_group_handle.control_python_function_type),
@@ -981,7 +940,7 @@ class RandomVibrationMetadata(SysIdEnvironmentMetadata):
         else:
             control_type = None
 
-        control_script_data = RandomControlParameters(
+        control_script_data = ControlParameters(
             control_script=control_script,
             control_object=control_object,
             control_type=control_type,

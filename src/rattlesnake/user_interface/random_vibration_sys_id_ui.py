@@ -27,9 +27,9 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationUICommands,
     RandomVibrationInstructions,
 )
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.random_vibration_sys_id_metadata import (
     RandomControlLawType,
-    RandomControlParameters,
 )
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdDataPackage
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
@@ -57,7 +57,6 @@ from rattlesnake.utilities import (
 )
 
 CONTROL_TYPE = EnvironmentType.RANDOM
-CONTROL_FUNCTION_TYPE_NAMES = ["Function", "Generator", "Class", "Interactive"]
 MAXIMUM_NAME_LENGTH = 50
 
 
@@ -613,7 +612,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             names=["Real Prediction", "Imag Prediction"],
         )
         # Create the interactive control law if necessary
-        if self.control_function_type == RandomControlLawType.INTERACTIVE_CLASS.value:
+        if self.control_function_type == RandomControlLawType.INTERACTIVE_CLASS:
             control_class = getattr(
                 self.python_control_module,
                 self.definition_widget.control_function_input.itemText(
@@ -650,14 +649,14 @@ class RandomVibrationUI(SysIdEnvironmentUI):
             channel_list_bools = []
 
         if self.python_control_module is None:
-            control_data = RandomControlParameters(
+            control_data = ControlParameters(
                 control_script=None,
                 control_object=None,
                 control_type=None,
                 control_parameters=None,
             )
         else:
-            control_data: RandomControlParameters = self.collect_control_data()
+            control_data: ControlParameters = self.collect_control_data()
         metadata = RandomVibrationMetadata(
             environment_name=self.environment_name,
             channel_list_bools=channel_list_bools,
@@ -735,7 +734,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         self.definition_widget.cpsd_overlap_selector.setValue(
             metadata.cpsd_overlap * 100
         )
-        control_data = RandomControlParameters(
+        control_data = ControlParameters(
             control_script=metadata.control_python_script,
             control_object=metadata.control_python_function,
             control_type=metadata.control_python_function_type
@@ -1155,7 +1154,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         control_function_type = self.control_function_type
         control_function_parameters = self.collect_control_extra_parameters()
-        control_data = RandomControlParameters(
+        control_data = ControlParameters(
             control_module,
             control_function,
             control_function_type,
@@ -1163,7 +1162,7 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         )
         return control_data
 
-    def set_control_data(self, control_data: RandomControlParameters):
+    def set_control_data(self, control_data: ControlParameters):
         self.select_python_module(filename=control_data.control_script)
         index = self.definition_widget.control_function_input.findText(
             control_data.control_object
@@ -1191,17 +1190,17 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         except AttributeError:
             return
         if inspect.isgeneratorfunction(function):
-            self.control_function_type = RandomControlLawType.GENERATOR.value
+            self.control_function_type = RandomControlLawType.GENERATOR
         elif inspect.isclass(function) and issubclass(
             function, AbstractControlLawComputation
         ):
-            self.control_function_type = RandomControlLawType.INTERACTIVE_CLASS.value
+            self.control_function_type = RandomControlLawType.INTERACTIVE_CLASS
         elif inspect.isclass(function):
-            self.control_function_type = RandomControlLawType.CLASS.value
+            self.control_function_type = RandomControlLawType.CLASS
         else:
-            self.control_function_type = RandomControlLawType.FUNCTION.value
+            self.control_function_type = RandomControlLawType.FUNCTION
         self.definition_widget.control_function_type_display.setText(
-            CONTROL_FUNCTION_TYPE_NAMES[self.control_function_type]
+            self.control_function_type.name.split('_')[0].capitalize()
         )
 
     def specification_selector_unit(self, selector_index):

@@ -8,6 +8,9 @@ from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
 )
+from rattlesnake.environment.random_vibration_sys_id_metadata import (
+    RandomControlLawType
+)
 from rattlesnake.environment.random_vibration_sys_id_utilities import load_specification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
@@ -87,7 +90,7 @@ def build_mimo_random_controller(threaded=False):
         allow_automatic_aborts=False,
         control_python_script="rattlesnake.environment.random_vibration_sys_id_control_law",
         control_python_function="buzz_control",
-        control_python_function_type=0,
+        control_python_function_type=RandomControlLawType.FUNCTION,
         control_python_function_parameters="",
         control_channel_indices=[
             index

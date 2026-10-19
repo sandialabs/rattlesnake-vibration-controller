@@ -11,6 +11,9 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationInstructions,
     RandomVibrationCommands,
 )
+from rattlesnake.environment.random_vibration_sys_id_metadata import (
+    RandomControlLawType
+)
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
     ToneParameters,
@@ -22,10 +25,10 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SRSType,
     SRSDisplacementType,
     SDSParameters,
-    ControlParameters,
-    ControlLawType,
+    SDSControlLawType,
     SpecParameters,
 )
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions, SDSCommands
 from rattlesnake.environment.random_vibration_sys_id_utilities import load_specification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
@@ -109,7 +112,7 @@ def build_combined_controller(threaded=False):
         allow_automatic_aborts=False,
         control_python_script="rattlesnake.environment.random_vibration_sys_id_control_law",
         control_python_function="buzz_control",
-        control_python_function_type=0,
+        control_python_function_type=RandomControlLawType.FUNCTION,
         control_python_function_parameters="",
         control_channel_indices=[
             index
@@ -202,7 +205,7 @@ def build_combined_controller(threaded=False):
     control_parameters = ControlParameters(
         control_script="rattlesnake.environment.sds_sys_id_control_law",
         control_object="default_control_law",
-        control_type=ControlLawType.FUNCTION,
+        control_type=SDSControlLawType.FUNCTION,
         control_parameters={},
     )
 
