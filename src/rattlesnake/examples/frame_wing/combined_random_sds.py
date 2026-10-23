@@ -1,3 +1,5 @@
+import os
+
 import openpyxl as opxl
 import numpy as np
 
@@ -37,9 +39,20 @@ from rattlesnake import data
 
 
 
-def build_combined_controller(threaded=False):
+def build_combined_controller(
+    threaded=False, *, output_directory: str | os.PathLike[str] | None = None
+):
     """
     Build a Rattlesnake controller initialized to a populated MIMO Random example state.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        Run the controller processes as threads. Default is False.
+    output_directory : str or os.PathLike or None, optional
+        Directory that holds ``streaming_example.nc4``. None selects the current
+        working directory. The example uses ``StreamType.NO_STREAM``, so it
+        writes no file until the stream type changes.
 
     Returns
     -------
@@ -289,39 +302,77 @@ def build_combined_controller(threaded=False):
 
     rattlesnake.initialize_profile_event_list(profile_event_list)
 
+    if output_directory is None:
+        output_directory = os.getcwd()
     stream_metadata = StreamMetadata(
         # StreamType.IMMEDIATELY,
         StreamType.NO_STREAM,
-        stream_file=rattlesnake_directory + "/frame_wing/data/streaming_example.nc4",
+        stream_file=os.path.join(output_directory, "streaming_example.nc4"),
     )
     rattlesnake.start_acquisition(stream_metadata)
 
     return rattlesnake
 
 
-def build_combined_app(threaded=False, display_errors=False):
+def build_combined_app(
+    threaded=False,
+    display_errors=False,
+    *,
+    output_directory: str | os.PathLike[str] | None = None,
+):
     """
     Build a populated MIMO Random example UI without entering the Qt event loop.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        Run the controller processes as threads. Default is False.
+    display_errors : bool, optional
+        Show error dialogs in the UI. Default is False.
+    output_directory : str or os.PathLike or None, optional
+        Directory that holds ``streaming_example.nc4``. None selects the current
+        working directory.
 
     Returns
     -------
     RattlesnakeAppHandle
         Handle containing controller, UI, and QApplication.
     """
-    rattlesnake = build_combined_controller(threaded=threaded)
+    rattlesnake = build_combined_controller(
+        threaded=threaded, output_directory=output_directory
+    )
     return build_rattlesnake_app(rattlesnake, display_errors=display_errors)
 
 
-def get_combined_ui(threaded=False, display_errors=False):
+def get_combined_ui(
+    threaded=False,
+    display_errors=False,
+    *,
+    output_directory: str | os.PathLike[str] | None = None,
+):
     """
     Convenience helper returning the Random environment UI.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        Run the controller processes as threads. Default is False.
+    display_errors : bool, optional
+        Show error dialogs in the UI. Default is False.
+    output_directory : str or os.PathLike or None, optional
+        Directory that holds ``streaming_example.nc4``. None selects the current
+        working directory.
 
     Returns
     -------
     tuple
         (handle, random_ui)
     """
-    handle = build_combined_app(threaded=threaded, display_errors=display_errors)
+    handle = build_combined_app(
+        threaded=threaded,
+        display_errors=display_errors,
+        output_directory=output_directory,
+    )
     random_ui = handle.rattlesnake_ui.environment_uis["Random"]
     return handle, random_ui
 
