@@ -4,7 +4,7 @@ Unit tests for ``rattlesnake.data``, which locates large data files.
 None of these tests use the internet. Tests that exercise a download serve a
 temporary directory from a local HTTP server on a free port.
 
-The tests cover six areas.
+The tests cover seven areas.
 
 Keyword-only signatures
     Every public function takes keyword arguments only, so a positional call
@@ -34,6 +34,9 @@ Keyword-only signatures
     Put every registered file in the cache directory. A cached file with a
     matching hash stays. Otherwise a packaged file with a matching hash is
     copied. Otherwise the file downloads. ``fetch_all`` reports progress.
+``python -m rattlesnake.data``
+    Requires ``--all``, prints one line per file, stops on a connection failure,
+    and continues past an HTTP error or a hash mismatch.
 
 Unit Tests
 ----------
@@ -81,6 +84,14 @@ test_cache_fill_replaces_corrupt_cached_file
     Overwrites a cached file whose hash is wrong with the packaged copy.
 test_fetch_all_progress
     Calls the progress function once per file, in name order.
+test_main_requires_all
+    Exits with status 2 when ``--all`` is missing.
+test_main_fills_cache
+    Exits 0 and prints one line per file.
+test_main_stops_on_connection_error
+    Exits 1 after the first file when GitHub is unreachable.
+test_main_continues_past_file_errors
+    Exits 1, lists the failed files, and still fetches the others.
 """
 
 import ast
@@ -98,8 +109,10 @@ from collections.abc import Callable, Iterator
 from typing import NoReturn
 
 import pytest
+import requests
 
 from rattlesnake import data
+from rattlesnake.data import __main__ as data_main
 
 REPOSITORY_ROOT = pathlib.Path(data.__file__).resolve().parents[3]
 IN_CHECKOUT = (REPOSITORY_ROOT / "pyproject.toml").is_file()
@@ -631,3 +644,88 @@ def test_fetch_all_progress(
         progress=lambda index, total, name: calls.append((index, total, name))
     )
     assert calls == [(i, 3, name) for i, name in enumerate(sorted(NAME_LIST), 1)]
+
+
+def test_main_requires_all() -> None:
+    """
+    Exit with status 2 when ``--all`` is missing.
+    """
+    with pytest.raises(SystemExit) as error:
+        data_main.main([])
+    assert error.value.code == 2
+
+
+def test_main_fills_cache(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    http_server: str,
+) -> None:
+    """
+    Exit 0 and print one line per file, then the cache directory.
+    """
+    registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    monkeypatch.setattr(data, "BASE_URL", http_server)
+    assert data_main.main(["--all"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    for index, name in enumerate(sorted(NAME_LIST), 1):
+        assert lines[index - 1].startswith(f"[{index}/3] {name}")
+    assert f"Cache directory: {tmp_path / 'cache'}" in lines
+    assert "3 of 3 files ready" in lines[-1]
+
+
+def test_main_stops_on_connection_error(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    Exit 1 after the first file when GitHub is unreachable.
+
+    A connection failure affects every file, so waiting through the retries of
+    the other files would only delay the same message.
+    """
+    registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    calls = []
+
+    def unreachable(*, name: str, fetcher: object) -> NoReturn:
+        calls.append(name)
+        raise requests.exceptions.ConnectionError("no network")
+
+    monkeypatch.setattr(data, "cache_fill", unreachable)
+    assert data_main.main(["--all"]) == 1
+    assert calls == [sorted(NAME_LIST)[0]]
+    assert "Cannot reach GitHub" in capsys.readouterr().err
+
+
+def test_main_continues_past_file_errors(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    http_server: str,
+) -> None:
+    """
+    Exit 1, list the failed files, and still fetch the others.
+
+    One file returns HTTP 404 and another fails its hash check. The third file
+    must still arrive in the cache.
+    """
+    registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    monkeypatch.setattr(data, "BASE_URL", http_server)
+    not_found, bad_hash, good = sorted(NAME_LIST)
+    original = data.cache_fill
+
+    def cache_fill_faulty(*, name: str, fetcher: object) -> str:
+        if name == not_found:
+            raise requests.exceptions.HTTPError("404")
+        if name == bad_hash:
+            raise ValueError("hash mismatch")
+        return original(name=name, fetcher=fetcher)
+
+    monkeypatch.setattr(data, "cache_fill", cache_fill_faulty)
+    assert data_main.main(["--all"]) == 1
+    err = capsys.readouterr().err
+    assert "2 of 3 files failed" in err
+    assert f"  {not_found}" in err
+    assert f"  {bad_hash}" in err
+    assert (tmp_path / "cache" / good).is_file()
