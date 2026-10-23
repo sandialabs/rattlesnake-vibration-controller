@@ -411,7 +411,7 @@ Code asks for a file by its path relative to `src/rattlesnake/examples`:
 ```python
 from rattlesnake import data
 
-path = data.fetch(name="hardware/sdynpy_system/sdynpy_system.npz")
+path = data.fetch(name="hardware/data/sdynpy_system.npz")
 ```
 
 `data.fetch` returns the local path of a file whose SHA-256 hash matches the registry.  It looks in three places, in order:
@@ -506,10 +506,10 @@ Each change below ends with these three steps:
    <repository>/src/rattlesnake/data/_registry.py is up to date
    ```
 
-   When the registry is stale, the command exits with status 1.  It prints one line per difference, then the command that fixes it.  For example, this output shows a checkout where `environment/time/time_signal.npy` is on disk but missing from the registry:
+   When the registry is stale, the command exits with status 1.  It prints one line per difference, then the command that fixes it.  For example, this output shows a checkout where `environment/data/time_signal.npy` is on disk but missing from the registry:
 
    ```text
-   missing  environment/time/time_signal.npy
+   missing  environment/data/time_signal.npy
    <repository>/src/rattlesnake/data/_registry.py is stale. Run: python -m rattlesnake.data.registry
    ```
 

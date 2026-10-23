@@ -167,7 +167,7 @@ def fetch(*, name: str) -> str:
     ----------
     name : str
         Key in ``REGISTRY``, for example
-        ``"hardware/sdynpy_system/sdynpy_system.npz"``.
+        ``"hardware/data/sdynpy_system.npz"``.
 
     Returns
     -------

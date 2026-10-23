@@ -33,7 +33,7 @@ def create_time_signal(hardware_metadata):
 
 
 def worksheet_time_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/time/time_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/time.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -44,12 +44,12 @@ def worksheet_time_metadata(hardware_metadata):
 
     signal = create_time_signal(hardware_metadata)
     metadata.output_signal = signal
-    metadata._signal_file = data.fetch(name="environment/time/time_signal.npy")
+    metadata._signal_file = data.fetch(name="environment/data/time_signal.npy")
     return metadata
 
 
 def netcdf_time_metadata(hardware_metadata):
-    netcdf_dir = data.fetch(name="environment/time/time_v4.nc4")
+    netcdf_dir = data.fetch(name="environment/data/time.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -57,7 +57,7 @@ def netcdf_time_metadata(hardware_metadata):
     metadata = TimeMetadata.load_metadata_from_netcdf(
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
-    metadata._signal_file = data.fetch(name="environment/time/time_signal.npy")
+    metadata._signal_file = data.fetch(name="environment/data/time_signal.npy")
 
     return metadata
 
@@ -80,7 +80,7 @@ def manual_time_metadata(hardware_metadata, **overrides):
     )
     kwargs.update(overrides)
     metadata = TimeMetadata(**kwargs)
-    metadata._signal_file = data.fetch(name="environment/time/time_signal.npy")
+    metadata._signal_file = data.fetch(name="environment/data/time_signal.npy")
 
     return metadata
 
@@ -156,7 +156,7 @@ def time_event_list():
 
 
 def worksheet_time_event_list():
-    worksheet_dir = defaults.DIRECTORY + "/environment/time/time_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/time.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     environment_types = {
         "Global": "Global",

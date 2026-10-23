@@ -22,7 +22,7 @@ ENVIRONMENT_NAME = "Sine 0"
 
 
 def worksheet_sine_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/sine.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -37,7 +37,7 @@ def worksheet_sine_metadata(hardware_metadata):
 
 
 def netcdf_sine_metadata(hardware_metadata):
-    netcdf_dir = data.fetch(name="environment/sine/sine_v4.nc4")
+    netcdf_dir = data.fetch(name="environment/data/sine.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -223,7 +223,7 @@ def worksheet_sine_event_list(
     """Load profile events, saving control data in output_directory or the cwd."""
     if output_directory is None:
         output_directory = os.getcwd()
-    worksheet_dir = defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/sine.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     environment_types = {
         "Global": "Global",

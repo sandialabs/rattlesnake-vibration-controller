@@ -18,7 +18,7 @@ ENVIRONMENT_NAME = "Skeleton Sysid 0"
 
 def worksheet_skeleton_sysid_metadata(hardware_metadata):
     worksheet_dir = (
-        defaults.DIRECTORY + "/environment/skeleton_sysid/skeleton_sysid_v4.xlsx"
+        defaults.DIRECTORY + "/environment/data/skeleton_sysid.xlsx"
     )
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
@@ -32,7 +32,7 @@ def worksheet_skeleton_sysid_metadata(hardware_metadata):
 
 def netcdf_skeleton_sysid_metadata(hardware_metadata):
     netcdf_dir = (
-        defaults.DIRECTORY + "/environment/skeleton_sysid/skeleton_sysid_v4.nc4"
+        defaults.DIRECTORY + "/environment/data/skeleton_sysid.nc4"
     )
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
@@ -113,7 +113,7 @@ def skeleton_sysid_instructions():
 
 
 # def worksheet_skeleton_event_list():
-#     worksheet_dir = defaults.DIRECTORY + "/environment/skeleton_sysid/skeleton_sysid_v4.xlsx"
+#     worksheet_dir = defaults.DIRECTORY + "/environment/data/skeleton_sysid.xlsx"
 #     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
 #     environment_types = {
 #         "Global": "Global",
