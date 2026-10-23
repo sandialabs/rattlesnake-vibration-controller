@@ -24,21 +24,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import copy
 import multiprocessing as mp
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 import threading
 import traceback
 from enum import Enum
 from typing import List
-import multiprocessing as mp
-import multiprocessing.queues as mpqueue
-import queue as thqueue
 
 import netCDF4 as nc4
-import openpyxl
 import numpy as np
 
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, RattlesnakeError
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.environment.abstract_environment import (
     EnvironmentCommands,
     EnvironmentInstructions,
@@ -47,6 +42,8 @@ from rattlesnake.environment.abstract_sysid_environment import (
     SysIdEnvironment,
     SysIdEnvironmentMetadata,
 )
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
     sysid_data_analysis_process,
@@ -55,6 +52,7 @@ from rattlesnake.process.data_collector import data_collector_process
 from rattlesnake.process.signal_generation_process import signal_generation_process
 from rattlesnake.process.spectral_processing import spectral_processing_process
 from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.utilities import GlobalCommands, RattlesnakeError, VerboseMessageQueue
 
 # Update this line to define the environment type, and add to the EnvironmentType
 # enumeration in environment/environment_utilities.py
@@ -215,7 +213,6 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
 
 # endregion
 class SkeletonSysIdInstructions(EnvironmentInstructions):
-
     def __init__(self, environment_name: str, example_test_level: float):
         super().__init__(ENVIRONMENT_TYPE, environment_name)
 
@@ -303,7 +300,6 @@ class SkeletonSysIdQueues:
 
 # region Environment
 class SkeletonSysIdEnvironment(SysIdEnvironment):
-
     def __init__(
         self,
         environment_name: str,
