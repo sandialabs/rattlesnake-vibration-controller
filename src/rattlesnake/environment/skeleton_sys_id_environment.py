@@ -158,10 +158,36 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
     # endregion
 
     # region Loading
+    @staticmethod
+    def output_channel_indices_from_hardware(
+        channel_list_bools: List[bool], hardware_metadata: HardwareMetadata
+    ):
+        """Indices of the environment's channels that have a feedback device."""
+        environment_channel_list = [
+            channel
+            for channel, channel_bool in zip(
+                hardware_metadata.channel_list, channel_list_bools
+            )
+            if channel_bool
+        ]
+        return [
+            index
+            for index, channel in enumerate(environment_channel_list)
+            if channel.feedback_device is not None
+        ]
+
     def save_metadata_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
         netcdf_group_handle.environment_name = self.environment_name
         netcdf_group_handle.environment_type = str(self.environment_type)
         netcdf_group_handle.sample_rate = self.sample_rate
+        netcdf_group_handle.example_window_size = self.example_window_size
+        netcdf_group_handle.createDimension(
+            "control_channels", len(self.control_channel_indices)
+        )
+        var = netcdf_group_handle.createVariable(
+            "control_channel_indices", "i4", ("control_channels")
+        )
+        var[...] = self.control_channel_indices
         return super().save_metadata_to_netcdf(netcdf_group_handle)
 
     @classmethod
@@ -176,10 +202,22 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             netcdf_group_handle, environment_name, channel_list_bools, hardware_metadata
         )
 
+        example_window_size = netcdf_group_handle.example_window_size
+        control_channel_indices = [
+            int(index)
+            for index in netcdf_group_handle.variables["control_channel_indices"][...]
+        ]
+        output_channel_indices = cls.output_channel_indices_from_hardware(
+            channel_list_bools, hardware_metadata
+        )
+
         return cls(
             environment_name=environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=hardware_metadata.sample_rate,
+            example_window_size=example_window_size,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
             sysid_metadata=sysid_metadata,
         )
 
@@ -188,9 +226,22 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
         super().create_blank_worksheet_template(worksheet)
 
         worksheet.cell(1, 2, ENVIRONMENT_TYPE.name.title())
+        worksheet.cell(2, 1, "Example Window Size")
+        worksheet.cell(
+            2,
+            3,
+            "# None type object used to show how to store example data to worksheets",
+        )
+        worksheet.cell(3, 1, "Control Channels (1-based)")
 
     def save_metadata_to_worksheet(self, worksheet):
         super().save_metadata_to_worksheet(worksheet)
+
+        if self.example_window_size:
+            worksheet.cell(2, 2, self.example_window_size)
+        if self.control_channel_indices is not None:
+            for idx, channel_ind in enumerate(self.control_channel_indices):
+                worksheet.cell(3, idx + 2, channel_ind + 1)
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -204,10 +255,40 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             worksheet, environment_name, channel_list_bools, hardware_metadata
         )
 
+        control_channel_indices = []
+        for row in worksheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            match name:
+                case "control_type":
+                    continue
+                case "example_window_size":
+                    example_window_size = float(value)
+                case "control_channels_(1-based)":
+                    for cell in row[1:]:
+                        if cell.value is None or (
+                            isinstance(cell.value, str)
+                            and (cell.value.startswith("#") or not cell.value.strip())
+                        ):
+                            break
+                        control_channel_indices.append(int(cell.value) - 1)
+                case "":
+                    continue
+                case _:
+                    raise RattlesnakeError(
+                        f"{name} does not go with {ENVIRONMENT_TYPE} environment"
+                    )
+        output_channel_indices = cls.output_channel_indices_from_hardware(
+            channel_list_bools, hardware_metadata
+        )
+
         return cls(
             environment_name=environment_name,
             channel_list_bools=channel_list_bools,
             sample_rate=hardware_metadata.sample_rate,
+            example_window_size=example_window_size,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
         )
 
     # endregion

@@ -38,6 +38,8 @@ from rattlesnake.examples.environment.skeleton_sysid_metadata import (
     netcdf_skeleton_sysid_metadata,
     worksheet_skeleton_sysid_metadata,
     skeleton_sysid_instructions,
+    skeleton_sysid_event_list,
+    worksheet_skeleton_sysid_event_list,
 )
 from rattlesnake.examples.environment.read_metadata import (
     manual_read_metadata,
@@ -207,8 +209,7 @@ ENVIRONMENT_DICT[EnvironmentType.SDS] = SDS_DICT
 
 # Example Files for Testing Suite
 EXAMPLE_NETCDF = {
-    EnvironmentType.SKELETON: defaults.DIRECTORY
-    + "/environment/data/skeleton.nc4",
+    EnvironmentType.SKELETON: defaults.DIRECTORY + "/environment/data/skeleton.nc4",
     EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
     + "/environment/data/skeleton_sysid.nc4",
     EnvironmentType.READ: defaults.DIRECTORY + "/environment/data/read.nc4",
@@ -216,13 +217,11 @@ EXAMPLE_NETCDF = {
     EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/data/modal.nc4",
     EnvironmentType.SINE: defaults.DIRECTORY + "/environment/data/sine.nc4",
     EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/data/random.nc4",
-    EnvironmentType.TRANSIENT: defaults.DIRECTORY
-    + "/environment/data/transient.nc4",
+    EnvironmentType.TRANSIENT: defaults.DIRECTORY + "/environment/data/transient.nc4",
     EnvironmentType.SDS: defaults.DIRECTORY + "/environment/data/sds.nc4",
 }
 EXAMPLE_WORKSHEET = {
-    EnvironmentType.SKELETON: defaults.DIRECTORY
-    + "/environment/data/skeleton.xlsx",
+    EnvironmentType.SKELETON: defaults.DIRECTORY + "/environment/data/skeleton.xlsx",
     EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
     + "/environment/data/skeleton_sysid.xlsx",
     EnvironmentType.READ: defaults.DIRECTORY + "/environment/data/read.xlsx",
@@ -230,8 +229,7 @@ EXAMPLE_WORKSHEET = {
     EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/data/modal.xlsx",
     EnvironmentType.SINE: defaults.DIRECTORY + "/environment/data/sine.xlsx",
     EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/data/random.xlsx",
-    EnvironmentType.TRANSIENT: defaults.DIRECTORY
-    + "/environment/data/transient.xlsx",
+    EnvironmentType.TRANSIENT: defaults.DIRECTORY + "/environment/data/transient.xlsx",
     EnvironmentType.SDS: defaults.DIRECTORY + "/environment/data/sds.xlsx",
 }
 
@@ -264,9 +262,9 @@ SKELETON_EVENT_DICT = {
     "worksheet": worksheet_skeleton_event_list,
 }
 SKELETON_SYSID_EVENT_DICT = {
-    "worksheet": lambda: [],
-    "netcdf": lambda: [],
-    "manual": lambda: [],
+    "manual": skeleton_sysid_event_list,
+    "netcdf": skeleton_sysid_event_list,
+    "worksheet": worksheet_skeleton_sysid_event_list,
 }
 READ_EVENT_DICT = {
     "manual": read_event_list,
