@@ -376,6 +376,9 @@ We do not want them in the published distribution.  Every release uploads a new 
 
 ### Alternatives considered
 
+:::{table} Alternatives considered for large data files
+:label: tab:data_file_alternatives
+:align: center
 | Approach | Decision |
 |---|---|
 | Keep shipping the files in the wheel | Rejected.  Every release adds about 20 MB to PyPI. |
@@ -385,6 +388,7 @@ We do not want them in the published distribution.  Every release uploads a new 
 | Git LFS | Rejected.  A raw GitHub URL for an LFS file returns a small pointer file, not the data.  The development team has also had experiences with LFS acting unreliably. |
 | Write our own downloader | Rejected.  It would need hash checks, retries, atomic writes, and a cache directory on each operating system.  Pooch already provides all four, and SciPy and scikit-image rely on it. |
 | Download on demand with Pooch | **Chosen.** |
+:::
 
 Pooch adds two packages to an install, `pooch` and `platformdirs`.  Pooch's other dependencies, `requests` and `packaging`, are already Rattlesnake dependencies.  Both new packages are pure Python.
 
@@ -422,10 +426,14 @@ path = data.fetch(name="hardware/sdynpy_system/sdynpy_system.npz")
 
 The download URL depends on the installed version:
 
+:::{table} Git ref that each kind of Rattlesnake version downloads from
+:label: tab:download_source
+:align: center
 | Version | Example | Downloads from |
 |---|---|---|
 | No `.dev` segment, a release built at its tag | `4.0.0rc4` | The git tag `v4.0.0rc4` |
 | Has a `.dev` segment, every other build | `4.0.0rc4.dev2` | The commit the build came from, such as [`f998f9ac20a5031b3e2e4a3360db9514694b13ff`](https://github.com/sandialabs/rattlesnake-vibration-controller/commit/f998f9ac20a5031b3e2e4a3360db9514694b13ff) |
+:::
 
 `hatch-vcs` adds the `.dev` segment to any build made from a commit after the latest tag.  That covers `pip install .` on any branch, including `main`, `dev`, and feature branches.  A release tag that has its own `.dev` segment, such as `v4.1.0.dev1`, also downloads from its commit.
 
@@ -445,6 +453,9 @@ Downloads go to a per-ref directory in the user cache, or to the directory named
 
 We checked each safeguard below on macOS, with Pooch 1.9.0, in a clean virtual environment.  Most rows used a locally built wheel that excluded all three file types.  At the time, the registry held 41 entries.  Two of them were run outputs, which we later removed from the registry.  The two rows about the download source describe their own setups.
 
+:::{table} Download safeguards and how each was verified
+:label: tab:download_safeguards
+:align: center
 | Safeguard | What happens | What we verified |
 |---|---|---|
 | Files are not in the distribution | The `exclude` globs in `pyproject.toml` drop every `.nc4`, `.npz`, and `.npy` file under `examples/`. | The wheel and sdist contain 0 of the 41 data files. |
@@ -457,13 +468,18 @@ We checked each safeguard below on macOS, with Pooch 1.9.0, in a clean virtual e
 | Download from the release tag | A tagged release downloads from its own git tag. | We installed 4.0.0rc4 from TestPyPI into a clean virtual environment.  `fetch` downloaded `frame_wing/data/transient_specification.npz` from the `v4.0.0rc4` tag in 3.9 s, into `~/Library/Caches/rattlesnake/v4.0.0rc4`.  Its hash matched, and a second `fetch` took 0.01 s. |
 | Download from the build's commit | A development build downloads from the commit it was built from. | We built a wheel and an sdist with `uv build` at commit `6c7224ca`, version `4.0.0rc5.dev5`.  Both recorded the full SHA, and so did a second wheel built from the sdist.  In a clean virtual environment, `fetch` downloaded `environment/time/time_signal.npy` from `raw/6c7224ca3fdb489fad2b3f53637634a0cf5906f2/` in 1.5 s.  Its hash matched. |
 | Atomic writes | Pooch downloads to a temporary file in the cache directory.  It moves the file into place only after the hash matches. | After the failed wrong-hash test, the good cached file was unchanged. |
+:::
 
 ### Distribution size
 
+:::{table} Data files and archive sizes of 4.0.0rc3 and 4.0.0rc4
+:label: tab:distribution_size
+:align: center
 | Release | Data files in package | Wheel | sdist |
 |---|:---:|---:|---:|
 | 4.0.0rc3 (TestPyPI) | 41 | 20,907,340 bytes | 20,964,518 bytes |
 | 4.0.0rc4 (TestPyPI) | 0 | 972,909 bytes | 895,879 bytes |
+:::
 
 The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist is 95.7% smaller than the 4.0.0rc3 sdist.  The 4.0.0rc4 registry lists 39 data files (41 original files less the two output files that were removed), none of which ship in either archive.
 
@@ -710,10 +726,14 @@ The `pytest_matrix` job runs across combinations of operating systems and Python
 - a manual dispatch with `test_level=full`
 - `[all tests]` in the commit message or the pull request title
 
+:::{table} Test modes in continuous integration
+:label: tab:ci_test_modes
+:align: center
 | Mode | Runners | Tests |
 |---|---|---|
 | Fast, every other push | `ubuntu-latest` × `3.12` (1 runner) | `tests/short` |
 | Full | `macos-latest`, `ubuntu-latest`, and `windows-latest` × `3.11` and `3.12` (6 runners) | `tests`, including `tests/long` |
+:::
 
 Fast mode keeps per-push feedback fast.  Full mode enforces cross-platform coverage before anything reaches a release branch.
 
@@ -737,6 +757,9 @@ By default, `preflight` matches CI's scope on non-`main`/`dev` branches: ruff fo
 pytest steps are currently skipped pending resolution of a test hang in `test_acquisition.py` (see TODO in `src/rattlesnake/preflight.py`). Only ruff format check and pylint run until that issue is resolved.
 ```
 
+:::{table} Options of the preflight command
+:label: tab:preflight_options
+:align: center
 option | description
 --- | ---
 *(none)* | Default scope: ruff format check + pylint (+ pytest `tests/ --ignore=tests/long` when re-enabled)
@@ -747,6 +770,7 @@ option | description
 `--no-sync` | Skips `uv sync` (useful when offline or behind a firewall)
 `--skip-network-check` | Skips the initial PyPI connectivity check
 `--force` | Continues even if the network or sync checks fail
+:::
 
 #### Examples
 
@@ -832,28 +856,40 @@ The `validate_tag` job in `release.yml` rejects a tag that does not follow PEP 4
 
 Following are **prerelease tags**:
 
+:::{table} Prerelease tags
+:label: tab:tags_prerelease
+:align: center
 tag | description
 --- | ---
 `v1.1.0a1` | The first **alpha** for version 1.1.0
 `v1.1.0b2` | The second **beta** for version 1.1.0
 `v1.1.0rc1` | The first **release candidate** for version 1.1.0
+:::
 
 A **release candidate** is made during the final testing stage before a full release.
 
 Following are **stable release tags** (e.g., starting from the `v1.0.0` release):
 
+:::{table} Stable release tags
+:label: tab:tags_stable
+:align: center
 tag | description
 --- | ----
 `v1.0.1` | **Patch Release**: Backwards-compatible bug fixes
 `v1.1.0` | **Minor Release**: New features that are backwards-compatible
 `v2.0.0` | **Major Release**: Significant changes or breaking API updates
+:::
 
 Following are **Development** and **Post-Release** tags:
 
+:::{table} Development and post-release tags
+:label: tab:tags_development
+:align: center
 tag | description
 --- | ---
 `v1.1.0.dev1` | A version currently under development
 `v1.0.0.post1` | Fix a minor error in the release process, such as a fix of a typo in the documentation, without changing the code
+:::
 
 ### Release on Tag
 

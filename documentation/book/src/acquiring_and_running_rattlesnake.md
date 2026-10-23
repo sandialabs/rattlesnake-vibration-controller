@@ -218,11 +218,15 @@ A `pip install .` from a clone also leaves the files out, so it downloads them t
 
 Rattlesnake stores downloaded files in the user cache, in a separate directory for each release or commit:
 
+:::{table} Cache directory for each operating system
+:label: tab:cache_directory
+:align: center
 | Operating system | Cache directory |
 |---|---|
 | macOS | `~/Library/Caches/rattlesnake/<ref>` |
 | Linux | `~/.cache/rattlesnake/<ref>`, or `$XDG_CACHE_HOME/rattlesnake/<ref>` |
 | Windows | `C:\Users\<user>\AppData\Local\rattlesnake\rattlesnake\Cache\<ref>` |
+:::
 
 `<ref>` is the git tag for a release, such as `v4.0.0rc4`.  For any other build, `<ref>` is the full 40-character SHA of the commit the build came from.  To print the `<ref>` for your install, run:
 
@@ -282,11 +286,15 @@ This line is normal and is not an error.
 
 A failed download is retried three times, with waits of 1 s, 2 s, and 3 s, so a failure takes about 7 s to report.  Each retry prints `Failed to download '<file>'. Will attempt the download again N more times.`  After the last attempt, the example stops with one of three errors:
 
+:::{table} Download errors, their likely causes, and what to do
+:label: tab:download_errors
+:align: center
 | Error | Likely cause | What to do |
 |---|---|---|
 | `requests.exceptions.ConnectionError` | The machine cannot reach `github.com`.  It may be offline, or a firewall may block it. | Connect to a network.  Behind a proxy, set the `HTTPS_PROXY` environment variable.  Without any network, follow [](#sec:working-offline). |
 | `requests.exceptions.HTTPError: 404 Client Error` | GitHub does not have the tag or commit.  This happens for a build made from a commit that was never pushed. | Push the commit, or use an editable install, which reads the files from the clone. |
 | `ValueError: SHA256 hash of downloaded file ... does not match the known hash` | The downloaded file differs from the one this build expects. | Report it as a bug.  The file on GitHub no longer matches this build's registry. |
+:::
 
 ## Running the Software
 
