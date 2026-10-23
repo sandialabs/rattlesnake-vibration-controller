@@ -4,7 +4,7 @@ Unit tests for ``rattlesnake.data``, which locates large data files.
 None of these tests use the internet. Tests that exercise a download serve a
 temporary directory from a local HTTP server on a free port.
 
-The tests cover five areas.
+The tests cover six areas.
 
 Keyword-only signatures
     Every public function takes keyword arguments only, so a positional call
@@ -30,6 +30,10 @@ Keyword-only signatures
     Prefers a packaged file whose hash matches, downloads a missing file into
     the cache, rejects a download with a wrong hash, and raises ``KeyError``
     for a name that is not in the registry.
+``cache_fill`` and ``fetch_all``
+    Put every registered file in the cache directory. A cached file with a
+    matching hash stays. Otherwise a packaged file with a matching hash is
+    copied. Otherwise the file downloads. ``fetch_all`` reports progress.
 
 Unit Tests
 ----------
@@ -67,6 +71,16 @@ test_fetch_downloads_into_cache
     Downloads a missing file into the cache.
 test_fetch_rejects_corrupt_download
     Raises ``ValueError`` and caches nothing on a hash mismatch.
+test_fetch_all_downloads_into_cache
+    Downloads every file when the package holds none.
+test_fetch_all_copies_packaged_files
+    Copies packaged files into the cache without a download.
+test_fetch_all_keeps_cached_files
+    Skips files that the cache already holds.
+test_cache_fill_replaces_corrupt_cached_file
+    Overwrites a cached file whose hash is wrong with the packaged copy.
+test_fetch_all_progress
+    Calls the progress function once per file, in name order.
 """
 
 import ast
@@ -100,6 +114,9 @@ SHA = "6c7224ca3fdb489fad2b3f53637634a0cf5906f2"
         data.hash_check,
         data.cache_directory,
         data.fetch,
+        data.fetcher_create,
+        data.cache_fill,
+        data.fetch_all,
     ],
 )
 def test_functions_require_keyword_arguments(function: Callable[..., object]) -> None:
@@ -474,3 +491,143 @@ def test_fetch_rejects_corrupt_download(
     with pytest.raises(ValueError, match="hash"):
         data.fetch(name=name)
     assert not (tmp_path / "cache" / name).exists()
+
+
+NAME_LIST = [
+    "environment/read/read_v4.nc4",
+    "hardware/sdynpy_system/sdynpy_system.npz",
+    "frame_wing/data/srs_specification.npz",
+]
+
+
+def registry_prepare(
+    *, root: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, bytes]:
+    """
+    Replace the registry with three small files and point the cache at a folder.
+
+    The function writes the three files under ``root``, which the local server
+    can serve. It empties the package directory and sets ``RATTLESNAKE_DATADIR``
+    to ``root / "cache"``.
+
+    Parameters
+    ----------
+    root : pathlib.Path
+        Directory that holds the files to serve.
+    monkeypatch : pytest.MonkeyPatch
+        Fixture that replaces the registry and the environment.
+
+    Returns
+    -------
+    dict of str to bytes
+        File contents by registry name.
+    """
+    content_by_name = {name: name.encode() for name in NAME_LIST}
+    for name, content in content_by_name.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_bytes(content)
+    monkeypatch.setattr(
+        data,
+        "REGISTRY",
+        {name: hashlib.sha256(c).hexdigest() for name, c in content_by_name.items()},
+    )
+    monkeypatch.setattr(data, "PACKAGE_DIRECTORY", root / "empty")
+    monkeypatch.setenv(data.ENV_VAR, str(root / "cache"))
+    return content_by_name
+
+
+def download_forbid(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Make any Pooch download fail the test.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Fixture that replaces ``pooch.Pooch.fetch``.
+    """
+
+    def fail(*args: object, **kwargs: object) -> NoReturn:
+        raise AssertionError("the test must not download")
+
+    monkeypatch.setattr(data.pooch.Pooch, "fetch", fail)
+
+
+def test_fetch_all_downloads_into_cache(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, http_server: str
+) -> None:
+    """
+    Download every file into the cache when the package holds none.
+    """
+    content_by_name = registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    monkeypatch.setattr(data, "BASE_URL", http_server)
+    paths = data.fetch_all()
+    assert paths == [str(tmp_path / "cache" / name) for name in sorted(content_by_name)]
+    for name, content in content_by_name.items():
+        assert (tmp_path / "cache" / name).read_bytes() == content
+
+
+def test_fetch_all_copies_packaged_files(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Copy packaged files into the cache, as in a clone, without a download.
+
+    Without the copy, the cache stays empty and a staged directory is useless
+    on a machine that installed a wheel.
+    """
+    content_by_name = registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    monkeypatch.setattr(data, "PACKAGE_DIRECTORY", tmp_path)
+    download_forbid(monkeypatch)
+    paths = data.fetch_all()
+    assert len(paths) == len(content_by_name)
+    for name, content in content_by_name.items():
+        assert (tmp_path / "cache" / name).read_bytes() == content
+
+
+def test_fetch_all_keeps_cached_files(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Skip files that the cache already holds with a matching hash.
+
+    The package directory is empty and downloads fail, so only the cached
+    copies can satisfy the call.
+    """
+    content_by_name = registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    for name, content in content_by_name.items():
+        (tmp_path / "cache" / name).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / "cache" / name).write_bytes(content)
+    download_forbid(monkeypatch)
+    assert len(data.fetch_all()) == len(content_by_name)
+
+
+def test_cache_fill_replaces_corrupt_cached_file(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Overwrite a cached file whose hash is wrong with the packaged copy.
+    """
+    content_by_name = registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    name = NAME_LIST[0]
+    monkeypatch.setattr(data, "PACKAGE_DIRECTORY", tmp_path)
+    (tmp_path / "cache" / name).parent.mkdir(parents=True)
+    (tmp_path / "cache" / name).write_bytes(b"corrupt")
+    download_forbid(monkeypatch)
+    fetcher = data.fetcher_create(ref="ref")
+    assert data.cache_fill(name=name, fetcher=fetcher) == str(tmp_path / "cache" / name)
+    assert (tmp_path / "cache" / name).read_bytes() == content_by_name[name]
+
+
+def test_fetch_all_progress(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Call the progress function once per file, in name order.
+    """
+    registry_prepare(root=tmp_path, monkeypatch=monkeypatch)
+    monkeypatch.setattr(data, "PACKAGE_DIRECTORY", tmp_path)
+    calls = []
+    data.fetch_all(
+        progress=lambda index, total, name: calls.append((index, total, name))
+    )
+    assert calls == [(i, 3, name) for i, name in enumerate(sorted(NAME_LIST), 1)]

@@ -12,6 +12,9 @@ commit it was built from. ``hatch_build.py`` records that commit SHA in
 
 Set ``RATTLESNAKE_DATADIR`` to use a different cache directory, for example a
 directory that was staged ahead of time on a machine without network access.
+``python -m rattlesnake.data --all`` stages a cache directory in one step. For
+each registered file, it keeps a cached copy whose hash matches, otherwise
+copies a matching packaged file into the cache, otherwise downloads the file.
 
 Attributes
 ----------
@@ -36,6 +39,8 @@ import importlib
 import importlib.metadata
 import os
 import pathlib
+import shutil
+from collections.abc import Callable
 
 import pooch
 
@@ -189,11 +194,108 @@ def fetch(*, name: str) -> str:
     packaged = PACKAGE_DIRECTORY / name
     if hash_check(path=packaged, expected=expected):
         return str(packaged)
-    ref = git_ref()
-    fetcher = pooch.create(
+    return fetcher_create(ref=git_ref()).fetch(name)
+
+
+def fetcher_create(*, ref: str) -> pooch.Pooch:
+    """
+    Return a Pooch downloader for the registered files at a git ref.
+
+    Parameters
+    ----------
+    ref : str
+        Git ref from ``git_ref``.
+
+    Returns
+    -------
+    pooch.Pooch
+        Downloader that stores files in ``cache_directory(ref=ref)`` and retries
+        each failed download 3 times.
+    """
+    return pooch.create(
         path=cache_directory(ref=ref),
         base_url=BASE_URL.format(ref=ref),
         registry=REGISTRY,
         retry_if_failed=3,
     )
+
+
+def cache_fill(*, name: str, fetcher: pooch.Pooch) -> str:
+    """
+    Put one registered file in the cache directory of a downloader.
+
+    The function tries three steps in order. First, it keeps a cached file whose
+    hash matches. Second, it copies a packaged file whose hash matches. Third, it
+    downloads the file. Unlike ``fetch``, it never returns the packaged path, so
+    the cache holds the file afterward.
+
+    Parameters
+    ----------
+    name : str
+        Key in ``REGISTRY``.
+    fetcher : pooch.Pooch
+        Downloader from ``fetcher_create``. Its path is the cache directory.
+
+    Returns
+    -------
+    str
+        Path of the file in the cache directory.
+
+    Raises
+    ------
+    KeyError
+        If ``name`` is not in ``REGISTRY``.
+    requests.exceptions.ConnectionError
+        If the file must be downloaded and GitHub cannot be reached.
+    requests.exceptions.HTTPError
+        If GitHub returns an error, such as 404 for a commit it does not have.
+    ValueError
+        If every download attempt returns a file whose hash does not match.
+    """
+    expected = REGISTRY[name]
+    target = pathlib.Path(fetcher.path) / name
+    packaged = PACKAGE_DIRECTORY / name
+    if hash_check(path=target, expected=expected):
+        return str(target)
+    if hash_check(path=packaged, expected=expected):
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(packaged, target)
+        return str(target)
     return fetcher.fetch(name)
+
+
+def fetch_all(*, progress: Callable[[int, int, str], None] | None = None) -> list[str]:
+    """
+    Put every registered file in the cache directory.
+
+    The function stops at the first failure. The command
+    ``python -m rattlesnake.data --all`` continues past a failed file instead.
+
+    Parameters
+    ----------
+    progress : Callable, optional
+        Called after each file with the 1-based index, the total count, and the
+        file name.
+
+    Returns
+    -------
+    list of str
+        Paths of the files in the cache directory, sorted by name.
+
+    Raises
+    ------
+    requests.exceptions.ConnectionError
+        If a file must be downloaded and GitHub cannot be reached.
+    requests.exceptions.HTTPError
+        If GitHub returns an error for a file.
+    ValueError
+        If every download attempt for a file returns a hash mismatch.
+    """
+    fetcher = fetcher_create(ref=git_ref())
+    names = sorted(REGISTRY)
+    paths = []
+    for index, name in enumerate(names, start=1):
+        paths.append(cache_fill(name=name, fetcher=fetcher))
+        if progress is not None:
+            progress(index, len(names), name)
+    return paths
