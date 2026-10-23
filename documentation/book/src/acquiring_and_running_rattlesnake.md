@@ -251,10 +251,22 @@ Set the `RATTLESNAKE_DATADIR` environment variable to store the files in a direc
 
 To use the examples on a machine without network access:
 
-1. On a machine with network access, set `RATTLESNAKE_DATADIR` to an empty directory.
-2. Run the examples you need.  Each run downloads its files into that directory.
-3. Copy the directory to the offline machine.
-4. On the offline machine, set `RATTLESNAKE_DATADIR` to the copied directory.
+1. On a machine *with* network access, run the command below.  It puts every data file in the directory that `RATTLESNAKE_DATADIR` names.  Start with an empty directory.
+
+   ```sh
+   RATTLESNAKE_DATADIR=/path/to/stage python -m rattlesnake.data --all
+   ```
+
+2. Copy the directory to the offline machine.
+3. On the offline machine, set `RATTLESNAKE_DATADIR` to the copied directory.
+
+The command prints one line per file, then the cache directory and the total time.  It handles each registered file in one of three ways:
+
+- A file that the directory already holds, with the correct hash, stays where it is.  A rerun skips these files, so you can repeat the command after an interruption.
+- A file that the installed Rattlesnake package holds, with the correct hash, is copied into the directory.  A clone or an editable install holds every file, so the command downloads nothing there.
+- Any other file downloads from GitHub.
+
+If the machine cannot reach GitHub, the command stops at the first download, prints `Cannot reach GitHub`, and exits with status 1.  If the machine *can* reach GitHub but GitHub rejects a file or the file fails its hash check, the command continues with the other files.  It then lists the failed files and exits with status 1.  Files that already arrived stay in the `RATTLESNAKE_DATADIR` directory.
 
 Both machines must run the same build of Rattlesnake, because each build checks for its own file hashes.  For a release, that means the same version.  For any other build, it means a build from the same commit.
 
