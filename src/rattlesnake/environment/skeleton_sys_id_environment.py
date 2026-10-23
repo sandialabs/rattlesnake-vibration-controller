@@ -188,6 +188,22 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             "control_channel_indices", "i4", ("control_channels")
         )
         var[...] = self.control_channel_indices
+        for prefix, matrix in (
+            ("response", self.response_transformation_matrix),
+            ("reference", self.reference_transformation_matrix),
+        ):
+            if matrix is None:
+                continue
+            dimensions = (
+                f"{prefix}_transformation_rows",
+                f"{prefix}_transformation_cols",
+            )
+            for dimension, size in zip(dimensions, matrix.shape):
+                netcdf_group_handle.createDimension(dimension, size)
+            variable = netcdf_group_handle.createVariable(
+                f"{prefix}_transformation_matrix", "f8", dimensions
+            )
+            variable[...] = matrix
         return super().save_metadata_to_netcdf(netcdf_group_handle)
 
     @classmethod
@@ -218,6 +234,16 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             example_window_size=example_window_size,
             control_channel_indices=control_channel_indices,
             output_channel_indices=output_channel_indices,
+            response_transformation_matrix=(
+                netcdf_group_handle.variables["response_transformation_matrix"][...]
+                if "response_transformation_matrix" in netcdf_group_handle.variables
+                else None
+            ),
+            reference_transformation_matrix=(
+                netcdf_group_handle.variables["reference_transformation_matrix"][...]
+                if "reference_transformation_matrix" in netcdf_group_handle.variables
+                else None
+            ),
             sysid_metadata=sysid_metadata,
         )
 
@@ -233,6 +259,11 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             "# None type object used to show how to store example data to worksheets",
         )
         worksheet.cell(3, 1, "Control Channels (1-based)")
+        SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=4)
+        worksheet.cell(20, 1, "Response Transformation Matrix:")
+        worksheet.cell(20, 2, "None")
+        worksheet.cell(21, 1, "Output Transformation Matrix:")
+        worksheet.cell(21, 2, "None")
 
     def save_metadata_to_worksheet(self, worksheet):
         super().save_metadata_to_worksheet(worksheet)
@@ -242,6 +273,13 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
         if self.control_channel_indices is not None:
             for idx, channel_ind in enumerate(self.control_channel_indices):
                 worksheet.cell(3, idx + 2, channel_ind + 1)
+        self.sysid_metadata.save_metadata_to_worksheet(worksheet, start_row=4)
+        self.save_sysid_matrix_to_worksheet(
+            worksheet,
+            self.response_transformation_matrix,
+            self.reference_transformation_matrix,
+            start_row=20,
+        )
 
     @classmethod
     def load_metadata_from_worksheet(
@@ -256,7 +294,7 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
         )
 
         control_channel_indices = []
-        for row in worksheet.rows:
+        for row in worksheet.iter_rows(min_row=1, max_row=3):
             name = str(row[0].value).lower().strip().replace(" ", "_")
             value = row[1].value
             match name:
@@ -282,6 +320,22 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             channel_list_bools, hardware_metadata
         )
 
+        # Existing skeleton examples contain only the first three rows. Keep
+        # their default sysid settings; do not silently accept a partial new block.
+        has_extended_metadata = any(
+            cell.value is not None and str(cell.value).strip()
+            for row in worksheet.iter_rows(min_row=4)
+            for cell in row
+        )
+        sysid_metadata = None
+        response_matrix = reference_matrix = None
+        if has_extended_metadata:
+            sysid_metadata = SysIdMetadata.load_metadata_from_worksheet(
+                worksheet, hardware_metadata, start_row=4
+            )
+            response_matrix, reference_matrix = cls.load_sysid_matrix_from_worksheet(
+                worksheet, start_row=20
+            )
         return cls(
             environment_name=environment_name,
             channel_list_bools=channel_list_bools,
@@ -289,6 +343,9 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
             example_window_size=example_window_size,
             control_channel_indices=control_channel_indices,
             output_channel_indices=output_channel_indices,
+            response_transformation_matrix=response_matrix,
+            reference_transformation_matrix=reference_matrix,
+            sysid_metadata=sysid_metadata,
         )
 
     # endregion
@@ -296,7 +353,6 @@ class SkeletonSysIdMetadata(SysIdEnvironmentMetadata):
 
 # endregion
 class SkeletonSysIdInstructions(EnvironmentInstructions):
-
     def __init__(self, environment_name: str, example_test_level: float):
         super().__init__(ENVIRONMENT_TYPE, environment_name)
 
@@ -384,7 +440,6 @@ class SkeletonSysIdQueues:
 
 # region Environment
 class SkeletonSysIdEnvironment(SysIdEnvironment):
-
     def __init__(
         self,
         environment_name: str,
