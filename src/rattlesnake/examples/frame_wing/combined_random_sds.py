@@ -26,7 +26,7 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     ControlLawType,
     SpecParameters,
 )
-from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions, SDSCommands
+from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
 from rattlesnake.environment.random_vibration_sys_id_utilities import load_specification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
