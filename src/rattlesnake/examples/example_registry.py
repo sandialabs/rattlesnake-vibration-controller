@@ -104,6 +104,7 @@ from rattlesnake.examples.environment.sds_metadata import (
     worksheet_sds_event_list,
 )
 
+from rattlesnake import data
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.streaming import StreamType
@@ -208,17 +209,22 @@ ENVIRONMENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_DICT
 ENVIRONMENT_DICT[EnvironmentType.SDS] = SDS_DICT
 
 # Example Files for Testing Suite
+# Resolve only the requested asset: EXAMPLE_NETCDF[environment_type]().
+# Worksheets remain bundled and retain direct paths.
 EXAMPLE_NETCDF = {
-    EnvironmentType.SKELETON: defaults.DIRECTORY + "/environment/data/skeleton.nc4",
-    EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
-    + "/environment/data/skeleton_sysid.nc4",
-    EnvironmentType.READ: defaults.DIRECTORY + "/environment/data/read.nc4",
-    EnvironmentType.TIME: defaults.DIRECTORY + "/environment/data/time.nc4",
-    EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/data/modal.nc4",
-    EnvironmentType.SINE: defaults.DIRECTORY + "/environment/data/sine.nc4",
-    EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/data/random.nc4",
-    EnvironmentType.TRANSIENT: defaults.DIRECTORY + "/environment/data/transient.nc4",
-    EnvironmentType.SDS: defaults.DIRECTORY + "/environment/data/sds.nc4",
+    EnvironmentType.SKELETON: lambda: data.fetch(name="environment/data/skeleton.nc4"),
+    EnvironmentType.SYSID_SKELETON: lambda: data.fetch(
+        name="environment/data/skeleton_sysid.nc4"
+    ),
+    EnvironmentType.READ: lambda: data.fetch(name="environment/data/read.nc4"),
+    EnvironmentType.TIME: lambda: data.fetch(name="environment/data/time.nc4"),
+    EnvironmentType.MODAL: lambda: data.fetch(name="environment/data/modal.nc4"),
+    EnvironmentType.SINE: lambda: data.fetch(name="environment/data/sine.nc4"),
+    EnvironmentType.RANDOM: lambda: data.fetch(name="environment/data/random.nc4"),
+    EnvironmentType.TRANSIENT: lambda: data.fetch(
+        name="environment/data/transient.nc4"
+    ),
+    EnvironmentType.SDS: lambda: data.fetch(name="environment/data/sds.nc4"),
 }
 EXAMPLE_WORKSHEET = {
     EnvironmentType.SKELETON: defaults.DIRECTORY + "/environment/data/skeleton.xlsx",

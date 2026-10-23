@@ -1,6 +1,8 @@
 import openpyxl
 import netCDF4 as nc4
 
+from rattlesnake import data
+
 import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.utilities import GlobalCommands
@@ -29,7 +31,7 @@ def worksheet_skeleton_sysid_metadata(hardware_metadata):
 
 
 def netcdf_skeleton_sysid_metadata(hardware_metadata):
-    netcdf_dir = defaults.DIRECTORY + "/environment/data/skeleton_sysid.nc4"
+    netcdf_dir = data.fetch(name="environment/data/skeleton_sysid.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 

@@ -21,6 +21,7 @@ registry = {
     "environment/data/sine.nc4": "85bcff3ff94a4e7d1fe70e822f37ecba3a6cf9e12e05a8f27ef2b76551201fad",
     "environment/data/sine_spec.npz": "76dbba31baf26d7fa4166d01c1457eacf8b1dbe95835f6c903fde4729fca547e",
     "environment/data/skeleton.nc4": "34ed9ed8a5d5267b5461cdff3a1e922781b47321b0db9a903e1b8c9214ad9889",
+    "environment/data/skeleton_sysid.nc4": "525e0ac3162c510728e69b6beab1df9ce2995323a4e8d79b2153720dd1a269b7",
     "environment/data/sysid.nc4": "3a877e426d012fafbf30a6f4798cd38e276bdc96e211f78e779ad009581805b6",
     "environment/data/sysid_data.nc4": "c276ef463e7bb1b58244c027496d3e17833b0bb4b63dfc296a7f2f9327831580",
     "environment/data/time.nc4": "f7bdaa9b18ff92e053d43f720e47644562eb15aa6afcccb3df384bedd25e928c",
