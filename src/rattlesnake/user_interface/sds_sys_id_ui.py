@@ -64,6 +64,11 @@ from scipy.io import loadmat, savemat
 import netCDF4 as nc4
 
 CONTROL_TYPE = EnvironmentType.SDS
+CONTROL_FUNCTION_TYPE_NAMES = {
+    ControlLawType.FUNCTION: "Function",
+    ControlLawType.CLASS: "Class",
+    ControlLawType.INTERACTIVE_CLASS: "Interactive",
+}
 MAXIMUM_NAME_LENGTH = 50
 
 
@@ -108,6 +113,7 @@ class SDSUI(SysIdEnvironmentUI):
         self.response_transformation_matrix = None
         self.output_transformation_matrix = None
         self.python_control_module = None
+        self.control_function_type = None
         self.python_function_extra_arguments = []
         self.python_function_extra_argument_widgets = {}
         self.decay_values_current_strategy = DecayStrategy.NUM_TIME_CONSTANTS
@@ -223,7 +229,7 @@ class SDSUI(SysIdEnvironmentUI):
             self.set_up_widgets
         )
         self.definition_widget.control_function_input.currentIndexChanged.connect(
-            self.update_generator_selector
+            self.update_control_function_type
         )
         self.definition_widget.load_breakpoints_button.clicked.connect(
             self.load_specification
@@ -1025,7 +1031,7 @@ class SDSUI(SysIdEnvironmentUI):
         for function in self.python_function_extra_arguments:
             self.definition_widget.control_function_input.addItem(function[0])
         self.set_up_widgets()
-        self.update_generator_selector()
+        self.update_control_function_type()
 
     @staticmethod
     def create_widget_for_type(arg_type, default_value):
@@ -1065,15 +1071,11 @@ class SDSUI(SysIdEnvironmentUI):
             layout.addRow(arg_name, widget)
             self.python_function_extra_argument_widgets[arg_name] = widget
 
-    def update_generator_selector(self):
-        """Updates the control type selector based on the selected control object."""
-        # print(
-        #     f"Called Update Generator Selector with \n{self.python_control_module=}\n"
-        #     + f"{self.definition_widget.control_function_input.currentIndex()=}\n"
-        #     + f"{self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex())=}."
-        # )
+    def update_control_function_type(self):
+        """Detects and displays the type of the selected control object."""
+        self.control_function_type = None
+        self.definition_widget.control_function_type_display.setText("")
         if self.python_control_module is None:
-            # print("Control Module is None")
             return
 
         try:
@@ -1084,27 +1086,20 @@ class SDSUI(SysIdEnvironmentUI):
                 ),
             )
         except AttributeError:
-            # print("Couldn't get the object from the module!")
             return
 
-        if inspect.isgeneratorfunction(obj):
-            # SDS doesn't currently use generator-style control laws, but preserve the pattern
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                ControlLawType.FUNCTION.value
-            )
-        elif inspect.isclass(obj):
+        if inspect.isclass(obj):
             if hasattr(obj, "send_command") or hasattr(obj, "update_parameters"):
-                self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                    ControlLawType.INTERACTIVE_CLASS.value
-                )
+                self.control_function_type = ControlLawType.INTERACTIVE_CLASS
             else:
-                self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                    ControlLawType.CLASS.value
-                )
+                self.control_function_type = ControlLawType.CLASS
         else:
-            self.definition_widget.control_function_generator_selector.setCurrentIndex(
-                ControlLawType.FUNCTION.value
-            )
+            # SDS doesn't currently use generator-style control laws, so
+            # generators are treated as functions
+            self.control_function_type = ControlLawType.FUNCTION
+        self.definition_widget.control_function_type_display.setText(
+            CONTROL_FUNCTION_TYPE_NAMES[self.control_function_type]
+        )
 
     def collect_control_extra_parameters(self):
         kwargs = {}
@@ -1152,8 +1147,10 @@ class SDSUI(SysIdEnvironmentUI):
         control_function = self.definition_widget.control_function_input.itemText(
             self.definition_widget.control_function_input.currentIndex()
         )
-        control_function_type = ControlLawType(
-            self.definition_widget.control_function_generator_selector.currentIndex()
+        control_function_type = (
+            ControlLawType.FUNCTION
+            if self.control_function_type is None
+            else self.control_function_type
         )
         control_function_parameters = self.collect_control_extra_parameters()
         control_data = ControlParameters(
@@ -1173,9 +1170,6 @@ class SDSUI(SysIdEnvironmentUI):
             self.definition_widget.control_function_input.setCurrentIndex(index)
         else:
             raise ValueError("Control function/class was not found.")
-        self.definition_widget.control_function_generator_selector.setCurrentIndex(
-            control_data.control_type.value
-        )
         self.set_control_extra_parameters(control_data.control_parameters)
 
     # region UI Collect Metadata

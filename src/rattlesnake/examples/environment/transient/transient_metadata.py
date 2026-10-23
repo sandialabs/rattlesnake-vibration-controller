@@ -28,7 +28,7 @@ def worksheet_transient_metadata(hardware_metadata):
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
     metadata.control_python_script = (
-        defaults.DIRECTORY + "/control_laws/transient_control_laws.py"
+        "rattlesnake.environment.transient_sys_id_control_law"
     )
     metadata.control_python_function = "pseudoinverse_control"
     metadata.control_python_function_type = 0
@@ -47,7 +47,7 @@ def netcdf_transient_metadata(hardware_metadata):
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
     metadata.control_python_script = (
-        defaults.DIRECTORY + "/control_laws/transient_control_laws.py"
+        "rattlesnake.environment.transient_sys_id_control_law"
     )
 
     return metadata
@@ -61,9 +61,7 @@ def manual_transient_metadata(hardware_metadata, **overrides):
     number_of_channels = 21
     control_signal = create_control_signal()
     ramp_time = 0.5
-    control_python_script = (
-        defaults.DIRECTORY + "/control_laws/transient_control_laws.py"
-    )
+    control_python_script = "rattlesnake.environment.transient_sys_id_control_law"
     control_python_function = "pseudoinverse_control"
     control_python_function_type = 0
     control_python_function_parameters = ""

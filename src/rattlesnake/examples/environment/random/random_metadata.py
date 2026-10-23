@@ -30,7 +30,7 @@ def worksheet_random_metadata(hardware_metadata):
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
     metadata.control_python_script = (
-        defaults.DIRECTORY + "/control_laws/control_laws.py"
+        "rattlesnake.environment.random_vibration_sys_id_control_law"
     )
     metadata.control_python_function = "buzz_control"
     metadata.control_python_function_type = 0
@@ -55,7 +55,7 @@ def netcdf_random_metadata(hardware_metadata):
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
     metadata.control_python_script = (
-        defaults.DIRECTORY + "/control_laws/control_laws.py"
+        "rattlesnake.environment.random_vibration_sys_id_control_law"
     )
 
     return metadata
@@ -79,7 +79,9 @@ def manual_random_metadata(hardware_metadata, **overrides):
     cpsd_overlap = 0.5
     percent_lines_out = 10.0
     allow_automatic_aborts = False
-    control_python_script = defaults.DIRECTORY + "/control_laws/control_laws.py"
+    control_python_script = (
+        "rattlesnake.environment.random_vibration_sys_id_control_law"
+    )
     control_python_function = "buzz_control"
     control_python_function_type = 0
     control_python_function_parameters = ""

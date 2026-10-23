@@ -761,31 +761,22 @@ All Sine Tones</string>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="control_function_generator_selector">
+               <widget class="QLineEdit" name="control_function_type_display">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Select if the selected control law is a Function, Class, or Interactive Class. This should be detected automatically by inspection; users should not have to adjust this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <property name="focusPolicy">
+                 <enum>Qt::NoFocus</enum>
                 </property>
-                <item>
-                 <property name="text">
-                  <string>Function</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Class</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Interactive</string>
-                 </property>
-                </item>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Type&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays whether the selected control law is a Function, Class, or Interactive Class. This is detected automatically by inspecting the selected control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
                </widget>
               </item>
              </layout>
