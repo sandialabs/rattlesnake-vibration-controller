@@ -218,13 +218,13 @@ Environment Definition for the State Space example problem.
 :::{figure} figures/example_state_space_vibration_system_identification.png
 :label: fig:examplestatespacevibrationsystemidentification
 :align: center
-System Identification for the State Space example problem
+System Identification for the State Space example problem.
 :::
 
 :::{figure} figures/example_state_space_vibration_predictions.png
 :label: fig:examplestatespacevibrationpredictions
 :align: center
-Test Predictions for the State Space Example Problem
+Test Predictions for the State Space Example Problem.
 :::
 
 :::{figure} figures/example_state_space_vibration_run_test.png

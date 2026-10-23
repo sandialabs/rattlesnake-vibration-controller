@@ -376,7 +376,7 @@ We do not want them in the published distribution.  Every release uploads a new 
 
 ### Alternatives considered
 
-:::{table} Alternatives considered for large data files
+:::{table} Alternatives considered for large data files.
 :label: tab:data_file_alternatives
 :align: center
 | Approach | Decision |
@@ -426,7 +426,7 @@ path = data.fetch(name="hardware/sdynpy_system/sdynpy_system.npz")
 
 The download URL depends on the installed version:
 
-:::{table} Git ref that each kind of Rattlesnake version downloads from
+:::{table} Git ref that each kind of Rattlesnake version downloads from.
 :label: tab:download_source
 :align: center
 | Version | Example | Downloads from |
@@ -453,7 +453,7 @@ Downloads go to a per-ref directory in the user cache, or to the directory named
 
 We checked each safeguard below on macOS, with Pooch 1.9.0, in a clean virtual environment.  Most rows used a locally built wheel that excluded all three file types.  At the time, the registry held 41 entries.  Two of them were run outputs, which we later removed from the registry.  The two rows about the download source describe their own setups.
 
-:::{table} Download safeguards and how each was verified
+:::{table} Download safeguards and how each was verified.
 :label: tab:download_safeguards
 :align: center
 | Safeguard | What happens | What we verified |
@@ -472,7 +472,7 @@ We checked each safeguard below on macOS, with Pooch 1.9.0, in a clean virtual e
 
 ### Distribution size
 
-:::{table} Data files and archive sizes of 4.0.0rc3 and 4.0.0rc4
+:::{table} Data files and archive sizes of 4.0.0rc3 and 4.0.0rc4.
 :label: tab:distribution_size
 :align: center
 | Release | Data files in package | Wheel | sdist |
@@ -726,7 +726,7 @@ The `pytest_matrix` job runs across combinations of operating systems and Python
 - a manual dispatch with `test_level=full`
 - `[all tests]` in the commit message or the pull request title
 
-:::{table} Test modes in continuous integration
+:::{table} Test modes in continuous integration.
 :label: tab:ci_test_modes
 :align: center
 | Mode | Runners | Tests |
@@ -757,7 +757,7 @@ By default, `preflight` matches CI's scope on non-`main`/`dev` branches: ruff fo
 pytest steps are currently skipped pending resolution of a test hang in `test_acquisition.py` (see TODO in `src/rattlesnake/preflight.py`). Only ruff format check and pylint run until that issue is resolved.
 ```
 
-:::{table} Options of the preflight command
+:::{table} Options of the preflight command.
 :label: tab:preflight_options
 :align: center
 option | description
@@ -856,7 +856,7 @@ The `validate_tag` job in `release.yml` rejects a tag that does not follow PEP 4
 
 Following are **prerelease tags**:
 
-:::{table} Prerelease tags
+:::{table} Prerelease tags.
 :label: tab:tags_prerelease
 :align: center
 tag | description
@@ -870,7 +870,7 @@ A **release candidate** is made during the final testing stage before a full rel
 
 Following are **stable release tags** (e.g., starting from the `v1.0.0` release):
 
-:::{table} Stable release tags
+:::{table} Stable release tags.
 :label: tab:tags_stable
 :align: center
 tag | description
@@ -882,7 +882,7 @@ tag | description
 
 Following are **Development** and **Post-Release** tags:
 
-:::{table} Development and post-release tags
+:::{table} Development and post-release tags.
 :label: tab:tags_development
 :align: center
 tag | description

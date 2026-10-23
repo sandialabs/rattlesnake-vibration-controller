@@ -27,7 +27,7 @@ LAN-XI devices are defined by an IP address, which is displayed on each module w
 :::{figure} figures/lanxi_physical_device.png
 :label: fig:lanxi_physical_device
 :align: center
-Physical Channel and Feedback Channels for LAN-XI modules.  The left device would have the Physical Device 169.254.113.201 and Physical Channels 1, 2, 3, 4, 5, and 6.  The right device would have Physical Device 169.254.211.152 and Physical Channels 1, 2, 3, and 4.  The right device would also have Feedback Device 169.254.211.152 and Feedback Channels 1 and 2
+Physical Channel and Feedback Channels for LAN-XI modules.  The left device would have the Physical Device 169.254.113.201 and Physical Channels 1, 2, 3, 4, 5, and 6.  The right device would have Physical Device 169.254.211.152 and Physical Channels 1, 2, 3, and 4.  The right device would also have Feedback Device 169.254.211.152 and Feedback Channels 1 and 2.
 :::
 
 The `Maximum Value` column in the channel table is used to set the range on the LAN-XI hardware.  The only two valid options for LAN-XI hardware ranges are `10` and `31.6`.  No other range is allowable.  The Minimum Value column is not used and can be left blank.

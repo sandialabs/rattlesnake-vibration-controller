@@ -218,7 +218,7 @@ A `pip install .` from a clone also leaves the files out, so it downloads them t
 
 Rattlesnake stores downloaded files in the user cache, in a separate directory for each release or commit:
 
-:::{table} Cache directory for each operating system
+:::{table} Cache directory for each operating system.
 :label: tab:cache_directory
 :align: center
 | Operating system | Cache directory |
@@ -286,7 +286,7 @@ This line is normal and is not an error.
 
 A failed download is retried three times, with waits of 1 s, 2 s, and 3 s, so a failure takes about 7 s to report.  Each retry prints `Failed to download '<file>'. Will attempt the download again N more times.`  After the last attempt, the example stops with one of three errors:
 
-:::{table} Download errors, their likely causes, and what to do
+:::{table} Download errors, their likely causes, and what to do.
 :label: tab:download_errors
 :align: center
 | Error | Likely cause | What to do |
