@@ -21,7 +21,7 @@ ENVIRONMENT_NAME = "Random 0"
 
 def worksheet_random_metadata(hardware_metadata):
 
-    worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/random.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -46,7 +46,7 @@ def worksheet_random_metadata(hardware_metadata):
 
 
 def netcdf_random_metadata(hardware_metadata):
-    netcdf_dir = data.fetch(name="environment/random/random_v4.nc4")
+    netcdf_dir = data.fetch(name="environment/data/random.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -187,7 +187,7 @@ def random_event_list(*, output_directory: str | os.PathLike[str] | None = None)
 
     timestamp = 17
     command = RandomVibrationCommands.CHANGE_SPECIFICATION
-    event_data = data.fetch(name="environment/random/random_spec.npz")
+    event_data = data.fetch(name="environment/data/random_spec.npz")
     change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
 
     timestamp = 20
@@ -232,7 +232,7 @@ def worksheet_random_event_list(
     """Load profile events, saving control data in output_directory or the cwd."""
     if output_directory is None:
         output_directory = os.getcwd()
-    worksheet_dir = defaults.DIRECTORY + "/environment/random/random_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/random.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     environment_types = {
         "Global": "Global",
@@ -242,5 +242,5 @@ def worksheet_random_event_list(
     save_event = event_list[4]
     save_event.data = os.path.join(output_directory, "random_control_data.nc4")
     change_spec_event = event_list[5]
-    change_spec_event.data = data.fetch(name="environment/random/random_spec.npz")
+    change_spec_event.data = data.fetch(name="environment/data/random_spec.npz")
     return event_list

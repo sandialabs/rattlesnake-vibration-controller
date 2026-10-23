@@ -109,7 +109,7 @@ def manual_sds_metadata(hardware_metadata, **overrides):
 
 
 def netcdf_sds_metadata(hardware_metadata):
-    netcdf_dir = data.fetch(name="environment/sds/sds_v4.nc4")
+    netcdf_dir = data.fetch(name="environment/data/sds.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -125,11 +125,11 @@ def netcdf_sds_metadata(hardware_metadata):
 
 
 def worksheet_sds_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/sds/sds_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/sds.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir)
     worksheet = workbook[ENVIRONMENT_NAME]
 
-    worksheet.cell(18, 2, data.fetch(name="environment/sds/sds_spec.npz"))
+    worksheet.cell(18, 2, data.fetch(name="environment/data/sds_spec.npz"))
 
     channel_list_bools = [True] * len(hardware_metadata.channel_list)
     metadata = SDSMetadata.load_metadata_from_worksheet(

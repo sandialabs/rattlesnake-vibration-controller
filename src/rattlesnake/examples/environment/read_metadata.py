@@ -18,7 +18,7 @@ ENVIRONMENT_NAME = "Read 0"
 
 
 def worksheet_read_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/read/read_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/read.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook[ENVIRONMENT_NAME]
 
@@ -30,7 +30,7 @@ def worksheet_read_metadata(hardware_metadata):
 
 
 def netcdf_read_metadata(hardware_metadata):
-    netcdf_dir = data.fetch(name="environment/read/read_v4.nc4")
+    netcdf_dir = data.fetch(name="environment/data/read.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
 
@@ -94,7 +94,7 @@ def read_event_list():
 
 
 def worksheet_read_event_list():
-    worksheet_dir = defaults.DIRECTORY + "/environment/read/read_v4.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/read.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     environment_types = {
         "Global": "Global",

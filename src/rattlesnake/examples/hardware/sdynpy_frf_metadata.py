@@ -3,35 +3,35 @@ import netCDF4 as nc4
 
 import rattlesnake.examples.defaults as defaults
 
-from rattlesnake import data
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.sdynpy_system_virtual_hardware import (
-    SDynPySystemMetadata,
+from rattlesnake.hardware.sdynpy_frf_virtual_hardware import (
+    SDynPyFRFMetadata,
 )
+from rattlesnake import data
 
-HARDWARE_FILE_NAME = "hardware/sdynpy_system/sdynpy_system.npz"
+HARDWARE_FILE_NAME = "hardware/data/sdynpy_frf.npz"
 
 
-def worksheet_sdynpy_system_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/sdynpy_system/sdynpy_system_v4.xlsx"
+def worksheet_sdynpy_frf_metadata():
+    worksheet_dir = defaults.DIRECTORY + "/hardware/data/sdynpy_frf.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
-    metadata = SDynPySystemMetadata.load_metadata_from_workbook(workbook)
+    metadata = SDynPyFRFMetadata.load_metadata_from_workbook(workbook)
     metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     workbook.close()
     return metadata
 
 
-def netcdf_sdynpy_system_metadata():
-    netcdf_dir = data.fetch(name="hardware/sdynpy_system/sdynpy_system_v4.nc4")
+def netcdf_sdynpy_frf_metadata():
+    netcdf_dir = data.fetch(name="hardware/data/sdynpy_frf.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
-    metadata = SDynPySystemMetadata.load_metadata_from_netcdf(netcdf_dataset)
+    metadata = SDynPyFRFMetadata.load_metadata_from_netcdf(netcdf_dataset)
     metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     netcdf_dataset.close()
     return metadata
 
 
-def manual_sdynpy_system_metadata(**overrides):
-    """Builds a SDynPySystemMetadata with sensible example defaults, letting
+def manual_sdynpy_frf_metadata(**overrides):
+    """Builds a SDynPyFRFMetadata with sensible example defaults, letting
     individual attributes be overridden via kwargs (e.g. sample_rate=300000)."""
     directions = ["X+", "Y+", "Z+"]
     force_nodes = [13, 131, 135]
@@ -57,17 +57,15 @@ def manual_sdynpy_system_metadata(**overrides):
                 comment="Force",
                 physical_device="Virtual",
                 channel_type="Force",
-                feedback_device="Virtual",
+                feedback_device="Input",
             )
             channel_list.append(channel)
-
     kwargs = dict(
         channel_list=channel_list,
         sample_rate=defaults.SAMPLE_RATE,
         time_per_read=defaults.BUFFER_SIZE,
         time_per_write=defaults.BUFFER_SIZE,
-        output_oversample=defaults.OUTPUT_OVERSAMPLE,
         hardware_file=data.fetch(name=HARDWARE_FILE_NAME),
     )
     kwargs.update(overrides)
-    return SDynPySystemMetadata(**kwargs)
+    return SDynPyFRFMetadata(**kwargs)
