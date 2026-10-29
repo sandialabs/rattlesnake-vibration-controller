@@ -775,30 +775,32 @@ During Control?</string>
           <item>
            <layout class="QVBoxLayout" name="control_parameters_layout">
             <item>
-             <widget class="QLabel" name="control_parameters_label">
-              <property name="text">
-               <string>Control Parameters</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QTextEdit" name="control_parameters_text_input">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Parameters&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Any additional parameters needed by the control law are entered in this text box. It is up to the control law to prescribe what is needed to be defined in this box. The data entered into this box will be passed to the control law as a string to the &amp;quot;extra_parameters&amp;quot; argument. Control laws should parse this string to extract needed information.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="lineWrapMode">
-               <enum>QTextEdit::NoWrap</enum>
-              </property>
-              <property name="acceptRichText">
-               <bool>false</bool>
-              </property>
-             </widget>
+           <widget class="QLabel" name="control_parameters_label">
+            <property name="text">
+             <string>Control Parameters</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QScrollArea" name="control_parameters_scroll_area">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Parameters&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Any additional parameters needed by the control law are entered in this area.  This area will be automatically populated based on the extra arguments required by the control law.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="control_parameters_widget">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>542</width>
+               <height>156</height>
+              </rect>
+             </property>
+             <layout class="QFormLayout" name="control_parameters_widget_layout"/>
+            </widget>
+           </widget>
             </item>
            </layout>
           </item>

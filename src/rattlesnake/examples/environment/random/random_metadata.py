@@ -5,10 +5,14 @@ import openpyxl
 import rattlesnake.examples.defaults as defaults
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.load_utilities import load_profile_from_workbook
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
     RandomVibrationInstructions,
+)
+from rattlesnake.environment.random_vibration_sys_id_metadata import (
+    RandomControlLawType
 )
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.environment_utilities import EnvironmentType
@@ -26,12 +30,18 @@ def worksheet_random_metadata(hardware_metadata):
     metadata = RandomVibrationMetadata.load_metadata_from_worksheet(
         worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
-    metadata.control_python_script = (
+    control_script = (
         "rattlesnake.environment.random_vibration_sys_id_control_law"
     )
-    metadata.control_python_function = "buzz_control"
-    metadata.control_python_function_type = 0
-    metadata.control_python_function_parameters = ""
+    control_object = "buzz_control"
+    control_type = RandomControlLawType.FUNCTION
+    control_parameters = ""
+    metadata.control_script_data = ControlParameters(
+        control_script=control_script,
+        control_object=control_object,
+        control_type=control_type,
+        control_parameters=control_parameters
+    )
     (
         metadata.specification_frequency_lines,
         metadata.specification_cpsd_matrix,
@@ -51,7 +61,7 @@ def netcdf_random_metadata(hardware_metadata):
     metadata = RandomVibrationMetadata.load_metadata_from_netcdf(
         netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
     )
-    metadata.control_python_script = (
+    metadata.control_script_data.control_script = (
         "rattlesnake.environment.random_vibration_sys_id_control_law"
     )
 
@@ -76,12 +86,12 @@ def manual_random_metadata(hardware_metadata, **overrides):
     cpsd_overlap = 0.5
     percent_lines_out = 10.0
     allow_automatic_aborts = False
-    control_python_script = (
-        "rattlesnake.environment.random_vibration_sys_id_control_law"
+    control_script_data = ControlParameters(
+        control_script = "rattlesnake.environment.random_vibration_sys_id_control_law",
+        control_object = "buzz_control",
+        control_type = RandomControlLawType.FUNCTION,
+        control_parameters = {}
     )
-    control_python_function = "buzz_control"
-    control_python_function_type = 0
-    control_python_function_parameters = ""
     control_channel_indices = [0, 1, 2]
     output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
 
@@ -111,10 +121,7 @@ def manual_random_metadata(hardware_metadata, **overrides):
         cpsd_overlap=cpsd_overlap,
         percent_lines_out=percent_lines_out,
         allow_automatic_aborts=allow_automatic_aborts,
-        control_python_script=control_python_script,
-        control_python_function=control_python_function,
-        control_python_function_type=control_python_function_type,
-        control_python_function_parameters=control_python_function_parameters,
+        control_script_data=control_script_data,
         control_channel_indices=control_channel_indices,
         output_channel_indices=output_channel_indices,
         specification_frequency_lines=specification_frequency_lines,

@@ -2,6 +2,7 @@ from qtpy import QtCore, QtWidgets, uic
 from qtpy.QtCore import Qt, QTime
 from rattlesnake.user_interface.abstract_sys_id_user_interface import SysIdEnvironmentUI
 from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
     ToneStrategy,
@@ -14,8 +15,7 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SRSDisplacementType,
     SDSParameters,
     SpecParameters,
-    ControlLawType,
-    ControlParameters,
+    SDSControlLawType,
     convert_decay_strategy,
 )
 from rattlesnake.engine import RattlesnakeController
@@ -65,9 +65,9 @@ import netCDF4 as nc4
 
 CONTROL_TYPE = EnvironmentType.SDS
 CONTROL_FUNCTION_TYPE_NAMES = {
-    ControlLawType.FUNCTION: "Function",
-    ControlLawType.CLASS: "Class",
-    ControlLawType.INTERACTIVE_CLASS: "Interactive",
+    SDSControlLawType.FUNCTION: "Function",
+    SDSControlLawType.CLASS: "Class",
+    SDSControlLawType.INTERACTIVE_CLASS: "Interactive",
 }
 MAXIMUM_NAME_LENGTH = 50
 
@@ -1037,7 +1037,7 @@ class SDSUI(SysIdEnvironmentUI):
     def create_widget_for_type(arg_type, default_value):
         if arg_type == int:
             widget = QtWidgets.QSpinBox()
-            widget.setMinimum(1000000)
+            widget.setMinimum(-1000000)
             widget.setMaximum(1000000)
             widget.setValue(default_value)
         elif arg_type == float:
@@ -1090,13 +1090,13 @@ class SDSUI(SysIdEnvironmentUI):
 
         if inspect.isclass(obj):
             if hasattr(obj, "send_command") or hasattr(obj, "update_parameters"):
-                self.control_function_type = ControlLawType.INTERACTIVE_CLASS
+                self.control_function_type = SDSControlLawType.INTERACTIVE_CLASS
             else:
-                self.control_function_type = ControlLawType.CLASS
+                self.control_function_type = SDSControlLawType.CLASS
         else:
             # SDS doesn't currently use generator-style control laws, so
             # generators are treated as functions
-            self.control_function_type = ControlLawType.FUNCTION
+            self.control_function_type = SDSControlLawType.FUNCTION
         self.definition_widget.control_function_type_display.setText(
             CONTROL_FUNCTION_TYPE_NAMES[self.control_function_type]
         )
@@ -1148,7 +1148,7 @@ class SDSUI(SysIdEnvironmentUI):
             self.definition_widget.control_function_input.currentIndex()
         )
         control_function_type = (
-            ControlLawType.FUNCTION
+            SDSControlLawType.FUNCTION
             if self.control_function_type is None
             else self.control_function_type
         )

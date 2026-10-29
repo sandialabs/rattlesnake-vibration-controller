@@ -46,8 +46,7 @@ from rattlesnake.environment.environment_utilities import (
 )
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
-    ControlLawType,
-    ControlParameters,
+    SDSControlLawType,
 )
 from rattlesnake.environment.sds_sys_id_utilities import (
     SDSQueues,
@@ -255,11 +254,11 @@ class SDSEnvironment(SysIdEnvironment):
                 self.environment_metadata.control_script_data.control_script
             )
         # Depending on the type, initialize the control law
-        if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
+        if self.environment_metadata.control_script_data.control_type == SDSControlLawType.FUNCTION:
             self.control_law = getattr(
                 self.control_module, self.environment_metadata.control_script_data.control_object
             )
-        elif self.environment_metadata.control_script_data.control_type == ControlLawType.CLASS:
+        elif self.environment_metadata.control_script_data.control_type == SDSControlLawType.CLASS:
             self.control_law = getattr(
                 self.control_module, self.environment_metadata.control_script_data.control_object
             )(
@@ -273,7 +272,7 @@ class SDSEnvironment(SysIdEnvironment):
             )
         elif (
             self.environment_metadata.control_script_data.control_type
-            == ControlLawType.INTERACTIVE_CLASS
+            == SDSControlLawType.INTERACTIVE_CLASS
         ):
             self.control_law = getattr(
                 self.control_module, self.environment_metadata.control_script_data.control_object
@@ -332,7 +331,7 @@ class SDSEnvironment(SysIdEnvironment):
         """Updates the interactive control law based on received parameters"""
         if (
             self.environment_metadata.control_script_data.control_type
-            == ControlLawType.INTERACTIVE_CLASS
+            == SDSControlLawType.INTERACTIVE_CLASS
         ):
             self.control_law.update_parameters(interactive_control_parameters)
             self.control_last_interactive_parameters = interactive_control_parameters
@@ -347,7 +346,7 @@ class SDSEnvironment(SysIdEnvironment):
         and data to its corresponding computation object"""
         if (
             self.environment_metadata.control_script_data.control_type
-            == ControlLawType.INTERACTIVE_CLASS
+            == SDSControlLawType.INTERACTIVE_CLASS
         ):
             self.control_law.send_command(command)
         else:
@@ -382,7 +381,7 @@ class SDSEnvironment(SysIdEnvironment):
             return
         # Perform the control prediction
         # Depending on the type, initialize the control law
-        if self.environment_metadata.control_script_data.control_type == ControlLawType.FUNCTION:
+        if self.environment_metadata.control_script_data.control_type == SDSControlLawType.FUNCTION:
             output_amplitudes, output_decays, output_delays = self.control_law(
                 environment_metadata=self.environment_metadata,
                 sysid_data=self.sysid_data,
@@ -393,15 +392,15 @@ class SDSEnvironment(SysIdEnvironment):
                 **self.environment_metadata.control_script_data.control_parameters,
             )
         elif (
-            self.environment_metadata.control_script_data.control_type == ControlLawType.CLASS
+            self.environment_metadata.control_script_data.control_type == SDSControlLawType.CLASS
             or self.environment_metadata.control_script_data.control_type
-            == ControlLawType.INTERACTIVE_CLASS
+            == SDSControlLawType.INTERACTIVE_CLASS
         ):
             if sysid_update:
                 self.control_law.system_id_update(sysid_data=self.sysid_data)
                 if (
                     self.environment_metadata.control_script_data.control_type
-                    == ControlLawType.INTERACTIVE_CLASS
+                    == SDSControlLawType.INTERACTIVE_CLASS
                 ):
                     self.gui_update_queue.put(
                         (
@@ -414,7 +413,7 @@ class SDSEnvironment(SysIdEnvironment):
                     )
                     self.control_has_sent_interactive_control_transfer_function_results = True
             if (
-                self.environment_metadata.control_script_data.control_type == ControlLawType.CLASS
+                self.environment_metadata.control_script_data.control_type == SDSControlLawType.CLASS
                 or self.control_last_interactive_parameters is not None
             ):
                 output_amplitudes, output_decays, output_delays = self.control_law.control(
@@ -868,7 +867,7 @@ class SDSEnvironment(SysIdEnvironment):
 
             if (
                 self.environment_metadata.control_script_data.control_type
-                == ControlLawType.FUNCTION
+                == SDSControlLawType.FUNCTION
             ):
                 output_amplitudes, output_decays, output_delays = self.control_law(
                     environment_metadata=self.environment_metadata,
@@ -882,8 +881,8 @@ class SDSEnvironment(SysIdEnvironment):
                     **self.environment_metadata.control_script_data.control_parameters,
                 )
             elif self.environment_metadata.control_script_data.control_type in (
-                ControlLawType.CLASS,
-                ControlLawType.INTERACTIVE_CLASS,
+                SDSControlLawType.CLASS,
+                SDSControlLawType.INTERACTIVE_CLASS,
             ):
                 output_amplitudes, output_decays, output_delays = self.control_law.control(
                     last_response_srs=self.last_response_srs,

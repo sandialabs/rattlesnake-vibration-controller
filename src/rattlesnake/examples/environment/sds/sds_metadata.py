@@ -16,10 +16,10 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SRSType,
     SRSDisplacementType,
     SDSParameters,
-    ControlParameters,
-    ControlLawType,
+    SDSControlLawType,
     SpecParameters,
 )
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.sds_sys_id_environment import SDSEnvironment
 from rattlesnake.environment.sds_sys_id_utilities import (
     SDSInstructions,
@@ -65,7 +65,7 @@ def manual_sds_metadata(hardware_metadata, **overrides):
     control_script_data = ControlParameters(
         control_script=DIRECTORY + r"\environment\sds_sys_id_control_law.py",
         control_object="default_control_law",
-        control_type=ControlLawType.FUNCTION,
+        control_type=SDSControlLawType.FUNCTION,
         control_parameters={"rcond": 1e-10, "accuracy_weight": 100, "input_weight": 1},
     )
     control_channel_indices = [0, 1, 2]

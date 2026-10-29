@@ -47,7 +47,7 @@ def pseudoinverse_control(specification, # Specifications
                           multiple_coherence, # Coherence from the system identification
                           frames, # Number of frames in the CPSD and FRF matrices
                           total_frames, # Total frames that could be in the CPSD and FRF matrices
-                          extra_parameters = '', # Extra parameters for the control law
+                          extra_parameters: str = '', # Extra parameters for the control law
                           last_response_cpsd = None, # Last Control Response for Error Correction
                           last_output_cpsd = None, # Last Control Excitation for Drive-based control
                           ):

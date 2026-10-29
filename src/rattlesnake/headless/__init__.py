@@ -69,12 +69,12 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SRSType,
     SRSDisplacementType,
     SDSParameters,
-    ControlParameters,
-    ControlLawType,
+    SDSControlLawType,
     SpecParameters,
 )
 from rattlesnake.environment.sds_sys_id_environment import SDSCommands
 from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
+from rattlesnake.environment.abstract_control_law import ControlParameters
 
 # endregion
 
@@ -148,7 +148,7 @@ __all__ = [
     "SRSDisplacementType",
     "SDSParameters",
     "ControlParameters",
-    "ControlLawType",
+    "SDSControlLawType",
     "SpecParameters",
     "SDSInstructions",
     # Process

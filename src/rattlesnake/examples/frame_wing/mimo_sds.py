@@ -6,6 +6,7 @@ from rattlesnake.main import launch_rattlesnake_ui
 from rattlesnake.user_interface.user_interface import build_rattlesnake_app
 from rattlesnake.hardware.state_space_virtual_hardware import StateSpaceMetadata
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_control_law import ControlParameters
 from rattlesnake.environment.sds_sys_id_metadata import (
     SDSMetadata,
     ToneParameters,
@@ -17,8 +18,7 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     SRSType,
     SRSDisplacementType,
     SDSParameters,
-    ControlParameters,
-    ControlLawType,
+    SDSControlLawType,
     SpecParameters,
 )
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
@@ -125,7 +125,7 @@ def build_mimo_sds_controller(threaded=False):
     control_parameters = ControlParameters(
         control_script="rattlesnake.environment.sds_sys_id_control_law",
         control_object="default_control_law",
-        control_type=ControlLawType.FUNCTION,
+        control_type=SDSControlLawType.FUNCTION,
         control_parameters={},
     )
 
