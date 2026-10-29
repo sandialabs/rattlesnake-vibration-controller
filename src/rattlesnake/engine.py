@@ -46,6 +46,7 @@ from rattlesnake.load_utilities import (
     save_rattlesnake_to_workbook,
 )
 from rattlesnake.profile_manager import ProfileEvent, ProfileManager
+from rattlesnake.typehint import EventType
 from rattlesnake.utilities import (
     log_file_task,
     flush_queue,
@@ -113,7 +114,7 @@ class RattlesnakeState(Enum):
 
     Notes
     -----
-    We don't check for stored streaming/profiles because they can beleft blank
+    We don't check for stored streaming/profiles because they can be left blank.
     """
 
     INIT = 0
@@ -200,6 +201,9 @@ class RattlesnakeController:
         timeout : float, optional
             Timeout in seconds to wait for processes to respond to commands before
             resorting to error handling.
+
+        Unit Tests
+        ----------
         """
         # Shutdown behavior
         self._shutdown_complete = False
@@ -459,6 +463,22 @@ class RattlesnakeController:
 
     @property
     def state(self) -> RattlesnakeState:
+        """
+        Return the current controller state.
+
+        The state is computed from whether hardware metadata is stored, whether
+        environment metadata is stored, whether acquisition and output are active,
+        whether any environment is active, and whether any environment has active
+        system identification.
+
+        Returns
+        -------
+        RattlesnakeState
+            Current controller state.
+
+        Unit Tests
+        ----------
+        """
         hardware_store = self.hardware_metadata is not None
         environment_store = self.environment_metadata != {}
         acquisition_active = self.event_container.acquisition_active_event.is_set()
@@ -508,65 +528,143 @@ class RattlesnakeController:
 
     @property
     def threaded(self):
+        """
+        Return whether the controller is running in threaded mode.
+
+        Returns
+        -------
+        bool
+            ``True`` if worker components are threads, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self._threaded
 
     @property
     def blocking(self):
+        """
+        Return whether controller operations will block execution. This should be
+        ``True`` for headless operation and ``False`` for user interface operations.
+
+        Returns
+        -------
+        bool
+            ``True`` if operations wait for ready and active events, otherwise
+            ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self._blocking
 
     @property
     def timeout(self):
+        """
+        Return the controller event wait timeout.
+
+        Returns
+        -------
+        float
+            Timeout in seconds used by blocking wait operations.
+
+        Unit Tests
+        ----------
+        """
         return self._timeout
 
     @property
     def is_alive(self):
+        """
+        Returns whether the alive event is set. This event allows subprocesses to
+        extend the timeout period when performing long operations.
+
+        Returns
+        -------
+        bool
+            ``True`` if the ping-alive event is set, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self.event_container.ping_alive_event.is_set()
 
     def set_alive(self):
+        """
+        Set the alive event. Marks the controller as having received an alive
+        ping from a worker process during a long blocking operation.
+
+        Unit Tests
+        ----------
+        """
         self.event_container.ping_alive_event.set()
 
     def clear_alive(self):
+        """
+        Clear the alive event. This is used by this controller after receiving a
+        ping alive signal and resetting the timeout timer.
+
+        Unit Tests
+        ----------
+        """
         self.event_container.ping_alive_event.clear()
 
     def set_blocking(self):
         """
-        Tells rattlesnake to wait for a response from a process after sending a command.
+        Enables blocking controller operations. When this is enabled, the controller
+        will pause execution to wait for subprocesses to complete when sending commands.
+
+        Unit Tests
+        ----------
         """
         self._blocking = True
 
     def clear_blocking(self):
         """
-        Tells rattlesnake to not check for response from a process after
-        sending commands.
+        Disables blocking controller operations. When this is enabled, the controller
+        will not wait for subprocesses to complete when sending commands.
+
+        Unit Tests
+        ----------
         """
         self._blocking = False
 
     def wait_for_events(
         self,
-        ready_event_list: List[mp.synchronize.Event],
-        active_event_list: List[mp.synchronize.Event],
+        ready_event_list: List[EventType],
+        active_event_list: List[EventType],
         *,
         active_event_check: bool | None = None,
     ):
         """
-        Checks for response from processes after rattlesnake has sent a command.
+        Wait for process ready and active events.
 
-        The events in the ready_event_list are cleared after they are set as the
-        ready state for that process has been confirmed. The events in the
-        active_event_list are not cleared after being checked.
+        Blocks until all supplied ready events are set and all supplied active
+        events match ``active_event_check``. If the controller receives an alive
+        ping, the timeout timer is reset. If the timeout expires before all
+        required event conditions are satisfied, all ready events are set and a
+        ``RattlesnakeError`` is raised.
 
         Parameters
         ----------
-        ready_event_list : List[mp.synchronize.Event]
-            Events that processes use to confirm that they have recieved data. These
-            events are cleared automatically after the confirmation
-        active_event_list : List[mp.synchronize.Event]
-            Events that processes use to confirm that they are ready to recieve data
-            from other processes. These events are not cleared after being checked.
-        active_event_check: bool
-            This determines whether to check if the active_event_list processes are
-            active or not active. True correspondes to active, False corresponds to not
-            active. This is a required input when using active_event_list.
+        ready_event_list : list of threading.Event or multiprocessing.Event
+            Events that subprocesses set to confirm they have completed an
+            operation. These events will be set to ``False`` after completion.
+        active_event_list : list of threading.Event or multiprocessing.Event
+            Events that indicate whether subprocesses or environments are active.
+            These events will be unchanged after completion.
+        active_event_check : bool or None, optional
+            Required state for each active event. Use ``True`` to wait for active
+            events to be set, ``False`` to wait for them to be cleared, and
+            ``None`` only when no active events are supplied.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the timeout expires before all event conditions are satisfied.
+
+        Unit Tests
+        ----------
         """
         start_time = time.time()
 
