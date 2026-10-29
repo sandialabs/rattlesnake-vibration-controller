@@ -68,7 +68,10 @@ from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_METADATA,
     SYSID_ENVIRONMENTS,
 )
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdDataPackage,
+    SysIdMetadata,
+)
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.controller import controller_process
 from rattlesnake.process.output import output_process
@@ -838,7 +841,8 @@ class RattlesnakeController:
 
     def save_system_id_to_file(self, environment_name: str, filepath: PathType):
         """
-        Saves system identification data for an environment to a netCDF4, matlab, or numpy file.
+        Saves system identification data for an environment to a netCDF4, matlab,
+        or numpy file.
 
         Sends a save system identification command to the environment and waits
         for its ready event, regardless of the blocking setting. Saving is only
@@ -886,8 +890,39 @@ class RattlesnakeController:
         self.wait_for_events(ready_event_list, active_event_list)
 
     def load_system_id_from_package(
-        self, environment_name, sysid_package, ask_to_share=False
+        self,
+        environment_name: str,
+        sysid_package: SysIdDataPackage,
+        ask_to_share: bool = False,
     ):
+        """
+        Loads a system identification package into an environment.
+
+        Validates the package against the environment, sends it to the
+        environment, and waits for the system identification stored event.
+        Loading is only permitted in the ``ENVIRONMENT_STORE`` state.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment that receives the package.
+        sysid_package : SysIdDataPackage
+            System identification package to load.
+        ask_to_share : bool, optional
+            Whether the user interface should offer to share the loaded system
+            identification with other environments. Ignored when the controller
+            has no GUI. Defaults to ``False``.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state is not ``ENVIRONMENT_STORE``.
+        RattlesnakeError
+            If the package does not pass the environment manager's validation.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for loading system identification: {self.state}"
@@ -915,7 +950,33 @@ class RattlesnakeController:
 
     # region Hardware
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
-        """Validates hardware_metadata and sends data to relevant processes"""
+        """
+        Validate and initialize hardware metadata.
+
+        Validates the current controller state, verifies that the supplied object
+        is a ``HardwareMetadata`` instance, calls its validation method, stores
+        hardware information in the environment manager, sends hardware
+        initialization commands to acquisition and output, and waits for ready
+        events when blocking mode is enabled.
+
+        Parameters
+        ----------
+        hardware_metadata : HardwareMetadata
+            Hardware metadata used to initialize acquisition, output, and
+            environment-related hardware state.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit hardware initialization.
+        RattlesnakeError
+            If ``hardware_metadata`` is not a ``HardwareMetadata`` instance.
+        RattlesnakeError
+            If hardware metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         # Validate Rattlesnake State
         if self.state not in (
             RattlesnakeState.INIT,
