@@ -1,16 +1,51 @@
+"""
+Main Rattlesnake controller engine.
+
+This module defines the high-level controller object responsible for
+constructing queues and events, starting controller subprocesses, managing
+hardware and environment metadata, starting acquisition and output,
+handling system identification workflows, managing streaming and profiles,
+and shutting down the controller cleanly.
+
+Rattlesnake Vibration Control Software
+Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
+(NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
+Government retains certain rights in this software.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import atexit
-from datetime import datetime
-from enum import Enum
-import multiprocessing as mp
 import os
-import queue as thqueue
 import threading
 import time
+import multiprocessing as mp
+import queue as thqueue
+from datetime import datetime
+from enum import Enum
 from typing import Dict, List
 
 import openpyxl
 import netCDF4 as nc4
 
+from rattlesnake.environment_manager import EnvironmentManager
+from rattlesnake.load_utilities import (
+    load_metadata_from_netcdf,
+    load_metadata_from_workbook,
+    save_rattlesnake_to_workbook,
+)
+from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 from rattlesnake.utilities import (
     log_file_task,
     flush_queue,
@@ -21,27 +56,22 @@ from rattlesnake.utilities import (
     RattlesnakeError,
     VerboseMessageQueue,
 )
-from rattlesnake.environment_manager import EnvironmentManager
-from rattlesnake.profile_manager import ProfileEvent, ProfileManager
-from rattlesnake.load_utilities import (
-    load_metadata_from_netcdf,
-    load_metadata_from_workbook,
-    save_rattlesnake_to_workbook,
-)
-from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
+from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentMetadata,
 )
-from rattlesnake.environment.environment_registry import ENVIRONMENT_METADATA
+from rattlesnake.environment.environment_registry import (
+    ENVIRONMENT_METADATA,
+    SYSID_ENVIRONMENTS,
+)
+from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.acquisition import acquisition_process
+from rattlesnake.process.controller import controller_process
 from rattlesnake.process.output import output_process
 from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
-from rattlesnake.process.controller import controller_process
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
-from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
 
 # from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 
