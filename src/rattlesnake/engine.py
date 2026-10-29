@@ -87,13 +87,41 @@ GUI_QUEUE_POLL_INTERVAL = 0.25  # Seconds between gui_update_queue size checks
 
 # region State
 class RattlesnakeState(Enum):
-    # We don't check for stored stream/profiles because they can be left blank
-    INIT = 0  # Nothing is stored yet
-    HARDWARE_STORE = 1  # Hardware has been stored
-    ENVIRONMENT_STORE = 2  # Environments have been stored
-    HARDWARE_ACTIVE = 3  # Acquisition is running
-    ENVIRONMENT_ACTIVE = 4  # Environment output is running
-    SYS_ID_ACTIVE = 5  # System identification is being performed
+    """
+    Enumeration of high-level controller states.
+
+    The controller state is computed from the attributes of the controller and
+    different event flags within the acquisition, output, and environment processes.
+
+    Attributes
+    ----------
+    INIT : int
+        No hardware or environment metadata has been stored.
+    HARDWARE_STORE : int
+        Hardware metadata has been stored.
+    ENVIRONMENT_STORE : int
+        Hardware and environment metadata have been stored.
+    HARDWARE_ACTIVE : int
+        Acquisition and output hardware are running.
+    ENVIRONMENT_ACTIVE : int
+        At least one environment is actively running while hardware is active.
+    SYS_ID_ACTIVE : int
+        System identification is active while hardware is active.
+
+    Unit Tests
+    ----------
+
+    Notes
+    -----
+    We don't check for stored streaming/profiles because they can beleft blank
+    """
+
+    INIT = 0
+    HARDWARE_STORE = 1
+    ENVIRONMENT_STORE = 2
+    HARDWARE_ACTIVE = 3
+    ENVIRONMENT_ACTIVE = 4
+    SYS_ID_ACTIVE = 5
 
 
 # endregion
@@ -101,35 +129,77 @@ class RattlesnakeState(Enum):
 
 # region Rattlesnake
 class RattlesnakeController:
-    """Object responsible for setting up, sending data to, and running processes that
-    make up the rattlesnake vibration controller."""
+    """
+    The main controller that owns the process queues, synchronization events,
+    subprocess handles, environment manager, profile manager, and stored
+    metadata needed to run tests. It provides the public API
+    for initializing hardware, initializing environments, starting and stopping
+    acquisition, starting and stopping environments, running system
+    identification, managing streaming, managing profiles, loading and saving
+    templates, and shutting down all subprocesses.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        If ``True``, worker components are started as threads and use
+        thread-compatible queues and events. If ``False``, worker components
+        are started as multiprocessing processes. Defaults to ``THREADING``.
+    timeout : float, optional
+        Timeout in seconds used by blocking operations while waiting for
+        subprocess ready or active events. Defaults to ``40``.
+
+    Attributes
+    ----------
+    queue_container : QueueContainer
+        Container holding controller, acquisition, output, streaming, GUI,
+        sync, hardware, and environment queues.
+    event_container : EventContainer
+        Container holding ready, close, active, system-identification, and
+        watchdog events.
+    environment_manager : EnvironmentManager
+        Manager responsible for environment metadata, environment processes,
+        queue names, and environment validation.
+    profile_manager : ProfileManager
+        Manager responsible for validating, starting, and stopping profile
+        events.
+    hardware_metadata : HardwareMetadata or None
+        Current hardware metadata stored by the controller.
+    environment_metadata : dict of str to EnvironmentMetadata
+        Current environment metadata stored by the environment manager.
+    last_stream_metadata : StreamMetadata or None
+        Most recently stored stream metadata for UI use.
+    last_profile_event_list : list of ProfileEvent
+        Most recently stored profile event list for UI use.
+    has_gui : bool
+        Whether the controller has been configured for GUI use.
+    threaded : bool
+        Whether the controller is running in threaded mode.
+    blocking : bool
+        Whether public API operations wait for process ready and active events.
+    timeout : float
+        Timeout used by blocking wait operations.
+
+    Unit Tests
+    ----------
+    """
 
     def __init__(self, *, threaded: bool = THREADING, timeout: float = 40):
         """
         Initializes a blank rattlesnake controller object and spins up
         multiple processes required to run a vibration test.
 
-        Running in the threaded mode results in much quicker data transfer
-        rates as commands do not have to be copied in the RAM. This mode
-        allows the control laws to respond quicker to changes in response
-        data. The downside is that threaded mode can be overloaded if the
-        processor is not fast enough which can result in a crash.
-
-        The timeout is used for waiting for processes to confirm they have
-        recieved a command which prevents rattlesnake from overloading the
-        processes with new commands when it is running in headless mode.
+        Creates the log process, queue container, event container, controller
+        process, acquisition process, output process, streaming process,
+        environment manager, and profile manager.
 
         Parameters
         ----------
-        threaded : bool
-            Tells rattlesnake whether to run on a single core or multiple
-            processing cores. A value of True corresponds to single
-            threaded
-        timeout : float
-            The amount of time rattlesnake waits for a process to respond
-            after giving it a command. A timeout error will roll back to
-            the previous state and require you to perform the command
-            again.
+        threaded : bool, optional
+            If ``True``, use threads and thread-compatible queues and events. If
+            ``False``, use multiprocessing processes and queues.
+        timeout : float, optional
+            Timeout in seconds to wait for processes to respond to commands before
+            resorting to error handling.
         """
         # Shutdown behavior
         self._shutdown_complete = False
