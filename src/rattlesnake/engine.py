@@ -187,7 +187,7 @@ class RattlesnakeController:
     ----------
     """
 
-    def __init__(self, *, threaded: bool = THREADING, timeout: float = 40):
+    def __init__(self, *, threaded: bool = THREADING, timeout: float = 40) -> None:
         """
         Initializes a blank rattlesnake controller object and spins up
         multiple processes required to run a vibration test.
@@ -530,7 +530,7 @@ class RattlesnakeController:
         return RattlesnakeState.INIT
 
     @property
-    def threaded(self):
+    def threaded(self) -> bool:
         """
         Return whether the controller is running in threaded mode.
 
@@ -545,7 +545,7 @@ class RattlesnakeController:
         return self._threaded
 
     @property
-    def blocking(self):
+    def blocking(self) -> bool:
         """
         Return whether controller operations will block execution. This should be
         ``True`` for headless operation and ``False`` for user interface operations.
@@ -562,7 +562,7 @@ class RattlesnakeController:
         return self._blocking
 
     @property
-    def timeout(self):
+    def timeout(self) -> float:
         """
         Return the controller event wait timeout.
 
@@ -577,7 +577,7 @@ class RattlesnakeController:
         return self._timeout
 
     @property
-    def is_alive(self):
+    def is_alive(self) -> bool:
         """
         Returns whether the alive event is set. This event allows subprocesses to
         extend the timeout period when performing long operations.
@@ -592,7 +592,7 @@ class RattlesnakeController:
         """
         return self.event_container.ping_alive_event.is_set()
 
-    def set_alive(self):
+    def set_alive(self) -> None:
         """
         Set the alive event. Marks the controller as having received an alive
         ping from a worker process during a long blocking operation.
@@ -602,7 +602,7 @@ class RattlesnakeController:
         """
         self.event_container.ping_alive_event.set()
 
-    def clear_alive(self):
+    def clear_alive(self) -> None:
         """
         Clear the alive event. This is used by this controller after receiving a
         ping alive signal and resetting the timeout timer.
@@ -612,7 +612,7 @@ class RattlesnakeController:
         """
         self.event_container.ping_alive_event.clear()
 
-    def set_blocking(self):
+    def set_blocking(self) -> None:
         """
         Enables blocking controller operations. When this is enabled, the controller
         will pause execution to wait for subprocesses to complete when sending commands.
@@ -638,7 +638,7 @@ class RattlesnakeController:
         active_event_list: List[EventType],
         *,
         active_event_check: bool | None = None,
-    ):
+    ) -> None:
         """
         Wait for process ready and active events.
 
@@ -693,7 +693,7 @@ class RattlesnakeController:
             time.sleep(0.25)
 
     # region Loading
-    def setup_gui(self):
+    def setup_gui(self) -> None:
         """
         Configures the controller for GUI operation.
 
@@ -707,7 +707,7 @@ class RattlesnakeController:
         self.clear_blocking()
         self.has_gui = True
 
-    def close_gui(self):
+    def close_gui(self) -> None:
         """
         Configures the controller for headless operation.
 
@@ -720,7 +720,7 @@ class RattlesnakeController:
         self.set_blocking()
         self.has_gui = False
 
-    def load_rattlesnake_from_template(self, filepath: PathType):
+    def load_rattlesnake_from_template(self, filepath: PathType) -> None:
         """
         Stores metadata from a template file to the controller.
 
@@ -802,7 +802,7 @@ class RattlesnakeController:
             if not initial_blocking:
                 self.clear_blocking()
 
-    def save_rattlesnake_to_template(self, filepath: PathType):
+    def save_rattlesnake_to_template(self, filepath: PathType) -> None:
         """
         Save the current controller configuration to an Excel template.
 
@@ -839,7 +839,7 @@ class RattlesnakeController:
         )
         workbook.save(filepath)
 
-    def save_system_id_to_file(self, environment_name: str, filepath: PathType):
+    def save_system_id_to_file(self, environment_name: str, filepath: PathType) -> None:
         """
         Saves system identification data for an environment to a netCDF4, matlab,
         or numpy file.
@@ -894,7 +894,7 @@ class RattlesnakeController:
         environment_name: str,
         sysid_package: SysIdDataPackage,
         ask_to_share: bool = False,
-    ):
+    ) -> None:
         """
         Loads a system identification package into an environment.
 
@@ -1021,18 +1021,66 @@ class RattlesnakeController:
 
     # region Environment
     @property
-    def environment_metadata(self):
+    def environment_metadata(self) -> Dict[str, EnvironmentMetadata]:
+        """
+        Return a dict of environment metadata stored by the environment manager.
+
+        Returns
+        -------
+        dict of str to EnvironmentMetadata
+            Mapping from environment queue names to environment metadata.
+
+        Unit Tests
+        ----------
+        """
         return self.environment_manager.environment_metadata
 
     @environment_metadata.setter
     def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
+        """
+        Store environment metadata through the environment manager.
+
+        Parameters
+        ----------
+        value : dict of str to EnvironmentMetadata
+            Mapping from environment queue names to environment metadata.
+        """
         self.environment_manager.environment_metadata = value
 
     def initialize_environments(
         self, environment_metadata_list: List[EnvironmentMetadata]
     ):
-        """Validates environment_metadata, starts up environment processes,
-        assigns queues, and sends data to relevant processes"""
+        """
+        Validate and initialize environments.
+
+        Validates the current controller state, validates environment metadata
+        against the stored hardware metadata, starts or updates environment
+        processes through the environment manager, sends initialized environment
+        metadata to acquisition and output, and waits for ready events when
+        blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_metadata_list : list of EnvironmentMetadata
+            Environment metadata objects to initialize.
+
+        Returns
+        -------
+        dict of str to EnvironmentMetadata
+            Mapping from assigned queue names to initialized environment metadata.
+            This is the main way to check which queue names were assigned to each
+            environment.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit environment initialization.
+        RattlesnakeError
+            If environment metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         # Validate Rattlesnake State
         if self.state not in (
             RattlesnakeState.HARDWARE_STORE,
