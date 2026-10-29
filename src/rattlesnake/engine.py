@@ -46,7 +46,7 @@ from rattlesnake.load_utilities import (
     save_rattlesnake_to_workbook,
 )
 from rattlesnake.profile_manager import ProfileEvent, ProfileManager
-from rattlesnake.typehint import EventType
+from rattlesnake.typehint import EventType, PathType
 from rattlesnake.utilities import (
     log_file_task,
     flush_queue,
@@ -128,7 +128,7 @@ class RattlesnakeState(Enum):
 # endregion
 
 
-# region Rattlesnake
+# region Controller
 class RattlesnakeController:
     """
     The main controller that owns the process queues, synchronization events,
@@ -691,26 +691,61 @@ class RattlesnakeController:
 
     # region Loading
     def setup_gui(self):
+        """
+        Configures the controller for GUI operation.
+
+        Disables blocking mode and marks the controller as having a GUI attached.
+        GUI-driven workflows typically handle asynchronous updates through gui signals
+        to prevent locking the gui execution loop during operation.
+
+        Unit Tests
+        ----------
+        """
         self.clear_blocking()
         self.has_gui = True
 
     def close_gui(self):
+        """
+        Configures the controller for headless operation.
+
+        Enables blocking mode and removes the gui mark from the controller. The
+        controller will now pause execution while subprocesses perform functions.
+
+        Unit Tests
+        ----------
+        """
         self.set_blocking()
         self.has_gui = False
 
-    def load_rattlesnake_from_template(self, filepath: str):
+    def load_rattlesnake_from_template(self, filepath: PathType):
         """
-        Loads data from worksheet or netcdf4 file to the rattlesnake controller.
+        Stores metadata from a template file to the controller.
+
+        Loads hardware metadata, environment metadata, optional system
+        identification metadata, and optional profile events from a supported
+        template file. Supported file types are netCDF ``.nc4`` and Excel
+        ``.xlsx``. Blocking mode is temporarily enabled while loading so that
+        hardware and environment initialization complete before returning.
 
         Parameters
         ----------
-        filepath : string
-            Full path to template file.
+        filepath : str or os.PathLike
+            Path to the template file.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the file cannot be read.
+        RattlesnakeError
+            If the file type is unsupported by the loading logic.
+
+        Unit Tests
+        ----------
         """
         filename, filetype = os.path.splitext(filepath)
 
         if not os.access(filepath, os.R_OK):
-            raise RattlesnakeError("You do not have permissions to open {filepath}")
+            raise RattlesnakeError(f"You do not have permissions to open {filepath}")
 
         # I force blocking on this
         initial_blocking = True
@@ -764,17 +799,26 @@ class RattlesnakeController:
             if not initial_blocking:
                 self.clear_blocking()
 
-    def save_rattlesnake_to_template(self, filepath: str):
+    def save_rattlesnake_to_template(self, filepath: PathType):
         """
-        Saves excel template from current controller state.
+        Save the current controller configuration to an Excel template.
 
-        This function will fill out the current data from the rattlesnake class.
-        If there is no data stored, it will store a blank template.
+        Creates an Excel workbook and writes hardware metadata, environment
+        metadata, and profile events to it. If no metadata is stored, a blank
+        template is saved.
 
         Parameters
         ----------
-        filepath : string
-            Full path to template file.
+        filepath : str or os.PathLike
+            Output path for the Excel template.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``filepath`` does not have an ``.xlsx`` extension.
+
+        Unit Tests
+        ----------
         """
         filename, filetype = os.path.splitext(filepath)
         if filetype != ".xlsx":
@@ -792,7 +836,32 @@ class RattlesnakeController:
         )
         workbook.save(filepath)
 
-    def save_system_id_to_file(self, environment_name, filepath):
+    def save_system_id_to_file(self, environment_name: str, filepath: PathType):
+        """
+        Saves system identification data for an environment to a netCDF4, matlab, or numpy file.
+
+        Sends a save system identification command to the environment and waits
+        for its ready event, regardless of the blocking setting. Saving is only
+        permitted in the ``ENVIRONMENT_STORE`` or ``HARDWARE_ACTIVE`` states.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment whose system identification data is saved.
+        filepath : str or os.PathLike
+            Destination file path. The extension selects the format: ``.nc4``,
+            ``.mat``, or ``.npz``. Other extensions are not saved.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit saving system identification,
+            if no environment exists with ``environment_name``, or if the
+            environment does not respond before the timeout.
+
+        Unit Tests
+        ----------
+        """
         if self.state not in (
             RattlesnakeState.ENVIRONMENT_STORE,
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -811,7 +880,7 @@ class RattlesnakeController:
             TASK_NAME, (GlobalCommands.SAVE_SYSTEM_ID, filepath)
         )
 
-        # I dont care about blocking in this case as race issues are very possible
+        # I force blocking in this case as race issues are likely
         ready_event_list = [self.event_container.environment_ready_events[queue_name]]
         active_event_list = []
         self.wait_for_events(ready_event_list, active_event_list)

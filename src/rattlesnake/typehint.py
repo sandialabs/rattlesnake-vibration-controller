@@ -22,7 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
+import os
 import threading
 
 # Events are threading or multiprocessing events depending on the threaded setting
 EventType = threading.Event | mp.synchronize.Event
+
+# Accepts plain strings or path objects such as pathlib.Path
+PathType = str | os.PathLike[str]
