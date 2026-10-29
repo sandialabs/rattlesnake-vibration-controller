@@ -272,7 +272,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
             RandomControlLawType.INTERACTIVE_CLASS,
         ]:  # Class or Interactive
             if (
-                self.environment_metadata.control_script_data.control_object == RandomControlLawType.CLASS
+                self.environment_metadata.control_script_data.control_type == RandomControlLawType.CLASS
                 or not self.has_sent_interactive_control_transfer_function_results
             ):
                 self.control_function.system_id_update(
@@ -328,7 +328,7 @@ class RandomVibrationDataAnalysisProcess(SysIDAnalysisProcess):
                 )
                 time.sleep(0.25)
                 return
-        elif self.environment_metadata.control_script_data.control_object == RandomControlLawType.FUNCTION:  # Function
+        elif self.environment_metadata.control_script_data.control_type == RandomControlLawType.FUNCTION:  # Function
             output_cpsd = self.control_function(
                 self.environment_metadata.specification_cpsd_matrix,  # Specifications
                 self.environment_metadata.specification_warning_matrix,  # Warning levels
