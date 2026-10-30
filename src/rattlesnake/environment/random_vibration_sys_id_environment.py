@@ -109,16 +109,19 @@ class RandomVibrationCommands(EnvironmentCommands):
     RECOMPUTE_PREDICTION = 2
     CHANGE_SPECIFICATION = 3
     SAVE_CONTROL_DATA = 4
+    SET_CONTINUOUS_RUN = 5
 
     VALID_PROFILE_COMMANDS = (
         ADJUST_TEST_LEVEL,
         CHANGE_SPECIFICATION,
         SAVE_CONTROL_DATA,
+        SET_CONTINUOUS_RUN,
     )
     VALID_DATA = {
         ADJUST_TEST_LEVEL: float,
         CHANGE_SPECIFICATION: str,
         SAVE_CONTROL_DATA: str,
+        SET_CONTINUOUS_RUN: type(None),
     }
 
 
@@ -1194,6 +1197,9 @@ class RandomVibrationEnvironment(SysIdEnvironment):
             RandomVibrationCommands.CHANGE_SPECIFICATION, self.change_specification
         )
         self.map_command(
+            RandomVibrationCommands.SET_CONTINUOUS_RUN, self.set_continuous_run
+        )
+        self.map_command(
             RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN,
             self.check_for_control_shutdown,
         )
@@ -1383,6 +1389,13 @@ class RandomVibrationEnvironment(SysIdEnvironment):
                 self.environment_name,
                 (RandomVibrationUICommands.ADJUST_TEST_LEVEL, data),
             )
+        )
+
+    def set_continuous_run(self, data=None):
+        """Sets the test to run continuously until stopped"""
+        self.log("Continuous run turned on")
+        self.gui_update_queue.put(
+            (self.environment_name, (RandomVibrationCommands.SET_CONTINUOUS_RUN, data))
         )
 
     def send_interactive_command(self, command):
