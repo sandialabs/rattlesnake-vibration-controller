@@ -2092,15 +2092,16 @@ class RattlesnakeController:
         Shut down the controller and all subprocesses.
 
         Stops acquisition if hardware, environments, or system identification are
-        active. Then sends ``QUIT`` commands to controller, acquisition, output, and
-        streaming processes, joins each process, closes environment processes through
-        the environment manager, and shuts down the log file process. Processes that
-        do not shutdown within the timeout will be force closed.
+        active. Then sends ``QUIT`` commands to the controller, acquisition,
+        output, and streaming processes, joins each process, closes environment
+        processes through the environment manager, and shuts down the log file
+        process. Processes that do not shut down within the timeout will be force
+        closed.
 
-        This function is not
-        tied to the user interface shutdown and must be called after the execution loop
-        is finished. It is recommended to use ``with RattlesnakeController as rattlesnake:``
-        to automatically shutdown the controller within a python script.
+        This function is not tied to the user interface shutdown and must be
+        called after the execution loop is finished. It is recommended to use
+        ``with RattlesnakeController() as rattlesnake:`` to automatically shut
+        down the controller within a Python script.
 
         Unit Tests
         ----------
