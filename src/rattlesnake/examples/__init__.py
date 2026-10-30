@@ -1,20 +1,20 @@
 from rattlesnake.examples.headless_example import build_example_rattlesnake_object
-from rattlesnake.examples.hardware.exodus.exodus_metadata import (
+from rattlesnake.examples.hardware.exodus_metadata import (
     worksheet_exodus_metadata,
     netcdf_exodus_metadata,
     manual_exodus_metadata,
 )
-from rattlesnake.examples.hardware.sdynpy_frf.sdynpy_frf_metadata import (
+from rattlesnake.examples.hardware.sdynpy_frf_metadata import (
     worksheet_sdynpy_frf_metadata,
     netcdf_sdynpy_frf_metadata,
     manual_sdynpy_frf_metadata,
 )
-from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
+from rattlesnake.examples.hardware.sdynpy_system_metadata import (
     worksheet_sdynpy_system_metadata,
     netcdf_sdynpy_system_metadata,
     manual_sdynpy_system_metadata,
 )
-from rattlesnake.examples.hardware.state_space.state_space_metadata import (
+from rattlesnake.examples.hardware.state_space_metadata import (
     worksheet_state_space_metadata,
     netcdf_state_space_metadata,
     manual_state_space_metadata,
@@ -27,7 +27,7 @@ from rattlesnake.examples.hardware.stream_metadata import (
     stream_metadata_profile,
 )
 
-from rattlesnake.examples.environment.modal.modal_metadata import (
+from rattlesnake.examples.environment.modal_metadata import (
     worksheet_modal_metadata,
     netcdf_modal_metadata,
     manual_modal_metadata,
@@ -35,7 +35,7 @@ from rattlesnake.examples.environment.modal.modal_metadata import (
     modal_event_list,
     worksheet_modal_event_list,
 )
-from rattlesnake.examples.environment.random.random_metadata import (
+from rattlesnake.examples.environment.random_metadata import (
     worksheet_random_metadata,
     netcdf_random_metadata,
     manual_random_metadata,
@@ -44,7 +44,7 @@ from rattlesnake.examples.environment.random.random_metadata import (
     random_event_list,
     worksheet_random_event_list,
 )
-from rattlesnake.examples.environment.sine.sine_metadata import (
+from rattlesnake.examples.environment.sine_metadata import (
     worksheet_sine_metadata,
     netcdf_sine_metadata,
     manual_sine_metadata,
@@ -53,7 +53,7 @@ from rattlesnake.examples.environment.sine.sine_metadata import (
     sine_event_list,
     worksheet_sine_event_list,
 )
-from rattlesnake.examples.environment.sds.sds_metadata import (
+from rattlesnake.examples.environment.sds_metadata import (
     worksheet_sds_metadata,
     netcdf_sds_metadata,
     manual_sds_metadata,
@@ -61,7 +61,7 @@ from rattlesnake.examples.environment.sds.sds_metadata import (
     sds_event_list,
     worksheet_sds_event_list,
 )
-from rattlesnake.examples.environment.read.read_metadata import (
+from rattlesnake.examples.environment.read_metadata import (
     manual_read_metadata,
     worksheet_read_metadata,
     netcdf_read_metadata,
@@ -69,7 +69,7 @@ from rattlesnake.examples.environment.read.read_metadata import (
     read_event_list,
     worksheet_read_event_list,
 )
-from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
+from rattlesnake.examples.environment.skeleton_metadata import (
     worksheet_skeleton_metadata,
     netcdf_skeleton_metadata,
     manual_skeleton_metadata,
@@ -77,19 +77,19 @@ from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
     skeleton_event_list,
     worksheet_skeleton_event_list,
 )
-from rattlesnake.examples.environment.skeleton_sysid.skeleton_sysid_metadata import (
+from rattlesnake.examples.environment.skeleton_sysid_metadata import (
     worksheet_skeleton_sysid_metadata,
     netcdf_skeleton_sysid_metadata,
     manual_skeleton_sysid_metadata,
     skeleton_sysid_instructions,
 )
-from rattlesnake.examples.environment.sysid.sysid_metadata import (
+from rattlesnake.examples.environment.sysid_metadata import (
     netcdf_sysid_data_package,
     netcdf_sysid_metadata,
     worksheet_sysid_metadata,
     manual_sysid_metadata,
 )
-from rattlesnake.examples.environment.time.time_metadata import (
+from rattlesnake.examples.environment.time_metadata import (
     create_time_signal,
     worksheet_time_metadata,
     netcdf_time_metadata,
@@ -98,7 +98,7 @@ from rattlesnake.examples.environment.time.time_metadata import (
     time_event_list,
     worksheet_time_event_list,
 )
-from rattlesnake.examples.environment.transient.transient_metadata import (
+from rattlesnake.examples.environment.transient_metadata import (
     worksheet_transient_metadata,
     netcdf_transient_metadata,
     manual_transient_metadata,

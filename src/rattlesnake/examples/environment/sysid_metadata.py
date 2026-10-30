@@ -11,7 +11,7 @@ from rattlesnake import data
 
 
 def netcdf_sysid_data_package():
-    netcdf_dir = data.fetch(name="environment/sysid/sysid_data.nc4")
+    netcdf_dir = data.fetch(name="environment/data/sysid_data.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups["sysid"]
     data_package = SysIdDataPackage.load_package_from_netcdf(netcdf_group)
@@ -20,7 +20,7 @@ def netcdf_sysid_data_package():
 
 
 def netcdf_sysid_metadata(hardware_metadata):
-    netcdf_dir = data.fetch(name="environment/sysid/sysid.nc4")
+    netcdf_dir = data.fetch(name="environment/data/sysid.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
     netcdf_group = netcdf_dataset.groups["sysid"]
     metadata = SysIdMetadata.load_metadata_from_netcdf(netcdf_group, hardware_metadata)
@@ -29,7 +29,7 @@ def netcdf_sysid_metadata(hardware_metadata):
 
 
 def worksheet_sysid_metadata(hardware_metadata):
-    worksheet_dir = defaults.DIRECTORY + "/environment/sysid/sysid.xlsx"
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/sysid.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
     worksheet = workbook["sysid"]
 

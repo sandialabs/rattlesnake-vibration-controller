@@ -4,34 +4,34 @@ import netCDF4 as nc4
 import rattlesnake.examples.defaults as defaults
 
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.exodus_modal_solution_hardware import (
-    ExodusMetadata,
+from rattlesnake.hardware.state_space_virtual_hardware import (
+    StateSpaceMetadata,
 )
 from rattlesnake import data
 
-HARDWARE_FILE = defaults.DIRECTORY + "/hardware/exodus/exodus.exo"
+HARDWARE_FILE_NAME = "hardware/data/state_space.npz"
 
 
-def worksheet_exodus_metadata():
-    worksheet_dir = defaults.DIRECTORY + "/hardware/exodus/exodus_v4.xlsx"
+def worksheet_state_space_metadata():
+    worksheet_dir = defaults.DIRECTORY + "/hardware/data/state_space.xlsx"
     workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
-    metadata = ExodusMetadata.load_metadata_from_workbook(workbook)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata = StateSpaceMetadata.load_metadata_from_workbook(workbook)
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     workbook.close()
     return metadata
 
 
-def netcdf_exodus_metadata():
-    netcdf_dir = data.fetch(name="hardware/exodus/exodus_v4.nc4")
+def netcdf_state_space_metadata():
+    netcdf_dir = data.fetch(name="hardware/data/state_space.nc4")
     netcdf_dataset = nc4.Dataset(netcdf_dir)
-    metadata = ExodusMetadata.load_metadata_from_netcdf(netcdf_dataset)
-    metadata.hardware_file = HARDWARE_FILE
+    metadata = StateSpaceMetadata.load_metadata_from_netcdf(netcdf_dataset)
+    metadata.hardware_file = data.fetch(name=HARDWARE_FILE_NAME)
     netcdf_dataset.close()
     return metadata
 
 
-def manual_exodus_metadata(**overrides):
-    """Builds an ExodusMetadata with sensible example defaults, letting
+def manual_state_space_metadata(**overrides):
+    """Builds a StateSpaceMetadata with sensible example defaults, letting
     individual attributes be overridden via kwargs (e.g. sample_rate=300000)."""
     directions = ["X+", "Y+", "Z+"]
     force_nodes = [13, 131, 135]
@@ -60,14 +60,14 @@ def manual_exodus_metadata(**overrides):
                 feedback_device="Input",
             )
             channel_list.append(channel)
+
     kwargs = dict(
         channel_list=channel_list,
         sample_rate=defaults.SAMPLE_RATE,
         time_per_read=defaults.BUFFER_SIZE,
         time_per_write=defaults.BUFFER_SIZE,
         output_oversample=defaults.OUTPUT_OVERSAMPLE,
-        hardware_file=HARDWARE_FILE,
-        damping_ratio=defaults.DAMPING_RATIO,
+        hardware_file=data.fetch(name=HARDWARE_FILE_NAME),
     )
     kwargs.update(overrides)
-    return ExodusMetadata(**kwargs)
+    return StateSpaceMetadata(**kwargs)

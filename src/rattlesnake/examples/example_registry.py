@@ -1,19 +1,19 @@
-from rattlesnake.examples.hardware.sdynpy_system.sdynpy_system_metadata import (
+from rattlesnake.examples.hardware.sdynpy_system_metadata import (
     manual_sdynpy_system_metadata,
     netcdf_sdynpy_system_metadata,
     worksheet_sdynpy_system_metadata,
 )
-from rattlesnake.examples.hardware.sdynpy_frf.sdynpy_frf_metadata import (
+from rattlesnake.examples.hardware.sdynpy_frf_metadata import (
     manual_sdynpy_frf_metadata,
     netcdf_sdynpy_frf_metadata,
     worksheet_sdynpy_frf_metadata,
 )
-from rattlesnake.examples.hardware.state_space.state_space_metadata import (
+from rattlesnake.examples.hardware.state_space_metadata import (
     manual_state_space_metadata,
     netcdf_state_space_metadata,
     worksheet_state_space_metadata,
 )
-from rattlesnake.examples.hardware.exodus.exodus_metadata import (
+from rattlesnake.examples.hardware.exodus_metadata import (
     manual_exodus_metadata,
     netcdf_exodus_metadata,
     worksheet_exodus_metadata,
@@ -25,7 +25,7 @@ from rattlesnake.examples.hardware.stream_metadata import (
     stream_metadata_profile,
     stream_metadata_test_level,
 )
-from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
+from rattlesnake.examples.environment.skeleton_metadata import (
     manual_skeleton_metadata,
     netcdf_skeleton_metadata,
     worksheet_skeleton_metadata,
@@ -33,13 +33,15 @@ from rattlesnake.examples.environment.skeleton.skeleton_metadata import (
     worksheet_skeleton_event_list,
     skeleton_instructions,
 )
-from rattlesnake.examples.environment.skeleton_sysid.skeleton_sysid_metadata import (
+from rattlesnake.examples.environment.skeleton_sysid_metadata import (
     manual_skeleton_sysid_metadata,
     netcdf_skeleton_sysid_metadata,
     worksheet_skeleton_sysid_metadata,
     skeleton_sysid_instructions,
+    skeleton_sysid_event_list,
+    worksheet_skeleton_sysid_event_list,
 )
-from rattlesnake.examples.environment.read.read_metadata import (
+from rattlesnake.examples.environment.read_metadata import (
     manual_read_metadata,
     netcdf_read_metadata,
     worksheet_read_metadata,
@@ -47,7 +49,7 @@ from rattlesnake.examples.environment.read.read_metadata import (
     read_event_list,
     worksheet_read_event_list,
 )
-from rattlesnake.examples.environment.time.time_metadata import (
+from rattlesnake.examples.environment.time_metadata import (
     manual_time_metadata,
     netcdf_time_metadata,
     worksheet_time_metadata,
@@ -55,7 +57,7 @@ from rattlesnake.examples.environment.time.time_metadata import (
     worksheet_time_event_list,
     time_instructions,
 )
-from rattlesnake.examples.environment.modal.modal_metadata import (
+from rattlesnake.examples.environment.modal_metadata import (
     manual_modal_metadata,
     netcdf_modal_metadata,
     worksheet_modal_metadata,
@@ -63,7 +65,7 @@ from rattlesnake.examples.environment.modal.modal_metadata import (
     modal_event_list,
     worksheet_modal_event_list,
 )
-from rattlesnake.examples.environment.sine.sine_metadata import (
+from rattlesnake.examples.environment.sine_metadata import (
     manual_sine_metadata,
     worksheet_sine_metadata,
     netcdf_sine_metadata,
@@ -71,13 +73,13 @@ from rattlesnake.examples.environment.sine.sine_metadata import (
     sine_event_list,
     worksheet_sine_event_list,
 )
-from rattlesnake.examples.environment.sysid.sysid_metadata import (
+from rattlesnake.examples.environment.sysid_metadata import (
     manual_sysid_metadata,
     worksheet_sysid_metadata,
     netcdf_sysid_metadata,
     netcdf_sysid_data_package,
 )
-from rattlesnake.examples.environment.random.random_metadata import (
+from rattlesnake.examples.environment.random_metadata import (
     manual_random_metadata,
     netcdf_random_metadata,
     worksheet_random_metadata,
@@ -85,7 +87,7 @@ from rattlesnake.examples.environment.random.random_metadata import (
     random_event_list,
     worksheet_random_event_list,
 )
-from rattlesnake.examples.environment.transient.transient_metadata import (
+from rattlesnake.examples.environment.transient_metadata import (
     netcdf_transient_metadata,
     manual_transient_metadata,
     worksheet_transient_metadata,
@@ -93,7 +95,7 @@ from rattlesnake.examples.environment.transient.transient_metadata import (
     transient_event_list,
     worksheet_transient_event_list,
 )
-from rattlesnake.examples.environment.sds.sds_metadata import (
+from rattlesnake.examples.environment.sds_metadata import (
     netcdf_sds_metadata,
     manual_sds_metadata,
     worksheet_sds_metadata,
@@ -102,6 +104,7 @@ from rattlesnake.examples.environment.sds.sds_metadata import (
     worksheet_sds_event_list,
 )
 
+from rattlesnake import data
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import EnvironmentType
 from rattlesnake.process.streaming import StreamType
@@ -206,33 +209,34 @@ ENVIRONMENT_DICT[EnvironmentType.TRANSIENT] = TRANSIENT_DICT
 ENVIRONMENT_DICT[EnvironmentType.SDS] = SDS_DICT
 
 # Example Files for Testing Suite
+# Resolve only the requested asset: EXAMPLE_NETCDF[environment_type]().
+# Worksheets remain bundled and retain direct paths.
 EXAMPLE_NETCDF = {
-    EnvironmentType.SKELETON: defaults.DIRECTORY
-    + "/environment/skeleton/skeleton_v4.nc4",
-    EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
-    + "/environment/skeleton_sysid/skeleton_sysid_v4.nc4",
-    EnvironmentType.READ: defaults.DIRECTORY + "/environment/read/read_v4.nc4",
-    EnvironmentType.TIME: defaults.DIRECTORY + "/environment/time/time_v4.nc4",
-    EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/modal/modal_v4.nc4",
-    EnvironmentType.SINE: defaults.DIRECTORY + "/environment/sine/sine_v4.nc4",
-    EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/random/random_v4.nc4",
-    EnvironmentType.TRANSIENT: defaults.DIRECTORY
-    + "/environment/transient/transient_v4.nc4",
-    EnvironmentType.SDS: defaults.DIRECTORY + "/environment/sds/sds_v4.nc4",
+    EnvironmentType.SKELETON: lambda: data.fetch(name="environment/data/skeleton.nc4"),
+    EnvironmentType.SYSID_SKELETON: lambda: data.fetch(
+        name="environment/data/skeleton_sysid.nc4"
+    ),
+    EnvironmentType.READ: lambda: data.fetch(name="environment/data/read.nc4"),
+    EnvironmentType.TIME: lambda: data.fetch(name="environment/data/time.nc4"),
+    EnvironmentType.MODAL: lambda: data.fetch(name="environment/data/modal.nc4"),
+    EnvironmentType.SINE: lambda: data.fetch(name="environment/data/sine.nc4"),
+    EnvironmentType.RANDOM: lambda: data.fetch(name="environment/data/random.nc4"),
+    EnvironmentType.TRANSIENT: lambda: data.fetch(
+        name="environment/data/transient.nc4"
+    ),
+    EnvironmentType.SDS: lambda: data.fetch(name="environment/data/sds.nc4"),
 }
 EXAMPLE_WORKSHEET = {
-    EnvironmentType.SKELETON: defaults.DIRECTORY
-    + "/environment/skeleton/skeleton_v4.xlsx",
+    EnvironmentType.SKELETON: defaults.DIRECTORY + "/environment/data/skeleton.xlsx",
     EnvironmentType.SYSID_SKELETON: defaults.DIRECTORY
-    + "/environment/skeleton_sysid/skeleton_sysid_v4.xlsx",
-    EnvironmentType.READ: defaults.DIRECTORY + "/environment/read/read_v4.xlsx",
-    EnvironmentType.TIME: defaults.DIRECTORY + "/environment/time/time_v4.xlsx",
-    EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/modal/modal_v4.xlsx",
-    EnvironmentType.SINE: defaults.DIRECTORY + "/environment/sine/sine_v4.xlsx",
-    EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/random/random_v4.xlsx",
-    EnvironmentType.TRANSIENT: defaults.DIRECTORY
-    + "/environment/transient/transient_v4.xlsx",
-    EnvironmentType.SDS: defaults.DIRECTORY + "/environment/sds/sds_v4.xlsx",
+    + "/environment/data/skeleton_sysid.xlsx",
+    EnvironmentType.READ: defaults.DIRECTORY + "/environment/data/read.xlsx",
+    EnvironmentType.TIME: defaults.DIRECTORY + "/environment/data/time.xlsx",
+    EnvironmentType.MODAL: defaults.DIRECTORY + "/environment/data/modal.xlsx",
+    EnvironmentType.SINE: defaults.DIRECTORY + "/environment/data/sine.xlsx",
+    EnvironmentType.RANDOM: defaults.DIRECTORY + "/environment/data/random.xlsx",
+    EnvironmentType.TRANSIENT: defaults.DIRECTORY + "/environment/data/transient.xlsx",
+    EnvironmentType.SDS: defaults.DIRECTORY + "/environment/data/sds.xlsx",
 }
 
 # System Identification
@@ -264,9 +268,9 @@ SKELETON_EVENT_DICT = {
     "worksheet": worksheet_skeleton_event_list,
 }
 SKELETON_SYSID_EVENT_DICT = {
-    "worksheet": lambda: [],
-    "netcdf": lambda: [],
-    "manual": lambda: [],
+    "manual": skeleton_sysid_event_list,
+    "netcdf": skeleton_sysid_event_list,
+    "worksheet": worksheet_skeleton_sysid_event_list,
 }
 READ_EVENT_DICT = {
     "manual": read_event_list,
