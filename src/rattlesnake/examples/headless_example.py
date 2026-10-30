@@ -18,9 +18,9 @@ from rattlesnake.process.streaming import StreamType
 """USER INPUTS"""
 THREADED = False
 TIMEOUT = 20
-IMPORT_METHOD = "netcdf"  # worksheet, netcdf, manual
+IMPORT_METHOD = "worksheet"  # worksheet, netcdf, manual
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
-ENVIRONMENT_TYPE = EnvironmentType.NONE
+ENVIRONMENT_TYPE = EnvironmentType.SYSID_SKELETON
 STREAM_TYPE = StreamType.NO_STREAM
 LOAD_SYSID = False
 RUN_SYSID = False
@@ -41,6 +41,7 @@ def build_example_rattlesnake_object(
     start_hardware=START_HARDWARE,
     start_environment=START_ENVIRONMENT,
     run_profile=RUN_PROFILE,
+    output_directory=None,
 ):
     rattlesnake = RattlesnakeController(threaded=threaded, timeout=timeout)
 
@@ -71,7 +72,9 @@ def build_example_rattlesnake_object(
 
     # Initialize profile event list and stream metadata in the UI (Don't normally need this for headless)
     event_list = EVENT_DICT[environment_type][import_method]()
-    stream_metadata = STREAM_DICT[stream_type](environment_name)
+    stream_metadata = STREAM_DICT[stream_type](
+        environment_name, output_directory=output_directory
+    )
     rattlesnake.initialize_profile_event_list(event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
 

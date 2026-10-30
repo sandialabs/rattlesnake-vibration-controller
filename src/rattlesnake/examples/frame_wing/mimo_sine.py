@@ -10,6 +10,7 @@ from rattlesnake.environment.sine_sys_id_utilities import load_specification, Si
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+from rattlesnake import data
 
 
 def build_mimo_sine_controller(threaded=False):
@@ -34,7 +35,7 @@ def build_mimo_sine_controller(threaded=False):
         time_per_read=0.25,
         time_per_write=0.25,
         output_oversample=10,
-        hardware_file=rattlesnake_directory + "/frame_wing/data/rattlesnake_state_space_system.npz",
+        hardware_file=data.fetch(name="frame_wing/data/rattlesnake_state_space_system.npz"),
     )
 
     rattlesnake.initialize_hardware(hardware_metadata)
@@ -76,7 +77,7 @@ def build_mimo_sine_controller(threaded=False):
         aborts,
         start_time,
         name,
-    ) = load_specification(rattlesnake_directory + "/frame_wing/data/sine_specification.npz")
+    ) = load_specification(data.fetch(name="frame_wing/data/sine_specification.npz"))
 
     spec = SineSpecification(
         name=name,

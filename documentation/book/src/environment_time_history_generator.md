@@ -37,7 +37,7 @@ In addition to the signal that will be played to the excitation devices, there i
 :::{figure} figures/time_history_generator_environment_definition.png
 :label: fig:timehistorygeneratorenvironmentdefinition
 :align: center
-GUI defining the Time History Generation environment
+GUI defining the Time History Generation environment.
 :::
 
 Pressing the `Load Signal` button brings up a file dialog from which the signal file can be loaded.  Once the file is loaded, it is displayed in the main plot window.  Signal statistics are also displayed in the adjacent table.  The checkbox in the `Show?` column of the table can be used to show or hide individual signals.  The signal name in the `Signal` column is constructed from the node number and direction in the channel table.  The `Max` and `RMS` value of the signal is also displayed.
@@ -62,7 +62,7 @@ The Time History Generator environment is then run on the `Run Test` tab of the 
 :::{figure} figures/time_history_generator_run_test.png
 :label: fig:timehistorygeneratorruntest
 :align: center
-GUI for running the Time History Generator Environment
+GUI for running the Time History Generator Environment.
 :::
 
 Two parameters can be defined prior to starting the environment.

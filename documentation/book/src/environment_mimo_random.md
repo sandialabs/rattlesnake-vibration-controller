@@ -1099,7 +1099,7 @@ Representative 6DoF setup showing 12 shakers attached to a rigid table with four
 
 To set up the output transformation, one should examine the geometry of the test setup to identify which shakers excite which motions.  For example, to move the table vertically in the Y+ direction, the four bottom shakers (9, 10, 11, and 12) should excite with a positive signal (here, a positive signal is assumed to be compressive, pushing the table away from the shaker; this may vary depending on shaker wiring).  For this case, the row of the output transformation matrix should contain a 1 for shaker signals 9, 10, 11, and 12, and a zero for other shakers.  Similar reasoning can be used for rotations: to rotate about the positive Z+ direction, shakers 11 and 12 should push with a positive signal and shakers 9 and 10 should pull with a negative signal.  Therefore, the row corresponding to this degree of freedom would have -1 for shakers 9 and 10 and +1 for 11 and 12.  The full output transformation for this case can be seen in @tab:6DoF_Output_Transform.  This matrix transforms the 12 physical shaker signals into 6 rigid body motions of the table.
 
-:::{table} Output transformation for the 6DoF test shown in @fig:6dof
+:::{table} Output transformation for the 6DoF test shown in @fig:6dof.
 :label: tab:6DoF_Output_Transform
 :align: center
 |Shaker | 1 | 2  | 3 | 4  | 5  | 6  | 7  | 8  | 9  | 10 | 11 | 12 |
@@ -1115,7 +1115,7 @@ To set up the output transformation, one should examine the geometry of the test
 
 To generate the response transformation matrix, it is often helpful to construct the inverse transformation and then invert it to recover the response transformation matrix.  As an example, we will investigate the measured signals by the accelerometers if the table is translated one unit in the X+ direction.  In this case, all accelerometers pointing in the X+ direction would see a one unit signal.  Therefore the column of the inverse transformation corresponding to a X+ direction motion would have 1 for all channels pointing in that direction.  If the table is rotated about the Y+ direction, the 1X+, 1Z+, 2X+, and 4Z+ channels will see positive motion, and the 2Z+, 3X+, 3Z+ and 4X+ channels will see negative motions, so the rows corresponding to those channels should be populated with +1 or -1, respectively.  Note that there technically should be a moment arm computed by the distance from the accelerometer to the center-line of the table in the real rotation calculation; however, if all accelerometers are equidistant, this term can be dropped, and the system identification will compensate accordingly.  @tab:6DoF_Response_Transform_inverse shows the constructed inverse transformation, and @tab:6DoF_Response_Transform shows the response transform matrix that should be provided to Rattlesnake. 
 
-:::{table} Inverse response transformation for the 6DoF test shown in @fig:6dof
+:::{table} Inverse response transformation for the 6DoF test shown in @fig:6dof.
 :label: tab:6DoF_Response_Transform_inverse
 :align: center
 |Channel | DX+ | DY+ | DZ+ | RX+ | RY+ | RZ+ |
@@ -1135,7 +1135,7 @@ To generate the response transformation matrix, it is often helpful to construct
 :::
 
 
-:::{table} Response transformation for the 6DoF test shown in @fig:6dof
+:::{table} Response transformation for the 6DoF test shown in @fig:6dof.
 :label: tab:6DoF_Response_Transform
 :align: center
 |Channel |  1X+   |  1Y+   |  1Z+   |  2X+  |  2Y+   |  2Z+   |  3X+   |  3Y+   |  3Z+   |  4X+   |  4Y+   |  4Z+  |
@@ -1170,7 +1170,7 @@ Transformation matrices are specified by clicking the `Transformation Matrices..
 :::{figure} figures/transformation_matrix_dialog.png
 :label: fig:transformation_matrix_dialog
 :align: center
-Transformation Matrix Dialog Box
+Transformation Matrix Dialog Box.
 :::
 
 The top portion of the window corresponds to the Response Transformations, which are transformations applied to the physical control channels to create virtual control channels, and the bottom portion of the window corresponds to the Output transformations, which are transformations applied to the physical excitation channels to create virtual excitation sources.

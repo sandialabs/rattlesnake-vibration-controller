@@ -12,6 +12,7 @@ from rattlesnake.environment.random_vibration_sys_id_utilities import load_speci
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+from rattlesnake import data
 
 
 def build_mimo_random_controller(threaded=False):
@@ -36,7 +37,7 @@ def build_mimo_random_controller(threaded=False):
         time_per_read=0.25,
         time_per_write=0.25,
         output_oversample=10,
-        hardware_file=rattlesnake_directory + "/frame_wing/data/rattlesnake_state_space_system.npz",
+        hardware_file=data.fetch(name="frame_wing/data/rattlesnake_state_space_system.npz"),
     )
 
     rattlesnake.initialize_hardware(hardware_metadata)
@@ -63,7 +64,7 @@ def build_mimo_random_controller(threaded=False):
     )
 
     spec_freq_lines, spec_cpsd_matrix, spec_warning_matrix, spec_abort_matrix = load_specification(
-        spec_path=rattlesnake_directory + "/frame_wing/data/random_vibration_specification.npz",
+        spec_path=data.fetch(name="frame_wing/data/random_vibration_specification.npz"),
         n_freq_lines=sysid_parameters.sysid_frame_size // 2 + 1,
         df=sysid_parameters.sample_rate / sysid_parameters.sysid_frame_size,
     )
