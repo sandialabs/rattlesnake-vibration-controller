@@ -77,9 +77,6 @@ from rattlesnake.process.controller import controller_process
 from rattlesnake.process.output import output_process
 from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
 
-# from rattlesnake.process.sysid_data_analysis import SysIdMetadata
-
-
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
 THREADING = False  # Decides whether to spin up multiple processes or threads
@@ -1126,7 +1123,36 @@ class RattlesnakeController:
     # endregion
 
     # region System Id
-    def initialize_system_id(self, sysid_metadata, environment_name):
+    def initialize_system_id(
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Initialize system identification metadata for an environment.
+
+        Validates that system identification metadata can be stored in the current
+        state, validates the metadata against hardware and environment
+        configuration, sends initialization through the environment manager, waits
+        for the environment ready event when blocking mode is enabled, and updates
+        stored environment metadata.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to initialize.
+        environment_name : str
+            User-facing environment name associated with the metadata.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit system identification
+            initialization.
+        RattlesnakeError
+            If system identification metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         if self.state not in (
             RattlesnakeState.ENVIRONMENT_STORE,
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -1155,7 +1181,31 @@ class RattlesnakeController:
 
         self.environment_metadata = environment_metadata
 
-    def start_system_id_noise(self, environment_name):
+    def start_system_id_noise(self, environment_name: str) -> None:
+        """
+        Starts the noise phase for a system identification test.
+
+        Validates that hardware is active, resolves the environment queue name,
+        sends a start-system-identification-noise command to the controller
+        process, and waits for the environment system identification active event
+        when blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name whose noise measurement should start.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``HARDWARE_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
+
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for starting system identification: {self.state}"
@@ -1178,7 +1228,31 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=True
             )
 
-    def start_system_id_transfer_function(self, environment_name):
+    def start_system_id_transfer_function(self, environment_name: str) -> None:
+        """
+        Starts the transfer-function phase of system identification.
+
+        Validates that hardware is active, resolves the environment queue name,
+        sends a start-system-identification-transfer command to the controller
+        process, and waits for the environment system identification active event
+        when blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name whose transfer-function measurement should
+            start.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``HARDWARE_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for starting system identification: {self.state}"
@@ -1201,7 +1275,30 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=True
             )
 
-    def stop_system_id(self, environment_name):
+    def stop_system_id(self, environment_name: str) -> None:
+        """
+        Stops active system identification.
+
+        Validates that system identification is active, resolves the environment
+        queue name, sends a stop-system-identification command to the controller
+        process, and waits for the system identification active event to clear when
+        blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name whose system identification should stop.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``SYS_ID_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.SYS_ID_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for stopping system identification {self.state}"
@@ -1224,7 +1321,32 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    def preview_system_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
+    def preview_system_id_noise(
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Performs a preview of the noise for the system identification for the
+        environment.
+
+        This is used in headless mode as the preview button. It starts the
+        acquisition, initializes the system identification metadata, and starts
+        the system identification noise without streaming.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to preview.
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``ENVIRONMENT_STORE`` state.
+
+        Unit Tests
+        ----------
+        """
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
 
@@ -1243,8 +1365,31 @@ class RattlesnakeController:
         self.start_system_id_noise(environment_name)
 
     def preview_system_id_transfer(
-        self, sysid_metadata: SysIdMetadata, environment_name
-    ):
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Performs a preview of the transfer function for the system identification
+        for the environment.
+
+        This is used in headless mode as the preview button. It initializes the
+        system identification metadata, starts the acquisition, and starts the
+        system identification transfer function without streaming.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to preview.
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``ENVIRONMENT_STORE`` state.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 "Invalid state for previewing system identification "
@@ -1259,7 +1404,34 @@ class RattlesnakeController:
         self.start_acquisition(stream_metadata)
         self.start_system_id_transfer_function(environment_name)
 
-    def run_system_id(self, sysid_metadata: SysIdMetadata, environment_name):
+    def run_system_id(
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Performs a full system identification for the environment.
+
+        This is used in headless mode as the start button. It initializes the
+        system identification metadata, starts the acquisition, and runs the
+        system identification noise followed by the transfer function. Each phase
+        shuts down automatically when complete, after which the acquisition is
+        stopped. If the metadata has a ``stream_file``, each phase is streamed to
+        that file.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to run.
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``ENVIRONMENT_STORE`` state.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for running system identification: {self.state}"
@@ -1313,7 +1485,30 @@ class RattlesnakeController:
             self.stop_streaming()
         self.stop_acquisition()
 
-    def stop_system_id_run(self, environment_name):
+    def stop_system_id_run(self, environment_name: str) -> None:
+        """
+        Stops a system identification preview or run early.
+
+        Used within a headless script or Jupyter notebook to stop the system
+        identification early. If the system identification is active, it is
+        stopped before the acquisition is stopped. If only the hardware is
+        active, the acquisition is stopped.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``HARDWARE_ACTIVE`` or
+            ``SYS_ID_ACTIVE`` state, or if no environment exists with
+            ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
             return
