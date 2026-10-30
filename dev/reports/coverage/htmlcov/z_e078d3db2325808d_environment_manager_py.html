@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/rattlesnake/environment_manager.py: 72%</title>
+    <title>Coverage for src/rattlesnake/environment_manager.py: 75%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src&#8201;/&#8201;rattlesnake&#8201;/&#8201;environment_manager.py</b>:
-            <span class="pc_cov">72%</span>
+            <span class="pc_cov">75%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">288 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">206<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">82<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">217<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">71<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_8b994c311233d423___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-10-16 14:09 +0000
+            created at 2026-10-30 22:29 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -335,15 +335,15 @@
     <p class="run"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t">        <span class="key">return</span> <span class="nam">environment_metadata_dict</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">    <span class="key">def</span> <span class="nam">initialize_system_id</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">sysid_metadata</span><span class="op">,</span> <span class="nam">queue_name</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">        <span class="nam">environment_metadata_dict</span> <span class="op">=</span> <span class="nam">copy</span><span class="op">.</span><span class="nam">deepcopy</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">environment_metadata</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">        <span class="nam">environment_metadata</span> <span class="op">=</span> <span class="nam">environment_metadata_dict</span><span class="op">[</span><span class="nam">queue_name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">        <span class="nam">environment_metadata</span><span class="op">.</span><span class="nam">sysid_metadata</span> <span class="op">=</span> <span class="nam">sysid_metadata</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">        <span class="nam">environment_metadata_dict</span> <span class="op">=</span> <span class="nam">copy</span><span class="op">.</span><span class="nam">deepcopy</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">environment_metadata</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">        <span class="nam">environment_metadata</span> <span class="op">=</span> <span class="nam">environment_metadata_dict</span><span class="op">[</span><span class="nam">queue_name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">        <span class="nam">environment_metadata</span><span class="op">.</span><span class="nam">sysid_metadata</span> <span class="op">=</span> <span class="nam">sysid_metadata</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">queue_container</span><span class="op">.</span><span class="nam">environment_command_queues</span><span class="op">[</span><span class="nam">queue_name</span><span class="op">]</span><span class="op">.</span><span class="nam">put</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">            <span class="nam">TASK_NAME</span><span class="op">,</span> <span class="op">(</span><span class="nam">GlobalCommands</span><span class="op">.</span><span class="nam">INITIALIZE_SYSTEM_ID</span><span class="op">,</span> <span class="nam">sysid_metadata</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">queue_container</span><span class="op">.</span><span class="nam">environment_command_queues</span><span class="op">[</span><span class="nam">queue_name</span><span class="op">]</span><span class="op">.</span><span class="nam">put</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">            <span class="nam">TASK_NAME</span><span class="op">,</span> <span class="op">(</span><span class="nam">GlobalCommands</span><span class="op">.</span><span class="nam">INITIALIZE_SYSTEM_ID</span><span class="op">,</span> <span class="nam">sysid_metadata</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">        <span class="key">return</span> <span class="nam">environment_metadata_dict</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">        <span class="key">return</span> <span class="nam">environment_metadata_dict</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">    <span class="key">def</span> <span class="nam">find_sysid_compatible_environments</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">environment_name</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -408,24 +408,24 @@
     <p class="run"><span class="n"><a id="t326" href="#t326">326</a></span><span class="t">    <span class="key">def</span> <span class="nam">validate_system_id_metadata</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t327" href="#t327">327</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span> <span class="nam">sysid_metadata</span><span class="op">,</span> <span class="nam">hardware_metadata</span><span class="op">,</span> <span class="nam">environment_name</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t328" href="#t328">328</a></span><span class="t">    <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t">        <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">sysid_metadata</span><span class="op">,</span> <span class="nam">SysIdMetadata</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t329" href="#t329">329</a></span><span class="t">        <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">sysid_metadata</span><span class="op">,</span> <span class="nam">SysIdMetadata</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t330" href="#t330">330</a></span><span class="t">            <span class="key">raise</span> <span class="nam">RattlesnakeError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t331" href="#t331">331</a></span><span class="t">                <span class="str">"Rattlesnake.initialize_system_id was not given a SysIdMetadata object"</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t332" href="#t332">332</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t">            <span class="nam">queue_name</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">queue_names_dict</span><span class="op">[</span><span class="nam">environment_name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t333" href="#t333">333</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t334" href="#t334">334</a></span><span class="t">            <span class="nam">queue_name</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">queue_names_dict</span><span class="op">[</span><span class="nam">environment_name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t335" href="#t335">335</a></span><span class="t">        <span class="key">except</span> <span class="nam">KeyError</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t336" href="#t336">336</a></span><span class="t">            <span class="key">raise</span> <span class="nam">RattlesnakeError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t337" href="#t337">337</a></span><span class="t">                <span class="fst">f"</span><span class="fst">No environments exist for </span><span class="op">{</span><span class="nam">environment_name</span><span class="op">}</span><span class="fst"> instruction</span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t338" href="#t338">338</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t">        <span class="nam">environment_type</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">environment_types</span><span class="op">[</span><span class="nam">queue_name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t">        <span class="key">if</span> <span class="nam">environment_type</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">SYSID_ENVIRONMENTS</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t">        <span class="nam">environment_type</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">environment_types</span><span class="op">[</span><span class="nam">queue_name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t">        <span class="key">if</span> <span class="nam">environment_type</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">SYSID_ENVIRONMENTS</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t341" href="#t341">341</a></span><span class="t">            <span class="key">raise</span> <span class="nam">RattlesnakeError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t">                <span class="fst">f"</span><span class="op">{</span><span class="nam">environment_name</span><span class="op">}</span><span class="fst"> is a </span><span class="op">{</span><span class="nam">environment_type</span><span class="op">}</span><span class="fst"> environment </span><span class="fst">"</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t343" href="#t343">343</a></span><span class="t">                <span class="str">"which does not require system identification"</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t344" href="#t344">344</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">        <span class="key">return</span> <span class="nam">queue_name</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">        <span class="key">return</span> <span class="nam">queue_name</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">    <span class="key">def</span> <span class="nam">validate_system_id_package</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span> <span class="nam">environment_name</span><span class="op">,</span> <span class="nam">data_package</span><span class="op">:</span> <span class="nam">SysIdDataPackage</span>&nbsp;</span><span class="r"></span></p>
@@ -706,7 +706,7 @@
             <a class="nav" href="z_8b994c311233d423___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-10-16 14:09 +0000
+            created at 2026-10-30 22:29 +0000
         </p>
     </div>
 </footer>

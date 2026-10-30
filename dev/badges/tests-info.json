@@ -1,12 +1,12 @@
 {
-  "total": 663,
-  "passed": 663,
+  "total": 817,
+  "passed": 817,
   "failed": 0,
   "skipped": 0,
-  "message": "663 pass 0 fail",
+  "message": "817 pass 0 fail",
   "color": "brightgreen",
   "workflow_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml?query=branch%3Adev",
-  "run_id": "38913276011",
-  "artifact_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/38913276011",
-  "timestamp": "2026-10-16T14:36:12Z"
+  "run_id": "41138220068",
+  "artifact_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/runs/41138220068",
+  "timestamp": "2026-10-30T22:49:25Z"
 }

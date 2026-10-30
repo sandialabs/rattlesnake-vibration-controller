@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/rattlesnake/utilities.py: 35%</title>
+    <title>Coverage for src/rattlesnake/utilities.py: 36%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src&#8201;/&#8201;rattlesnake&#8201;/&#8201;utilities.py</b>:
-            <span class="pc_cov">35%</span>
+            <span class="pc_cov">36%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">689 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">239<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">450<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">250<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">439<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="index.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-10-16 14:09 +0000
+            created at 2026-10-30 22:29 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1129,8 +1129,8 @@
     <p class="pln"><span class="n"><a id="t1047" href="#t1047">1047</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1048" href="#t1048">1048</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1049" href="#t1049">1049</a></span><span class="t"><span class="key">def</span> <span class="nam">load_control_module</span><span class="op">(</span><span class="nam">control_script</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1050" href="#t1050">1050</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">control_script</span><span class="op">.</span><span class="nam">endswith</span><span class="op">(</span><span class="str">".py"</span><span class="op">)</span> <span class="key">and</span> <span class="key">not</span> <span class="nam">os</span><span class="op">.</span><span class="nam">path</span><span class="op">.</span><span class="nam">isfile</span><span class="op">(</span><span class="nam">control_script</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1051" href="#t1051">1051</a></span><span class="t">        <span class="key">return</span> <span class="nam">importlib</span><span class="op">.</span><span class="nam">import_module</span><span class="op">(</span><span class="nam">control_script</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1050" href="#t1050">1050</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">control_script</span><span class="op">.</span><span class="nam">endswith</span><span class="op">(</span><span class="str">".py"</span><span class="op">)</span> <span class="key">and</span> <span class="key">not</span> <span class="nam">os</span><span class="op">.</span><span class="nam">path</span><span class="op">.</span><span class="nam">isfile</span><span class="op">(</span><span class="nam">control_script</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1051" href="#t1051">1051</a></span><span class="t">        <span class="key">return</span> <span class="nam">importlib</span><span class="op">.</span><span class="nam">import_module</span><span class="op">(</span><span class="nam">control_script</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t1052" href="#t1052">1052</a></span><span class="t">    <span class="key">return</span> <span class="nam">load_python_module</span><span class="op">(</span><span class="nam">control_script</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1053" href="#t1053">1053</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1054" href="#t1054">1054</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -1160,16 +1160,16 @@
     <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t"><span class="str">    headless mode will keep it as ints/floats/etc. which changes how</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1079" href="#t1079">1079</a></span><span class="t"><span class="str">    openpyxl stores the information to an excel sheet.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1080" href="#t1080">1080</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">    <span class="key">if</span> <span class="nam">value</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1082" href="#t1082">1082</a></span><span class="t">        <span class="key">return</span> <span class="nam">default</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1083" href="#t1083">1083</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">value</span><span class="op">,</span> <span class="nam">str</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1084" href="#t1084">1084</a></span><span class="t">        <span class="nam">value</span> <span class="op">=</span> <span class="nam">value</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1085" href="#t1085">1085</a></span><span class="t">        <span class="key">return</span> <span class="nam">value</span> <span class="key">if</span> <span class="nam">value</span> <span class="key">else</span> <span class="nam">default</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1086" href="#t1086">1086</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">value</span><span class="op">,</span> <span class="nam">float</span><span class="op">)</span> <span class="key">and</span> <span class="nam">value</span><span class="op">.</span><span class="nam">is_integer</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">    <span class="key">if</span> <span class="nam">value</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1082" href="#t1082">1082</a></span><span class="t">        <span class="key">return</span> <span class="nam">default</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1083" href="#t1083">1083</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">value</span><span class="op">,</span> <span class="nam">str</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1084" href="#t1084">1084</a></span><span class="t">        <span class="nam">value</span> <span class="op">=</span> <span class="nam">value</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1085" href="#t1085">1085</a></span><span class="t">        <span class="key">return</span> <span class="nam">value</span> <span class="key">if</span> <span class="nam">value</span> <span class="key">else</span> <span class="nam">default</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1086" href="#t1086">1086</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">value</span><span class="op">,</span> <span class="nam">float</span><span class="op">)</span> <span class="key">and</span> <span class="nam">value</span><span class="op">.</span><span class="nam">is_integer</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t1087" href="#t1087">1087</a></span><span class="t">        <span class="key">return</span> <span class="nam">str</span><span class="op">(</span><span class="nam">int</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1088" href="#t1088">1088</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">value</span><span class="op">,</span> <span class="nam">datetime</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1089" href="#t1089">1089</a></span><span class="t">        <span class="key">return</span> <span class="nam">value</span><span class="op">.</span><span class="nam">date</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">isoformat</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t1090" href="#t1090">1090</a></span><span class="t">    <span class="key">return</span> <span class="nam">str</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1088" href="#t1088">1088</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">value</span><span class="op">,</span> <span class="nam">datetime</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1089" href="#t1089">1089</a></span><span class="t">        <span class="key">return</span> <span class="nam">value</span><span class="op">.</span><span class="nam">date</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">isoformat</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1090" href="#t1090">1090</a></span><span class="t">    <span class="key">return</span> <span class="nam">str</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1091" href="#t1091">1091</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1092" href="#t1092">1092</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1093" href="#t1093">1093</a></span><span class="t"><span class="key">def</span> <span class="nam">read_transformation_matrix_from_worksheet</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -1940,7 +1940,7 @@
             <a class="nav" href="index.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-10-16 14:09 +0000
+            created at 2026-10-30 22:29 +0000
         </p>
     </div>
 </footer>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/rattlesnake/hardware/abstract_hardware.py: 37%</title>
+    <title>Coverage for src/rattlesnake/hardware/abstract_hardware.py: 43%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src&#8201;/&#8201;rattlesnake&#8201;/&#8201;hardware&#8201;/&#8201;abstract_hardware.py</b>:
-            <span class="pc_cov">37%</span>
+            <span class="pc_cov">43%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">246 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">90<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">156<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">106<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">140<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_8acf6d1a3ee030d2_data_physics_dp900_hardware_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-10-16 14:09 +0000
+            created at 2026-10-30 22:29 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -292,33 +292,33 @@
     <p class="run"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t">    <span class="key">def</span> <span class="nam">load_channel_table_from_workbook</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">        <span class="nam">cls</span><span class="op">,</span> <span class="nam">workbook</span><span class="op">:</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">workbook</span><span class="op">.</span><span class="nam">workbook</span><span class="op">.</span><span class="nam">Workbook</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="nam">List</span><span class="op">[</span><span class="nam">Channel</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">        <span class="nam">sheets</span> <span class="op">=</span> <span class="nam">workbook</span><span class="op">.</span><span class="nam">sheetnames</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">        <span class="nam">sheets</span> <span class="op">=</span> <span class="nam">workbook</span><span class="op">.</span><span class="nam">sheetnames</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">        <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">sheets</span><span class="op">)</span> <span class="op">></span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">        <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">sheets</span><span class="op">)</span> <span class="op">></span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">            <span class="nam">sheets</span> <span class="op">=</span> <span class="op">[</span><span class="nam">sheet</span> <span class="key">for</span> <span class="nam">sheet</span> <span class="key">in</span> <span class="nam">sheets</span> <span class="key">if</span> <span class="str">"channel"</span> <span class="key">in</span> <span class="nam">sheet</span><span class="op">.</span><span class="nam">lower</span><span class="op">(</span><span class="op">)</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">        <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">sheets</span><span class="op">)</span> <span class="op">></span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">        <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">sheets</span><span class="op">)</span> <span class="op">></span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">            <span class="key">raise</span> <span class="nam">RattlesnakeError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">                <span class="str">"Multiple channel table sheets located in Excel Spreadsheet"</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t">        <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">sheets</span><span class="op">)</span> <span class="op">==</span> <span class="num">0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t">        <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">sheets</span><span class="op">)</span> <span class="op">==</span> <span class="num">0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t">            <span class="key">raise</span> <span class="nam">RattlesnakeError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t">                <span class="str">"Excel Spreadsheet does not contain a channel table sheet"</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">        <span class="nam">worksheet</span> <span class="op">=</span> <span class="nam">workbook</span><span class="op">[</span><span class="nam">sheets</span><span class="op">[</span><span class="num">0</span><span class="op">]</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">        <span class="nam">worksheet</span> <span class="op">=</span> <span class="nam">workbook</span><span class="op">[</span><span class="nam">sheets</span><span class="op">[</span><span class="num">0</span><span class="op">]</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t">        <span class="nam">channel_list</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t">        <span class="nam">channel_attr_list</span> <span class="op">=</span> <span class="nam">Channel</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">channel_attr_list</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">        <span class="key">for</span> <span class="nam">row</span> <span class="key">in</span> <span class="nam">worksheet</span><span class="op">.</span><span class="nam">iter_rows</span><span class="op">(</span><span class="nam">min_row</span><span class="op">=</span><span class="num">3</span><span class="op">,</span> <span class="nam">min_col</span><span class="op">=</span><span class="num">2</span><span class="op">,</span> <span class="nam">max_col</span><span class="op">=</span><span class="num">23</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t231" href="#t231">231</a></span><span class="t">            <span class="nam">channel</span> <span class="op">=</span> <span class="nam">Channel</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t232" href="#t232">232</a></span><span class="t">            <span class="key">for</span> <span class="nam">col</span><span class="op">,</span> <span class="nam">cell</span> <span class="key">in</span> <span class="nam">enumerate</span><span class="op">(</span><span class="nam">row</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t233" href="#t233">233</a></span><span class="t">                <span class="nam">value</span> <span class="op">=</span> <span class="nam">worksheet_cell_str</span><span class="op">(</span><span class="nam">cell</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span> <span class="nam">default</span><span class="op">=</span><span class="key">None</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">                <span class="nam">setattr</span><span class="op">(</span><span class="nam">channel</span><span class="op">,</span> <span class="nam">channel_attr_list</span><span class="op">[</span><span class="nam">col</span><span class="op">]</span><span class="op">,</span> <span class="nam">value</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">            <span class="key">if</span> <span class="nam">channel</span><span class="op">.</span><span class="nam">is_empty</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">            <span class="nam">channel_list</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">channel</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t">        <span class="nam">channel_list</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t">        <span class="nam">channel_attr_list</span> <span class="op">=</span> <span class="nam">Channel</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">channel_attr_list</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">        <span class="key">for</span> <span class="nam">row</span> <span class="key">in</span> <span class="nam">worksheet</span><span class="op">.</span><span class="nam">iter_rows</span><span class="op">(</span><span class="nam">min_row</span><span class="op">=</span><span class="num">3</span><span class="op">,</span> <span class="nam">min_col</span><span class="op">=</span><span class="num">2</span><span class="op">,</span> <span class="nam">max_col</span><span class="op">=</span><span class="num">23</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t231" href="#t231">231</a></span><span class="t">            <span class="nam">channel</span> <span class="op">=</span> <span class="nam">Channel</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t232" href="#t232">232</a></span><span class="t">            <span class="key">for</span> <span class="nam">col</span><span class="op">,</span> <span class="nam">cell</span> <span class="key">in</span> <span class="nam">enumerate</span><span class="op">(</span><span class="nam">row</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t233" href="#t233">233</a></span><span class="t">                <span class="nam">value</span> <span class="op">=</span> <span class="nam">worksheet_cell_str</span><span class="op">(</span><span class="nam">cell</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span> <span class="nam">default</span><span class="op">=</span><span class="key">None</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">                <span class="nam">setattr</span><span class="op">(</span><span class="nam">channel</span><span class="op">,</span> <span class="nam">channel_attr_list</span><span class="op">[</span><span class="nam">col</span><span class="op">]</span><span class="op">,</span> <span class="nam">value</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">            <span class="key">if</span> <span class="nam">channel</span><span class="op">.</span><span class="nam">is_empty</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">            <span class="nam">channel_list</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">channel</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">        <span class="key">return</span> <span class="nam">channel_list</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">        <span class="key">return</span> <span class="nam">channel_list</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">    <span class="op">@</span><span class="nam">classmethod</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t242" href="#t242">242</a></span><span class="t">    <span class="key">def</span> <span class="nam">save_blank_hardware_to_workbook</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -679,7 +679,7 @@
             <a class="nav" href="z_8acf6d1a3ee030d2_data_physics_dp900_hardware_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-10-16 14:09 +0000
+            created at 2026-10-30 22:29 +0000
         </p>
     </div>
 </footer>
