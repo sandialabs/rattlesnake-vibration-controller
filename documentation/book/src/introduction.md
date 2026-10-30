@@ -6,10 +6,8 @@ authors:
     email: dprohe@sandia.gov
   - name: Ryan Schultz
     affiliation: Sandia National Laboratories
-    email: rschult@sandia.gov
   - name: Norman Hunter
     affiliation: Sandia National Laboratories
-    email: nfhunte@sandia.gov
   - name: Cody Langston
     affiliation: Sandia National Laboratories/University of Georgia
   - name: Chad Hovey
