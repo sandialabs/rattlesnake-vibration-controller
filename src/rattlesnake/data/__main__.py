@@ -3,7 +3,9 @@ Fill the data cache so Rattlesnake can run without network access.
 
 Run the command on a machine with network access::
 
-    RATTLESNAKE_DATADIR=/path/to/stage python -m rattlesnake.data --all
+    RATTLESNAKE_DATADIR=/path/to/stage rattlesnake-data --all
+
+``python -m rattlesnake.data --all`` runs the same command.
 
 Copy the directory to the offline machine and set ``RATTLESNAKE_DATADIR``
 there. For each registered file, the command keeps a cached copy whose hash
@@ -44,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         ``--all`` is missing.
     """
     parser = argparse.ArgumentParser(
-        prog="python -m rattlesnake.data",
+        prog="rattlesnake-data",
         description="Put every registered data file in the cache directory.",
     )
     parser.add_argument(

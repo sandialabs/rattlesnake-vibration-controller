@@ -12,7 +12,7 @@ commit it was built from. ``hatch_build.py`` records that commit SHA in
 
 Set ``RATTLESNAKE_DATADIR`` to use a different cache directory, for example a
 directory that was staged ahead of time on a machine without network access.
-``python -m rattlesnake.data --all`` stages a cache directory in one step. For
+``rattlesnake-data --all`` stages a cache directory in one step. For
 each registered file, it keeps a cached copy whose hash matches, otherwise
 copies a matching packaged file into the cache, otherwise downloads the file.
 
@@ -269,7 +269,7 @@ def fetch_all(*, progress: Callable[[int, int, str], None] | None = None) -> lis
     Put every registered file in the cache directory.
 
     The function stops at the first failure. The command
-    ``python -m rattlesnake.data --all`` continues past a failed file instead.
+    ``rattlesnake-data --all`` continues past a failed file instead.
 
     Parameters
     ----------

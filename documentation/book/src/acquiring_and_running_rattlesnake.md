@@ -106,13 +106,12 @@ Install it in three steps.
    uv pip install rattlesnake-vibration-controller
    ```
 
-Once installed, the package exposes a console entry point named:
+Once installed, the package exposes two console entry points for users:
 
-```text
-rattlesnake
-```
-
-which launches the main application.
+| Command | Purpose |
+|---|---|
+| `rattlesnake` | Launches the main application. |
+| `rattlesnake-data` | Puts every example data file in the cache.  See [](#sec:working-offline). |
 
 ### Installing from a GitHub Clone
 
@@ -258,8 +257,10 @@ To use the examples on a machine without network access:
 1. On a machine *with* network access, run the command below.  It puts every data file in the directory that `RATTLESNAKE_DATADIR` names.  Start with an empty directory.
 
    ```sh
-   RATTLESNAKE_DATADIR=/path/to/stage python -m rattlesnake.data --all
+   RATTLESNAKE_DATADIR=/path/to/stage rattlesnake-data --all
    ```
+
+   `python -m rattlesnake.data --all` runs the same command.  Use it when the `rattlesnake-data` script is not on your `PATH`.
 
 2. Copy the directory to the offline machine.
 3. On the offline machine, set `RATTLESNAKE_DATADIR` to the copied directory.

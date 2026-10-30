@@ -58,6 +58,7 @@ dev = [
 [project.scripts]
 rattlesnake = "rattlesnake.main:main"
 preflight = "rattlesnake.preflight:main"
+rattlesnake-data = "rattlesnake.data.__main__:main"
 
 [project.urls]
 Documentation = "https://sandialabs.github.io/rattlesnake-vibration-controller"

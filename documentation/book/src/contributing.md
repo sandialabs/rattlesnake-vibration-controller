@@ -447,7 +447,7 @@ A non-editable build, such as `pip install .` or a wheel from `uv build`, contai
 
 `src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.  A tag ruleset stops anyone from deleting or moving a release tag.  See [Release Tag Protection](#sec:release-tag-protection).
 
-Downloads go to a per-ref directory in the user cache, or to the directory named by the `RATTLESNAKE_DATADIR` environment variable.  The user-facing section [](#sec:example-data-files) lists the cache directory for each operating system and explains how to work offline.  The command `python -m rattlesnake.data --all` calls `rattlesnake.data.fetch_all`, which puts every registered file in that directory in one step.  See [](#sec:working-offline).
+Downloads go to a per-ref directory in the user cache, or to the directory named by the `RATTLESNAKE_DATADIR` environment variable.  The user-facing section [](#sec:example-data-files) lists the cache directory for each operating system and explains how to work offline.  The command `rattlesnake-data --all` puts every registered file in that directory in one step.  `pyproject.toml` maps the command to `main` in `src/rattlesnake/data/__main__.py`, so `python -m rattlesnake.data --all` runs the same code.  See [](#sec:working-offline).
 
 ### Safeguards
 

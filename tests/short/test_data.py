@@ -34,8 +34,8 @@ Keyword-only signatures
     Put every registered file in the cache directory. A cached file with a
     matching hash stays. Otherwise a packaged file with a matching hash is
     copied. Otherwise the file downloads. ``fetch_all`` reports progress.
-``python -m rattlesnake.data``
-    Requires ``--all``, prints one line per file, stops on a connection failure,
+``rattlesnake-data`` and ``python -m rattlesnake.data``
+    The console script points at ``__main__.main``. The command requires ``--all``, prints one line per file, stops on a connection failure,
     and continues past an HTTP error or a hash mismatch.
 
 Unit Tests
@@ -84,6 +84,8 @@ test_cache_fill_replaces_corrupt_cached_file
     Overwrites a cached file whose hash is wrong with the packaged copy.
 test_fetch_all_progress
     Calls the progress function once per file, in name order.
+test_main_console_script
+    ``pyproject.toml`` maps ``rattlesnake-data`` to ``__main__.main``.
 test_main_requires_all
     Exits with status 2 when ``--all`` is missing.
 test_main_fills_cache
@@ -104,6 +106,7 @@ import pathlib
 import re
 import sys
 import threading
+import tomllib
 import types
 from collections.abc import Callable, Iterator
 from typing import NoReturn
@@ -644,6 +647,16 @@ def test_fetch_all_progress(
         progress=lambda index, total, name: calls.append((index, total, name))
     )
     assert calls == [(i, 3, name) for i, name in enumerate(sorted(NAME_LIST), 1)]
+
+
+@pytest.mark.skipif(not IN_CHECKOUT, reason="not running from a source checkout")
+def test_main_console_script() -> None:
+    """
+    Map ``rattlesnake-data`` to ``__main__.main`` in ``pyproject.toml``.
+    """
+    with (REPOSITORY_ROOT / "pyproject.toml").open("rb") as file:
+        scripts = tomllib.load(file)["project"]["scripts"]
+    assert scripts["rattlesnake-data"] == "rattlesnake.data.__main__:main"
 
 
 def test_main_requires_all() -> None:
