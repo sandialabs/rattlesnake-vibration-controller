@@ -184,6 +184,10 @@ def random_event_list():
     data = defaults.DIRECTORY + "/environment/random/random_spec.npz"
     change_spec_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, data)
 
+    timestamp = 19
+    command = RandomVibrationCommands.SET_CONTINUOUS_RUN
+    continuous_run_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
     timestamp = 20
     command = GlobalCommands.START_ENVIRONMENT
     instructions = random_instructions()
@@ -211,6 +215,7 @@ def random_event_list():
         stop_environment_event,
         save_event,
         change_spec_event,
+        continuous_run_event,
         start_environment_event_2,
         stop_environment_event_2,
         stop_stream_event,
