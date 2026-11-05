@@ -569,9 +569,6 @@ class TimeEnvironment(Environment):
                 self.log("Test Level set to {:}".format(self.current_test_level))
             self.signal_remainder = self.environment_metadata.output_signal
             self.set_active()
-            self.queue_container.gui_update_queue.put(
-                (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
-            )
         # See if any data has come in
         try:
             acquisition_data, last_acquisition = (

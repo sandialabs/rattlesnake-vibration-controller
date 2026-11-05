@@ -220,6 +220,7 @@ def test_time_environment_run_environment(
 ):
     mock_gui_queue = mock.MagicMock()
     time_environment.queue_container.gui_update_queue = mock_gui_queue
+    time_environment._gui_update_queue = mock_gui_queue
 
     mock_data_in_queue = mock.MagicMock()
     time_environment.queue_container.data_in_queue = mock_data_in_queue

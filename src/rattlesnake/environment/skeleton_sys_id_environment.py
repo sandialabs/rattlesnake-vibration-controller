@@ -420,9 +420,6 @@ class SkeletonSysIdEnvironment(SysIdEnvironment):
             self.set_active()
             self.shutdown_flag = False
             self.last_acqusition = False
-            self.gui_update_queue.put(
-                (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
-            )
 
             # Start Run Environment loop
             self.environment_command_queue.put(
