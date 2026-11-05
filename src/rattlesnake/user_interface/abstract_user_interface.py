@@ -187,10 +187,6 @@ class EnvironmentUI(ABC):
 
     @abstractmethod
     def start_environment_ready(self):
-        if self.active:
-            self.display_environment_started()
-        else:
-            self.display_environment_ended()
 
         self.clean_up_event_watcher()
 

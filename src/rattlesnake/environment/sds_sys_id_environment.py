@@ -651,7 +651,6 @@ class SDSEnvironment(SysIdEnvironment):
         print(f"Sent instructions {instructions} to the GUI Update Queue")
 
         self.set_active()
-        self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_STARTED, None)))
         print("Set active and notified environment start.")
         self.log(
             f"Starting SDS environment: automatic_hits={self.automatic_hits}, "

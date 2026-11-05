@@ -2249,9 +2249,6 @@ class SineEnvironment(SysIdEnvironment):
             ]
             self.control_startup = False
             self.set_active()
-            self.gui_update_queue.put(
-                (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
-            )
         # See if any data has come in
         try:
             # print('Listening for Data')
