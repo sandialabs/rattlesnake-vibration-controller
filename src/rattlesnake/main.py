@@ -38,7 +38,7 @@ from rattlesnake.user_interface.user_interface import (
 )
 
 
-def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
+def launch_rattlesnake_ui(rattlesnake: RattlesnakeController) -> None:
     """
     Launches the Rattlesnake user interface for an existing controller.
 
@@ -60,7 +60,7 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
         app.exec_()
 
 
-def main():
+def main() -> None:
     """
     Starts the Rattlesnake application.
 

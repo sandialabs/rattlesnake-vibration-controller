@@ -3,7 +3,7 @@ from datetime import datetime
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import threading
-from typing import List
+from typing import Dict, List
 
 from rattlesnake.utilities import (
     EventContainer,
@@ -21,6 +21,7 @@ from rattlesnake.environment.environment_registry import (
     SYSID_ENVIRONMENTS,
 )
 from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.typehint import EventType
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdMetadata,
     SysIdDataPackage,
@@ -103,7 +104,7 @@ class EnvironmentManager:
         queue_container: QueueContainer,
         event_container: EventContainer,
         threaded: bool,
-    ):
+    ) -> None:
         """
         Initializes a blank environment manager without environments.
 
@@ -149,7 +150,7 @@ class EnvironmentManager:
             self.new_event = mp.Event
 
     @property
-    def threaded(self):
+    def threaded(self) -> bool:
         """
         Return whether environments should run on single threads.
 
@@ -164,7 +165,7 @@ class EnvironmentManager:
         return self._threaded
 
     @property
-    def available_queues(self):
+    def available_queues(self) -> List[str]:
         """
         Return the queue names that are mapped to an existing environment.
 
@@ -184,7 +185,7 @@ class EnvironmentManager:
         ]
 
     @property
-    def num_queues(self):
+    def num_queues(self) -> int:
         """
         Return the total number of environment queues.
 
@@ -200,7 +201,7 @@ class EnvironmentManager:
         return len(self.queue_names) + len(self.available_queues)
 
     @property
-    def queue_names_dict(self):
+    def queue_names_dict(self) -> Dict[str, str]:
         """
         Return a dict for looking up queue names from environment names.
 
@@ -217,7 +218,7 @@ class EnvironmentManager:
             for queue_name in self.queue_names
         }
 
-    def log(self, message):
+    def log(self, message: str) -> None:
         """
         Write a message to the log file.
 
@@ -238,7 +239,7 @@ class EnvironmentManager:
 
     # region State Sync
     @property
-    def ready_event_list(self):
+    def ready_event_list(self) -> List[EventType]:
         """
         Return the ready events of the stored environments.
 
@@ -256,7 +257,7 @@ class EnvironmentManager:
         return ready_event_list
 
     @property
-    def active_event_list(self):
+    def active_event_list(self) -> List[EventType]:
         """
         Return the active events of the stored environments.
 
@@ -275,7 +276,7 @@ class EnvironmentManager:
         return active_event_list
 
     @property
-    def acquisition_ready_environments(self):
+    def acquisition_ready_environments(self) -> Dict[str, bool]:
         """
         Return whether each environment is able to start.
 
@@ -301,7 +302,7 @@ class EnvironmentManager:
         return acquisition_ready_environments
 
     @property
-    def sysid_active_environments(self):
+    def sysid_active_environments(self) -> List[str]:
         """
         Return the environments that are running system identification.
 
@@ -321,7 +322,7 @@ class EnvironmentManager:
         return sysid_active_list
 
     @property
-    def environment_active_environments(self):
+    def environment_active_environments(self) -> List[str]:
         """
         Return the environments that are currently active.
 
@@ -340,7 +341,7 @@ class EnvironmentManager:
 
         return environment_active_list
 
-    def clear_sysid_events(self):
+    def clear_sysid_events(self) -> None:
         """
         Clear the system identification stored event of every environment.
 
@@ -350,12 +351,13 @@ class EnvironmentManager:
         for queue_name in self.queue_names:
             self.environment_sysid_stored_events[queue_name].clear()
 
-    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """
         Send hardware metadata to every environment.
 
         Clears the ready events and queues an ``INITIALIZE_HARDWARE`` command for each
-        environment. The caller is responsible for waiting on ``ready_event_list``.
+        environment. The ``RattlesnakeController`` is responsible for waiting on
+        ``ready_event_list``.
 
         Parameters
         ----------
@@ -376,19 +378,16 @@ class EnvironmentManager:
         self,
         metadata_list: List[EnvironmentMetadata],
         hardware_metadata: HardwareMetadata,
-    ):
-        # TODO: Remove this, set an equivalency to a sysid data container to
-        # see if this needs to be cleared
+    ) -> Dict[str, EnvironmentMetadata]:
         """
-        Assign environment metadata to environment processes.
+        Spin up environment processes corresponding to environments within the metadata
+        list.
 
-        Clears the system identification stored events. Existing environments with the
-        same name (case-insensitive) and type keep their process and are sent the new
-        metadata. Other existing environments are shut down, and a new process is
-        started for each remaining metadata object.
-
-        The caller is responsible for waiting on ``ready_event_list`` and storing the
-        returned dict in ``environment_metadata``.
+        Existing environments with the same name (case-insensitive) and type keep their
+        process and are sent the new metadata. Other existing environments are shut
+        down, and a new process is started for each remaining metadata object. Once
+        processes are spun up, they are first given hardware metadata and then
+        environment metadata.
 
         Parameters
         ----------
@@ -400,7 +399,8 @@ class EnvironmentManager:
         Returns
         -------
         dict of str to EnvironmentMetadata
-            Mapping from assigned queue names to environment metadata.
+            Mapping from assigned queue names to environment metadata. This is used by
+            the acquisition, output, and user interface to keep track of queue names.
 
         Raises
         ------
@@ -410,6 +410,8 @@ class EnvironmentManager:
         Unit Tests
         ----------
         """
+        # TODO: Remove this, set an equivalency to a sysid data container to
+        # see if this needs to be cleared
         self.clear_sysid_events()
 
         self.log("Initializing Environments")
@@ -471,12 +473,14 @@ class EnvironmentManager:
 
         return environment_metadata_dict
 
-    def initialize_system_id(self, sysid_metadata, queue_name):
+    def initialize_system_id(
+        self, sysid_metadata: SysIdMetadata, queue_name: str
+    ) -> Dict[str, EnvironmentMetadata]:
         """
         Send system identification metadata to an environment.
 
-        The caller is responsible for clearing the environment's ready event beforehand,
-        waiting on it, and storing the returned dict in ``environment_metadata``.
+        Stores the system identification metadata to the environment and syncs the
+        controller's metdata dict with the environment.
 
         Parameters
         ----------
@@ -504,7 +508,7 @@ class EnvironmentManager:
 
         return environment_metadata_dict
 
-    def find_sysid_compatible_environments(self, environment_name: str):
+    def find_sysid_compatible_environments(self, environment_name: str) -> List[str]:
         """
         Find the environments that can share system identification data.
 
@@ -666,7 +670,9 @@ class EnvironmentManager:
 
         return queue_name
 
-    def validate_environment_instructions(self, instructions: EnvironmentInstructions):
+    def validate_environment_instructions(
+        self, instructions: EnvironmentInstructions
+    ) -> str:
         """Validate the instructions"""
         # Validate class
         if not isinstance(instructions, EnvironmentInstructions):
@@ -702,7 +708,7 @@ class EnvironmentManager:
 
         return queue_name
 
-    def validate_profile_events(self, profile_events_list: List[ProfileEvent]):
+    def validate_profile_events(self, profile_events_list: List[ProfileEvent]) -> None:
         """Since the profile events are comming form the UI/Terminal which has
         no idea which queue was assigned to an environment, the validation of
         the environment_names is performed by the environment manager"""
@@ -742,7 +748,7 @@ class EnvironmentManager:
 
     def add_environment(
         self, metadata: EnvironmentMetadata, hardware_metadata: HardwareMetadata
-    ):
+    ) -> str:
         """Adds environment to container with unique name"""
 
         # Find the first available queue for the environment
@@ -816,7 +822,7 @@ class EnvironmentManager:
     # endregion
 
     # region Shutdown
-    def remove_environment(self, queue_name):
+    def remove_environment(self, queue_name) -> None:
         """Removes environment from container"""
         # Check if index corresponds to an existing environment
         if queue_name in self.queue_names:
