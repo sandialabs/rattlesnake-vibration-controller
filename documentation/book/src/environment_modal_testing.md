@@ -25,7 +25,7 @@ The Rattlesnake Modal Testing environment has many signal processing parameters 
 :::{figure} figures/modal_environment_definition.png
 :label: fig:modalenvironmentdefinition
 :align: center
-GUI used to define a Modal Testing Environment
+GUI used to define a Modal Testing Environment.
 :::
 
 ### Sampling Parameters

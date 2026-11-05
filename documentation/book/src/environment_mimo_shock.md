@@ -428,7 +428,7 @@ Clicking on the [**Shock History**](#fig:srs_sds_run:shock_history_button) butto
 :label: fig:mimo_sds_shock_history
 :align: center
 
-Shock History Dialog
+Shock History Dialog.
 :::
 
 The Shock History dialog provides an overview of what has been done to the test article, including:
@@ -465,7 +465,7 @@ Clicking the [**SDS Table**](#fig:srs_sds_run:sds_table_button) button will brin
 :label: fig:mimo_sds_run_table
 :align: center
 
-Shock History Dialog
+Shock History Dialog.
 :::
 
 Depending on which options are checked the user can manually or the control law can automatically update the values in this table.  When values are updated, the control law will automatically make response predictions based on the new drive signals.  When measurements are obtained, the measured data will also be plotted on the response sections.  This allows users or the control law to tune the controller as the run is progressing.
@@ -495,14 +495,14 @@ In addition to the main UI showing all of the control SRSs and the Run Table sho
 :label: fig:mimo_sds_srs_channel
 :align: center
 
-Control SRS Window
+Control SRS Window.
 :::
 
 :::{figure} figures/srs_sds_time_channel_window.png
 :label: fig:mimo_sds_time_channel
 :align: center
 
-Control Time Window
+Control Time Window.
 :::
 
 ```{embed} #sec:srs_sds_run:data_display_groupbox

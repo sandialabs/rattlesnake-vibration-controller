@@ -1,0 +1,237 @@
+import os
+
+import numpy as np
+import openpyxl
+import netCDF4 as nc4
+
+import rattlesnake.examples.defaults as defaults
+
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.load_utilities import load_profile_from_workbook
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.environment.sine_sys_id_environment import (
+    SineCommands,
+    SineMetadata,
+    SineInstructions,
+)
+from rattlesnake.environment.sine_sys_id_utilities import SineSpecification
+from rattlesnake import data
+
+ENVIRONMENT_NAME = "Sine 0"
+
+
+def worksheet_sine_metadata(hardware_metadata):
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/sine.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    worksheet = workbook[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    metadata = SineMetadata.load_metadata_from_worksheet(
+        worksheet, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+    specifications = create_sine_specification()
+    metadata.specifications = specifications
+
+    return metadata
+
+
+def netcdf_sine_metadata(hardware_metadata):
+    netcdf_dir = data.fetch(name="environment/data/sine.nc4")
+    netcdf_dataset = nc4.Dataset(netcdf_dir)
+    netcdf_group = netcdf_dataset.groups[ENVIRONMENT_NAME]
+
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    metadata = SineMetadata.load_metadata_from_netcdf(
+        netcdf_group, ENVIRONMENT_NAME, channel_list_bools, hardware_metadata
+    )
+
+    return metadata
+
+
+def manual_sine_metadata(hardware_metadata, **overrides):
+    """Builds a SineMetadata with sensible example defaults, letting
+    individual attributes be overridden via kwargs (e.g. samples_per_frame=100)."""
+    channel_list_bools = [True] * len(hardware_metadata.channel_list)
+    sample_rate = hardware_metadata.sample_rate
+    samples_per_frame = 50
+    number_of_channels = 21
+    specifications = create_sine_specification()
+    ramp_time = 0.5
+    buffer_blocks = 2
+    control_convergence = 0.15
+    update_drives_after_environment = False
+    phase_fit = False
+    allow_automatic_aborts = False
+    tracking_filter_type = 0
+    tracking_filter_cutoff = 0.15
+    tracking_filter_order = 2
+    vk_filter_order = 2
+    vk_filter_bandwidth = 2
+    vk_filter_blocksize = 1000
+    vk_filter_overlap = 0.15
+    control_python_script = "rattlesnake.environment.sine_sys_id_control_law"
+    control_python_class = "DefaultSineControlLaw"
+    control_python_parameters = ""
+    control_channel_indices = [0, 1, 2]
+    output_channel_indices = [12, 13, 14, 15, 16, 17, 18, 19, 20]
+    response_transformation_matrix = None
+    output_transformation_matrix = None
+
+    kwargs = dict(
+        environment_name=ENVIRONMENT_NAME,
+        channel_list_bools=channel_list_bools,
+        sample_rate=sample_rate,
+        samples_per_frame=samples_per_frame,
+        number_of_channels=number_of_channels,
+        specifications=specifications,
+        ramp_time=ramp_time,
+        buffer_blocks=buffer_blocks,
+        control_convergence=control_convergence,
+        update_drives_after_environment=update_drives_after_environment,
+        phase_fit=phase_fit,
+        allow_automatic_aborts=allow_automatic_aborts,
+        tracking_filter_type=tracking_filter_type,
+        tracking_filter_cutoff=tracking_filter_cutoff,
+        tracking_filter_order=tracking_filter_order,
+        vk_filter_order=vk_filter_order,
+        vk_filter_bandwidth=vk_filter_bandwidth,
+        vk_filter_blocksize=vk_filter_blocksize,
+        vk_filter_overlap=vk_filter_overlap,
+        control_python_script=control_python_script,
+        control_python_class=control_python_class,
+        control_python_parameters=control_python_parameters,
+        control_channel_indices=control_channel_indices,
+        output_channel_indices=output_channel_indices,
+        response_transformation_matrix=response_transformation_matrix,
+        output_transformation_matrix=output_transformation_matrix,
+    )
+    kwargs.update(overrides)
+    return SineMetadata(**kwargs)
+
+
+def create_sine_specification():
+    specification = SineSpecification(
+        name="Sine Tone 1",
+        start_time=0,
+        num_control=3,
+        num_breakpoints=4,
+    )
+
+    table = specification.breakpoint_table
+
+    table[0]["frequency"] = 1
+    table[0]["sweep_type"] = 0  # 0 = linear
+    table[0]["sweep_rate"] = 1
+    table[0]["amplitude"][:] = [0, 0, 0]
+    table[0]["phase"][:] = [0, 0, 0]
+
+    table[1]["frequency"] = 10
+    table[1]["sweep_type"] = 0
+    table[1]["sweep_rate"] = 2
+    table[1]["amplitude"][:] = [1, 1, 1]
+    table[1]["phase"][:] = [0, 0, 0]
+
+    table[2]["frequency"] = 15
+    table[2]["sweep_type"] = 0
+    table[2]["sweep_rate"] = 2
+    table[2]["amplitude"][:] = [1, 1, 1]
+    table[2]["phase"][:] = [0, 0, 0]
+
+    table[3]["frequency"] = 20
+    table[3]["sweep_type"] = 1
+    table[3]["sweep_rate"] = 10
+    table[3]["amplitude"][:] = [0.5, 0.5, 0.5]
+    table[3]["phase"][:] = [0, 0, 0]
+
+    table["warning"][:] = np.nan
+    table["abort"][:] = np.nan
+
+    specifications = [specification]
+    return specifications
+
+
+def sine_instructions():
+    control_test_level = 0
+    control_tones = None
+    control_end_time = None
+    control_start_time = None
+
+    instructions = SineInstructions(
+        ENVIRONMENT_NAME,
+        control_test_level,
+        control_tones,
+        control_start_time,
+        control_end_time,
+    )
+    return instructions
+
+
+def sine_event_list(*, output_directory: str | os.PathLike[str] | None = None):
+    """Build profile events, saving control data in output_directory or the cwd."""
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 0
+    command = SineCommands.SET_TEST_LEVEL
+    event_data = 5
+    set_level_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
+
+    timestamp = 0.5
+    command = GlobalCommands.START_ENVIRONMENT
+    instructions = sine_instructions()
+    instructions.control_test_level = 5
+    start_environment_event = ProfileEvent(
+        timestamp, ENVIRONMENT_NAME, command, instructions
+    )
+
+    timestamp = 10
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command)
+
+    if output_directory is None:
+        output_directory = os.getcwd()
+    timestamp = 10
+    command = SineCommands.SAVE_CONTROL_DATA
+    event_data = os.path.join(output_directory, "sine_control_data.npz")
+    save_event = ProfileEvent(timestamp, ENVIRONMENT_NAME, command, event_data)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 10
+    command = GlobalCommands.STOP_HARDWARE
+    stop_hardware_event = ProfileEvent(timestamp, "Global", command)
+
+    event_list = [
+        start_stream_event,
+        set_level_event,
+        start_environment_event,
+        stop_environment_event,
+        save_event,
+        stop_stream_event,
+        stop_hardware_event,
+    ]
+    return event_list
+
+
+def worksheet_sine_event_list(
+    *, output_directory: str | os.PathLike[str] | None = None
+):
+    """Load profile events, saving control data in output_directory or the cwd."""
+    if output_directory is None:
+        output_directory = os.getcwd()
+    worksheet_dir = defaults.DIRECTORY + "/environment/data/sine.xlsx"
+    workbook = openpyxl.load_workbook(worksheet_dir, read_only=True)
+    environment_types = {
+        "Global": "Global",
+        ENVIRONMENT_NAME: EnvironmentType.SINE,
+    }
+    event_list = load_profile_from_workbook(workbook, environment_types)
+    save_event = next(
+        event for event in event_list if event.command == SineCommands.SAVE_CONTROL_DATA
+    )
+    save_event.data = os.path.join(output_directory, "sine_control_data.npz")
+    return event_list

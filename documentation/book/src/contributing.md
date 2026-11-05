@@ -7,7 +7,7 @@ numbering:
 
 Users may contribute to the Rattlesnake project by [cloning](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) or [forking](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the Rattlesnake [repository](https://github.com/sandialabs/rattlesnake-vibration-controller).
 
-Direct **cloning** is reserved for authorized collaborators of the Rattlesnake repository; however, because the project is open-source, all other contributors can obtain their own copy by **forking** the repository.
+Only authorized collaborators can **push** directly to the Rattlesnake repository.  Because the project is open source, all other contributors work from their own copy, made by **forking** the repository.
 
 ## Cloning
 
@@ -19,7 +19,7 @@ Direct **cloning** is reserved for authorized collaborators of the Rattlesnake r
 ## Forking
 
 * Forking is a GitHub action.
-* It is a personal copy of the entire project on **your own GitHub account**.
+* It creates a personal copy of the entire project on **your own GitHub account**.
 * It acts as a bridge for external contributors. You can make any changes you want to your fork without affecting the original project. When you are ready to share those changes, you submit a [**Pull Request**](https://github.com/sandialabs/rattlesnake-vibration-controller/pulls) to the original repository.
 
 ## Getting the Source Code
@@ -44,7 +44,7 @@ Two approaches are documented below:
 
 ### Using `uv` (Recommended)
 
-[`uv`](https://docs.astral.sh/uv/) is a fast, modern Python package and project manager, written in Rust. It replaces `pip`, `venv`, and several other tools with a single command line interface, and it is what every other section of this document (testing, linting, formatting) assumes you are using.
+[`uv`](https://docs.astral.sh/uv/) is a fast, modern Python package and project manager, written in Rust. It replaces `pip`, `venv`, and several other tools with a single command-line interface.
 
 Compared to `pip` and `venv`, `uv`:
 
@@ -97,16 +97,16 @@ python3 -m venv .venv
 Activate the environment to tell your shell to use the Python interpreter and pip packages located inside the `.venv` folder using the command appropriate to your system:
 
 ```bash
-source .venv/bin/activate  # macOS / Linux:
-.venv\Scripts\Activate.ps1 # Windows (PowerShell):
-.venv\Scripts\activate.bat # Windows (Command Prompt), DOS
+source .venv/bin/activate   # macOS / Linux
+.venv\Scripts\Activate.ps1  # Windows (PowerShell)
+.venv\Scripts\activate.bat  # Windows (Command Prompt)
 ```
 
 Once activated, your terminal prompt will typically show `(.venv)`. You can now install dependencies safely.
 
 ```bash
-# Install the entire Rattlesnake development in editable mode
-pip install -e .[dev]
+# Install Rattlesnake in editable mode, with its development dependencies
+pip install -e ".[dev]"
 
 # Additional packages can be installed on an as-needed basis.  For example, to install
 # the "requests" package
@@ -133,6 +133,7 @@ deactivate
 
 > **Best Practice:** Never commit the `.venv` directory to version control. Add `.venv/` to your `.gitignore` file.
 
+(sec:development)=
 ## Development
 
 Before pushing changes, contributors should check code quality locally rather than relying solely on CI to catch problems. This means running the test suite (pytest), linting (pylint), format checking (ruff), code coverage, and confirming that the Jupyter Book documentation still builds — all on your own machine. Catching issues locally is faster than waiting on a CI run, and it keeps the CI pipeline green for everyone else.
@@ -180,10 +181,7 @@ uv run pytest tests/short/test_environment_manager.py --cov=rattlesnake.environm
 ```
 
 ```{note}
-This mirrors the scope CI uses: pushes and pull requests targeting `main` or
-`dev` run the full suite (`tests`, including `tests/long`); everything else
-runs just `tests/short` by default, unless `[all tests]` appears in the
-commit message, which forces the full suite on any branch. For example:
+CI runs `tests/short` on feature branches and the full `tests` suite on `main` and `dev`.  `[all tests]` in the commit message forces the full suite on any branch.  See [Matrix scope](#sec:matrix-scope).  For example:
 
     (dev-cicd) > git commit -m 'test feature foo with [all tests]'
 ```
@@ -225,7 +223,7 @@ Before pushing, you can check whether any files are out of compliance with the p
 uv run ruff format --check src/rattlesnake
 ```
 
-This is the same command the `lint` job in `ci.yml` runs on every push. It is intentionally **non-blocking** in CI — a formatting drift surfaces as a warning annotation on the workflow run rather than failing the job, so it will not block a merge. If it reports files that need formatting, run `uv run ruff format src/rattlesnake` locally (as shown above) to fix them before committing.
+This is the same command the `lint` job in `ci.yml` runs on every push that changes code, and on every push to `main` or `dev`. It is intentionally **non-blocking** in CI — a formatting drift surfaces as a warning annotation on the workflow run rather than failing the job, so it will not block a merge. If it reports files that need formatting, run `uv run ruff format src/rattlesnake` locally (as shown above) to fix them before committing.
 
 ### Documentation
 
@@ -258,6 +256,7 @@ The script opens real Qt windows and screenshots them, so it needs a desktop ses
 CI runs this job on `windows-latest`.  Windows is where the interface is developed, so its screenshots are the reference.  A macOS or Linux run produces different window decorations and widget metrics, so use the generated pages for a local preview rather than as a match for what CI will publish.
 ```
 
+(sec:local-build)=
 #### Local Build
 
 Within the `documentation` folder, the `myst.yml` file specifies how Jupyter Book should build the documentation.  Importantly, it links to Markdown files that contain the book's content.
@@ -296,7 +295,7 @@ building myst-cli session with API URL: https://api.mystmd.org
 (Use `node --trace-warnings ...` to show where the warning was created)
 🌎 Building Jupyter Book (via myst) site
 📖 Built book/src/_generated/random_vibration_run_doc.md in 64 ms.
-📖 Built book/src/chapter_13.md in 124 ms.
+📖 Built book/src/introduction.md in 124 ms.
 📖 Built book/src/notation.md in 117 ms.
 📖 Built book/src/contributing.md in 117 ms.
 <--(snip)-->
@@ -323,7 +322,7 @@ In a local web browser, navigate to the web address indicated above.
 
 #### Bibliography
 
-The documentation uses the `myst-nb` and standard MyST bibliography support.
+The documentation uses MyST's built-in bibliography support.
 
 1. Prepare your bibliography file:
 
@@ -363,10 +362,231 @@ cd documentation
 jupyter book build
 ```
 
+(sec:large-data-files)=
+## Large Data Files
+
+Rattlesnake downloads its large example data files **on demand**.  The files stay in the repository under version control.  They are left out of the wheel and sdist that we publish to PyPI.  The `rattlesnake.data` module fetches each file the first time code needs it.  The module uses the [Pooch](https://www.fatiando.org/pooch/) library.  This section explains the reasons for this design and how it works.  It also lists the safeguards we verified.  Issue [#139](https://github.com/sandialabs/rattlesnake-vibration-controller/issues/139) records the original discussion.
+
+### Motivation
+
+The repository holds 39 example data files under `src/rattlesnake/examples`: 23 `.nc4` (20.2 MB), 13 `.npz` (12.9 MB), and 3 `.npy` (14.5 MB).
+Together they take 47.6 MB on disk.  We want to keep them in the repository.  Tests, examples, and the documentation use them, and Git records every change to them.
+
+We do not want them in the published distribution.  Every release uploads a new wheel and sdist to PyPI, and PyPI keeps every past release.  Release 4.0.0rc3 shipped 41 data files.  Two of them were run outputs that the repository no longer tracks.  The 41 files took 19.9 MB of its 20.9 MB wheel, or 96%.  The other 244 files in that wheel took 1.0 MB.  Each new release would add another 20 MB copy of unchanged data.
+
+### Alternatives considered
+
+:::{table} Alternatives considered for large data files.
+:label: tab:data_file_alternatives
+:align: center
+| Approach | Decision |
+|---|---|
+| Keep shipping the files in the wheel | Rejected.  Every release adds about 20 MB to PyPI. |
+| Download at install time | Not possible.  pip runs no package code when it installs a wheel.  A build hook could download files during an sdist install.  We rejected that, because a build should not depend on the network, and many build environments block it. |
+| Separate data package, installed as an extra (`pip install "rattlesnake-vibration-controller[examples]"`) | Rejected.  It needs a second PyPI project, a second Trusted Publisher entry, and a second publish job in `release.yml`.  Our version comes from the git tag through `hatch-vcs`, so pinning the data package to the main package's version needs extra build code.  Both wheels would also write into the same `rattlesnake/` directory. |
+| Archive on a GitHub release, plus a `download-data` command | Rejected for now.  Users must remember to run an extra command before the examples work.  A single archive suits datasets too large to fetch file by file.  Our largest file is 7.7 MB (`frame_wing/data/sdynpy_fem_shapes.npy`). |
+| Git LFS | Rejected.  A raw GitHub URL for an LFS file returns a small pointer file, not the data.  The development team has also had experiences with LFS acting unreliably. |
+| Write our own downloader | Rejected.  It would need hash checks, retries, atomic writes, and a cache directory on each operating system.  Pooch already provides all four, and SciPy and scikit-image rely on it. |
+| Download on demand with Pooch | **Chosen.** |
+:::
+
+Pooch adds two packages to an install, `pooch` and `platformdirs`.  Pooch's other dependencies, `requests` and `packaging`, are already Rattlesnake dependencies.  Both new packages are pure Python.
+
+### Who else uses Pooch
+
+[Fatiando a Terra](https://www.fatiando.org) maintains Pooch.  The Pooch [README](https://github.com/fatiando/pooch) lists 40 projects that use it:
+
+- **Core scientific Python (4):** [SciPy](https://github.com/scipy/scipy), [scikit-image](https://github.com/scikit-image/scikit-image), [xarray](https://github.com/pydata/xarray), and [napari](https://github.com/napari/napari)
+- **Earth sciences and geospatial analysis (17):**
+  - Weather and climate (7): [MetPy](https://github.com/Unidata/MetPy), [Satpy](https://github.com/pytroll/satpy), [Py-ART](https://github.com/ARM-DOE/pyart), [cf-xarray](https://github.com/xarray-contrib/cf-xarray), [xclim](https://github.com/Ouranosinc/xclim), [climlab](https://github.com/climlab/climlab), and [CLISOPS](https://github.com/roocs/clisops)
+  - Geology and geophysics (8): [SHTOOLS](https://github.com/SHTOOLS/SHTOOLS), [GemPy](https://github.com/cgre-aachen/gempy), [GemGIS](https://github.com/cgre-aachen/gemgis), [Open AR-Sandbox](https://github.com/cgre-aachen/open_AR_Sandbox), [Ensaio](https://github.com/fatiando/ensaio), [icepack](https://github.com/icepack/icepack), [PVGeo](https://github.com/OpenGeoVis/PVGeo), and [DASCore](https://github.com/DASDAE/dascore)
+  - Spatial analysis of people and places (2): [geosnap](https://github.com/oturns/geosnap) and [scikit-mobility](https://github.com/scikit-mobility/scikit-mobility)
+- **Neuroscience and biology (8):** [MNE-Python](https://github.com/mne-tools/mne-python), [MOABB](https://github.com/NeuroTechX/moabb), [Brainrender](https://github.com/brainglobe/brainrender), [cellfinder](https://github.com/brainglobe/cellfinder), [histolab](https://github.com/histolab/histolab), [Scirpy](https://github.com/scverse/scirpy), [scXpand](https://github.com/yizhak-lab-ccg/scXpand), and [BioCypher](https://github.com/biocypher/biocypher)
+- **Electron microscopy (4):** [HyperSpy](https://github.com/hyperspy/hyperspy), [RosettaSciIO](https://github.com/hyperspy/rosettasciio), [eXSpy](https://github.com/hyperspy/exspy), and [pyxem](https://github.com/pyxem/pyxem)
+- **Astronomy (3):** [yt](https://github.com/yt-project/yt), [ScopeSim](https://github.com/AstarVienna/ScopeSim), and [SPLASH](https://github.com/Adam-Boesky/astro_SPLASH)
+- **Visualization and images (4):** [PyVista](https://github.com/pyvista/pyvista), [GeoViews](https://github.com/holoviz/geoviews), [seaborn-image](https://github.com/SarthakJariwala/seaborn-image), and [rembg](https://github.com/danielgatis/rembg)
+
+As an illustrative example, scikit-image adopted Pooch in [PR #3945](https://github.com/scikit-image/scikit-image/pull/3945), merged in March 2020.  That PR moved its test data and new datasets onto Pooch and kept 7 MB of legacy data in the wheel.  The PR author measured the wheel at 41 MB before the change and 27 MB after it.
+
+### How `rattlesnake.data.fetch` works
+
+Code asks for a file by its path relative to `src/rattlesnake/examples`:
+
+```python
+from rattlesnake import data
+
+path = data.fetch(name="hardware/data/sdynpy_system.npz")
+```
+
+`data.fetch` returns the local path of a file whose SHA-256 hash matches the registry.  It looks in three places, in order:
+
+1. **The package tree.**  A git checkout still contains every data file.  If the file is there and its hash matches, `fetch` returns it with no network access.  Developers and CI therefore never download anything.
+2. **The local cache.**  Pooch returns a cached copy if its hash matches.
+3. **GitHub.**  Pooch downloads the file, checks its hash, and saves it to the cache.
+
+The download URL depends on the installed version:
+
+:::{table} Git ref that each kind of Rattlesnake version downloads from.
+:label: tab:download_source
+:align: center
+| Version | Example | Downloads from |
+|---|---|---|
+| No `.dev` segment, a release built at its tag | `4.0.0rc4` | The git tag `v4.0.0rc4` |
+| Has a `.dev` segment, every other build | `4.0.0rc4.dev2` | The commit the build came from, such as [`f998f9ac20a5031b3e2e4a3360db9514694b13ff`](https://github.com/sandialabs/rattlesnake-vibration-controller/commit/f998f9ac20a5031b3e2e4a3360db9514694b13ff) |
+:::
+
+`hatch-vcs` adds the `.dev` segment to any build made from a commit after the latest tag.  That covers `pip install .` on any branch, including `main`, `dev`, and feature branches.  A release tag that has its own `.dev` segment, such as `v4.1.0.dev1`, also downloads from its commit.
+
+Downloads come from a branch only as the fallback described in the next paragraph.  A branch moves, so its files can stop matching the registry of an older build.  A tag or a commit names fixed file contents.  An old install therefore keeps receiving the data that matches its own code.
+
+`hatch_build.py` at the repository root records the commit.  This Hatch build hook runs `git rev-parse HEAD` during every build.  It writes the full SHA to `src/rattlesnake/_commit.py`, which `.gitignore` lists.  The sdist carries that file, so a wheel built from the sdist records the same SHA.  A build with no recorded commit falls back to the `dev` branch.
+
+```{warning}
+A non-editable build, such as `pip install .` or a wheel from `uv build`, contains no data files.  It downloads them from the commit it was built from.  Commit and push before you build one.  Otherwise each download fails, with HTTP 404 for an unpushed commit, or with a hash mismatch for an uncommitted data change.  The build also loses its data source if its commit later leaves GitHub, for example after a force-push to a feature branch.  An editable install, such as `uv sync`, rarely downloads at all, because `fetch` finds the files in the package tree first.
+```
+
+`src/rattlesnake/data/_registry.py` maps each file name to its SHA-256 hash.  The registry pins each Rattlesnake version to specific file contents, not just to file names.  A changed data file gets a new hash.  Older versions of Rattlesnake keep their own registry and their own tag, so they still fetch the old file.  A tag ruleset stops anyone from deleting or moving a release tag.  See [Release Tag Protection](#sec:release-tag-protection).
+
+Downloads go to a per-ref directory in the user cache, or to the directory named by the `RATTLESNAKE_DATADIR` environment variable.  The user-facing section [](#sec:example-data-files) lists the cache directory for each operating system and explains how to work offline.  The command `rattlesnake-data --all` puts every registered file in that directory in one step.  `pyproject.toml` maps the command to `main` in `src/rattlesnake/data/__main__.py`, so `python -m rattlesnake.data --all` runs the same code.  See [](#sec:working-offline).
+
+### Safeguards
+
+We checked each safeguard below on macOS, with Pooch 1.9.0, in a clean virtual environment.  Most rows used a locally built wheel that excluded all three file types.  At the time, the registry held 41 entries.  Two of them were run outputs, which we later removed from the registry.  The two rows about the download source describe their own setups.
+
+:::{table} Download safeguards and how each was verified.
+:label: tab:download_safeguards
+:align: center
+| Safeguard | What happens | What we verified |
+|---|---|---|
+| Files are not in the distribution | The `exclude` globs in `pyproject.toml` drop every `.nc4`, `.npz`, and `.npy` file under `examples/`. | The wheel and sdist contain 0 of the 41 data files. |
+| Download on first use | `fetch` downloads a file only when code asks for it.  Importing an example module downloads nothing. | The first pass over all 41 names downloaded 40 files in 59.7 s.  The 41st file was already cached from an earlier test. |
+| Hash check on download | Pooch computes the SHA-256 of each download and compares it with the registry. | All 41 downloaded files matched the registry. |
+| Cache reuse | A second `fetch` returns the cached file without contacting GitHub. | The second pass over all 41 names took 0.1 s and downloaded nothing. |
+| Corrupt cache repair | Pooch hashes the cached file before it returns it.  On a mismatch it downloads a fresh copy. | We overwrote a cached file with junk.  The next `fetch` downloaded the original file again, and its hash matched. |
+| Wrong hash rejected | Pooch retries a download whose hash does not match.  After the last attempt it raises `ValueError`. | We replaced a registry hash with 64 zeros.  Pooch made four download attempts, then raised `ValueError: SHA256 hash of downloaded file (srs_specification.npz) does not match the known hash`. |
+| Retries | `fetch` sets `retry_if_failed=3`.  Pooch makes 1 + 3 = 4 attempts.  It waits 1 s, 2 s, then 3 s between them. | We counted four calls to Pooch's HTTP downloader in the wrong-hash test. |
+| Download from the release tag | A tagged release downloads from its own git tag. | We installed 4.0.0rc4 from TestPyPI into a clean virtual environment.  `fetch` downloaded `frame_wing/data/transient_specification.npz` from the `v4.0.0rc4` tag in 3.9 s, into `~/Library/Caches/rattlesnake/v4.0.0rc4`.  Its hash matched, and a second `fetch` took 0.01 s. |
+| Download from the build's commit | A development build downloads from the commit it was built from. | We built a wheel and an sdist with `uv build` at commit `6c7224ca`, version `4.0.0rc5.dev5`.  Both recorded the full SHA, and so did a second wheel built from the sdist.  In a clean virtual environment, `fetch` downloaded `environment/time/time_signal.npy` from `raw/6c7224ca3fdb489fad2b3f53637634a0cf5906f2/` in 1.5 s.  Its hash matched. |
+| Atomic writes | Pooch downloads to a temporary file in the cache directory.  It moves the file into place only after the hash matches. | After the failed wrong-hash test, the good cached file was unchanged. |
+:::
+
+### Distribution size
+
+:::{table} Data files and archive sizes of 4.0.0rc3 and 4.0.0rc4.
+:label: tab:distribution_size
+:align: center
+| Release | Data files in package | Wheel | sdist |
+|---|:---:|---:|---:|
+| 4.0.0rc3 (TestPyPI) | 41 | 20,907,340 bytes | 20,964,518 bytes |
+| 4.0.0rc4 (TestPyPI) | 0 | 972,909 bytes | 895,879 bytes |
+:::
+
+The 4.0.0rc4 wheel is 95.3% smaller than the 4.0.0rc3 wheel.  The 4.0.0rc4 sdist is 95.7% smaller than the 4.0.0rc3 sdist.  The 4.0.0rc4 registry lists 39 data files (41 original files less the two output files that were removed), none of which ship in either archive.
+
+### Managing data files
+
+The registry lists every file that git tracks under `src/rattlesnake/examples` and whose suffix the `exclude` list in `pyproject.toml` names, currently `.nc4`, `.npz`, and `.npy`.  An untracked file, such as a run output, never enters the registry.  A file with any other suffix, such as `.xlsx`, ships in the wheel and the sdist and stays out of the registry.  To fetch a new file type, add a glob for its suffix, such as `"/src/rattlesnake/examples/**/*.xlsx"`, to the `exclude` list under `[tool.hatch.build]` in `pyproject.toml`.  Then follow the [steps for every change](#sec:steps-for-every-change) below.  The regenerated registry picks up the new files.
+
+`pyproject.toml` is the *single source of truth* for the suffixes.  Hatchling reads `exclude` as static TOML when it builds the wheel and the sdist.  It cannot import the list from Python code.  A build hook such as `hatch_build.py` can add files to an archive, but hatchling gives a hook no way to remove them.  So the list lives in `pyproject.toml`, and `registry.py` reads it from there.
+
+The list sits in `[tool.hatch.build]`, not under a single build target, because hatchling applies a top-level option to every target.  One list covers *both* the wheel and the sdist.
+
+```{warning}
+Do not add an `exclude` list under `[tool.hatch.build.targets.wheel]` or `[tool.hatch.build.targets.sdist]`.  A target's own list replaces the `[tool.hatch.build]` list for that target instead of adding to it.  Every data file, 47.6 MB in all, would then ship in that archive.
+
+Two safeguards catch this mistake before a release.  `suffixes_read` in `src/rattlesnake/data/registry.py` finds the target's own list and raises `ValueError`.  `python -m rattlesnake.data.registry` then exits with status 2 and writes no registry.  `test_suffixes_read_repository` in `tests/short/test_registry.py` calls `suffixes_read` too, so it fails in CI.
+```
+
+`suffixes_read` also rejects a glob that is not `/src/rattlesnake/examples/**/*` followed by a single suffix, such as `.nc4`.  `suffixes_read` could not tell which files such a glob excludes.  The same two safeguards then catch the mistake.
+
+(sec:steps-for-every-change)=
+#### Steps for every change
+
+Each change below ends with these three steps:
+
+1. Regenerate the registry from the repository root:
+
+   ```sh
+   uv run python -m rattlesnake.data.registry
+   ```
+
+   To check the registry without writing it, add `--check`:
+
+   ```sh
+   uv run python -m rattlesnake.data.registry --check
+   ```
+
+   When the registry matches the files on disk, the command exits with status 0 and prints:
+
+   ```text
+   <repository>/src/rattlesnake/data/_registry.py is up to date
+   ```
+
+   When the registry is stale, the command exits with status 1.  It prints one line per difference, then the command that fixes it.  For example, this output shows a checkout where `environment/data/time_signal.npy` is on disk but missing from the registry:
+
+   ```text
+   missing  environment/data/time_signal.npy
+   <repository>/src/rattlesnake/data/_registry.py is stale. Run: python -m rattlesnake.data.registry
+   ```
+
+   Each difference line starts with one of three words:
+
+   - `missing`: a file on disk that the registry does not list.
+   - `stale`: a registry entry whose file is gone.
+   - `changed`: a file whose hash no longer matches its registry entry.
+
+   The command exits with status 2 when the examples directory or `pyproject.toml` is missing, or when `suffixes_read` rejects the `exclude` list.
+
+2. Commit the `_registry.py` and data files **together**.
+3. Push the commit.  A non-editable build can download a file only from a commit already on GitHub.
+
+#### Add a file
+
+1. Put the file under `src/rattlesnake/examples`.
+2. Stage the file with `git add`.  The registry lists only files that git tracks, so the next step would skip an unstaged file.
+3. Read the file through `data.fetch(name=...)`.  The name is the path relative to `src/rattlesnake/examples`.  Do not build the path from `defaults.DIRECTORY`.  A path built from `defaults.DIRECTORY` points into the installed package, and the published package does not contain the file.  Use `data.fetch` only for a file that Rattlesnake reads, never for a path that Rattlesnake writes, such as the destination of a `SAVE_CONTROL_DATA` profile event.  Rattlesnake would overwrite the cached copy, and its hash would no longer match.
+4. Call `data.fetch` inside the function that needs the file, not at module level.  A module-level call downloads the file whenever someone imports the module.
+5. Follow the [steps for every change](#sec:steps-for-every-change).
+
+#### Change a file
+
+1. Replace the file in place, under the same name.
+2. Follow the [steps for every change](#sec:steps-for-every-change).
+
+Older releases keep downloading the old version from their own tag.  Changing a file never breaks them.
+
+Git keeps every version of a binary file in the repository history.  Every clone downloads all of those versions.  Commit a new version of a large file only when its contents matter, and avoid a series of small edits.
+
+#### Rename or move a file
+
+1. Move the file with `git mv`.
+2. Update every `data.fetch(name=...)` call that uses the old name.  `grep -rn "<old name>" src` finds them.
+3. Follow the [steps for every change](#sec:steps-for-every-change).  `--check` reports the old name as `stale` and the new name as `missing` until you regenerate the registry.
+
+Older releases keep downloading the old name from their own tag.  The repository needs no alias for the old name.
+
+#### Delete a file
+
+1. Remove the file with `git rm`.
+2. Remove or replace every `data.fetch(name=...)` call that uses its name.
+3. Follow the [steps for every change](#sec:steps-for-every-change).
+
+Older releases keep downloading the file from their own tag.
+
+#### Tests that catch a missed step
+
+Four tests catch a missed step in CI:
+
+- `test_registry_matches_repository_file` in `tests/short/test_data.py` guards against the case where someone edits a data file and forgets to regenerate the registry.  Without the test, CI would stay green, and the release would ship the old hash.  Every user's `fetch` would then fail with a `ValueError` after four attempts.  This test prevents that scenario.
+- `test_registry_file_exists_in_checkout` in `tests/short/test_data.py` fails when someone renames or deletes a registered file and forgets to regenerate the registry.
+- `test_committed_registry_matches_files_on_disk` in `tests/short/test_registry.py` fails when someone stages a data file with `git add` and forgets to regenerate the registry.  The wheel leaves the file out, and the registry does not list it, so the file would ship nowhere.
+- `test_fetch_names_are_registered` in `tests/short/test_data.py` fails when a `data.fetch` call uses a name that the registry lacks.  After a rename or delete, a missed call site would otherwise fail only when its example runs, with a `KeyError`.
+
 ## Continuous Integration/Continuous Deployment (CI/CD)
 
 The CI/CD pipeline comprises two GitHub Actions workflows, `ci.yml` and `release.yml`, described in detail below.
 
+(sec:synopsis)=
 ### Synopsis
 
 `ci.yml` — Continuous Integration
@@ -389,12 +609,8 @@ Seven jobs, five of which share a gate:
 1. **changes**
    * Uses [dorny/paths-filter](https://github.com/dorny/paths-filter) to detect whether docs and/or code files changed. Sets the job outputs `docs_changed` and `code_changed` (each `true`/`false`), which downstream jobs use to streamline the CI process by skipping unnecessary jobs.
 2. **pytest_matrix**
-   * Runs tests on all combinations of [macOS, Ubuntu, Windows] × [3.11, 3.12] of Python using `pip install .[dev]`.  PyQt wheel compatibility requires use of `pip` instead of `uv`. Test scope is adaptive:
-     * Default: `tests/short`
-     * Full suite triggered by:
-       * commit message containing `[all tests]`, or
-       * manual dispatch with `test_level=full`, or
-       * branch is `main` or `dev`
+   * Runs tests after `pip install .[dev]`.  PyQt wheel compatibility requires use of `pip` instead of `uv`.
+   * The operating systems, Python versions, and test scope depend on the branch.  See [Matrix scope](#sec:matrix-scope).
 3. **lint**
    * Runs `uv run ruff format --check src/rattlesnake` first. This step is **non-blocking** — a
   formatting drift surfaces as a `::warning::` annotation on the workflow run instead of failing
@@ -412,7 +628,7 @@ Seven jobs, five of which share a gate:
    * The job takes roughly half an hour, so the docs gate matters here more than anywhere else.
 6. **docs_jupyter_book**
    * Downloads the `ui-generated-docs` artifact into `documentation/book/src/_generated`, updates `myst.yml` metadata via `report_jupyter_book.py`, validates the table of contents via `toc.py`, then builds the Jupyter Book.
-   * The table of contents check and the scan of the build log for MyST's `⛔️` error marker both exist because `--strict` alone does not fail the job.  MyST records some errors, a missing table of contents entry among them, against `myst.yml` rather than against a page.  MyST's help text for `--strict` reads "Summarize build warnings and stop on any errors," and MyST does log the missing entry at error level.  The strict check simply never inspects errors recorded against the config file.  So MyST prints them and exits zero (`success`).  This is an upstream gap that our manually-created `toc.py` now guards against.
+   * The table of contents check and the scan of the build log for MyST's `⛔️` error marker both exist because `--strict` alone does not fail the job on every error.  The `--strict` warning under [Local Build](#sec:local-build) explains the gap.
 7. **deploy**
    * Assembles all artifacts into a `pages/` tree, generates the dashboard (`report_dashboard.py`), creates SVG badges, then clones the `gh-pages` branch, replaces only the current branch's subdirectory (`main/` or `dev/`), and pushes the result back with plain `git` (not `peaceiris/actions-gh-pages` or `actions/deploy-pages` — see the comments in `ci.yml` for why both were rejected).
 
@@ -484,9 +700,9 @@ the job makes this determination:
 💻 Code files: src/rattlesnake/cicd/report_dashboard.py src/rattlesnake/cicd/report_jupyter_book.py src/rattlesnake/cicd/report_lint.py tests/test_cicd_utilities.py
 ```
 
-Only the `pytest_matrix`, `lint`, and `coverage` jobs will be run.  The `docs_jupyter_book` and `deploy` jobs will be skipped.
+Only the `pytest_matrix`, `lint`, and `coverage` jobs will be run.  The `docs_ui_generate`, `docs_jupyter_book`, and `deploy` jobs will be skipped.
 
-#### All test
+#### All tests
 
 Regardless of the file type, if either the `main` or the `dev` branch is the target
 of an update, *all tests* are run, for example,
@@ -500,12 +716,26 @@ Full suite of CI/CD jobs triggered for main or dev branch updates.
 
 Running the full suite is significantly more time-consuming than executing only the specific tests relevant to the modified files.
 
+(sec:matrix-scope)=
 #### Matrix scope
 
-The `pytest_matrix` job runs across combinations of operating systems and Python versions. The scope is adaptive:
+The `pytest_matrix` job runs across combinations of operating systems and Python versions.  The `pytest_matrix` and `coverage` jobs also choose which tests to run.  Both scale up together in **full mode**, which applies to any of these:
 
-- **Feature branches** — runs only `ubuntu-latest` × `3.12` (1 runner). This keeps per-push feedback fast.
-- **`main` and `dev` branches** — runs the full matrix: `macos-latest`, `ubuntu-latest`, and `windows-latest` × `3.11` and `3.12` (6 runners). Full cross-platform coverage is enforced before anything reaches a release branch.
+- a push to `main` or `dev`
+- a pull request targeting `main` or `dev`
+- a manual dispatch with `test_level=full`
+- `[all tests]` in the commit message or the pull request title
+
+:::{table} Test modes in continuous integration.
+:label: tab:ci_test_modes
+:align: center
+| Mode | Runners | Tests |
+|---|---|---|
+| Fast, every other push | `ubuntu-latest` × `3.12` (1 runner) | `tests/short` |
+| Full | `macos-latest`, `ubuntu-latest`, and `windows-latest` × `3.11` and `3.12` (6 runners) | `tests`, including `tests/long` |
+:::
+
+Fast mode keeps per-push feedback fast.  Full mode enforces cross-platform coverage before anything reaches a release branch.
 
 This means OS-specific or Python-version-specific bugs are caught on `main`/`dev` before a release, without slowing down every feature branch push.
 
@@ -517,16 +747,19 @@ The `preflight` command is a local CI/CD readiness check. It mirrors the checks 
 uv run preflight
 ```
 
-largely automates the manual steps listed above in the [Development](#development) section.
+This command largely automates the manual steps listed above in the [Development](#sec:development) section.
 
 #### Modes and options
 
 By default, `preflight` matches CI's scope on non-`main`/`dev` branches: ruff format check and full pylint on `src/rattlesnake/`. When pytest is re-enabled, the default scope will also run `tests/ --ignore=tests/long`; use `--all-tests` to include `tests/long/` (matching CI on `main`/`dev`).
 
 ```{note}
-pytest steps are currently skipped pending resolution of a test hang in `test_acquisition.py` (see TODO in `src/rattlesnake/preflight.py`). Only ruff format check and pylint run until that issue is resolved with Dan.
+pytest steps are currently skipped pending resolution of a test hang in `test_acquisition.py` (see TODO in `src/rattlesnake/preflight.py`). Only ruff format check and pylint run until that issue is resolved.
 ```
 
+:::{table} Options of the preflight command.
+:label: tab:preflight_options
+:align: center
 option | description
 --- | ---
 *(none)* | Default scope: ruff format check + pylint (+ pytest `tests/ --ignore=tests/long` when re-enabled)
@@ -537,6 +770,7 @@ option | description
 `--no-sync` | Skips `uv sync` (useful when offline or behind a firewall)
 `--skip-network-check` | Skips the initial PyPI connectivity check
 `--force` | Continues even if the network or sync checks fail
+:::
 
 #### Examples
 
@@ -563,7 +797,7 @@ To configure Trusted Publishing, you tell PyPI, "Trust any code from this specif
 
 Steps:
 
-* In `release.yml`, `publish_testpypi` and `publish_pypi` are two separate jobs, each hardcoded to its own environment (`testpypi` / `pypi` respectively). Which one actually runs is decided once, upstream, in `validate_tag`'s `is_prerelease` output:
+* `release.yml` publishes through two jobs, each tied to one environment.  [Synopsis](#sec:synopsis) explains how `validate_tag` picks one:
 
 ```yaml
   publish_testpypi:
@@ -585,7 +819,7 @@ On the GitHub repo:
     * Click the **New environment** button.
     * Name the environment `pypi` (and then make a second item called `testpypi`) and click **Configure environment**.
   * If it does exist but is named differently, you can click on it to rename it or delete it and create a new one.
-* For a basic setup using Trusted Publishing, you don't actually need to add any secrets or configuration on this page. Just having the environment named testpypi exist is enough to link it to your workflow.
+* For a basic setup using Trusted Publishing, you don't actually need to add any secrets or configuration on this page. Having both the `pypi` and `testpypi` environments exist is enough to link them to your workflow.
 * Optionally, we add the following protections:
   * Under the **Deployment branches and tags**, under the **No Restriction** button, select **Selected branches and tags**.
   * Click **Add deployment branch or tag rule**.
@@ -616,36 +850,46 @@ We follow [PEP 440](https://peps.python.org/pep-0440/) (the Python standard for 
 N.N.N[{a|b|rc}N][.postN][.devN]
 ```
 
-The `validate_tag` job in `release.yml` enforces that a tag can be added only when the
-branch is `main` or `dev`, that the tag follows PEP 440, and that the version is
-strictly newer than all existing tags.
+The `validate_tag` job in `release.yml` rejects a tag that does not follow PEP 440.  [Synopsis](#sec:synopsis) lists its other checks.
 
 #### Example Tags
 
 Following are **prerelease tags**:
 
+:::{table} Prerelease tags.
+:label: tab:tags_prerelease
+:align: center
 tag | description
 --- | ---
 `v1.1.0a1` | The first **alpha** for version 1.1.0
 `v1.1.0b2` | The second **beta** for version 1.1.0
 `v1.1.0rc1` | The first **release candidate** for version 1.1.0
+:::
 
 A **release candidate** is made during the final testing stage before a full release.
 
 Following are **stable release tags** (e.g., starting from the `v1.0.0` release):
 
+:::{table} Stable release tags.
+:label: tab:tags_stable
+:align: center
 tag | description
 --- | ----
 `v1.0.1` | **Patch Release**: Backwards-compatible bug fixes
 `v1.1.0` | **Minor Release**: New features that are backwards-compatible
 `v2.0.0` | **Major Release**: Significant changes or breaking API updates
+:::
 
 Following are **Development** and **Post-Release** tags:
 
+:::{table} Development and post-release tags.
+:label: tab:tags_development
+:align: center
 tag | description
 --- | ---
 `v1.1.0.dev1` | A version currently under development
 `v1.0.0.post1` | Fix a minor error in the release process, such as a fix of a typo in the documentation, without changing the code
+:::
 
 ### Release on Tag
 
@@ -655,7 +899,7 @@ Following is an example of creating a release with a tag.
 
 To create a prerelease on TestPyPI:
 
-The tag must be pushed from `main` or `dev` (see [Synopsis](#synopsis)); the convention (but not requirement) is to tag from `dev`, so that release-candidate tags can be tested before merging to `main`.
+The tag must be pushed from `main` or `dev` (see [Synopsis](#sec:synopsis)); the convention (but not requirement) is to tag from `dev`, so that release-candidate tags can be tested before merging to `main`.
 
 * On the `dev` branch, create a tag and then push, e.g.,
 
@@ -678,10 +922,10 @@ git push origin v1.0.0rc1
 
 To create a release on PyPI:
 
-The tag must be pushed from `main` or `dev` (see [Synopsis](#synopsis)); the convention (but not requirement) is to cut production PyPI releases from `main`, after merging in the validated work from `dev`, so that `main` reliably reflects what has actually shipped.
+The tag must be pushed from `main` or `dev` (see [Synopsis](#sec:synopsis)); the convention (but not requirement) is to cut production PyPI releases from `main`, after merging in the validated work from `dev`, so that `main` reliably reflects what has actually shipped.
 
 * Merge the `dev` branch into the `main` branch.
-* On the `main` branch, create a tag using `git tag` and push it to the `main` branch on GitHub, e.g.,
+* On the `main` branch, create a tag using `git tag` and push the tag to GitHub, e.g.,
 
 ```sh
 # Ensure you are on the main branch
@@ -697,6 +941,30 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 # On the main branch, push the tag to GitHub
 git push origin v1.0.0
 ```
+
+(sec:release-tag-protection)=
+### Release Tag Protection
+
+A GitHub tag ruleset named `release tags` protects every release tag.  The ruleset matches tags that start with `v`, the same pattern that triggers `release.yml`.  GitHub refuses any push that deletes or moves a matching tag, and it blocks deleting one in the web interface.  Tags that do not start with `v` are not protected.
+
+The ruleset does not restrict creating a tag, so the release steps above work unchanged.
+
+Each release downloads its data files from its own tag (see [Large Data Files](#sec:large-data-files)).  A deleted or moved tag would break every install of that release.  Each `data.fetch` call would fail after four attempts, and users could not repair it.
+
+The ruleset has no bypass list, so it also blocks repository admins.  To fix a wrong tag, such as one pushed on the wrong commit, an admin must turn the ruleset off first:
+
+1. Go to **Settings → Rules → Rulesets → release tags**.
+2. Set **Enforcement status** to **Disabled**, and save.
+3. Delete the tag on GitHub and locally:
+
+   ```sh
+   git push origin :refs/tags/v1.0.0rc1
+   git tag -d v1.0.0rc1
+   ```
+
+4. Set **Enforcement status** back to **Active**, and save.
+
+We accept this extra effort as the cost of the protection.  Fix a wrong tag right after you push it, before anyone installs that release.  A pushed tag also starts `release.yml`, so check whether the run published the version.  PyPI and TestPyPI never accept the same version twice.  If a release was published, leave its tag alone, and release a new version instead.
 
 ### Manual Approval Gate
 

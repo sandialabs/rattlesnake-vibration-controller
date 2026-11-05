@@ -60,5 +60,5 @@ The Rattlesnake framework was developed to overcome these limitations and facili
 :label: fig:rattlesnake_logo
 :align: center
 
-Rattlesnake Logo
+Rattlesnake Logo.
 :::
