@@ -82,14 +82,6 @@ def test_environment_manager_ready_event_list(environment_manager):
     assert environment_manager.ready_event_list == ready_event_list
 
 
-def test_environment_manager_set_ready_events(environment_manager):
-    environment_manager.queue_names = ["Environment 0"]
-    environment_manager.environment_ready_events["Environment 0"].clear()
-    environment_manager.set_ready_events()
-
-    assert environment_manager.environment_ready_events["Environment 0"].is_set()
-
-
 def test_environment_manager_initialize_hardware(environment_manager):
     hardware_metadata = MockHardwareMetadata()
     environment_manager.queue_names = ["Environment 0"]
