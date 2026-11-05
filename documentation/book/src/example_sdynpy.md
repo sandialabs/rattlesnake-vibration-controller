@@ -232,7 +232,7 @@ Similarly to @sec:example_nidaqmx, we will open Rattlesnake in the Modal Environ
 :::{figure} figures/example_cdaq_modal_testing_selection.png
 :label: fig:examplesdynpymodaltestingselection
 :align: center
-Selecting the Modal Environment in Rattlesnake
+Selecting the Modal Environment in Rattlesnake.
 :::
 
 We can then click the `Save Channel Table` button to save out the empty channel table to an Excel spreadsheet (@fig:examplesdynpysavechanneltable).
@@ -310,7 +310,7 @@ To enable the Modal Environment, first click the `Arm Data Acquisition` button. 
 :::{figure} figures/example_sdynpy_modal_testing_ready.png
 :label: fig:examplesdynpymodaltestingready
 :align: center
-Run Test tab with data acquisition armed
+Run Test tab with data acquisition armed.
 :::
 
   Next we can set up data display windows. We will use the `New from Template...` dropdown menu to create `Drive Point (Imaginary)`, `Drive Point Coherence`, and `Reference Autospectrum` channels. We will also manually create 5 windows by clicking the `New` button, and set them to visualize the time histories for each channel; these will help us determine if we need to change the trigger settings, frame length, or add a window. Clicking the `Tile` button will expand the windows to fill up the available space.  @fig:examplesdynpymodalshakeremptywindows shows the result of these operations.
@@ -347,7 +347,7 @@ In the `Signal Generator` section, we will select a `Burst Random` signal and se
 :::{figure} figures/example_sdynpy_burst_random_parameters.png
 :label: fig:examplesdynpyburstrandomparameters
 :align: center
-Test parameters for the Burst Random excitation
+Test parameters for the Burst Random excitation.
 :::
 
 We can preview the signal by clicking the `Preview Acquisition` button to ensure that the triggering has been set up correctly and the signals ring down appropriately.  @fig:examplesdynpyburstrandompreview shows the previewed data.
@@ -381,7 +381,7 @@ Press the `Stop Acquisition` button to stop the preview, set a file to store the
 :::{figure} figures/example_sdynpy_burst_random_acquire.png
 :label: fig:examplesdynpyburstrandomacquire
 :align: center
-Acquiring the burst random data
+Acquiring the burst random data.
 :::
 
 ### Analyzing Modal Data
@@ -527,7 +527,7 @@ Our channel table now looks like @fig:examplesdynpytwoshakerchanneltable.
 :::{figure} figures/example_sdynpy_two_shaker_channel_table.png
 :label: fig:examplesdynpytwoshakerchanneltable
 :align: center
-Channel table for the random vibration test setup
+Channel table for the random vibration test setup.
 :::
 
 ### Setting up the Random Vibration Test
@@ -536,7 +536,7 @@ Now that the specification and channel table are set up, we will set up our rand
 :::{figure} figures/example_cdaq_mimo_random_selection.png
 :label: fig:examplesdynpymimorandomselection
 :align: center
-Selecting the MIMO Random Vibration environment
+Selecting the MIMO Random Vibration environment.
 :::
 
 On the `Data Acquisition Setup` tab, we will `Load Channel Table` to import our Excel channel spreadsheet. We will set the `Hardware Selector` to `SDynPy System Integration...` and select our system file `sdynpy_system.npz`, as well as set the sample `Sample Rate` to `5120`. The other parameters can be left at their default values.  @fig:examplesdynpyvibrationdataacquisitionsetup shows these parameters.
@@ -576,7 +576,7 @@ On the `Test Prediction` tab, Rattlesnake will make predictions of the voltage t
 :::{figure} figures/example_sdynpy_random_vibration_predictions.png
 :label: fig:examplesdynpyrandomvibrationpredictions
 :align: center
-Test predictions for the random vibration environment
+Test predictions for the random vibration environment.
 :::
 
 If the predictions look good, we can proceed to the Test Profile tab, which we will again leave blank and click the Initialize Test Profile button to proceed to the Run Test tab.
@@ -593,7 +593,7 @@ As the test is running, the main Rattlesnake interface will show the sum of APSD
 :::{figure} figures/example_sdynpy_random_vibration_sum_asds.png
 :label: fig:examplesdynpyrandomvibrationsumasds
 :align: center
-Rattlesnake GUI showing the average test response
+Rattlesnake GUI showing the average test response.
 :::
 
 :::{figure} figures/example_sdynpy_random_vibration_individual_channels.png
@@ -631,7 +631,7 @@ The last demonstration will show how we can perform a MIMO Transient environment
 :::{figure} figures/example_cdaq_mimo_transient_selection.png
 :label: fig:examplesdynpymimotransientselection
 :align: center
-Selecting the MIMO Transient environment
+Selecting the MIMO Transient environment.
 :::
 
 We will set the `Data Acquisition Setup` tab identical to what was used before, as shown in @fig:examplesdynpyvibrationdataacquisitionsetup. Click the `Initialize Data Acquisition` button to proceed.

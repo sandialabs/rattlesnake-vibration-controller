@@ -342,11 +342,18 @@ def skeleton_environment(**overrides):
 
 # region SysId Environment
 def skeleton_sysid_environment_metadata(**overrides):
-    """Builds a SkeletonMetadata with test defaults."""
+    """Build SkeletonSysIdMetadata for mock_channel_list's response/drive pair.
+
+    Indices are local to the selected environment channels. When overriding
+    channel membership, supply matching index overrides if the layout changes.
+    """
     kwargs = dict(
         environment_name="Skeleton SysId Environment",
         channel_list_bools=mock_channel_list_bools(),
         sample_rate=1024,
+        example_window_size=5,
+        control_channel_indices=[0],
+        output_channel_indices=[1],
     )
     kwargs.update(overrides)
     return SkeletonSysIdMetadata(**kwargs)

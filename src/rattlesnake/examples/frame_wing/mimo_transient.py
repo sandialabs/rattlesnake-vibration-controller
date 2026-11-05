@@ -12,6 +12,7 @@ from rattlesnake.utilities import load_time_history
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+from rattlesnake import data
 
 
 def build_mimo_transient_controller(threaded=False):
@@ -36,7 +37,7 @@ def build_mimo_transient_controller(threaded=False):
         time_per_read=0.25,
         time_per_write=0.25,
         output_oversample=10,
-        hardware_file=rattlesnake_directory + "/frame_wing/data/rattlesnake_state_space_system.npz",
+        hardware_file=data.fetch(name="frame_wing/data/rattlesnake_state_space_system.npz"),
     )
 
     rattlesnake.initialize_hardware(hardware_metadata)
@@ -63,7 +64,7 @@ def build_mimo_transient_controller(threaded=False):
     )
 
     signal = load_time_history(
-        rattlesnake_directory + "/frame_wing/data/transient_specification.npz",
+        data.fetch(name="frame_wing/data/transient_specification.npz"),
         hardware_metadata.sample_rate,
     )
 

@@ -29,7 +29,6 @@ import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 
 import netCDF4 as nc
-import numpy as np
 
 from rattlesnake.utilities import GlobalCommands, QueueContainer, RattlesnakeError
 from rattlesnake.utilities import save_rattlesnake_to_netcdf
@@ -71,8 +70,9 @@ class StreamMetadata:
                     f"The directory for the stream file does not exist: {parent_dir}"
                 )
 
-        # Does not check whether the environment_name corresponds to a valid environment. If it isn't,
-        # the stream just wont start which isn't critical enough to warrant a restructure
+        # Does not check whether the environment_name corresponds to a valid
+        # environment. If it isn't, the stream just wont start which isn't
+        # critical enough to warrant a restructure
         if self.stream_type == StreamType.TEST_LEVEL:
             if self.test_level_environment_name is None or not isinstance(
                 self.test_level_environment_name, str

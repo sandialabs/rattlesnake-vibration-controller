@@ -82,7 +82,7 @@ Besides the sample rate, no additional hardware-specific parameters must be spec
 :::{figure} figures/nidaqmx_data_acquisition_parameters.png
 :label: fig:nidaqmx_data_acquisition_parameters
 :align: center
-NI-DAQmx Data Acquisition Parameters
+NI-DAQmx Data Acquisition Parameters.
 :::
 
 (warn:ni_sample_rate)=

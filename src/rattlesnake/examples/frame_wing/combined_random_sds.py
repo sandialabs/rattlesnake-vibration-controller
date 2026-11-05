@@ -1,3 +1,5 @@
+import os
+
 import openpyxl as opxl
 import numpy as np
 
@@ -26,19 +28,31 @@ from rattlesnake.environment.sds_sys_id_metadata import (
     ControlLawType,
     SpecParameters,
 )
-from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions, SDSCommands
+from rattlesnake.environment.sds_sys_id_utilities import SDSInstructions
 from rattlesnake.environment.random_vibration_sys_id_utilities import load_specification
 from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+from rattlesnake import data
 
 
 
-def build_combined_controller(threaded=False):
+def build_combined_controller(
+    threaded=False, *, output_directory: str | os.PathLike[str] | None = None
+):
     """
     Build a Rattlesnake controller initialized to a populated MIMO Random example state.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        Run the controller processes as threads. Default is False.
+    output_directory : str or os.PathLike or None, optional
+        Directory that holds ``streaming_example.nc4``. None selects the current
+        working directory. The example uses ``StreamType.NO_STREAM``, so it
+        writes no file until the stream type changes.
 
     Returns
     -------
@@ -58,7 +72,7 @@ def build_combined_controller(threaded=False):
         time_per_read=0.25,
         time_per_write=0.25,
         output_oversample=10,
-        hardware_file=rattlesnake_directory + "/frame_wing/data/rattlesnake_state_space_system.npz",
+        hardware_file=data.fetch(name="frame_wing/data/rattlesnake_state_space_system.npz"),
     )
 
     rattlesnake.initialize_hardware(hardware_metadata)
@@ -85,7 +99,7 @@ def build_combined_controller(threaded=False):
     )
 
     spec_freq_lines, spec_cpsd_matrix, spec_warning_matrix, spec_abort_matrix = load_specification(
-        spec_path=rattlesnake_directory + "/frame_wing/data/random_vibration_specification.npz",
+        spec_path=data.fetch(name="frame_wing/data/random_vibration_specification.npz"),
         n_freq_lines=sysid_parameters.sysid_frame_size // 2 + 1,
         df=sysid_parameters.sample_rate / sysid_parameters.sysid_frame_size,
     )
@@ -190,7 +204,7 @@ def build_combined_controller(threaded=False):
         error_tolerance=0.05,
     )
 
-    spec_data = np.load(rattlesnake_directory + "/frame_wing/data/srs_specification.npz")
+    spec_data = np.load(data.fetch(name="frame_wing/data/srs_specification.npz"))
     specification = SpecParameters(
         frequencies=spec_data["f"],
         srs_spec=spec_data["srs"],
@@ -237,9 +251,9 @@ def build_combined_controller(threaded=False):
     profile_event_list = []
     timestamp = 0
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = -6
+    event_data = -6
     profile_event_list.append(
-        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, event_data)
     )
 
     timestamp = 0
@@ -253,16 +267,16 @@ def build_combined_controller(threaded=False):
 
     timestamp = 5
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = -3
+    event_data = -3
     profile_event_list.append(
-        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, event_data)
     )
 
     timestamp = 10
     command = RandomVibrationCommands.ADJUST_TEST_LEVEL
-    data = 0
+    event_data = 0
     profile_event_list.append(
-        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, data)
+        ProfileEvent(timestamp, random_environment_metadata.environment_name, command, event_data)
     )
 
     timestamp = 20
@@ -288,39 +302,77 @@ def build_combined_controller(threaded=False):
 
     rattlesnake.initialize_profile_event_list(profile_event_list)
 
+    if output_directory is None:
+        output_directory = os.getcwd()
     stream_metadata = StreamMetadata(
         # StreamType.IMMEDIATELY,
         StreamType.NO_STREAM,
-        stream_file=rattlesnake_directory + "/frame_wing/data/streaming_example.nc4",
+        stream_file=os.path.join(output_directory, "streaming_example.nc4"),
     )
     rattlesnake.start_acquisition(stream_metadata)
 
     return rattlesnake
 
 
-def build_combined_app(threaded=False, display_errors=False):
+def build_combined_app(
+    threaded=False,
+    display_errors=False,
+    *,
+    output_directory: str | os.PathLike[str] | None = None,
+):
     """
     Build a populated MIMO Random example UI without entering the Qt event loop.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        Run the controller processes as threads. Default is False.
+    display_errors : bool, optional
+        Show error dialogs in the UI. Default is False.
+    output_directory : str or os.PathLike or None, optional
+        Directory that holds ``streaming_example.nc4``. None selects the current
+        working directory.
 
     Returns
     -------
     RattlesnakeAppHandle
         Handle containing controller, UI, and QApplication.
     """
-    rattlesnake = build_combined_controller(threaded=threaded)
+    rattlesnake = build_combined_controller(
+        threaded=threaded, output_directory=output_directory
+    )
     return build_rattlesnake_app(rattlesnake, display_errors=display_errors)
 
 
-def get_combined_ui(threaded=False, display_errors=False):
+def get_combined_ui(
+    threaded=False,
+    display_errors=False,
+    *,
+    output_directory: str | os.PathLike[str] | None = None,
+):
     """
     Convenience helper returning the Random environment UI.
+
+    Parameters
+    ----------
+    threaded : bool, optional
+        Run the controller processes as threads. Default is False.
+    display_errors : bool, optional
+        Show error dialogs in the UI. Default is False.
+    output_directory : str or os.PathLike or None, optional
+        Directory that holds ``streaming_example.nc4``. None selects the current
+        working directory.
 
     Returns
     -------
     tuple
         (handle, random_ui)
     """
-    handle = build_combined_app(threaded=threaded, display_errors=display_errors)
+    handle = build_combined_app(
+        threaded=threaded,
+        display_errors=display_errors,
+        output_directory=output_directory,
+    )
     random_ui = handle.rattlesnake_ui.environment_uis["Random"]
     return handle, random_ui
 

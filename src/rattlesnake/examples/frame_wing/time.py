@@ -9,6 +9,7 @@ from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.time_environment import TimeMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.examples.defaults import DIRECTORY as rattlesnake_directory
+from rattlesnake import data
 
 
 def build_time_signal(sample_rate):
@@ -67,7 +68,7 @@ def build_time_controller(threaded=False):
         time_per_read=0.25,
         time_per_write=0.25,
         output_oversample=10,
-        hardware_file=rattlesnake_directory + "/frame_wing/data/rattlesnake_state_space_system.npz",
+        hardware_file=data.fetch(name="frame_wing/data/rattlesnake_state_space_system.npz"),
     )
 
     rattlesnake.initialize_hardware(hardware_metadata)

@@ -37,7 +37,7 @@ Rattlesnake runs most of its tasks on separate processes in order to perform ope
 :::{figure} figures/controller_flowchart.png
 :label: fig:controllerflowchart
 :align: center
-High-level flow chart of the Rattlesnake software
+High-level flow chart of the Rattlesnake software.
 :::
 
 The UI of the controller exists on the main Rattlesnake process.  Therefore, any environment-specific UI components are also run on this process.  At run-time after the environments in a given test have been selected, the controller assembles the GUI, combining it with the environment-specific interfaces of each environment used in the test.  Typically, the constructor for each environment's UI class will handle adding the environment-specific portion of the GUI to the main GUI.  The class implementing the UI should inherit from the `AbstractUI` class in the `components/abstract_environment.py` file.

@@ -49,7 +49,7 @@ As we install instrumentation, we will fill out a channel table. Rather than fil
 :::{figure} figures/example_cdaq_modal_testing_selection.png
 :label: fig:examplecdaqmodaltestingselection
 :align: center
-Selecting the Modal Environment in Rattlesnake
+Selecting the Modal Environment in Rattlesnake.
 :::
 
 We can then click the `Save Channel Table` button to save out the empty channel table to an Excel spreadsheet (@fig:examplecdaqsavechanneltable).
@@ -144,7 +144,7 @@ To enable the Modal Environment, first click the `Arm Data Acquisition` button. 
 :::{figure} figures/example_cdaq_modal_testing_ready.png
 :label: fig:examplecdaqmodaltestingready
 :align: center
-Run Test tab with data acquisition armed
+Run Test tab with data acquisition armed.
 :::
 
 To start, we will use the `Degree of Freedom Override` section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the `Data Acquisition Setup` page and reinitializing everything in the channel table. Click the `Add Override` button, and in the row that appears, change the `Channel` column to the force channel. In the `New Node` column, put `23`, which will be the position we excite at. For the `New Direction`, put `Y-`.  This is shown in @fig:examplecdaqchanneloverride.
@@ -264,7 +264,7 @@ The results of this command are shown in @fig:examplecdaqallfrfs.
 :::{figure} figures/example_cdaq_all_frfs.png
 :label: fig:examplecdaqallfrfs
 :align: center
-All FRFs from the three impacts
+All FRFs from the three impacts.
 :::
 
 Ideally we would like to plot mode shapes of this test, so as a first step towards that goal we will construct a test geometry. This contains nodes, coordinate systems, and optionally tracelines or elements.  We can construct nodes with the ID numbers given in the test and coordinates specified by each node's position along the beam.  Here we construct and print a `node_array` in SDynPy
@@ -396,7 +396,7 @@ With the channel table set up, we can now start Rattlesnake and load the channel
 :::{figure} figures/example_cdaq_modal_shaker_daq_settings.png
 :label: fig:examplecdaqmodalshakerdaqsettings
 :align: center
-Data acquisition settings for the Modal Shaker Test
+Data acquisition settings for the Modal Shaker Test.
 :::
 
 ### Environment Definition for Pseudorandom Excitation
@@ -462,7 +462,7 @@ In the `Signal Generator` section, we will select a `Burst Random` signal and se
 :::{figure} figures/example_cdaq_burst_random_parameters.png
 :label: fig:examplecdaqburstrandomparameters
 :align: center
-Test parameters for the Burst Random excitation
+Test parameters for the Burst Random excitation.
 :::
 
 We can preview the signal by clicking the `Preview Acquisition` button to ensure that the triggering has been set up correctly and the signals ring down appropriately.  @fig:examplecdaqburstrandompreview shows the previewed data.
@@ -496,7 +496,7 @@ Press the `Stop Acquisition` button to stop the preview, set a file to store the
 :::{figure} figures/example_cdaq_burst_random_acquire.png
 :label: fig:examplecdaqburstrandomacquire
 :align: center
-Acquiring the burst random data
+Acquiring the burst random data.
 :::
 
 ### Analyzing Modal Shaker Data
@@ -558,7 +558,7 @@ On the `Run Test` tab, before selecting `Arm Data Acquisition` we select `Start 
 :::{figure} figures/example_cdaq_set_up_streaming.png
 :label: fig:examplecdaqsetupstreaming
 :align: center
-Run Test tab with Streaming enabled
+Run Test tab with Streaming enabled.
 :::
 
 Now we can `Arm Data Acquisition` and then `Preview Acquisition`. Once the data acquisition is running, we will tap the structure with the modal hammer repeatedly along the length of the beam.  Don't worry that the hammer is not plugged in, as we only care about the accelerometer response. Once we have recorded a few seconds of impacts, we can select `Stop Acquisition` and `Disarm Data Acquisition`. Note that the streaming file will not be available until the data acquisition is disarmed.  We can now close Rattlesnake because we are done with the Modal environment.
@@ -661,7 +661,7 @@ Our channel table now looks like @fig:examplecdaqtwoshakerchanneltable.
 :::{figure} figures/example_cdaq_two_shaker_channel_table.png
 :label: fig:examplecdaqtwoshakerchanneltable
 :align: center
-Channel table for the random vibration test setup
+Channel table for the random vibration test setup.
 :::
 
 ### Setting up the Random Vibration Test
@@ -670,7 +670,7 @@ Now that the test hardware and channel table are set up, we will set up our rand
 :::{figure} figures/example_cdaq_mimo_random_selection.png
 :label: fig:examplecdaqmimorandomselection
 :align: center
-Selecting the MIMO Random Vibration environment
+Selecting the MIMO Random Vibration environment.
 :::
 
 On the `Data Acquisition Setup` tab, we will `Load Channel Table` to import our Excel channel spreadsheet. We will also set the `Sample Rate` to `5120`. The other parameters can be left at their default values.  @fig:examplecdaqvibrationdataacquisitionsetup shows these parameters.
@@ -710,7 +710,7 @@ On the `Test Prediction` tab, Rattlesnake will make predictions of the voltage t
 :::{figure} figures/example_cdaq_random_vibration_predictions.png
 :label: fig:examplecdaqrandomvibrationpredictions
 :align: center
-Test predictions for the random vibration environment
+Test predictions for the random vibration environment.
 :::
 
 If the predictions look good, we can proceed to the Test Profile tab, which we will again leave blank and click the Initialize Test Profile button to proceed to the Run Test tab.
@@ -725,7 +725,7 @@ We can then click the `Start Environment` button to start the test.  @fig:exampl
 :::{figure} figures/example_cdaq_random_vibration_start.png
 :label: fig:examplecdaqrandomvibrationstart
 :align: center
-Ready to start a random vibration test in Rattlesnake
+Ready to start a random vibration test in Rattlesnake.
 :::
 
 As the test is running, the main Rattlesnake interface will show the sum of APSDs, which is the trace of the CPSD matrix and can be thought of as an average response of the test (@fig:examplecdaqrandomvibrationsumasds). To visualize individual channels, windows can be created in the `Data Display` section of the window (@fig:examplecdaqrandomvibrationindividualchannels).
@@ -733,7 +733,7 @@ As the test is running, the main Rattlesnake interface will show the sum of APSD
 :::{figure} figures/example_cdaq_random_vibration_sum_asds.png
 :label: fig:examplecdaqrandomvibrationsumasds
 :align: center
-Rattlesnake GUI showing the average test response
+Rattlesnake GUI showing the average test response.
 :::
 
 :::{figure} figures/example_cdaq_random_vibration_individual_channels.png
@@ -787,7 +787,7 @@ The last demonstration will show how we can perform a MIMO Transient environment
 :::{figure} figures/example_cdaq_mimo_transient_selection.png
 :label: fig:examplecdaqmimotransientselection
 :align: center
-Selecting the MIMO Transient environment
+Selecting the MIMO Transient environment.
 :::
 
 We will set the `Data Acquisition Setup` tab identical to what was used before, as shown in @fig:examplecdaqvibrationdataacquisitionsetup. Click the `Initialize Data Acquisition` button to proceed.
