@@ -489,6 +489,9 @@ class Environment(ABC):
 
     def set_active(self):
         self._active_event.set()
+        self.gui_update_queue.put(
+            (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
+        )
 
     def clear_active(self):
         self._active_event.clear()
