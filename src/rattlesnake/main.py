@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 """
+Main Rattlesnake application entry point.
+
+This module defines the functions used to launch the Rattlesnake graphical
+user interface, either from the ``Rattlesnake`` console script or from a
+Python script that has already constructed and configured a controller.
+
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
 (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
@@ -34,13 +40,20 @@ from rattlesnake.user_interface.user_interface import (
 
 def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
     """
-    Function for launching rattlesnake ui with the default formatting
-    that scales correcctly.
+    Launches the Rattlesnake user interface for an existing controller.
+
+    This starts up an execution loop for the main QtApplication and should be used
+    within python scripts and not jupyter notebooks. The user interface and
+    controller will shut down automatically when the user interface closes.
 
     Parameters
     ----------
     rattlesnake : RattlesnakeController
-        The rattlesnake controller object that the UI is going to represent.
+        The controller that the user interface will represent. It may be blank
+        or already configured with hardware and environment metadata.
+
+    Unit Tests
+    ----------
     """
     with build_rattlesnake_app(rattlesnake) as (rattlesnake, rattlesnake_ui, app):
         rattlesnake_ui.show()
@@ -48,7 +61,14 @@ def launch_rattlesnake_ui(rattlesnake: RattlesnakeController):
 
 
 def main():
-    """Main Rattlesnake Application Entry Point"""
+    """
+    Starts the Rattlesnake application.
+
+    This is the target of the ``Rattlesnake`` command line entry point
+
+    Unit Tests
+    ----------
+    """
     print("Loading Rattlesnake...")
 
     rattlesnake = RattlesnakeController()
