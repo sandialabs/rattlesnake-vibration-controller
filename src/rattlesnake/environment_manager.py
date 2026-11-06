@@ -565,7 +565,32 @@ class EnvironmentManager:
         self,
         metadata_list: List[EnvironmentMetadata],
         hardware_metadata: HardwareMetadata,
-    ):
+    ) -> None:
+        """
+        Validate environment metadata before it is initialized.
+
+        Each metadata object also validates itself against the hardware metadata, which
+        can raise additional errors.
+
+        Parameters
+        ----------
+        metadata_list : list of EnvironmentMetadata
+            Environment metadata objects to validate.
+        hardware_metadata : HardwareMetadata
+            Hardware metadata that the environment metadata is validated against.
+
+        Raises
+        ------
+        RattlesnakeError
+            If there are more environments than environment queues.
+        RattlesnakeError
+            If an object is not an ``EnvironmentMetadata`` object.
+        RattlesnakeError
+            If environment names are not unique (case-insensitive).
+
+        Unit Tests
+        ----------
+        """
         # Check if there are available queues
         if len(metadata_list) > self.num_queues:
             raise RattlesnakeError(
@@ -594,8 +619,41 @@ class EnvironmentManager:
             metadata.validate(hardware_metadata)
 
     def validate_system_id_metadata(
-        self, sysid_metadata, hardware_metadata, environment_name
-    ):
+        self,
+        sysid_metadata: SysIdMetadata,
+        hardware_metadata: HardwareMetadata,
+        environment_name: str,
+    ) -> str:
+        """
+        Validate system identification metadata for an environment.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to validate.
+        hardware_metadata : HardwareMetadata
+            Currently stored hardware metadata.
+        environment_name : str
+            Name of the environment the metadata is for.
+
+        Returns
+        -------
+        str
+            Queue name of the environment. This is used to send system identification
+            metadata to the correct environment after validation.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``sysid_metadata`` is not a ``SysIdMetadata`` object.
+        RattlesnakeError
+            If no environment exists with the given name.
+        RattlesnakeError
+            If the environment is not a system identification environment.
+
+        Unit Tests
+        ----------
+        """
         if not isinstance(sysid_metadata, SysIdMetadata):
             raise RattlesnakeError(
                 "Rattlesnake.initialize_system_id was not given a SysIdMetadata object"
@@ -616,8 +674,44 @@ class EnvironmentManager:
         return queue_name
 
     def validate_system_id_package(
-        self, environment_name, data_package: SysIdDataPackage
-    ):
+        self, environment_name: str, data_package: SysIdDataPackage
+    ) -> str:
+        """
+        Validate a system identification data package for an environment.
+
+        The package is only compared to the environment by its number of response and
+        reference channels.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment the data is for.
+        data_package : SysIdDataPackage
+            System identification data to validate.
+
+        Returns
+        -------
+        str
+            Queue name of the environment. This is used to send the system identification
+            package to the environment after validation.
+
+        Raises
+        ------
+        RattlesnakeError
+            If no environment exists with the given name.
+        RattlesnakeError
+            If the environment is not a system identification environment.
+        RattlesnakeError
+            If the environment does not have system identification metadata stored.
+        RattlesnakeError
+            If ``data_package`` is not a ``SysIdDataPackage`` object.
+        RattlesnakeError
+            If the number of response or reference channels does not match the
+            environment.
+
+        Unit Tests
+        ----------
+        """
         try:
             queue_name = self.queue_names_dict[environment_name]
         except KeyError:
@@ -673,7 +767,37 @@ class EnvironmentManager:
     def validate_environment_instructions(
         self, instructions: EnvironmentInstructions
     ) -> str:
-        """Validate the instructions"""
+        """
+        Validate environment instructions before an environment is started.
+
+        The instructions object also validates itself, which can raise additional
+        errors.
+
+        Parameters
+        ----------
+        instructions : EnvironmentInstructions
+            Instructions to validate.
+
+        Returns
+        -------
+        str
+            Queue name of the environment. This is used to send the instructions to the
+            environment after validation.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``instructions`` is not an ``EnvironmentInstructions`` object.
+        RattlesnakeError
+            If no environment exists with the given name.
+        RattlesnakeError
+            If the instructions type does not match the environment type.
+        RattlesnakeError
+            If the environment requires system identification data that is not stored.
+
+        Unit Tests
+        ----------
+        """
         # Validate class
         if not isinstance(instructions, EnvironmentInstructions):
             raise RattlesnakeError(
@@ -709,9 +833,29 @@ class EnvironmentManager:
         return queue_name
 
     def validate_profile_events(self, profile_events_list: List[ProfileEvent]) -> None:
-        """Since the profile events are comming form the UI/Terminal which has
-        no idea which queue was assigned to an environment, the validation of
-        the environment_names is performed by the environment manager"""
+        """
+        Validate profile events and assign their queue names and environment types.
+
+        The profile events come from the UI/Terminal, which has no idea which queue was
+        assigned to an environment, so the environment names are validated here. Each
+        event is given a queue name. Events with the environment name ``"Global"`` are
+        assigned ``"Global"`` as their queue name and environment type.
+
+        Parameters
+        ----------
+        profile_events_list : list of ProfileEvent
+            Profile events to validate.
+
+        Raises
+        ------
+        RattlesnakeError
+            If an object is not a ``ProfileEvent`` object.
+        RattlesnakeError
+            If no environment exists with the name given by an event.
+
+        Unit Tests
+        ----------
+        """
         for profile_event in profile_events_list:
             # Validate class
             if not isinstance(profile_event, ProfileEvent):
@@ -739,6 +883,12 @@ class EnvironmentManager:
 
     # region Environment
     def clear_environments(self):
+        """
+        Shut down all environments and clear their stored information.
+
+        Unit Tests
+        ----------
+        """
         self.queue_names = []
         self.environment_types = {}
         self.environment_names = {}
@@ -749,7 +899,33 @@ class EnvironmentManager:
     def add_environment(
         self, metadata: EnvironmentMetadata, hardware_metadata: HardwareMetadata
     ) -> str:
-        """Adds environment to container with unique name"""
+        """
+        Start a process for a new environment.
+
+        Assigns the first available queue to the environment, starts its process, and
+        sends it the hardware and environment metadata.
+
+        Parameters
+        ----------
+        metadata : EnvironmentMetadata
+            Environment metadata of the new environment.
+        hardware_metadata : HardwareMetadata
+            Hardware metadata to send to the environment.
+
+        Returns
+        -------
+        str
+            Queue name assigned to the environment. This is used to build the
+            environment metadata dict stored by the manager.
+
+        Raises
+        ------
+        RattlesnakeError
+            If there are no available queues.
+
+        Unit Tests
+        ----------
+        """
 
         # Find the first available queue for the environment
         queue_name = None
@@ -822,8 +998,27 @@ class EnvironmentManager:
     # endregion
 
     # region Shutdown
-    def remove_environment(self, queue_name) -> None:
-        """Removes environment from container"""
+    def remove_environment(self, queue_name: str) -> None:
+        """
+        Shut down an environment and clear its stored information.
+
+        Sends a ``QUIT`` command and waits for the process to join. If it is still
+        alive, its close event is set. A process that still does not join is terminated,
+        while a thread is left running since threads cannot be terminated.
+
+        Parameters
+        ----------
+        queue_name : str
+            Queue name of the environment to remove.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``queue_name`` is not assigned to an environment.
+
+        Unit Tests
+        ----------
+        """
         # Check if index corresponds to an existing environment
         if queue_name in self.queue_names:
             self.log(
@@ -863,7 +1058,20 @@ class EnvironmentManager:
                 f"Invalid control name: {queue_name}. Must be mapped to available queue"
             )
 
-    def close_environments(self):
+    def close_environments(self) -> None:
+        """
+        Shut down every environment process and flush its command queue.
+
+        Sends a ``QUIT`` command to each process and waits for it to join. If it is
+        still alive, its close event is set. A process that still does not join is
+        terminated, while a thread is left running since threads cannot be terminated.
+
+        This does not clear the stored environment information. Use
+        ``clear_environments`` to also clear it.
+
+        Unit Tests
+        ----------
+        """
         for queue_name, environment_process in self.environment_processes.items():
             self.queue_container.environment_command_queues[queue_name].put(
                 TASK_NAME, (GlobalCommands.QUIT, None)
