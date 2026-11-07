@@ -39,13 +39,6 @@ from typing import Dict, List
 import openpyxl
 import netCDF4 as nc4
 
-from rattlesnake.environment_manager import EnvironmentManager
-from rattlesnake.load_utilities import (
-    load_metadata_from_netcdf,
-    load_metadata_from_workbook,
-    save_rattlesnake_to_workbook,
-)
-from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 from rattlesnake.typehint import EventType, PathType
 from rattlesnake.utilities import (
     log_file_task,
@@ -58,15 +51,9 @@ from rattlesnake.utilities import (
     VerboseMessageQueue,
 )
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
-from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentMetadata,
-)
-from rattlesnake.environment.environment_registry import (
-    ENVIRONMENT_METADATA,
-    SYSID_ENVIRONMENTS,
 )
 from rattlesnake.process.abstract_sysid_data_analysis import (
     SysIdDataPackage,
@@ -76,6 +63,16 @@ from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.controller import controller_process
 from rattlesnake.process.output import output_process
 from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
+from rattlesnake.environment.environment_registry import (
+    SYSID_ENVIRONMENTS,
+)
+from rattlesnake.environment_manager import EnvironmentManager
+from rattlesnake.load_utilities import (
+    load_metadata_from_netcdf,
+    load_metadata_from_workbook,
+    save_rattlesnake_to_workbook,
+)
+from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join

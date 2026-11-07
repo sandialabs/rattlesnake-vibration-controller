@@ -1,10 +1,11 @@
 import copy
-from datetime import datetime
-import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import threading
+import multiprocessing as mp
+from datetime import datetime
 from typing import Dict, List
 
+from rattlesnake.typehint import EventType
 from rattlesnake.utilities import (
     EventContainer,
     GlobalCommands,
@@ -16,16 +17,15 @@ from rattlesnake.environment.abstract_environment import (
     EnvironmentInstructions,
     EnvironmentMetadata,
 )
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdMetadata,
+    SysIdDataPackage,
+)
 from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_PROCESS,
     SYSID_ENVIRONMENTS,
 )
 from rattlesnake.profile_manager import ProfileEvent
-from rattlesnake.typehint import EventType
-from rattlesnake.process.abstract_sysid_data_analysis import (
-    SysIdMetadata,
-    SysIdDataPackage,
-)
 
 TASK_NAME = "Environment Manager"
 CLOSE_TIMEOUT = 5
