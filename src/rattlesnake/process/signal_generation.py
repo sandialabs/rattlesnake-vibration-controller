@@ -110,68 +110,6 @@ def cola(
     return output
 
 
-def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
-    """Generates a time history realization from a CPSD matrix
-
-    Parameters
-    ----------
-    cpsd_matrix : np.ndarray :
-        A 3D complex np.ndarray representing a CPSD matrix where the first
-        dimension is the frequency line and the second two dimensions are the
-        rows and columns of the matrix at each frequency line.
-    sample_rate: float :
-        The sample rate of the controller in samples per second
-    df : float :
-        The frequency spacing of the cpsd matrix
-
-
-    Returns
-    -------
-    output : np.ndarray :
-        A numpy array containing the generated signals
-
-    Notes
-    -----
-    Uses the process described in [1]_
-
-    .. [1] R. Schultz and G. Nelson, "Input signal synthesis for open-loop
-       multiple-input/multiple-output testing," Proceedings of the International
-       Modal Analysis Conference, 2019.
-
-    """
-    # pylint: disable=invalid-name
-    # svd_start = time()
-    # Compute SVD broadcasting over all frequency lines
-    [U, S, Vh] = np.linalg.svd(cpsd_matrix, full_matrices=False)
-    # svd_end = time()
-    # print('SVD Time: {:0.4f}'.format(svd_end-svd_start))
-    # Reform using the sqrt of the S matrix
-    Lsvd = U * np.sqrt(S[:, np.newaxis, :]) @ Vh
-    # Compute Random Process
-    W = np.sqrt(0.5) * (
-        np.random.randn(*cpsd_matrix.shape[:-1], 1)
-        + 1j * np.random.randn(*cpsd_matrix.shape[:-1], 1)
-    )
-    Xv = 1 / np.sqrt(df) * Lsvd @ W
-    # Ensure that the signal is real by setting the nyquist and DC component to 0
-    Xv[[0, -1], :, :] = 0
-    # Compute the IFFT, using the real version makes it so you don't need negative frequencies
-    zero_padding = np.zeros(
-        [(output_oversample - 1) * (Xv.shape[0] - 1)] + list(Xv.shape[1:]),
-        dtype=Xv.dtype,
-    )
-    # ifft_start = time()
-    xv = (
-        np.fft.irfft(np.concatenate((Xv, zero_padding), axis=0) / np.sqrt(2), axis=0)
-        * output_oversample
-        * sample_rate
-    )
-    # ifft_end = time()
-    # print('FFT Time: {:0.4f}'.format(ifft_end-ifft_start))
-    output = xv[:, :, 0].T
-    return output
-
-
 class SignalGenerator(ABC):
     """Abstract base class showing required methods of each signal generator class"""
 

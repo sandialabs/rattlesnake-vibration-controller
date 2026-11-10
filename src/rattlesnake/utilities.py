@@ -20,29 +20,40 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from __future__ import annotations
+
 import importlib.util
-import multiprocessing as mp
-import multiprocessing.queues as mpqueue
+import multiprocessing.managers  # pylint: disable=unused-import
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import os
-import queue as thqueue
 import random
 import re
 import socket
 import string
 import subprocess
 import sys
+import threading
 import time
+import multiprocessing as mp
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Tuple
+from types import ModuleType
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, TextIO, Tuple
 
-import numpy as np
+import netCDF4
 import requests
+import numpy as np
 import scipy.signal as sig
+from openpyxl.worksheet.worksheet import Worksheet
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
+
+if TYPE_CHECKING:
+    from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+    from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 
 if sys.platform == "win32":
     import msvcrt
@@ -58,10 +69,31 @@ else:
     DIRECTORY = this_path
 
 
-def open_and_lock_file(lock_filename: str, encoding: str = "utf-8"):
+def open_and_lock_file(lock_filename: str, encoding: str = "utf-8") -> TextIO | None:
     """
     Returns a new file if the filename is not a locked file. Returns None
     if the file is in use by another program
+
+    The file is opened in append mode and an exclusive, non-blocking lock is
+    requested on it. If the lock is acquired, the file is truncated and the
+    current process id is written to it.
+
+    Parameters
+    ----------
+    lock_filename : str
+        Path to the lock file to open and lock. It is created if it does not
+        exist.
+    encoding : str, optional
+        Text encoding used to open the file. Defaults to ``"utf-8"``.
+
+    Returns
+    -------
+    TextIO or None
+        The open, locked file handle, or ``None`` if another process already
+        holds the lock.
+
+    Unit Tests
+    ----------
     """
     lock_file = open(lock_filename, "a+", encoding=encoding)
     lock_file.seek(0)
@@ -82,9 +114,18 @@ def open_and_lock_file(lock_filename: str, encoding: str = "utf-8"):
     return lock_file
 
 
-def unlock_file(lock_file):
+def unlock_file(lock_file: TextIO) -> None:
     """
-    Releases the lock acquired by `open_and_lock_file` and closes the file.
+    Releases the lock acquired by ``open_and_lock_file`` and closes the file.
+
+    Parameters
+    ----------
+    lock_file : TextIO
+        A file handle returned by ``open_and_lock_file``. The file is closed
+        even if releasing the lock fails.
+
+    Unit Tests
+    ----------
     """
     try:
         if sys.platform == "win32":
@@ -96,7 +137,26 @@ def unlock_file(lock_file):
         lock_file.close()
 
 
-def get_unique_log_filename():
+def get_unique_log_filename() -> Tuple[TextIO, str]:
+    """
+    Finds a log filename that is not in use by another Rattlesnake instance.
+
+    Tries ``Rattlesnake.log`` first, then ``Rattlesnake_0.log``, ``Rattlesnake_1.log``,
+    and so on, until a matching ``.lock`` file can be locked. This allows multiple
+    instances of Rattlesnake to run in a Jupyter Notebook without writing to the same
+    log file.
+
+    Returns
+    -------
+    lock : TextIO
+        The locked lock file. It should be released with ``unlock_file`` when logging is
+        finished.
+    base_filename : str
+        The log filename associated with the acquired lock.
+
+    Unit Tests
+    ----------
+    """
     base_filename = "Rattlesnake.log"
     lock_filename = "Rattlesnake.log.lock"
     lock = open_and_lock_file(lock_filename)
@@ -112,15 +172,25 @@ def get_unique_log_filename():
 
 def log_file_task(
     log_queue: mp.Queue,
-    shutdown_event,
-):
+    shutdown_event: mp.synchronize.Event,
+) -> None:
     """
-    A multiprocessing function that collects logging data and writes to file
+    A multiprocessing function that collects logging data and writes to file.
+
+    Messages are read from ``log_queue`` and written to a unique log file until
+    ``shutdown_event`` is set or a ``GlobalCommands.QUIT`` message is received. Messages
+    containing ``" ERROR"`` are also printed to the console. This task is always run on
+    a seperate process, even when the ``RattlesnakeController`` is in threading mode.
 
     Parameters
     ----------
-    queue : mp.queues.Queue
+    log_queue : mp.queues.Queue
         The multiprocessing queue to collect logging messages from
+    shutdown_event : mp.synchronize.Event
+        Event that stops the logging loop when set.
+
+    Unit Tests
+    ----------
     """
     lock, log_filename = get_unique_log_filename()
 
@@ -151,11 +221,28 @@ def log_file_task(
 
 
 class RattlesnakeError(Exception):
-    """Generic exception raised for Rattlesnake-specific error conditions."""
+    """
+    Exception used when wanting to print error statement to the Rattlesnake user
+    interface dialog box.
+
+    The validation errors should prompt the user on what to change in order to fix the
+    input
+
+    Unit Tests
+    ----------
+    """
 
 
 class GlobalCommands(Enum):
-    """Enumeration of command codes passed between controller subtasks."""
+    """
+    Enumeration of command codes passed between subtasks.
+
+    Most of these are sent from ``RattlesnakeController`` and ``Controller`` tasks and
+    have implementations in many subprocesses.
+
+    Unit Tests
+    ----------
+    """
 
     QUIT = 0  # Stop individual processes
     INITIALIZE_HARDWARE = 1  # Store hardware metadata to processes
@@ -185,33 +272,104 @@ class GlobalCommands(Enum):
     )
     STREAM_MANUAL = 22  # Notifies controller that manual streaming has been enabled
     SEND_ENVIRONMENT_COMMAND = 23  # Sends environment specific command to environment
-    SAVE_SYSTEM_ID = 24
-    LOAD_SYSTEM_ID = 25
+    SAVE_SYSTEM_ID = 24  # Tells environment to save its system id to a file
+    LOAD_SYSTEM_ID = 25  # Tells environment to load a system id from a file
     RESTART_ENVIRONMENT_OUTPUT = (
         26  # Tells the output to start listening again for an environment
     )
 
     @property
-    def label(self):
-        """Used by UI as names for"""
+    def label(self) -> str:
+        """
+        Human-readable name of the command, used by the UI for profile event list
+        display.
+
+        Underscores in the enum name are replaced with spaces and the result is
+        title-cased (e.g. ``START_STREAMING`` becomes ``"Start Streaming"``).
+
+        Returns
+        -------
+        str
+            The display label for the command.
+
+        Unit Tests
+        ----------
+        """
         return self.name.replace("_", " ").title()
 
 
 class VerboseMessageQueue:
-    """A queue class that contains automatic logging information"""
+    """
+    A queue class that contains automatic logging information
 
-    def __init__(self, log_queue, base_queue, base_name: str = "", name_manager=None):
+    Wraps a multiprocessing or threading queue so that ``put`` and ``get``
+    operations are written to the log file. Each message is tagged with a
+    random message id so a put can be matched to its corresponding get in the
+    log. Repeated puts of the same message within ``time_threshold`` seconds
+    are not logged to keep the log file readable.
+
+    The message queue has an optional name manager parameter that is used to assign
+    and environment name to the queue when it is assigned to an environment during
+    the ``intialize_environment`` function.
+
+    Attributes
+    ----------
+    base_queue : mp.queues.Queue or queue.Queue
+        The underlying queue that stores ``(message_id, message_data_tuple)``
+        pairs.
+    log_queue : mp.queues.Queue
+        Queue that log messages are written to.
+    base_name : str
+        Name of the queue used in log messages.
+    environment_name : multiprocessing.managers.ValueProxy or None
+        Shared value holding the name of the environment assigned to this
+        queue, or ``None`` if no ``name_manager`` was provided.
+    last_put_message : Enum or None
+        The most recent message put to the queue.
+    last_put_time : float
+        Time of the most recent logged put.
+    last_get_message : Enum or None
+        The most recent message retrieved from the queue.
+    last_get_time : float
+        Time of the most recent logged get.
+    last_flush : float
+        Time of the most recent logged flush.
+    time_threshold : float
+        Seconds within which repeated puts of the same message are not logged.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self,
+        log_queue: mp.Queue,
+        base_queue: mp.Queue | thqueue.Queue,
+        base_name: str = "",
+        name_manager: mp.managers.SyncManager | None = None,
+    ) -> None:
         """
-        A queue class that contains automatic logging information
+        A queue class that contains automatic logging information.
 
         Parameters
         ----------
-        log_queue : mp.queues.Queue :
+        log_queue : mp.queues.Queue
             A queue that a logging task will read from where the operations of
             the queue will be logged.
-        queue_name : str :
-            The name of the queue that will be included in the logging information
+        base_queue : mp.queues.Queue or queue.Queue
+            The underlying queue that data is put to and retrieved from. A
+            ``queue.Queue`` is used when Rattlesnake runs in threaded mode.
+        base_name : str, optional
+            The name of the queue that will be included in the logging
+            information. Defaults to ``""``.
+        name_manager : multiprocessing.managers.SyncManager, optional
+            Manager used to create a shared value for the environment name so
+            that it can be updated with ``assign_environment`` after the queue
+            has been passed to other processes. If ``None``, no environment
+            name is tracked. Defaults to ``None``.
 
+        Unit Tests
+        ----------
         """
         self.base_queue = base_queue
         self.log_queue = log_queue
@@ -228,8 +386,21 @@ class VerboseMessageQueue:
         self.time_threshold = 1.0
 
     @property
-    def log_name(self):
-        """The name used to identify this queue in log messages"""
+    def log_name(self) -> str:
+        """
+        The name used to identify this queue in log messages.
+
+        If an environment name has been assigned, the name will return, otherwise the
+        base name will be returned.
+
+        Returns
+        -------
+        str
+            The name of the queue for log messages.
+
+        Unit Tests
+        ----------
+        """
         if self.environment_name:
             try:
                 env = self.environment_name.value
@@ -239,31 +410,74 @@ class VerboseMessageQueue:
 
         return self.base_name
 
-    def assign_environment(self, env_name: str):
-        """Associates this queue with a named environment for logging purposes"""
+    def assign_environment(self, env_name: str) -> None:
+        """
+        Associates this queue with a named environment for logging purposes.
+
+        This requires the queue to have been created with a ``name_manager``. It is used
+        by ``EnvironmentManager`` when it assigns environments to queues.
+
+        Parameters
+        ----------
+        env_name : str
+            Name of the environment to include in log messages.
+
+        Unit Tests
+        ----------
+        """
         self.environment_name.value = env_name
 
-    def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
-        """Generates a random identifier for log file messages"""
+    def generate_message_id(
+        self, size: int = 6, chars: str = string.ascii_letters + string.digits
+    ) -> str:
+        """
+        Generates a random identifier for log file messages.
+
+        Parameters
+        ----------
+        size : int, optional
+            Number of characters in the identifier. Defaults to 6.
+        chars : str, optional
+            Characters to choose from. Defaults to ASCII letters and digits.
+
+        Returns
+        -------
+        str
+            The random identifier.
+
+        Unit Tests
+        ----------
+        """
         return "".join(random.choice(chars) for _ in range(size))
 
-    def put(self, task_name, message_data_tuple, *args, **kwargs):
-        """Puts data to a verbose queue
+    def put(
+        self,
+        task_name: str,
+        message_data_tuple: Tuple[Enum, Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Puts data into a verbose queue.
+
+        When the put is logged, the following line is written to ``log_queue``:
+            <timestamp>: <task_name> put <message> (<message_id>) to <log_name>
+
 
         Parameters
         ----------
         task_name : str
             Task name that is performing the put operation
         message_data_tuple : Tuple
-            A (message,data) tuple where message is the instruction and data is
-            any optional data to be passed along with the instruction.
+            A (message,data) tuple where message is the instruction and data is any
+            optional data to be passed along with the instruction.
         *args :
-            Additional arguments that will be passed to the mp.queues.Queue.put
-            function
+            Additional arguments that will be passed to the mp.queues.Queue.put function
         **kwargs :
-            Additional arguments that will be passed to the mp.queues.Queue.put
-            function
+            Additional arguments that will be passed to the mp.queues.Queue.put function
 
+        Unit Tests
+        ----------
         """
         put_time = time.time()
         if (
@@ -281,26 +495,34 @@ class VerboseMessageQueue:
             message_id = ""
         self.base_queue.put((message_id, message_data_tuple), *args, **kwargs)
 
-    def get(self, task_name, *args, **kwargs):
-        """Gets data from a verbose queue
+    def get(self, task_name: str, *args: Any, **kwargs: Any) -> Tuple[Enum, Any]:
+        """
+        Gets data from a verbose queue.
+
+        When the get is logged, the following line is written to ``log_queue``:
+            <timestamp>: <task_name> got <message> (<message_id>) from <log_name>.
 
         Parameters
         ----------
-        task_name : str :
+        task_name : str
             Name of the task that is retrieving data from the queue
         *args :
-            Additional arguments that will be passed to the mp.queues.Queue.get
-            function
+            Additional arguments that will be passed to the mp.queues.Queue.get function
         **kwargs :
-            Additional arguments that will be passed to the mp.queues.Queue.get
-            function
-
+            Additional arguments that will be passed to the mp.queues.Queue.get function
 
         Returns
         -------
-        message_data_tuple :
+        message_data_tuple : Tuple[Enum, Any]
             A (message,data) tuple
 
+        Raises
+        ------
+        queue.Empty
+            If the queue is empty and the get is non-blocking or times out.
+
+        Unit Tests
+        ----------
         """
         message_id, message_data_tuple = self.base_queue.get(*args, **kwargs)
         if message_id != "":
@@ -310,22 +532,24 @@ class VerboseMessageQueue:
             )
         return message_data_tuple
 
-    def flush(self, task_name):
-        """Flushes a verbose queue getting all data currently in the queue
+    def flush(self, task_name: str) -> List[Tuple[Enum, Any]]:
+        """
+        Flushes a verbose queue getting all data currently in the queue.
 
         After execution the queue should be empty barring race conditions.
 
         Parameters
         ----------
-        task_name : str :
+        task_name : str
             Name of the task that is flushing the queue
-
 
         Returns
         -------
-        data : iterable of message_data_tuples :
+        data : List[Tuple[Enum, Any]]
             A list of all (message,data) tuples currently in the queue.
 
+        Unit Tests
+        ----------
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
@@ -347,23 +571,55 @@ class VerboseMessageQueue:
             except mp.queues.Empty:
                 return data
 
-    def empty(self):
-        """Return true if the queue is empty."""
+    def empty(self) -> bool:
+        """
+        Return true if the queue is empty.
+
+        Returns
+        -------
+        bool
+            ``True`` if the underlying queue is empty. This is not reliable
+            across processes due to multiprocessing semantics.
+
+        Unit Tests
+        ----------
+        """
         return self.base_queue.empty()
 
-    def close(self):
-        """Closes queue"""
+    def close(self) -> None:
+        """
+        Closes the base queue.
+
+        Does nothing if the underlying queue does not support ``close``.
+
+        Unit Tests
+        ----------
+        """
         if hasattr(self.base_queue, "close"):
             self.base_queue.close()
 
-    def join_thread(self):
-        """Joins thread"""
+    def join_thread(self) -> None:
+        """
+        Joins the base thread.
+
+        Joins the background feeder thread of the underlying multiprocessing
+        queue. Does nothing if the underlying queue does not support
+        ``join_thread``.
+
+        Unit Tests
+        ----------
+        """
         if hasattr(self.base_queue, "join_thread"):
             self.base_queue.join_thread()
 
 
 class QueueContainer:
-    """A container class for the queues that the controller will manage"""
+    """
+    A container class for the queues that the ``RattlesnakeController`` will manage.
+
+    Unit Tests
+    ----------
+    """
 
     def __init__(
         self,
@@ -378,49 +634,52 @@ class QueueContainer:
         environment_command_queues: Dict[str, VerboseMessageQueue],
         environment_data_in_queues: Dict[str, mp.Queue],
         environment_data_out_queues: Dict[str, mp.Queue],
-    ):
-        """A container class for the queues that the controller will manage.
+    ) -> None:
+        """A container class for the queues that the ``RattlesnakeController`` will
+        manage.
 
-        The controller uses many queues to pass data between the various pieces.
-        This class organizes those queues into one common namespace.
+        The controller uses many queues to pass data between the various pieces. This
+        class organizes those queues into one common namespace.
 
         Parameters
         ----------
         controller_command_queue : VerboseMessageQueue
-            Queue that is read by the controller for global controller commands
+            Queue that is read by the controller for global controller commands.
         acquisition_command_queue : VerboseMessageQueue
-            Queue that is read by the acquisition subtask for acquisition commands
+            Queue that is read by the acquisition subtask for acquisition commands.
         output_command_queue : VerboseMessageQueue
-            Queue that is read by the output subtask for output commands
+            Queue that is read by the output subtask for output commands.
         streaming_command_queue : VerboseMessageQueue
-            Queue that is read by the streaming subtask for streaming commands
+            Queue that is read by the streaming subtask for streaming commands.
         log_file_queue : mp_queues.Queue
-            Queue for putting logging messages that will be read by the logging
-            subtask and written to a file.
+            Queue for putting logging messages that will be read by the logging subtask
+            and written to a file.
         input_output_sync_queue : mp_queues.Queue
-            Queue that is used to synchronize input and output signals
+            Queue that is used to synchronize input and output signals.
         single_process_hardware_queue : mp_queues.Queue
-            Queue that is used to connect the acquisition and output subtasks
-            for hardware implementations that cannot have acquisition and
-            output in separate processes.
+            Queue that is used to connect the acquisition and output subtasks for
+            hardware implementations that cannot have acquisition and output in separate
+            processes.
         gui_update_queue : mp_queues.Queue
-            Queue where various subtasks put instructions for updating the
-            widgets in the user interface
+            Queue where various subtasks put instructions for updating the widgets in
+            the user interface.
         environment_command_queues : Dict[str,VerboseMessageQueue]
             A dictionary where the keys are environment names and the values are
-            VerboseMessageQueues that connect the main controller to the
-            environment subtasks for sending instructions.
+            VerboseMessageQueues that connect the main controller to the environment
+            subtasks for sending instructions.
         environment_data_in_queues : Dict[str,multiprocessing.queues.Queue]
             A dictionary where the keys are environment names and the values are
             multiprocessing queues that connect the acquisition subtask to the
-            environment subtask.  Each environment will retrieve acquired data
-            from this queue.
+            environment subtask.  Each environment will retrieve acquired data from this
+            queue.
         environment_data_out_queues : Dict[str,multiprocessing.queues.Queue]
             A dictionary where the keys are environment names and the values are
-            multiprocessing queues that connect the output subtask to the
-            environment subtask.  Each environment will put data that it wants
-            the controller to generate in this queue.
+            multiprocessing queues that connect the output subtask to the environment
+            subtask.  Each environment will put data that it wants the controller to
+            generate in this queue.
 
+        Unit Tests
+        ----------
         """
         self.controller_command_queue = controller_command_queue
         self.acquisition_command_queue = acquisition_command_queue
@@ -436,9 +695,26 @@ class QueueContainer:
 
 
 class EventContainer:
-    """A container class for the multiprocessing events that the controller
-    uses to coordinate readiness, shutdown, and activity state across
-    subtasks."""
+    """
+    A container class for the multiprocessing events that the controller uses to
+    coordinate readiness, shutdown, and activity state across subtasks.
+
+    Events fall into five groups:
+
+    - **Ready** events are set by a process when it has finished handling a command. The
+      sender clears the event before sending the command and waits for it to be set
+      again.
+    - **Close** events are set to tell a process to shut down.
+    - **Active** events are set while a process (or an environment) is running, and
+      cleared when it stops.
+    - **Storage** events are set when an environment has stored its system
+      identification data.
+    - The **alive** event is set by long-running processes to reset the controller's
+      timeout while it waits on them.
+
+    Unit Tests
+    ----------
+    """
 
     def __init__(
         self,
@@ -460,7 +736,65 @@ class EventContainer:
         environment_sysid_active_events: Dict[str, mp.synchronize.Event],
         environment_sysid_stored_events: Dict[str, mp.synchronize.Event],
         ping_alive_event: mp.synchronize.Event,
-    ):
+    ) -> None:
+        """
+        A container class for the events that the controller will manage.
+
+        Parameters
+        ----------
+        controller_ready_event : mp.synchronize.Event
+            Cleared when a profile is started or stopped, and set by the
+            controller process when it receives ``PROFILE_CLOSEOUT``. Set
+            whenever no profile is running.
+        acquisition_ready_event : mp.synchronize.Event
+            Set by the acquisition process when it has finished handling a
+            command.
+        output_ready_event : mp.synchronize.Event
+            Set by the output process when it has finished handling a command.
+        streaming_ready_event : mp.synchronize.Event
+            Set by the streaming process when it has finished handling a
+            command.
+        environment_ready_events : Dict[str, mp.synchronize.Event]
+            A dictionary where the keys are queue names and the values are
+            events set by each environment process when it has finished
+            handling a command.
+        log_close_event : mp.synchronize.Event
+            Set to shut down the log process.
+        controller_close_event : mp.synchronize.Event
+            Set to shut down the controller process.
+        acquisition_close_event : mp.synchronize.Event
+            Set to shut down the acquisition process.
+        output_close_event : mp.synchronize.Event
+            Set to shut down the output process.
+        streaming_close_event : mp.synchronize.Event
+            Set to shut down the streaming process.
+        environment_close_events : Dict[str, mp.synchronize.Event]
+            A dictionary where the keys are queue names and the values are
+            events set to shut down each environment process.
+        acquisition_active_event : mp.synchronize.Event
+            Set while the acquisition process is acquiring data from hardware.
+        output_active_event : mp.synchronize.Event
+            Set while the output process is writing data to hardware.
+        streaming_active_event : mp.synchronize.Event
+            Set while acquired data is being streamed to file.
+        environment_active_events : Dict[str, mp.synchronize.Event]
+            A dictionary where the keys are queue names and the values are
+            events set while each environment is running.
+        environment_sysid_active_events : Dict[str, mp.synchronize.Event]
+            A dictionary where the keys are queue names and the values are
+            events set while each environment is running system
+            identification.
+        environment_sysid_stored_events : Dict[str, mp.synchronize.Event]
+            A dictionary where the keys are queue names and the values are
+            events set when each environment has stored its system
+            identification data.
+        ping_alive_event : mp.synchronize.Event
+            Set by long-running processes to tell the controller to reset its
+            timeout while waiting on other events.
+
+        Unit Tests
+        ----------
+        """
         # Ready Events
         self.controller_ready_event = controller_ready_event
         self.acquisition_ready_event = acquisition_ready_event
@@ -486,20 +820,30 @@ class EventContainer:
         self.ping_alive_event = ping_alive_event
 
 
-def flush_queue(queue, timeout=None):
-    """Flushes a queue by getting all the data currently in it.
+def flush_queue(
+    queue: mp.Queue | thqueue.Queue | VerboseMessageQueue,
+    timeout: float | None = None,
+) -> List[Any]:
+    """
+    Flushes a queue by getting all the data currently in it.
 
     Parameters
     ----------
-    queue : mp.queues.Queue or VerboseMessageQueue:
-        The queue to flush
-
+    queue : mp.queues.Queue or queue.Queue or VerboseMessageQueue
+        The queue to flush.
+    timeout : float, optional
+        If ``None``, the queue is read without blocking and the flush stops as
+        soon as it is empty. Otherwise each get blocks for up to ``timeout``
+        seconds, and the flush stops once a get times out. Defaults to
+        ``None``.
 
     Returns
     -------
-    data : iterable
-        A list of all data that were in the queue at flush
+    data : List[Any]
+        A list of all data that were in the queue at flush.
 
+    Unit Tests
+    ----------
     """
     data = []
     while True:
@@ -521,12 +865,38 @@ def flush_queue(queue, timeout=None):
 
 
 def gui_queue_cleanup(
-    gui_update_queue,
-    shutdown_event,
-    gui_active_check,
-    max_queue_size=500,
-    poll_interval=0.25,
-):
+    gui_update_queue: mp.Queue | thqueue.Queue,
+    shutdown_event: threading.Event,
+    gui_active_check: Callable[[], bool],
+    max_queue_size: int = 500,
+    poll_interval: float = 0.25,
+) -> None:
+    """
+    This task runs when Rattlesnake does not have a GUI and will keep the GUI update
+    queue from growing when a max size is hit. This prevents a memory leak when
+    Rattlesnake is running purely in headless mode.
+
+    Every ``poll_interval`` seconds, if ``gui_active_check`` returns ``False``, the
+    oldest messages are discarded until the queue holds no more than ``max_queue_size``
+    items. The loop exits when ``shutdown_event`` is set.
+
+    Parameters
+    ----------
+    gui_update_queue : mp.queues.Queue or queue.Queue
+        The queue that processes put GUI update instructions to.
+    shutdown_event : threading.Event
+        Event that stops the cleanup loop when set.
+    gui_active_check : Callable[[], bool]
+        Function that returns ``True`` when a GUI is attached and consuming the queue,
+        in which case nothing is discarded.
+    max_queue_size : int, optional
+        The maximum number of items left in the queue after cleanup. Defaults to 500.
+    poll_interval : float, optional
+        Seconds between cleanup checks. Defaults to 0.25.
+
+    Unit Tests
+    ----------
+    """
     while not shutdown_event.wait(poll_interval):
         if gui_active_check():
             continue
@@ -537,7 +907,10 @@ def gui_queue_cleanup(
             continue
 
 
-_direction_map = {
+# Maps a direction string (e.g. "X+", "-RY") to a signed integer direction, where 1-3
+# are translations, 4-6 are rotations, and the sign is the direction. Used by the random
+# vibration environment and UI, and the SDynPy virtual hardware.
+_direction_map: Dict[str | None, int] = {
     "X+": 1,
     "X": 1,
     "+X": 1,
@@ -571,7 +944,9 @@ _direction_map = {
     "": 0,
     None: 0,
 }
-_direction_inv_map = {
+# Inverse of _direction_map, mapping a signed integer direction back to its canonical
+# string. Used by the SDynPy virtual hardware.
+_direction_inv_map: Dict[int, str] = {
     0: "",
     1: "X+",
     2: "Y+",
@@ -588,10 +963,277 @@ _direction_inv_map = {
 }
 
 
-def autofill_single_ip_address(ip_address):
+class IPAddress:
+    """
+    Container for information about IPAddress, including host name, ipv4, and ipv6
+    address.
+
+    Used to compile backup addresses to fall back on when the connection does not
+    respond within the timeout windows.
+
+    Attributes
+    ----------
+    host_name : str or None
+        Host name of the device, in the form ``"BK<type>-<serial>"`` for LAN-XI modules.
+    ipv4_address : str or None
+        IPv4 address of the device.
+    ipv6_address : str or None
+        IPv6 address of the device, wrapped in brackets and including the scope id if
+        present (e.g. ``"[fe80::1%5]"``).
+    valid_ip : bool
+        ``True`` if the device has been confirmed reachable.
+    module_info : dict or None
+        JSON response from the device's ``/rest/rec/module/info`` endpoint.
+    sync_type : dict or None
+        JSON response from the device's ``/rest/rec/syncmode`` endpoint.
+    validation_timeout : float
+        Timeout in seconds for REST requests to the device.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self,
+        host_name: str | None = None,
+        ipv4_address: str | None = None,
+        ipv6_address: str | None = None,
+        valid_ip: bool = False,
+    ) -> None:
+        """
+        Initializes an address with no module or sync information.
+
+        Parameters
+        ----------
+        host_name : str, optional
+            Host name of the device. Defaults to ``None``.
+        ipv4_address : str, optional
+            IPv4 address of the device. Defaults to ``None``.
+        ipv6_address : str, optional
+            IPv6 address of the device. Defaults to ``None``.
+        valid_ip : bool, optional
+            Whether the address is already known to be valid. Defaults to
+            ``False``.
+
+        Unit Tests
+        ----------
+        """
+        self.host_name = host_name
+        self.ipv4_address = ipv4_address
+        self.ipv6_address = ipv6_address
+        self.valid_ip = valid_ip
+        self.module_info = None
+        self.sync_type = None
+        self.validation_timeout = 5
+
+    def get_ip_from_host_name(self) -> None:
+        """
+        Resolves ipv4_address and ipv6_address from host_name via DNS lookup.
+
+        Sets ``valid_ip`` to ``False`` if there is no host name or the lookup fails. A
+        successful lookup does not set ``valid_ip`` to ``True``.
+
+        Unit Tests
+        ----------
+        """
+        if not self.host_name:
+            self.valid_ip = False
+            return
+
+        try:
+            # Get the address info for the hostname
+            socket_info = socket.getaddrinfo(self.host_name, None)
+            for family, _, _, _, sockaddr in socket_info:
+                if family == socket.AF_INET:
+                    self.ipv4_address = sockaddr[0]
+
+                elif family == socket.AF_INET6:
+                    ipv6 = sockaddr[0]
+                    scope_id = sockaddr[3]
+
+                    if scope_id:
+                        self.ipv6_address = f"[{ipv6}%{scope_id}]"
+                    else:
+                        self.ipv6_address = f"[{ipv6}]"
+        except Exception:
+            self.valid_ip = False
+
+    def get_host_name_from_ip(self) -> None:
+        """
+        Queries the device REST API to derive host_name from the IP address
+
+        The IPv6 address is used if present, otherwise the IPv4 address. On success,
+        ``host_name``, ``module_info`` and ``sync_type`` are filled in and ``valid_ip``
+        is set to ``True``. On failure, ``valid_ip`` is set to ``False``.
+
+        Unit Tests
+        ----------
+        """
+        if self.ipv6_address:
+            host = "http://" + self.ipv6_address
+        elif self.ipv4_address:
+            host = "http://" + self.ipv4_address
+        else:
+            self.valid_ip = False
+            return
+
+        try:
+            response = requests.get(
+                host + "/rest/rec/module/info",
+                timeout=self.validation_timeout,
+            )
+            self.module_info = response.json()
+            response = requests.get(
+                host + "/rest/rec/syncmode",
+                timeout=self.validation_timeout,
+            )
+            self.sync_type = response.json()
+            module_type = self.module_info["module"]["type"]["number"]
+            module_serial = self.module_info["module"]["serial"]
+            self.host_name = f"BK{module_type}-{module_serial}"
+            self.valid_ip = True
+        except Exception:
+            self.valid_ip = False
+
+    def validate(self) -> None:
+        """
+        Queries the device REST API to confirm the address is reachable and valid.
+
+        The IPv6 address is used if present, otherwise the IPv4 address. On success,
+        ``module_info`` and ``sync_type`` are filled in and ``valid_ip`` is set to
+        ``True``. On failure, ``valid_ip`` is set to ``False``. Unlike
+        ``get_host_name_from_ip``, ``host_name`` is not changed.
+
+        Unit Tests
+        ----------
+        """
+        if self.ipv6_address:
+            host = "http://" + self.ipv6_address
+        elif self.ipv4_address:
+            host = "http://" + self.ipv4_address
+        else:
+            self.valid_ip = False
+            return
+
+        try:
+            response = requests.get(
+                host + "/rest/rec/module/info",
+                timeout=self.validation_timeout,
+            )
+            self.module_info = response.json()
+            response = requests.get(
+                host + "/rest/rec/syncmode",
+                timeout=self.validation_timeout,
+            )
+            self.sync_type = response.json()
+            self.valid_ip = True
+        except Exception:
+            self.valid_ip = False
+
+    def __eq__(self, other: object) -> bool:
+        """
+        The equality of addresses takes priority of ipv6 > ipv4 > bknum. This order is
+        chosen based off the priority of validation as well as how reliable each
+        connection is.
+
+        Parameters
+        ----------
+        other : object
+            The object to compare against.
+
+        Returns
+        -------
+        bool
+            ``True`` if the highest-priority field that both addresses have filled in
+            matches. ``False`` if it does not match or no field is filled in on both.
+            ``NotImplemented`` if ``other`` is not an ``IPAddress``.
+
+        Unit Tests
+        ----------
+        """
+        if not isinstance(other, IPAddress):
+            return NotImplemented
+        if self.ipv6_address is not None and other.ipv6_address is not None:
+            return self.ipv6_address == other.ipv6_address
+        if self.ipv4_address is not None and other.ipv4_address is not None:
+            return self.ipv4_address == other.ipv4_address
+        if self.host_name is not None and other.host_name is not None:
+            return self.host_name == other.host_name
+        return False
+
+    # Equality is content-based on mutable fields, so instances are not safe
+    # to use as dict/set keys.
+    __hash__ = None
+
+    def merge(self, other: IPAddress) -> Tuple[IPAddress, bool]:
+        """
+        Combines this address with another address that ``__eq__`` considers the same
+        device, keeping whichever fields are filled in.
+
+        Where both addresses have a value for a field, this address's value is kept.
+
+        Parameters
+        ----------
+        other : IPAddress
+            The address to merge with.
+
+        Returns
+        -------
+        merged : IPAddress
+            A new address with the combined fields. If there was a conflict,
+            ``valid_ip`` is ``False`` and ``module_info`` and ``sync_type`` are cleared
+            so the address is re-validated.
+        conflict : bool
+            ``True`` if both addresses had different values for the same field.
+
+        Unit Tests
+        ----------
+        """
+        merged = IPAddress()
+        conflict = False
+        for attr in ("ipv6_address", "ipv4_address", "host_name"):
+            self_value = getattr(self, attr)
+            other_value = getattr(other, attr)
+            if (
+                self_value is not None
+                and other_value is not None
+                and self_value != other_value
+            ):
+                conflict = True
+            setattr(merged, attr, self_value if self_value is not None else other_value)
+
+        if conflict:
+            merged.valid_ip = False
+            merged.module_info = None
+            merged.sync_type = None
+        else:
+            merged.valid_ip = self.valid_ip or other.valid_ip
+            merged.module_info = self.module_info or other.module_info
+            merged.sync_type = self.sync_type or other.sync_type
+
+        return merged, conflict
+
+
+def autofill_single_ip_address(ip_address: IPAddress) -> IPAddress:
     """
     Worker function for a single ip_address object.
-    Runs the same logic as the original loop, but without touching UI widgets.
+
+    Fills in any missing host name or IP addresses for ``ip_address`` by querying the
+    device and DNS, without touching UI widgets so it can be run in a worker thread.
+    Addresses that are already valid are returned unchanged.
+
+    Parameters
+    ----------
+    ip_address : IPAddress
+        The address to fill in. Modified in place.
+
+    Returns
+    -------
+    IPAddress
+        The same ``ip_address`` object, after its fields have been filled in.
+
+    Unit Tests
+    ----------
     """
     if ip_address.valid_ip:
         return ip_address
@@ -613,8 +1255,9 @@ def autofill_single_ip_address(ip_address):
     return ip_address
 
 
-def search_for_lanxi_devices(timeout):
-    """Repeatedly polls the network for B&K LAN-XI devices until timeout
+def search_for_lanxi_devices(timeout: float) -> List[IPAddress]:
+    """
+    Repeatedly polls the network for B&K LAN-XI devices until timeout has been reached.
 
     Parameters
     ----------
@@ -625,6 +1268,9 @@ def search_for_lanxi_devices(timeout):
     -------
     list[IPAddress]
         A list of unique IPAddress objects for the LAN-XI devices found
+
+    Unit Tests
+    ----------
     """
     unique_addresses = {}
     start_time = time.perf_counter()
@@ -643,17 +1289,25 @@ def search_for_lanxi_devices(timeout):
     return list(unique_addresses.values())
 
 
-def find_lanxi_devices():
-    """Scans the ARP table for candidate LAN-XI IP addresses and validates them
+def find_lanxi_devices() -> List[IPAddress]:
+    """
+    Scans the ARP table for candidate LAN-XI IP addresses and validates them.
 
     Candidate addresses are extracted from the local ARP table by matching the
-    169.254.x.x link-local address range used by LAN-XI devices, then each
-    candidate is queried concurrently to confirm it is a valid LAN-XI module.
+    169.254.x.x link-local address range used by LAN-XI devices, then each candidate is
+    queried concurrently to confirm it is a valid LAN-XI module.
 
     Returns
     -------
     list[IPAddress]
         A list of IPAddress objects for the LAN-XI devices found
+
+    Notes
+    -----
+    Only used by ``search_for_lanxi_devices``.
+
+    Unit Tests
+    ----------
     """
     result = subprocess.run(["arp", "-a"], capture_output=True, text=True, check=False)
 
@@ -694,8 +1348,11 @@ def find_lanxi_devices():
     return results
 
 
-def check_lanxi_candidate(ipv4_address):
-    """Queries a candidate IP address to check if it is a valid LAN-XI device
+def check_lanxi_candidate(
+    ipv4_address: str,
+) -> Tuple[str | None, str, dict | None, dict | None, bool]:
+    """
+    Queries a candidate IP address to check if it is a valid LAN-XI device.
 
     Parameters
     ----------
@@ -714,6 +1371,9 @@ def check_lanxi_candidate(ipv4_address):
         The sync mode JSON response if valid, otherwise None
     valid : bool
         True if the candidate responded as a valid LAN-XI device
+
+    Unit Tests
+    ----------
     """
     host = f"http://{ipv4_address}"
     try:
@@ -740,154 +1400,11 @@ def check_lanxi_candidate(ipv4_address):
     return (host_name, ipv4_address, info, sync, valid)
 
 
-class IPAddress:
-    """Container for information about IPAddress, mainly used to make
-    sure each address has a values for relevant information"""
-
-    def __init__(
-        self,
-        host_name: str | None = None,
-        ipv4_address: str | None = None,
-        ipv6_address: str | None = None,
-        valid_ip: bool = False,
-    ):
-        self.host_name = host_name
-        self.ipv4_address = ipv4_address
-        self.ipv6_address = ipv6_address
-        self.valid_ip = valid_ip
-        self.module_info = None
-        self.sync_type = None
-        self.validation_timeout = 5
-
-    def get_ip_from_host_name(self):
-        """Resolves ipv4_address and ipv6_address from host_name via DNS lookup"""
-        if not self.host_name:
-            self.valid_ip = False
-            return
-
-        try:
-            # Get the address info for the hostname
-            socket_info = socket.getaddrinfo(self.host_name, None)
-            for family, _, _, _, sockaddr in socket_info:
-                if family == socket.AF_INET:
-                    self.ipv4_address = sockaddr[0]
-
-                elif family == socket.AF_INET6:
-                    ipv6 = sockaddr[0]
-                    scope_id = sockaddr[3]
-
-                    if scope_id:
-                        self.ipv6_address = f"[{ipv6}%{scope_id}]"
-                    else:
-                        self.ipv6_address = f"[{ipv6}]"
-        except Exception:
-            self.valid_ip = False
-
-    def get_host_name_from_ip(self):
-        """Queries the device REST API to derive host_name from the IP address"""
-        if self.ipv6_address:
-            host = "http://" + self.ipv6_address
-        elif self.ipv4_address:
-            host = "http://" + self.ipv4_address
-        else:
-            self.valid_ip = False
-            return
-
-        try:
-            response = requests.get(
-                host + "/rest/rec/module/info",
-                timeout=self.validation_timeout,
-            )
-            self.module_info = response.json()
-            response = requests.get(
-                host + "/rest/rec/syncmode",
-                timeout=self.validation_timeout,
-            )
-            self.sync_type = response.json()
-            module_type = self.module_info["module"]["type"]["number"]
-            module_serial = self.module_info["module"]["serial"]
-            self.host_name = f"BK{module_type}-{module_serial}"
-            self.valid_ip = True
-        except Exception:
-            self.valid_ip = False
-
-    def validate(self):
-        """Queries the device REST API to confirm the address is reachable and valid"""
-        if self.ipv6_address:
-            host = "http://" + self.ipv6_address
-        elif self.ipv4_address:
-            host = "http://" + self.ipv4_address
-        else:
-            self.valid_ip = False
-            return
-
-        try:
-            response = requests.get(
-                host + "/rest/rec/module/info",
-                timeout=self.validation_timeout,
-            )
-            self.module_info = response.json()
-            response = requests.get(
-                host + "/rest/rec/syncmode",
-                timeout=self.validation_timeout,
-            )
-            self.sync_type = response.json()
-            self.valid_ip = True
-        except Exception:
-            self.valid_ip = False
-
-    def __eq__(self, other):
-        """
-        The equality of addresses takes priority of ipv6 > ipv4 > bknum. This order
-        is chosen based off the priority of validation as well as how reliable each
-        connection is.
-        """
-        if not isinstance(other, IPAddress):
-            return NotImplemented
-        if self.ipv6_address is not None and other.ipv6_address is not None:
-            return self.ipv6_address == other.ipv6_address
-        if self.ipv4_address is not None and other.ipv4_address is not None:
-            return self.ipv4_address == other.ipv4_address
-        if self.host_name is not None and other.host_name is not None:
-            return self.host_name == other.host_name
-        return False
-
-    # Equality is content-based on mutable fields, so instances are not safe
-    # to use as dict/set keys.
-    __hash__ = None
-
-    def merge(self, other):
-        """
-        Combines this address with another address that ``__eq__``
-        considers the same device, keeping whichever fields are filled in.
-        """
-        merged = IPAddress()
-        conflict = False
-        for attr in ("ipv6_address", "ipv4_address", "host_name"):
-            self_value = getattr(self, attr)
-            other_value = getattr(other, attr)
-            if (
-                self_value is not None
-                and other_value is not None
-                and self_value != other_value
-            ):
-                conflict = True
-            setattr(merged, attr, self_value if self_value is not None else other_value)
-
-        if conflict:
-            merged.valid_ip = False
-            merged.module_info = None
-            merged.sync_type = None
-        else:
-            merged.valid_ip = self.valid_ip or other.valid_ip
-            merged.module_info = self.module_info or other.module_info
-            merged.sync_type = self.sync_type or other.sync_type
-
-        return merged, conflict
-
-
-def add_unique_ip_address(unique_addresses, candidate):
-    """Adds ``candidate`` into ``unique_addresses`` in place, merging it into
+def add_unique_ip_address(
+    unique_addresses: List[IPAddress], candidate: IPAddress
+) -> bool:
+    """
+    Adds ``candidate`` into ``unique_addresses`` in place, merging it into
     an existing entry (per ``IPAddress.__eq__``/``merge``) instead of
     appending a duplicate when an equivalent address is already present.
 
@@ -904,6 +1421,9 @@ def add_unique_ip_address(unique_addresses, candidate):
         True if the candidate was merged into an existing entry and that
         merge disagreed on a field, meaning the merged entry needs to be
         re-validated against the device.
+
+    Unit Tests
+    ----------
     """
     for index, existing in enumerate(unique_addresses):
         if existing == candidate:
@@ -918,32 +1438,41 @@ def add_unique_ip_address(unique_addresses, candidate):
 
 
 # region Loading
-def load_time_history(signal_path, sample_rate):
-    """Loads a time history from a given file
+def load_time_history(signal_path: str, sample_rate: float) -> np.ndarray:
+    """
+    Loads a time history from a given file
 
-    The signal can be loaded from numpy files (.npz, .npy) or matlab files (.mat).
-    For .mat and .npz files, the time data can be included in the file in the
-    't' field, or it can be excluded and the sample_rate input argument will
-    be used.  If time data is specified, it will be linearly interpolated to the
-    sample rate of the controller.
-    For these file types, the signal should be stored in the 'signal'
-    field.  For .npy files, only one array is stored, so it is treated as the
-    signal, and the sample_rate input argument is used to construct the time
-    data.
+    The signal can be loaded from numpy files (.npz, .npy) or matlab files (.mat). For
+    .mat and .npz files, the time data can be included in the file in the 't' field, or
+    it can be excluded and the sample_rate input argument will be used.  If time data is
+    specified, it will be linearly interpolated to the sample rate of the controller.
+
+    For these file types, the signal should be stored in the 'signal' field.  For .npy
+    files, only one array is stored, so it is treated as the signal, and the sample_rate
+    input argument is used to construct the time data.
+
+    If the signal has an odd number of samples, the last sample is dropped so the length
+    is even.
 
     Parameters
     ----------
-    signal_path : str:
+    signal_path : str
         Path to the file from which to load the time history
-
-    sample_rate : str:
+    sample_rate : float
         The sample rate of the loaded signal.
 
     Returns
     -------
-    signal : np.ndarray:
+    signal : np.ndarray
         A signal loaded from the file
 
+    Raises
+    ------
+    ValueError
+        If the file extension is not ``.npy``, ``.npz`` or ``.mat``.
+
+    Unit Tests
+    ----------
     """
     _, extension = os.path.splitext(signal_path)
     if extension.lower() == ".npy":
@@ -984,20 +1513,23 @@ def load_time_history(signal_path, sample_rate):
     return signal
 
 
-def load_csv_matrix(file):
-    """Loads a matrix from a CSV file
+def load_csv_matrix(file: str) -> List[List[str]]:
+    """
+    Loads a matrix from a CSV file
 
     Parameters
     ----------
-    file : str :
+    file : str
         Path to the file that will be loaded
-
 
     Returns
     -------
     data : list[list[str]]
         A 2D nested list of strings containing the matrix in the CSV file.
 
+
+    Unit Tests
+    ----------
     """
     with open(file, "r", encoding="utf-8") as f:
         data = []
@@ -1008,35 +1540,42 @@ def load_csv_matrix(file):
     return data
 
 
-def save_csv_matrix(data, file):
-    """Saves 2D matrix data to a file
+def save_csv_matrix(data: Iterable[Iterable[str]], file: str) -> None:
+    """
+    Saves 2D matrix data to a csv file.
 
     Parameters
     ----------
-    data : 2D iterable of str:
-        A 2D nested iterable of strings that will be written to a file
-    file : str :
+    data : 2D iterable of str
+        A 2D nested iterable of strings that will be written to a file.
+    file : str
         The path to a file where the data will be written.
 
+
+    Unit Tests
+    ----------
     """
     text = "\n".join([",".join(row) for row in data])
     with open(file, "w", encoding="utf-8") as f:
         f.write(text)
 
 
-def load_python_module(module_path):
-    """Loads in the Python file at the specified path as a module at runtime
+def load_python_module(module_path: str) -> ModuleType:
+    """
+    Loads in the Python file at the specified path as a module at runtime.
 
     Parameters
     ----------
-    module_path : str:
+    module_path : str
         Path to the module to be loaded
-
 
     Returns
     -------
-    module : module:
+    module : ModuleType
         A reference to the loaded module
+
+    Unit Tests
+    ----------
     """
     _, file = os.path.split(module_path)
     file, _ = os.path.splitext(file)
@@ -1046,37 +1585,57 @@ def load_python_module(module_path):
     return module
 
 
-def load_control_module(control_script):
+def load_control_module(control_script: str) -> ModuleType:
+    """
+    Loads a control law module from a file path or an importable module name.
+
+    If ``control_script`` ends in ``.py`` or is an existing file, it is loaded from that
+    path with ``load_python_module``. Otherwise it is treated as a dotted module name
+    and imported with ``importlib.import_module``.
+
+    Parameters
+    ----------
+    control_script : str
+        Path to a Python file, or the name of an importable module, containing the
+        control law.
+
+    Returns
+    -------
+    module : ModuleType
+        A reference to the loaded module
+
+    Unit Tests
+    ----------
+    """
     if not control_script.endswith(".py") and not os.path.isfile(control_script):
         return importlib.import_module(control_script)
     return load_python_module(control_script)
 
 
-def worksheet_cell_str(value, default=""):
+def worksheet_cell_str(value: Any, default: str = "") -> str:
     """
-    This is used to cleanse inputs before writing them to excel as
-    the GUI automatically converts everything to a string but the
-    headless mode will keep it as ints/floats/etc. which changes how
-    openpyxl stores the information to an excel sheet.
-    """
-    if value is None:
-        return default
-    if isinstance(value, str):
-        value = value.strip()
-        return value if value else default
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    if isinstance(value, datetime):
-        return value.date().isoformat()
-    return str(value)
+    This is used to cleanse inputs before writing them to excel as the GUI automatically
+    converts everything to a string but the headless mode will keep it as
+    ints/floats/etc. which changes how openpyxl stores the information to an excel
+    sheet.
 
+    Parameters
+    ----------
+    value : Any
+        The value to convert. Strings are stripped, floats with integer values are
+        written without a decimal point, and datetimes are written as an ISO date
+        (``YYYY-MM-DD``).
+    default : str, optional
+        Value returned when ``value`` is ``None`` or an empty string. Defaults to
+        ``""``.
 
-def worksheet_cell_str(value, default=""):
-    """
-    This is used to cleanse inputs before writing them to excel as
-    the GUI automatically converts everything to a string but the
-    headless mode will keep it as ints/floats/etc. which changes how
-    openpyxl stores the information to an excel sheet.
+    Returns
+    -------
+    str
+        The string to write to the worksheet cell.
+
+    Unit Tests
+    ----------
     """
     if value is None:
         return default
@@ -1091,29 +1650,33 @@ def worksheet_cell_str(value, default=""):
 
 
 def read_transformation_matrix_from_worksheet(
-    worksheet, start_row, num_rows, start_col
-):
-    """Reads a numeric matrix from a block of cells in an Excel worksheet
+    worksheet: "Worksheet", start_row: int, num_rows: int, start_col: int
+) -> np.ndarray | None:
+    """
+    Reads a numeric matrix from a block of cells in an Excel worksheet
 
-    Each row is read starting at start_col until the first blank, comment
-    (starting with '#'), or "none" cell is encountered.
+    Each row is read starting at start_col until the first blank, comment (starting with
+    '#'), or "none" cell is encountered.
 
     Parameters
     ----------
     worksheet : openpyxl.worksheet.worksheet.Worksheet
-        The worksheet to read the matrix from
+        The worksheet to read the matrix from.
     start_row : int
-        The 1-indexed row where the matrix begins
+        The 1-indexed row where the matrix begins.
     num_rows : int
-        The number of rows to read
+        The number of rows to read.
     start_col : int
-        The 1-indexed column where each row of the matrix begins
+        The 1-indexed column where each row of the matrix begins.
 
     Returns
     -------
     np.ndarray or None
-        The matrix read from the worksheet, or None if the first cell is
-        blank or contains "none"
+        The matrix read from the worksheet, or None if the first cell is blank or
+        contains "none".
+
+    Unit Tests
+    ----------
     """
     first_cell = worksheet.cell(start_row, start_col).value
     if first_cell is None or (str(first_cell).strip().lower() == "none"):
@@ -1141,15 +1704,13 @@ def read_transformation_matrix_from_worksheet(
     return np.array(matrix, dtype=float)
 
 
-# This is really dumb but since modal environment saves netcdf
-# internally, this has to be in utilities instead of load_utilities
-# for circular import reasons
 def save_rattlesnake_to_netcdf(
-    netcdf_dataset,
-    hardware_metadata=None,
-    environment_metadata_dict=None,
-):
-    """Saves hardware and environment metadata to an open netCDF4 dataset
+    netcdf_dataset: "netCDF4.Dataset",
+    hardware_metadata: "HardwareMetadata | None" = None,
+    environment_metadata_dict: "Dict[str, EnvironmentMetadata] | None" = None,
+) -> None:
+    """
+    Saves hardware and environment metadata to an open netCDF4 dataset
 
     Parameters
     ----------
@@ -1158,8 +1719,16 @@ def save_rattlesnake_to_netcdf(
     hardware_metadata : HardwareMetadata, optional
         The hardware metadata to save
     environment_metadata_dict : dict, optional
-        A dictionary where the keys are environment names and the values are
-        the environment metadata objects to save, one per environment
+        A dictionary where the keys are environment names and the values are the
+        environment metadata objects to save, one per environment
+
+    Notes
+    -----
+    This is in utilities instead of load_utilities since the modal environment saves
+    netcdf files internally.
+
+    Unit Tests
+    ----------
     """
     if hardware_metadata:
         hardware_metadata.save_metadata_to_netcdf(netcdf_dataset)
@@ -1196,26 +1765,32 @@ def save_rattlesnake_to_netcdf(
 
 
 # region Math Operations
-def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int, int] | None = None):
-    """Compute coherence from a CPSD matrix
+def coherence(
+    cpsd_matrix: np.ndarray, row_column: Tuple[int, int] | None = None
+) -> np.ndarray:
+    """
+    Compute coherence from a CPSD matrix.
 
     Parameters
     ----------
-    cpsd_matrix : np.ndarray :
-        A 3D complex numpy array where the first index corresponds to the
-        frequency line and the second and third indices correspond to the rows
-        and columns of the matrix.
-    row_column : Tuple[int, int] :
-        Optional argument to compute the coherence at just a single (row,column)
-        pair.  (Default value = Compute Entire Matrix)
+    cpsd_matrix : np.ndarray
+        A 3D complex numpy array where the first index corresponds to the frequency line
+        and the second and third indices correspond to the rows and columns of the
+        matrix.
+    row_column : Tuple[int, int], optional
+        Optional argument to compute the coherence at just a single (row,column) pair.
+        (Default value = Compute Entire Matrix).
 
     Returns
     -------
-    coherence : np.ndarray :
+    coherence : np.ndarray
         3D array of coherence values where the [i,j,k] entry corresponds to the
-        coherence of the CPSD matrix for the ith frequency line, jth row, and
-        kth column.
+        coherence of the CPSD matrix for the ith frequency line, jth row, and kth
+        column. If ``row_column`` is given, a 1D array of coherence values at each
+        frequency line for that pair.
 
+    Unit Tests
+    ----------
     """
     if row_column is None:
         diag = np.einsum("ijj->ij", cpsd_matrix)
@@ -1230,35 +1805,46 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int, int] | None = None
     )
 
 
-def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
+def cpsd_to_time_history(
+    cpsd_matrix: np.ndarray,
+    sample_rate: float,
+    df: float,
+    output_oversample: int = 1,
+) -> np.ndarray:
     # pylint: disable=invalid-name
-    """Generates a time history realization from a CPSD matrix
+    """
+    Generates a time history realization from a CPSD matrix.
 
     Parameters
     ----------
-    cpsd_matrix : np.ndarray :
-        A 3D complex np.ndarray representing a CPSD matrix where the first
-        dimension is the frequency line and the second two dimensions are the
-        rows and columns of the matrix at each frequency line.
-    sample_rate: float :
+    cpsd_matrix : np.ndarray
+        A 3D complex np.ndarray representing a CPSD matrix where the first dimension is
+        the frequency line and the second two dimensions are the rows and columns of the
+        matrix at each frequency line.
+    sample_rate : float
         The sample rate of the controller in samples per second
-    df : float :
+    df : float
         The frequency spacing of the cpsd matrix
-
+    output_oversample : int, optional
+        Factor by which the output is oversampled relative to ``sample_rate``, by
+        zero-padding the spectrum. Defaults to 1.
 
     Returns
     -------
-    output : np.ndarray :
-        A numpy array containing the generated signals
+    output : np.ndarray
+        A numpy array containing the generated signals, with shape ``(num_signals,
+        num_samples)``.
 
     Notes
     -----
-    Uses the process described in [1]_
+    Not currently used anywhere. ``CPSDSignalGenerator`` has its own implementation.
 
-    .. [1] R. Schultz and G. Nelson, "Input signal synthesis for open-loop
-       multiple-input/multiple-output testing," Proceedings of the International
-       Modal Analysis Conference, 2019.
+    [1] R. Schultz and G. Nelson, "Input signal synthesis for open-loop
+    multiple-input/multiple-output testing," Proceedings of the International Modal
+    Analysis Conference, 2019.
 
+    Unit Tests
+    ----------
     """
     # Compute SVD broadcasting over all frequency lines
     [U, S, Vh] = np.linalg.svd(cpsd_matrix, full_matrices=False)
@@ -1291,30 +1877,38 @@ def reduce_array_by_coordinate(
     array: np.ndarray,
     coordinate: np.ndarray,
     control_coordinate: np.ndarray,
-    excitation_coordinate: np.ndarray = None,
-):
-    """Picks out entries in an array based on coordinate strings
+    excitation_coordinate: np.ndarray | None = None,
+) -> np.ndarray:
+    """
+    Picks out entries in an array based on coordinate strings.
+
+    Entries are matched on node and the absolute value of direction. If the signs of the
+    matched directions differ, the entry is negated.
 
     Parameters
     ----------
     array : np.ndarray
-        Array to parse
+        Array to parse.
     coordinate : np.ndarray
-        Coordinate names associated with the array
+        Coordinate names associated with the array.
     control_coordinate : np.ndarray
-        Coordinate names associated with control degrees of freedom
+        Coordinate names associated with control degrees of freedom.
     excitation_coordinate : np.ndarray, optional
-        Coordinate names associated with excitation degrees of freedom
+        Coordinate names associated with excitation degrees of freedom. If not given,
+        ``control_coordinate`` is used.
 
     Returns
     -------
     np.ndarray
-        An array sorted by the provided coordinate strings
+        An array sorted by the provided coordinate strings.
 
     Raises
     ------
     ValueError
-        If requested coordinate strings do not exist in the array strings
+        If requested coordinate strings do not exist in the array strings.
+
+    Unit Tests
+    ----------
     """
     if excitation_coordinate is None:
         excitation_coordinate = control_coordinate.copy()
@@ -1361,92 +1955,142 @@ def reduce_array_by_coordinate(
     return np.moveaxis(return_array, -1, 0)
 
 
-def db2scale(decibel):
-    """Converts a decibel value to a scale factor
+def db2scale(decibel: float | np.ndarray) -> float | np.ndarray:
+    """
+    Converts a decibel value to a scale factor.
 
     Parameters
     ----------
-    decibel : float :
-        Value in decibels
-
+    decibel : float or np.ndarray
+        Value in decibel scale.
 
     Returns
     -------
-    scale : float :
-        Value in linear
+    scale : float or np.ndarray
+        Value in linear scale.
 
+    Unit Tests
+    ----------
     """
     return 10 ** (decibel / 20)
 
 
-def power2db(power):
-    """Converts a power quantity to decibels"""
-    return 10 * np.log10(power)
-
-
-def scale2db(scale):
-    """Converts a scale quantity to decibels"""
-    return 20 * np.log10(scale)
-
-
-def rms_time(signal, axis=None, keepdims=False):
-    """Computes RMS over a time signal
+def power2db(power: float | np.ndarray) -> float | np.ndarray:
+    """
+    Converts a power quantity to decibels.
 
     Parameters
     ----------
-    signal : np.ndarray :
-        Signal over which to compute the root-mean-square value
-    axis : int :
-        The dimension over which the mean is performed (Default value = None)
-    keepdims : bool :
-        Whether to keep the dimension over which mean is computed
-        (Default value = False)
+    power : float or np.ndarray
+        Power quantity in linear units.
+
+    Returns
+    -------
+    float or np.ndarray
+        ``10 * log10(power)``.
+
+    Unit Tests
+    ----------
+    """
+    return 10 * np.log10(power)
+
+
+def scale2db(scale: float | np.ndarray) -> float | np.ndarray:
+    """
+    Converts a scale quantity to decibels.
+
+    Parameters
+    ----------
+    scale : float or np.ndarray
+        Amplitude (root-power) quantity in linear units.
+
+    Returns
+    -------
+    float or np.ndarray
+        ``20 * log10(scale)``.
+
+    Unit Tests
+    ----------
+    """
+    return 20 * np.log10(scale)
+
+
+def rms_time(
+    signal: np.ndarray,
+    axis: int | Tuple[int, ...] | None = None,
+    keepdims: bool = False,
+) -> float | np.ndarray:
+    """
+    Computes RMS over a time signal.
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        Signal over which to compute the root-mean-square value.
+    axis : int or Tuple[int, ...], optional
+        The dimension over which the mean is performed (Default value = None).
+    keepdims : bool, optional
+        Whether to keep the dimension over which mean is computed (Default value =
+        False).
 
     Returns
     -------
     rms : numpy scalar or numpy.ndarray
         The root-mean-square value of signal
 
+    Unit Tests
+    ----------
     """
     return np.sqrt(np.mean(signal**2, axis=axis, keepdims=keepdims))
 
 
-def rms_csd(csd, df):
-    """Computes RMS of a CPSD matrix
+def rms_csd(csd: np.ndarray, df: float) -> np.ndarray:
+    """
+    Computes RMS of a CPSD matrix.
 
     Parameters
     ----------
-    csd : np.ndarray :
-        3D complex Numpy array where the first dimension is the frequency line
-        and the second two dimensions are the rows and columns of the CPSD
-        matrix.
-    df : float :
-        Frequency spacing of the CPSD matrix
+    csd : np.ndarray
+        3D complex Numpy array where the first dimension is the frequency line and the
+        second two dimensions are the rows and columns of the CPSD matrix.
+    df : float
+        Frequency spacing of the CPSD matrix.
 
     Returns
     -------
-    rms : numpy scalar or numpy.ndarray
-        The root-mean-square value of signals in the CPSD matrix
+    rms : numpy.ndarray
+        The root-mean-square value of each signal in the CPSD matrix, computed from the
+        diagonal.
 
+    Unit Tests
+    ----------
     """
     return np.sqrt(np.einsum("ijj->j", csd).real * df)
 
 
-def trac(th_1, th_2=None):
-    """Computes the time response assurance criterion
+def trac(th_1: np.ndarray, th_2: np.ndarray | None = None) -> np.ndarray:
+    """
+    Computes the time response assurance criterion.
+
+    Signals are compared along the last axis. Pairs where either signal is all zeros
+    have a trac of 1.
 
     Parameters
     ----------
     th_1 : np.ndarray
         Signals to compute the trac on.
     th_2 : np.ndarray, optional
-        Signals to compute the trac against th_1 on.  If not specified, the
-        trac of th_1 to itself is computed
+        Signals to compute the trac against th_1 on.  If not specified, the trac of th_1
+        to itself is computed.
 
     Returns
     -------
     np.ndarray
-        Trac values for each signal or pair of signals
+        Trac values for each signal or pair of signals, with the shape of ``th_1`` minus
+        its last axis.
+
+    Unit Tests
+    ----------
     """
     if th_2 is None:
         th_2 = th_1
@@ -1463,40 +2107,50 @@ def trac(th_1, th_2=None):
     return trac_val.reshape(th_1_original_shape[:-1])
 
 
-def moving_sum(signal, n):
-    """Computes a moving sum of the specified number of items
+def moving_sum(signal: np.ndarray, n: int) -> np.ndarray:
+    """
+    Computes a moving sum of the specified number of items.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal(s) to compute the moving sum on
+        The signal(s) to compute the moving sum on. The sum is computed along the last
+        axis.
     n : int
-        The number of items to use in the moving sum
+        The number of items to use in the moving sum.
 
     Returns
     -------
-    np.array
-        The moving sum computed at each time step in the signal
+    np.ndarray
+        The moving sum computed at each time step in the signal. The last axis has
+        length ``signal.shape[-1] - n + 1``.
+
+    Unit Tests
+    ----------
     """
     return_value = np.cumsum(signal, axis=-1)
     return_value[..., n:] = return_value[..., n:] - return_value[..., :-n]
     return return_value[..., n - 1 :]
 
 
-def corr_norm_signal_spec(signal, specification):
-    """Computes correlation weighted by the norm of the signals
+def corr_norm_signal_spec(signal: np.ndarray, specification: np.ndarray) -> np.ndarray:
+    """
+    Computes correlation weighted by the norm of the signals.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal to compute the correlation on
+        The signal to compute the correlation on.
     specification : np.ndarray
-        The signal to compute the correlation against
+        The signal to compute the correlation against.
 
     Returns
     -------
     np.ndarray
         The weighted correlation signal
+
+    Unit Tests
+    ----------
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
@@ -1507,40 +2161,48 @@ def corr_norm_signal_spec(signal, specification):
     return correlation / norm_specification / norm_signal
 
 
-def corr_norm_spec2(signal, specification):
-    """Computes correlation weighted by the norm of the specification signal
+def corr_norm_spec2(signal: np.ndarray, specification: np.ndarray) -> np.ndarray:
+    """
+    Computes correlation weighted by the norm of the specification signal.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal to compute the correlation on
+        The signal to compute the correlation on.
     specification : np.ndarray
-        The signal to compute the correlation against
+        The signal to compute the correlation against.
 
     Returns
     -------
     np.ndarray
-        The weighted correlation signal
+        The weighted correlation signal.
+
+    Unit Tests
+    ----------
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
     return correlation / norm_specification**2
 
 
-def norm_ratio(signal, specification):
-    """Computes the ratio of the norms of two signals
+def norm_ratio(signal: np.ndarray, specification: np.ndarray) -> np.ndarray:
+    """
+    Computes the ratio of the norms of two signals.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal to compute the correlation on
+        The signal to compute the correlation on.
     specification : np.ndarray
-        The signal to compute the correlation against
+        The signal to compute the correlation against.
 
     Returns
     -------
     np.ndarray
-        The norm ratio signal
+        The norm ratio signal.
+
+    Unit Tests
+    ----------
     """
     norm_specification = np.linalg.norm(specification)
     norm_signal = np.sqrt(
@@ -1549,20 +2211,26 @@ def norm_ratio(signal, specification):
     return 1 - np.abs((norm_signal / norm_specification) ** 2 - 1)
 
 
-def correlation_norm_spec_ratio(signal, specification):
-    """Computes correlation weighted by the ratio of the norms of the signals
+def correlation_norm_spec_ratio(
+    signal: np.ndarray, specification: np.ndarray
+) -> np.ndarray:
+    """
+    Computes correlation weighted by the ratio of the norms of the signals.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal to compute the correlation on
+        The signal to compute the correlation on.
     specification : np.ndarray
-        The signal to compute the correlation against
+        The signal to compute the correlation against.
 
     Returns
     -------
     np.ndarray
-        The weighted correlation signal
+        The weighted correlation signal.
+
+    Unit Tests
+    ----------
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
@@ -1574,20 +2242,26 @@ def correlation_norm_spec_ratio(signal, specification):
     )
 
 
-def correlation_norm_signal_spec_ratio(signal, specification):
-    """Computes correlation weighted by the ratio of the norms of the signals
+def correlation_norm_signal_spec_ratio(
+    signal: np.ndarray, specification: np.ndarray
+) -> np.ndarray:
+    """
+    Computes correlation weighted by the ratio of the norms of the signals.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal to compute the correlation on
+        The signal to compute the correlation on.
     specification : np.ndarray
-        The signal to compute the correlation against
+        The signal to compute the correlation against.
 
     Returns
     -------
     np.ndarray
-        The weighted correlation signal
+        The weighted correlation signal.
+
+    Unit Tests
+    ----------
     """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
@@ -1602,40 +2276,47 @@ def correlation_norm_signal_spec_ratio(signal, specification):
 
 
 def align_signals(
-    measurement_buffer,
-    specification,
-    correlation_threshold=0.9,
-    perform_subsample=True,
-    correlation_metric=None,
-):
-    """Computes the time shift between two signals in time
+    measurement_buffer: np.ndarray,
+    specification: np.ndarray,
+    correlation_threshold: float = 0.9,
+    perform_subsample: bool = True,
+    correlation_metric: Callable[[np.ndarray, np.ndarray], np.ndarray] | None = None,
+) -> Tuple[np.ndarray | None, int | None, float | None, float]:
+    """
+    Computes the time shift between two signals in time.
 
     Parameters
     ----------
     measurement_buffer : np.ndarray
-        Signal coming from the measurement
+        Signal coming from the measurement.
     specification : np.ndarray
-        Signal to align the measurement to
+        Signal to align the measurement to.
     correlation_threshold : float, optional
-        Threshold for a "good" correlation, by default 0.9
+        Threshold for a "good" correlation, by default 0.9.
     perform_subsample : bool, optional
-        If True, computes a time shift that could be between samples using
-        the phase of the FFT of the signals, by default True
-    correlation_metric : function, optional
-        An optional function to use to change the matching criterion, by
-        default A simple correlation is used
+        If True, computes a time shift that could be between samples using the phase of
+        the FFT of the signals, by default True.
+    correlation_metric : Callable[[np.ndarray, np.ndarray], np.ndarray], optional
+        An optional function to use to change the matching criterion, by default A
+        simple correlation is used.
 
     Returns
     -------
-    spec_portion_aligned : np.ndarray
-        The portion of the measurement that lines up with the specification
-    delay : float
-        The time difference between the measurement and specification
-    mean_phase_slope : float
-        The slope of the phase computed in the FFT from the subsample
-        alignment.  Will be None if subsample matching is not used
+    spec_portion_aligned : np.ndarray or None
+        The portion of the measurement that lines up with the specification. ``None`` if
+        the correlation is below ``correlation_threshold``.
+    delay : int or None
+        The number of samples into the measurement where the specification starts.
+        ``None`` if the correlation is below ``correlation_threshold``.
+    mean_phase_slope : float or None
+        The slope of the phase computed in the FFT from the subsample alignment.  Will
+        be None if subsample matching is not used or the correlation is below
+        ``correlation_threshold``.
     found_correlation : float
-        The value of the correlation metric used to find the match
+        The value of the correlation metric used to find the match.
+
+    Unit Tests
+    ----------
     """
     if correlation_metric is None:
         maximum_possible_correlation = np.sum(specification**2)
@@ -1683,24 +2364,35 @@ def align_signals(
     return spec_portion_aligned, delay, mean_phase_slope, found_correlation
 
 
-def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
-    """Applies a time shift to a signal by modifying the phase of the FFT
+def shift_signal(
+    signal: np.ndarray, samples_to_keep: int, sample_delay: int, phase_slope: float
+) -> np.ndarray:
+    """
+    Applies a time shift to a signal by modifying the phase of the FFT.
 
     Parameters
     ----------
     signal : np.ndarray
-        The signal to shift
+        The signal to shift.
     samples_to_keep : int
-        The number of samples to keep in the shifted signal
+        The number of samples to keep in the shifted signal.
     sample_delay : int
-        The number of samples to delay
+        The number of samples to delay.
     phase_slope : float
-        The slope of the phase if subsample shift is used
+        The slope of the phase if subsample shift is used.
 
     Returns
     -------
     np.ndarray
-        The shifted signal
+        The shifted signal.
+
+    Notes
+    -----
+    Only used by the SDS and transient environments, with the ``delay`` and
+    ``mean_phase_slope`` returned by ``align_signals``.
+
+    Unit Tests
+    ----------
     """
     signal_sample_aligned = signal[..., sample_delay : sample_delay + samples_to_keep]
     sample_aligned_fft = np.fft.rfft(signal_sample_aligned, axis=-1)
@@ -1710,25 +2402,59 @@ def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
     return np.fft.irfft(subsample_aligned_fft)
 
 
-def wrap(data, period=2 * np.pi):
-    """Wraps angle data between -pi/2 and pi/2"""
+def wrap(data: float | np.ndarray, period: float = 2 * np.pi) -> float | np.ndarray:
+    """
+    Wraps angle data into the range ``[-period/2, period/2)``.
+
+    With the default period this is ``[-pi, pi)``.
+
+    Parameters
+    ----------
+    data : float or np.ndarray
+        The angle data to wrap.
+    period : float, optional
+        The period to wrap over. Defaults to ``2 * pi``.
+
+    Returns
+    -------
+    float or np.ndarray
+        The wrapped data.
+
+    Unit Tests
+    ----------
+    """
     return (data + period / 2) % period - period / 2
 
 
 class OverlapBuffer:
-    """Class to hold a buffer stored in a numpy array.
+    """
+    Class to hold a buffer stored in a numpy array.
 
-    This buffer supports overlap; when you pull data out, it doesn't remove the
-    data from the buffer."""
+    This buffer supports overlap; when you pull data out, it doesn't remove the data
+    from the buffer.
 
-    def __init__(self, shape, buffer_axis=-1, starting_value=0, dtype="float64"):
+    New data is added to the end of the buffer along ``buffer_axis``, pushing the oldest
+    data off the front. ``buffer_position`` counts how many samples from the end of the
+    buffer have not yet been read.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self,
+        shape: Tuple[int, ...],
+        buffer_axis: int = -1,
+        starting_value: Any = 0,
+        dtype: str | np.dtype = "float64",
+    ) -> None:
         """
-        Creates a buffer object
+        Creates a buffer object.
 
         Parameters
         ----------
         shape : tuple
-            Shape of the underlying data array
+            Shape of the underlying data array.
         buffer_axis : int, optional
             Index corresponding to the buffer axis. The default is -1.
         starting_value : optional
@@ -1736,6 +2462,9 @@ class OverlapBuffer:
             broadcast into the shape of the array. The default is 0.
         dtype : numpy dtype, optional
             The data type of the buffer array. The default is 'float64'.
+
+        Unit Tests
+        ----------
         """
         self._buffer_data = np.empty(shape, dtype)
         self._buffer_data[:] = starting_value
@@ -1745,22 +2474,67 @@ class OverlapBuffer:
         self._buffer_position = 0
 
     @property
-    def buffer_position(self):
-        """The current buffer position"""
+    def buffer_position(self) -> int:
+        """
+        The current buffer position.
+
+        Returns
+        -------
+        int
+            Number of samples at the end of the buffer that have not been
+            read.
+
+        Unit Tests
+        ----------
+        """
         return self._buffer_position
 
     @property
-    def buffer_axis(self):
-        """The axis of the data that is used as buffer dimension"""
+    def buffer_axis(self) -> int:
+        """
+        The axis of the data that is used as buffer dimension.
+
+        Returns
+        -------
+        int
+            The non-negative index of the buffer axis.
+
+        Unit Tests
+        ----------
+        """
         return self._buffer_axis
 
     @property
-    def buffer_data(self):
-        """Gets the data currently on the buffer"""
+    def buffer_data(self) -> np.ndarray:
+        """
+        Gets the data currently on the buffer.
+
+        Returns
+        -------
+        np.ndarray
+            The underlying buffer array.
+
+        Unit Tests
+        ----------
+        """
         return self._buffer_data
 
-    def add_data_noshift(self, data):
-        """Adds data to the buffer without shifting the buffer"""
+    def add_data_noshift(self, data: np.ndarray) -> None:
+        """
+        Adds data to the buffer without shifting the buffer.
+
+        If ``data`` is longer than the buffer along ``buffer_axis``, only the most
+        recent samples are kept.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Data to add. Must match the buffer shape on every axis except
+            ``buffer_axis``.
+
+        Unit Tests
+        ----------
+        """
         data = np.array(data)
         # Make sure the data will fit into the buffer
         data_slice = tuple(
@@ -1786,15 +2560,49 @@ class OverlapBuffer:
             (self.buffer_data[old_data_slice], data), axis=self.buffer_axis
         )
 
-    def add_data(self, data):
-        """Adds data to the buffer and shifts the buffer position"""
+    def add_data(self, data: np.ndarray) -> None:
+        """
+        Adds data to the buffer and shifts the buffer position.
+
+        The buffer position is increased by the number of samples added, up to the size
+        of the buffer.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Data to add. Must match the buffer shape on every axis except
+            ``buffer_axis``.
+
+        Unit Tests
+        ----------
+        """
         self.add_data_noshift(data)
         self._buffer_position += data.shape[self.buffer_axis]
         if self.buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
 
-    def get_data_noshift(self, num_samples):
-        """Gets data from the buffer without shifting the buffer position"""
+    def get_data_noshift(self, num_samples: int) -> np.ndarray:
+        """
+        Gets data from the buffer without shifting the buffer position.
+
+        Parameters
+        ----------
+        num_samples : int
+            Number of samples to read, starting from the oldest unread sample.
+
+        Returns
+        -------
+        np.ndarray
+            A view of the requested samples.
+
+        Raises
+        ------
+        ValueError
+            If ``num_samples`` is greater than ``buffer_position``.
+
+        Unit Tests
+        ----------
+        """
         data_start = -self.buffer_position
         data_end = -self.buffer_position + num_samples
         if data_end > 0:
@@ -1814,8 +2622,33 @@ class OverlapBuffer:
         )
         return self.buffer_data[data_slice]
 
-    def get_data(self, num_samples, buffer_shift=None):
-        """Gets data from the buffer and updates the position"""
+    def get_data(self, num_samples: int, buffer_shift: int | None = None) -> np.ndarray:
+        """
+        Gets data from the buffer and updates the position.
+
+        Parameters
+        ----------
+        num_samples : int
+            Number of samples to read, starting from the oldest unread sample.
+        buffer_shift : int, optional
+            Amount to shift the buffer position by after reading. If ``None``, the
+            position is moved back by ``num_samples`` so the read samples are consumed.
+            A smaller shift leaves samples to be read again, giving overlap. Defaults to
+            ``None``.
+
+        Returns
+        -------
+        np.ndarray
+            A view of the requested samples.
+
+        Raises
+        ------
+        ValueError
+            If ``num_samples`` is greater than ``buffer_position``.
+
+        Unit Tests
+        ----------
+        """
         data = self.get_data_noshift(num_samples)
         if buffer_shift is None:
             self.shift_buffer_position(-num_samples)
@@ -1823,28 +2656,79 @@ class OverlapBuffer:
             self.shift_buffer_position(buffer_shift)
         return data
 
-    def shift_buffer_position(self, samples):
-        """Moves the buffer positions"""
+    def shift_buffer_position(self, samples: int) -> None:
+        """
+        Moves the buffer positions.
+
+        The result is clamped between 0 and the size of the buffer.
+
+        Parameters
+        ----------
+        samples : int
+            Number of samples to move the position by. Negative values mark samples as
+            read.
+
+        Unit Tests
+        ----------
+        """
         self._buffer_position += samples
         if self._buffer_position < 0:
             self._buffer_position = 0
         if self._buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
 
-    def set_buffer_position(self, position=0):
-        """Sets the buffer positions"""
+    def set_buffer_position(self, position: int = 0) -> None:
+        """
+        Sets the buffer positions.
+
+        The result is clamped between 0 and the size of the buffer.
+
+        Parameters
+        ----------
+        position : int, optional
+            The new buffer position. Defaults to 0.
+
+        Unit Tests
+        ----------
+        """
         self._buffer_position = position
         if self._buffer_position < 0:
             self._buffer_position = 0
         if self._buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> Any:
+        """
+        Indexes directly into the underlying buffer array.
+
+        Parameters
+        ----------
+        key : Any
+            Any index accepted by a numpy array.
+
+        Returns
+        -------
+        Any
+            The result of indexing ``buffer_data``.
+
+        Unit Tests
+        ----------
+        """
         return self.buffer_data[key]
 
     @property
-    def shape(self):
-        """Gets the shape of the buffer"""
+    def shape(self) -> Tuple[int, ...]:
+        """
+        Gets the shape of the buffer.
+
+        Returns
+        -------
+        Tuple[int, ...]
+            The shape of the underlying buffer array.
+
+        Unit Tests
+        ----------
+        """
         return self.buffer_data.shape
 
 
