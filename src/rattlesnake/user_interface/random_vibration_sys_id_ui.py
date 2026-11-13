@@ -1539,6 +1539,10 @@ class RandomVibrationUI(SysIdEnvironmentUI):
         """
         self.run_widget.current_test_level_selector.setValue(float(test_level))
 
+    def set_continuous_run(self, data):  # pylint: disable=unused-argument
+        """Sets the test to run continously"""
+        self.run_widget.continuous_test_radiobutton.setChecked(True)
+
     def show_magnitude_window(self, item):
         """Creates a window showing the magnitude of a signal when an item is double-clicked"""
         index = self.run_widget.test_response_error_list.row(item)
@@ -1863,6 +1867,8 @@ class RandomVibrationUI(SysIdEnvironmentUI):
                 pass
             case RandomVibrationCommands.CHANGE_SPECIFICATION:
                 pass
+            case RandomVibrationCommands.SET_CONTINUOUS_RUN:
+                self.set_continuous_run(data)
             case UICommands.ENABLE:
                 widget = None
                 for parent in [

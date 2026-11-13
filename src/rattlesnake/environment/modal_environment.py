@@ -1336,9 +1336,6 @@ class ModalEnvironment(Environment):
         )
 
         self.set_active()
-        self.queue_container.gui_update_queue.put(
-            (self.environment_name, (UICommands.ENVIRONMENT_STARTED, None))
-        )
 
     def run_control(self, data):  # pylint: disable=unused-argument
         """Runs the environment
