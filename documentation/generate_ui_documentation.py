@@ -782,6 +782,19 @@ def compute_default_reduced_structure(ui_file, reduced_structure):
         default_widget_names,
     )
 
+def caption_sentence(text: str) -> str:
+    """
+    Return a figure caption that ends with terminal punctuation.
+
+    Trailing whitespace is removed.  A period is appended unless the text
+    already ends in ``.``, ``?``, or ``!``.  Empty text is returned empty.
+    """
+    text = text.rstrip()
+    if text == "" or text.endswith((".", "?", "!")):
+        return text
+    return text + "."
+
+
 def ensure_section_label(markdown_text: str, section_label: str) -> str:
     """
     Ensure a block of markdown begins with a section label.
@@ -1285,7 +1298,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 print(f"Save returned {saved} for {figure_full_path}")
 
                 this_figure_markdown += (
-                    f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n {name}\n:::"
+                    f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n {caption_sentence(name)}\n:::"
                 )
 
                 # Only emit a section anchor if this groupbox has real direct content
@@ -1327,7 +1340,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 this_figure_markdown += (
                     f"\n\n:::{{figure}} {figure_rel_path}\n"
                     f":label: {figure_ref_name}\n"
-                    f" **{label}** {message}\n:::"
+                    f" {caption_sentence(f'**{label}** {message}')}\n:::"
                 )
                 this_text_markdown += f"\n* [**{label}**](#{figure_ref_name}) {message}"
 
