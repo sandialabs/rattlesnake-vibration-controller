@@ -404,7 +404,7 @@ def test_fetch_prefers_packaged_file(
     The test replaces ``pooch.create`` with a function that fails, so any
     download attempt fails the test.
     """
-    name = "hardware/sdynpy_system/sdynpy_system.npz"
+    name = "hardware/data/sdynpy_system.npz"
     content = b"packaged"
     packaged = tmp_path / name
     packaged.parent.mkdir(parents=True)
@@ -474,7 +474,7 @@ def test_fetch_downloads_into_cache(
     The packaged directory is empty, so the file must come from the server.
     ``RATTLESNAKE_DATADIR`` points the cache at ``tmp_path``.
     """
-    name = "hardware/sdynpy_system/sdynpy_system.npz"
+    name = "hardware/data/sdynpy_system.npz"
     content = b"downloaded"
     (tmp_path / name).parent.mkdir(parents=True)
     (tmp_path / name).write_bytes(content)
@@ -497,7 +497,7 @@ def test_fetch_rejects_corrupt_download(
     The server holds bytes that do not match the registry hash. Pooch checks
     the hash after the download and deletes the file when it does not match.
     """
-    name = "hardware/sdynpy_system/sdynpy_system.npz"
+    name = "hardware/data/sdynpy_system.npz"
     (tmp_path / name).parent.mkdir(parents=True)
     (tmp_path / name).write_bytes(b"corrupt")
     monkeypatch.setattr(data, "PACKAGE_DIRECTORY", tmp_path / "empty")
@@ -510,8 +510,8 @@ def test_fetch_rejects_corrupt_download(
 
 
 NAME_LIST = [
-    "environment/read/read_v4.nc4",
-    "hardware/sdynpy_system/sdynpy_system.npz",
+    "environment/data/read.nc4",
+    "hardware/data/sdynpy_system.npz",
     "frame_wing/data/srs_specification.npz",
 ]
 
