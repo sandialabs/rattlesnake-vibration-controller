@@ -22,24 +22,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from __future__ import annotations
-
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import netCDF4
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
+from rattlesnake.utilities import GlobalCommands, RattlesnakeError
+from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.environment.environment_utilities import EnvironmentType
+from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
 from rattlesnake.environment.environment_registry import (
     ENVIRONMENT_COMMANDS,
     ENVIRONMENT_METADATA,
 )
-from rattlesnake.environment.environment_utilities import EnvironmentType
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
-from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.profile_manager import ProfileEvent
-from rattlesnake.user_interface.ui_utilities import UICommands
-from rattlesnake.utilities import GlobalCommands, RattlesnakeError
 
 if TYPE_CHECKING:
     from rattlesnake.environment.abstract_environment import EnvironmentMetadata
