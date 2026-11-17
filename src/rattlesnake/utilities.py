@@ -1,5 +1,6 @@
 """
-This file contains a number of helper classes for the general controller.
+This file contains a number of helper classes for use by rattlesnake files. This file
+can be imported by any file without circular imports.
 
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
     from rattlesnake.hardware.abstract_hardware import HardwareMetadata
     from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 
+# File lock for windows vs macos
 if sys.platform == "win32":
     import msvcrt
 else:
