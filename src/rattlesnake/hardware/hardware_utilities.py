@@ -54,55 +54,7 @@ class Channel:
 
     Each attribute corresponds to a column of the channel table. Every attribute
     defaults to ``None``, and a channel with every attribute equal to ``None`` is
-    considered empty. Each parameter is stored as an attribute of the same name.
-
-    Parameters
-    ----------
-    node_number : str, optional
-        Metadata specifying the node number.
-    node_direction : str, optional
-        Metadata specifying the direction at a node.
-    comment : str, optional
-        Metadata specifying any additional comments on the channel.
-    serial_number : str, optional
-        Metadata specifying the serial number of the instrument.
-    triax_dof : str, optional
-        Metadata specifying the degree of freedom on a triaxial sensor.
-    sensitivity : str, optional
-        Sensitivity value of the sensor in mV/engineering unit.
-    unit : str, optional
-        The engineering unit of the sensor.
-    make : str, optional
-        Metadata specifying the make of the sensor.
-    model : str, optional
-        Metadata specifying the model of the sensor.
-    expiration : str, optional
-        Metadata specifying the expiration date of the sensor.
-    physical_device : str, optional
-        Physical hardware that the instrument is connected to.
-    physical_channel : str, optional
-        Channel in the physical hardware that the instrument is connected to.
-    channel_type : str, optional
-        Type of channel.
-    minimum_value : str, optional
-        Minimum value of the channel in volts.
-    maximum_value : str, optional
-        Maximum value of the channel in volts.
-    coupling : str, optional
-        Coupling type for the channel.
-    excitation_source : str, optional
-        Source for the signal conditioning for the sensor.
-    excitation : str, optional
-        Level of excitation for the signal conditioning for the sensor.
-    feedback_device : str, optional
-        Physical hardware that the source output teed into this channel originates
-        from.
-    feedback_channel : str, optional
-        Channel on the physical hardware that is teed into this channel.
-    warning_level : str, optional
-        Level at which warnings will be flagged on the monitor.
-    abort_level : str, optional
-        Level at which the system will shut down.
+    considered empty.
 
     Unit Tests
     ----------
@@ -135,6 +87,54 @@ class Channel:
     ) -> None:
         """
         Initializes a channel from its channel table values.
+
+        Parameters
+        ----------
+        node_number : str, optional
+            Metadata specifying the node number.
+        node_direction : str, optional
+            Metadata specifying the direction at a node.
+        comment : str, optional
+            Metadata specifying any additional comments on the channel.
+        serial_number : str, optional
+            Metadata specifying the serial number of the instrument.
+        triax_dof : str, optional
+            Metadata specifying the degree of freedom on a triaxial sensor.
+        sensitivity : str, optional
+            Sensitivity value of the sensor in mV/engineering unit.
+        unit : str, optional
+            The engineering unit of the sensor.
+        make : str, optional
+            Metadata specifying the make of the sensor.
+        model : str, optional
+            Metadata specifying the model of the sensor.
+        expiration : str, optional
+            Metadata specifying the expiration date of the sensor.
+        physical_device : str, optional
+            Physical hardware that the instrument is connected to.
+        physical_channel : str, optional
+            Channel in the physical hardware that the instrument is connected to.
+        channel_type : str, optional
+            Type of channel.
+        minimum_value : str, optional
+            Minimum value of the channel in volts.
+        maximum_value : str, optional
+            Maximum value of the channel in volts.
+        coupling : str, optional
+            Coupling type for the channel.
+        excitation_source : str, optional
+            Source for the signal conditioning for the sensor.
+        excitation : str, optional
+            Level of excitation for the signal conditioning for the sensor.
+        feedback_device : str, optional
+            Physical hardware that the source output teed into this channel originates
+            from.
+        feedback_channel : str, optional
+            Channel on the physical hardware that is teed into this channel.
+        warning_level : str, optional
+            Level at which warnings will be flagged on the monitor.
+        abort_level : str, optional
+            Level at which the system will shut down.
 
         Unit Tests
         ----------

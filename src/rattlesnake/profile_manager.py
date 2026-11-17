@@ -81,27 +81,7 @@ class ProfileEvent:
 
     Stores the timestamp, the environment it applies to, the command, and any data the
     command requires. The queue name and environment type are assigned by the
-    ``EnvironmentManager`` during validation. Each parameter is stored as an attribute
-    of the same name.
-
-    Parameters
-    ----------
-    timestamp : float
-        Time, in seconds from the start of the profile, at which the event fires.
-    environment_name : str
-        Name of the environment the event applies to, or ``"Global"`` for
-        controller-wide commands.
-    command : Enum
-        ``GlobalCommands`` or environment-specific command to execute.
-    data : Any, optional
-        Data to pass along with the command. Defaults to ``None``.
-
-    Attributes
-    ----------
-    environment_type : EnvironmentType or str or None
-        Environment type assigned to the event.
-    queue_name : str or None
-        Queue name assigned to the event.
+    ``EnvironmentManager`` during validation.
 
     Unit Tests
     ----------
@@ -116,6 +96,18 @@ class ProfileEvent:
     ) -> None:
         """
         Initializes a profile event without a queue name or environment type.
+
+        Parameters
+        ----------
+        timestamp : float
+            Time, in seconds from the start of the profile, at which the event fires.
+        environment_name : str
+            Name of the environment the event applies to, or ``"Global"`` for
+            controller-wide commands.
+        command : Enum
+            ``GlobalCommands`` or environment-specific command to execute.
+        data : Any, optional
+            Data to pass along with the command. Defaults to ``None``.
 
         Unit Tests
         ----------
