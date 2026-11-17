@@ -173,17 +173,17 @@ def load_metadata_from_workbook(
 
     The workbook is read as follows:
 
-    - **Hardware type** comes from the ``Hardware Type`` row of the ``"Hardware"``
+    - **Hardware type** comes from the ``Hardware Type`` row of the "Hardware"
       sheet.
     - **Environment names** are read from row 2 of the channel sheet, starting at column
       24 and stopping at the first empty cell. A non-empty cell in rows 3 onward of that
       column marks the channel as active in that environment.
     - **Environment metadata** is read from the sheet with each environment's name. Its
       type comes from cell ``B1`` of that sheet.
-    - **Profile events** are read from the ``"Test Profile"`` sheet with
+    - **Profile events** are read from the "Test Profile" sheet with
       ``load_profile_from_workbook``.
 
-    If the workbook has more than one sheet, the first sheet with ``"channel"`` in its
+    If the workbook has more than one sheet, the first sheet with "channel" in its
     name is used as the channel sheet.
 
     The workbook is closed before returning.
@@ -366,7 +366,7 @@ def load_profile_from_workbook(
     environment name, the command, and the data.
 
     Command names are converted to upper case with spaces replaced by
-    underscores (e.g. ``"Start Environment"`` becomes ``START_ENVIRONMENT``),
+    underscores (e.g. "Start Environment" becomes ``START_ENVIRONMENT``),
     then looked up in ``GlobalCommands`` and then the environment's command
     enum. ``SET_ENVIRONMENT_INSTRUCTIONS`` rows are skipped, since those
     instructions cannot be set from a workbook. Empty data cells become
@@ -448,7 +448,7 @@ def save_profile_to_workbook(
 
     A header row (``Time (s)``, ``Environment``, ``Operation``, ``Data``) is
     always written to row 1. Events are written from row 2 onward, with each
-    command written as its ``label`` (e.g. ``"Start Environment"``) so that
+    command written as its ``label`` (e.g. "Start Environment") so that
     ``load_profile_from_workbook`` can read it back.
 
     Parameters

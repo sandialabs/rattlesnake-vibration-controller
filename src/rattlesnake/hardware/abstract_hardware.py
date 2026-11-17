@@ -316,7 +316,7 @@ class HardwareMetadata:
         """
         Write a channel table to the active sheet of a workbook.
 
-        The active sheet is renamed to ``"Channel Table"``. Group headers are written to
+        The active sheet is renamed to "Channel Table". Group headers are written to
         the first row, column headers to the second row, and one channel per row
         starting at the third row. ``None`` values are written as empty strings.
 
@@ -389,7 +389,7 @@ class HardwareMetadata:
         Load the channel table from a workbook.
 
         If the workbook has more than one sheet, the channel table is the sheet with
-        ``"channel"`` in its name. Channels are read starting at the third row until the
+        "channel" in its name. Channels are read starting at the third row until the
         first empty row.
 
         Parameters
@@ -445,7 +445,7 @@ class HardwareMetadata:
         """
         Write a blank hardware sheet template to a workbook.
 
-        Writes the ``"Hardware"`` sheet labels in the first column and instructions for
+        Writes the "Hardware" sheet labels in the first column and instructions for
         filling in each value. The sheet is created if it does not exist.
 
         This currently implements every possible hardware attribute even if it is unused
@@ -553,7 +553,7 @@ class HardwareMetadata:
         Parameters
         ----------
         workbook : openpyxl.workbook.workbook.Workbook
-            Workbook containing a channel table and a ``"Hardware"`` sheet.
+            Workbook containing a channel table and a "Hardware" sheet.
 
         Returns
         -------
@@ -575,7 +575,7 @@ class HardwareMetadata:
         RattlesnakeError
             If the workbook has more than one channel table sheet or none.
         KeyError
-            If the workbook does not have a ``"Hardware"`` sheet.
+            If the workbook does not have a "Hardware" sheet.
 
         Unit Tests
         ----------

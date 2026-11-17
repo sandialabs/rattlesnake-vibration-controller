@@ -102,7 +102,7 @@ class ProfileEvent:
         timestamp : float
             Time, in seconds from the start of the profile, at which the event fires.
         environment_name : str
-            Name of the environment the event applies to, or ``"Global"`` for
+            Name of the environment the event applies to, or "Global" for
             controller-wide commands.
         command : Enum
             ``GlobalCommands`` or environment-specific command to execute.
@@ -127,7 +127,7 @@ class ProfileEvent:
         Returns
         -------
         EnvironmentType or str or None
-            Environment type of ``environment_name``, ``"Global"`` for controller-wide
+            Environment type of ``environment_name``, "Global" for controller-wide
             commands, or ``None`` if it has not been assigned.
 
         Unit Tests
@@ -143,7 +143,7 @@ class ProfileEvent:
         Returns
         -------
         str or None
-            Queue name of ``environment_name``, ``"Global"`` for controller-wide
+            Queue name of ``environment_name``, "Global" for controller-wide
             commands, or ``None`` if it has not been assigned.
 
         Unit Tests

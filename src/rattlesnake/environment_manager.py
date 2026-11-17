@@ -838,8 +838,8 @@ class EnvironmentManager:
 
         The profile events come from the UI/Terminal, which has no idea which queue was
         assigned to an environment, so the environment names are validated here. Each
-        event is given a queue name. Events with the environment name ``"Global"`` are
-        assigned ``"Global"`` as their queue name and environment type.
+        event is given a queue name. Events with the environment name "Global" are
+        assigned "Global" as their queue name and environment type.
 
         Parameters
         ----------

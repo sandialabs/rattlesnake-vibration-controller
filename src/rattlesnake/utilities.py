@@ -86,7 +86,7 @@ def open_and_lock_file(lock_filename: str, encoding: str = "utf-8") -> TextIO | 
         Path to the lock file to open and lock. It is created if it does not
         exist.
     encoding : str, optional
-        Text encoding used to open the file. Defaults to ``"utf-8"``.
+        Text encoding used to open the file. Defaults to "utf-8".
 
     Returns
     -------
@@ -181,7 +181,7 @@ def log_file_task(
 
     Messages are read from ``log_queue`` and written to a unique log file until
     ``shutdown_event`` is set or a ``GlobalCommands.QUIT`` message is received. Messages
-    containing ``" ERROR"`` are also printed to the console. This task is always run on
+    containing " ERROR" are also printed to the console. This task is always run on
     a seperate process, even when the ``RattlesnakeController`` is in threading mode.
 
     Parameters
@@ -287,7 +287,7 @@ class GlobalCommands(Enum):
         display.
 
         Underscores in the enum name are replaced with spaces and the result is
-        title-cased (e.g. ``START_STREAMING`` becomes ``"Start Streaming"``).
+        title-cased (e.g. ``START_STREAMING`` becomes "Start Streaming").
 
         Returns
         -------
@@ -363,7 +363,7 @@ class VerboseMessageQueue:
             ``queue.Queue`` is used when Rattlesnake runs in threaded mode.
         base_name : str, optional
             The name of the queue that will be included in the logging
-            information. Defaults to ``""``.
+            information. Defaults to "".
         name_manager : multiprocessing.managers.SyncManager, optional
             Manager used to create a shared value for the environment name so
             that it can be updated with ``assign_environment`` after the queue
@@ -976,12 +976,12 @@ class IPAddress:
     Attributes
     ----------
     host_name : str or None
-        Host name of the device, in the form ``"BK<type>-<serial>"`` for LAN-XI modules.
+        Host name of the device, in the form "BK<type>-<serial>" for LAN-XI modules.
     ipv4_address : str or None
         IPv4 address of the device.
     ipv6_address : str or None
         IPv6 address of the device, wrapped in brackets and including the scope id if
-        present (e.g. ``"[fe80::1%5]"``).
+        present (e.g. "[fe80::1%5]").
     valid_ip : bool
         ``True`` if the device has been confirmed reachable.
     module_info : dict or None
@@ -1629,7 +1629,7 @@ def worksheet_cell_str(value: Any, default: str = "") -> str:
         (``YYYY-MM-DD``).
     default : str, optional
         Value returned when ``value`` is ``None`` or an empty string. Defaults to
-        ``""``.
+        "".
 
     Returns
     -------
