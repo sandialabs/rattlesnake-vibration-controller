@@ -1,16 +1,45 @@
+"""
+Main Rattlesnake controller engine.
+
+This module defines the high-level controller object responsible for
+constructing queues and events, starting controller subprocesses, managing
+hardware and environment metadata, starting acquisition and output,
+handling system identification workflows, managing streaming and profiles,
+and shutting down the controller cleanly.
+
+Rattlesnake Vibration Control Software
+Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
+(NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
+Government retains certain rights in this software.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import atexit
-from datetime import datetime
-from enum import Enum
-import multiprocessing as mp
 import os
-import queue as thqueue
 import threading
 import time
+import multiprocessing as mp
+import queue as thqueue
+from datetime import datetime
+from enum import Enum
 from typing import Dict, List
 
 import openpyxl
 import netCDF4 as nc4
 
+from rattlesnake.typehint import EventType, PathType
 from rattlesnake.utilities import (
     log_file_task,
     flush_queue,
@@ -21,30 +50,29 @@ from rattlesnake.utilities import (
     RattlesnakeError,
     VerboseMessageQueue,
 )
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import (
+    EnvironmentInstructions,
+    EnvironmentMetadata,
+)
+from rattlesnake.process.abstract_sysid_data_analysis import (
+    SysIdDataPackage,
+    SysIdMetadata,
+)
+from rattlesnake.process.acquisition import acquisition_process
+from rattlesnake.process.controller import controller_process
+from rattlesnake.process.output import output_process
+from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
+from rattlesnake.environment.environment_registry import (
+    SYSID_ENVIRONMENTS,
+)
 from rattlesnake.environment_manager import EnvironmentManager
-from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 from rattlesnake.load_utilities import (
     load_metadata_from_netcdf,
     load_metadata_from_workbook,
     save_rattlesnake_to_workbook,
 )
-from rattlesnake.hardware.hardware_utilities import HardwareType
-from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
-from rattlesnake.environment.abstract_environment import (
-    EnvironmentInstructions,
-    EnvironmentMetadata,
-)
-from rattlesnake.environment.environment_registry import ENVIRONMENT_METADATA
-from rattlesnake.process.acquisition import acquisition_process
-from rattlesnake.process.output import output_process
-from rattlesnake.process.streaming import streaming_process, StreamMetadata, StreamType
-from rattlesnake.process.controller import controller_process
-from rattlesnake.process.abstract_sysid_data_analysis import SysIdMetadata
-from rattlesnake.environment.environment_registry import SYSID_ENVIRONMENTS
-
-# from rattlesnake.process.sysid_data_analysis import SysIdMetadata
-
+from rattlesnake.profile_manager import ProfileEvent, ProfileManager
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
@@ -57,49 +85,122 @@ GUI_QUEUE_POLL_INTERVAL = 0.25  # Seconds between gui_update_queue size checks
 
 # region State
 class RattlesnakeState(Enum):
-    # We don't check for stored stream/profiles because they can be left blank
-    INIT = 0  # Nothing is stored yet
-    HARDWARE_STORE = 1  # Hardware has been stored
-    ENVIRONMENT_STORE = 2  # Environments have been stored
-    HARDWARE_ACTIVE = 3  # Acquisition is running
-    ENVIRONMENT_ACTIVE = 4  # Environment output is running
-    SYS_ID_ACTIVE = 5  # System identification is being performed
+    """
+    Enumeration of high-level controller states.
+
+    The controller state is computed from the attributes of the controller and
+    different event flags within the acquisition, output, and environment processes.
+
+    Attributes
+    ----------
+    INIT : int
+        No hardware or environment metadata has been stored.
+    HARDWARE_STORE : int
+        Hardware metadata has been stored.
+    ENVIRONMENT_STORE : int
+        Hardware and environment metadata have been stored.
+    HARDWARE_ACTIVE : int
+        Acquisition and output hardware are running.
+    ENVIRONMENT_ACTIVE : int
+        At least one environment is actively running while hardware is active.
+    SYS_ID_ACTIVE : int
+        System identification is active while hardware is active.
+
+    Unit Tests
+    ----------
+
+    Notes
+    -----
+    We don't check for stored streaming/profiles because they can be left blank.
+    """
+
+    INIT = 0
+    HARDWARE_STORE = 1
+    ENVIRONMENT_STORE = 2
+    HARDWARE_ACTIVE = 3
+    ENVIRONMENT_ACTIVE = 4
+    SYS_ID_ACTIVE = 5
 
 
 # endregion
 
 
-# region Rattlesnake
+# region Controller
 class RattlesnakeController:
-    """Object responsible for setting up, sending data to, and running processes that
-    make up the rattlesnake vibration controller."""
+    """
+    The main controller that owns the process queues, synchronization events,
+    subprocess handles, environment manager, profile manager, and stored
+    metadata needed to run tests. It provides the public API
+    for initializing hardware, initializing environments, starting and stopping
+    acquisition, starting and stopping environments, running system
+    identification, managing streaming, managing profiles, loading and saving
+    templates, and shutting down all subprocesses.
 
-    def __init__(self, *, threaded: bool = THREADING, timeout: float = 40):
+    Parameters
+    ----------
+    threaded : bool, optional
+        If ``True``, worker components are started as threads and use
+        thread-compatible queues and events. If ``False``, worker components
+        are started as multiprocessing processes. Defaults to ``THREADING``.
+    timeout : float, optional
+        Timeout in seconds used by blocking operations while waiting for
+        subprocess ready or active events. Defaults to ``40``.
+
+    Attributes
+    ----------
+    queue_container : QueueContainer
+        Container holding controller, acquisition, output, streaming, GUI,
+        sync, hardware, and environment queues.
+    event_container : EventContainer
+        Container holding ready, close, active, system-identification, and
+        watchdog events.
+    environment_manager : EnvironmentManager
+        Manager responsible for environment metadata, environment processes,
+        queue names, and environment validation.
+    profile_manager : ProfileManager
+        Manager responsible for validating, starting, and stopping profile
+        events.
+    hardware_metadata : HardwareMetadata or None
+        Current hardware metadata stored by the controller.
+    environment_metadata : dict of str to EnvironmentMetadata
+        Current environment metadata stored by the environment manager.
+    last_stream_metadata : StreamMetadata or None
+        Most recently stored stream metadata for UI use.
+    last_profile_event_list : list of ProfileEvent
+        Most recently stored profile event list for UI use.
+    has_gui : bool
+        Whether the controller has been configured for GUI use.
+    threaded : bool
+        Whether the controller is running in threaded mode.
+    blocking : bool
+        Whether public API operations wait for process ready and active events.
+    timeout : float
+        Timeout used by blocking wait operations.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(self, *, threaded: bool = THREADING, timeout: float = 40) -> None:
         """
         Initializes a blank rattlesnake controller object and spins up
         multiple processes required to run a vibration test.
 
-        Running in the threaded mode results in much quicker data transfer
-        rates as commands do not have to be copied in the RAM. This mode
-        allows the control laws to respond quicker to changes in response
-        data. The downside is that threaded mode can be overloaded if the
-        processor is not fast enough which can result in a crash.
-
-        The timeout is used for waiting for processes to confirm they have
-        recieved a command which prevents rattlesnake from overloading the
-        processes with new commands when it is running in headless mode.
+        Creates the log process, queue container, event container, controller
+        process, acquisition process, output process, streaming process,
+        environment manager, and profile manager.
 
         Parameters
         ----------
-        threaded : bool
-            Tells rattlesnake whether to run on a single core or multiple
-            processing cores. A value of True corresponds to single
-            threaded
-        timeout : float
-            The amount of time rattlesnake waits for a process to respond
-            after giving it a command. A timeout error will roll back to
-            the previous state and require you to perform the command
-            again.
+        threaded : bool, optional
+            If ``True``, use threads and thread-compatible queues and events. If
+            ``False``, use multiprocessing processes and queues.
+        timeout : float, optional
+            Timeout in seconds to wait for processes to respond to commands before
+            resorting to error handling.
+
+        Unit Tests
+        ----------
         """
         # Shutdown behavior
         self._shutdown_complete = False
@@ -359,6 +460,22 @@ class RattlesnakeController:
 
     @property
     def state(self) -> RattlesnakeState:
+        """
+        Return the current controller state.
+
+        The state is computed from whether hardware metadata is stored, whether
+        environment metadata is stored, whether acquisition and output are active,
+        whether any environment is active, and whether any environment has active
+        system identification.
+
+        Returns
+        -------
+        RattlesnakeState
+            Current controller state.
+
+        Unit Tests
+        ----------
+        """
         hardware_store = self.hardware_metadata is not None
         environment_store = self.environment_metadata != {}
         acquisition_active = self.event_container.acquisition_active_event.is_set()
@@ -407,66 +524,144 @@ class RattlesnakeController:
         return RattlesnakeState.INIT
 
     @property
-    def threaded(self):
+    def threaded(self) -> bool:
+        """
+        Return whether the controller is running in threaded mode.
+
+        Returns
+        -------
+        bool
+            ``True`` if worker components are threads, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self._threaded
 
     @property
-    def blocking(self):
+    def blocking(self) -> bool:
+        """
+        Return whether controller operations will block execution. This should be
+        ``True`` for headless operation and ``False`` for user interface operations.
+
+        Returns
+        -------
+        bool
+            ``True`` if operations wait for ready and active events, otherwise
+            ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self._blocking
 
     @property
-    def timeout(self):
+    def timeout(self) -> float:
+        """
+        Return the controller event wait timeout.
+
+        Returns
+        -------
+        float
+            Timeout in seconds used by blocking wait operations.
+
+        Unit Tests
+        ----------
+        """
         return self._timeout
 
     @property
-    def is_alive(self):
+    def is_alive(self) -> bool:
+        """
+        Returns whether the alive event is set. This event allows subprocesses to
+        extend the timeout period when performing long operations.
+
+        Returns
+        -------
+        bool
+            ``True`` if the ping-alive event is set, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self.event_container.ping_alive_event.is_set()
 
-    def set_alive(self):
+    def set_alive(self) -> None:
+        """
+        Set the alive event. Marks the controller as having received an alive
+        ping from a worker process during a long blocking operation.
+
+        Unit Tests
+        ----------
+        """
         self.event_container.ping_alive_event.set()
 
-    def clear_alive(self):
+    def clear_alive(self) -> None:
+        """
+        Clear the alive event. This is used by this controller after receiving a
+        ping alive signal and resetting the timeout timer.
+
+        Unit Tests
+        ----------
+        """
         self.event_container.ping_alive_event.clear()
 
-    def set_blocking(self):
+    def set_blocking(self) -> None:
         """
-        Tells rattlesnake to wait for a response from a process after sending a command.
+        Enables blocking controller operations. When this is enabled, the controller
+        will pause execution to wait for subprocesses to complete when sending commands.
+
+        Unit Tests
+        ----------
         """
         self._blocking = True
 
     def clear_blocking(self):
         """
-        Tells rattlesnake to not check for response from a process after
-        sending commands.
+        Disables blocking controller operations. When this is enabled, the controller
+        will not wait for subprocesses to complete when sending commands.
+
+        Unit Tests
+        ----------
         """
         self._blocking = False
 
     def wait_for_events(
         self,
-        ready_event_list: List[mp.synchronize.Event],
-        active_event_list: List[mp.synchronize.Event],
+        ready_event_list: List[EventType],
+        active_event_list: List[EventType],
         *,
         active_event_check: bool | None = None,
-    ):
+    ) -> None:
         """
-        Checks for response from processes after rattlesnake has sent a command.
+        Wait for process ready and active events.
 
-        The events in the ready_event_list are cleared after they are set as the
-        ready state for that process has been confirmed. The events in the
-        active_event_list are not cleared after being checked.
+        Blocks until all supplied ready events are set and all supplied active
+        events match ``active_event_check``. If the controller receives an alive
+        ping, the timeout timer is reset. If the timeout expires before all
+        required event conditions are satisfied, all ready events are set and a
+        ``RattlesnakeError`` is raised.
 
         Parameters
         ----------
-        ready_event_list : List[mp.synchronize.Event]
-            Events that processes use to confirm that they have recieved data. These
-            events are cleared automatically after the confirmation
-        active_event_list : List[mp.synchronize.Event]
-            Events that processes use to confirm that they are ready to recieve data
-            from other processes. These events are not cleared after being checked.
-        active_event_check: bool
-            This determines whether to check if the active_event_list processes are
-            active or not active. True correspondes to active, False corresponds to not
-            active. This is a required input when using active_event_list.
+        ready_event_list : list of threading.Event or multiprocessing.Event
+            Events that subprocesses set to confirm they have completed an
+            operation. These events will be set to ``False`` after completion.
+        active_event_list : list of threading.Event or multiprocessing.Event
+            Events that indicate whether subprocesses or environments are active.
+            These events will be unchanged after completion.
+        active_event_check : bool or None, optional
+            Required state for each active event. Use ``True`` to wait for active
+            events to be set, ``False`` to wait for them to be cleared, and
+            ``None`` only when no active events are supplied.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the timeout expires before all event conditions are satisfied.
+
+        Unit Tests
+        ----------
         """
         start_time = time.time()
 
@@ -492,27 +687,62 @@ class RattlesnakeController:
             time.sleep(0.25)
 
     # region Loading
-    def setup_gui(self):
+    def setup_gui(self) -> None:
+        """
+        Configures the controller for GUI operation.
+
+        Disables blocking mode and marks the controller as having a GUI attached.
+        GUI-driven workflows typically handle asynchronous updates through gui signals
+        to prevent locking the gui execution loop during operation.
+
+        Unit Tests
+        ----------
+        """
         self.clear_blocking()
         self.has_gui = True
 
-    def close_gui(self):
+    def close_gui(self) -> None:
+        """
+        Configures the controller for headless operation.
+
+        Enables blocking mode and removes the gui mark from the controller. The
+        controller will now pause execution while subprocesses perform functions.
+
+        Unit Tests
+        ----------
+        """
         self.set_blocking()
         self.has_gui = False
 
-    def load_rattlesnake_from_template(self, filepath: str):
+    def load_rattlesnake_from_template(self, filepath: PathType) -> None:
         """
-        Loads data from worksheet or netcdf4 file to the rattlesnake controller.
+        Stores metadata from a template file to the controller.
+
+        Loads hardware metadata, environment metadata, optional system
+        identification metadata, and optional profile events from a supported
+        template file. Supported file types are netCDF ``.nc4`` and Excel
+        ``.xlsx``. Blocking mode is temporarily enabled while loading so that
+        hardware and environment initialization complete before returning.
 
         Parameters
         ----------
-        filepath : string
-            Full path to template file.
+        filepath : str or os.PathLike
+            Path to the template file.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the file cannot be read.
+        RattlesnakeError
+            If the file type is unsupported by the loading logic.
+
+        Unit Tests
+        ----------
         """
         filename, filetype = os.path.splitext(filepath)
 
         if not os.access(filepath, os.R_OK):
-            raise RattlesnakeError("You do not have permissions to open {filepath}")
+            raise RattlesnakeError(f"You do not have permissions to open {filepath}")
 
         # I force blocking on this
         initial_blocking = True
@@ -566,17 +796,26 @@ class RattlesnakeController:
             if not initial_blocking:
                 self.clear_blocking()
 
-    def save_rattlesnake_to_template(self, filepath: str):
+    def save_rattlesnake_to_template(self, filepath: PathType) -> None:
         """
-        Saves excel template from current controller state.
+        Save the current controller configuration to an Excel template.
 
-        This function will fill out the current data from the rattlesnake class.
-        If there is no data stored, it will store a blank template.
+        Creates an Excel workbook and writes hardware metadata, environment
+        metadata, and profile events to it. If no metadata is stored, a blank
+        template is saved.
 
         Parameters
         ----------
-        filepath : string
-            Full path to template file.
+        filepath : str or os.PathLike
+            Output path for the Excel template.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``filepath`` does not have an ``.xlsx`` extension.
+
+        Unit Tests
+        ----------
         """
         filename, filetype = os.path.splitext(filepath)
         if filetype != ".xlsx":
@@ -594,7 +833,33 @@ class RattlesnakeController:
         )
         workbook.save(filepath)
 
-    def save_system_id_to_file(self, environment_name, filepath):
+    def save_system_id_to_file(self, environment_name: str, filepath: PathType) -> None:
+        """
+        Saves system identification data for an environment to a netCDF4, matlab,
+        or numpy file.
+
+        Sends a ``SAVE_SYSTEM_ID`` command to the environment and waits
+        for its ready event, regardless of the blocking setting. Saving is only
+        permitted in the ``ENVIRONMENT_STORE`` or ``HARDWARE_ACTIVE`` states.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment whose system identification data is saved.
+        filepath : str or os.PathLike
+            Destination file path. The extension selects the format: ``.nc4``,
+            ``.mat``, or ``.npz``. Other extensions are not saved.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit saving system identification,
+            if no environment exists with ``environment_name``, or if the
+            environment does not respond before the timeout.
+
+        Unit Tests
+        ----------
+        """
         if self.state not in (
             RattlesnakeState.ENVIRONMENT_STORE,
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -613,14 +878,45 @@ class RattlesnakeController:
             TASK_NAME, (GlobalCommands.SAVE_SYSTEM_ID, filepath)
         )
 
-        # I dont care about blocking in this case as race issues are very possible
+        # I force blocking in this case as race issues are likely
         ready_event_list = [self.event_container.environment_ready_events[queue_name]]
         active_event_list = []
         self.wait_for_events(ready_event_list, active_event_list)
 
     def load_system_id_from_package(
-        self, environment_name, sysid_package, ask_to_share=False
-    ):
+        self,
+        environment_name: str,
+        sysid_package: SysIdDataPackage,
+        ask_to_share: bool = False,
+    ) -> None:
+        """
+        Loads a system identification package into an environment.
+
+        Validates the package against the environment, sends it to the
+        environment, and waits for the system identification stored event.
+        Loading is only permitted in the ``ENVIRONMENT_STORE`` state.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment that receives the package.
+        sysid_package : SysIdDataPackage
+            System identification package to load.
+        ask_to_share : bool, optional
+            Whether the user interface should offer to share the loaded system
+            identification with other environments. Ignored when the controller
+            has no GUI. Defaults to ``False``.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state is not ``ENVIRONMENT_STORE``.
+        RattlesnakeError
+            If the package does not pass the environment manager's validation.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for loading system identification: {self.state}"
@@ -648,7 +944,33 @@ class RattlesnakeController:
 
     # region Hardware
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
-        """Validates hardware_metadata and sends data to relevant processes"""
+        """
+        Validate and initialize hardware metadata.
+
+        Validates the current controller state, verifies that the supplied object
+        is a ``HardwareMetadata`` instance, calls its validation method, stores
+        hardware information in the environment manager, sends
+        ``INITIALIZE_HARDWARE`` commands to acquisition and output, and waits for
+        ready events when blocking mode is enabled.
+
+        Parameters
+        ----------
+        hardware_metadata : HardwareMetadata
+            Hardware metadata used to initialize acquisition, output, and
+            environment-related hardware state.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit hardware initialization.
+        RattlesnakeError
+            If ``hardware_metadata`` is not a ``HardwareMetadata`` instance.
+        RattlesnakeError
+            If hardware metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         # Validate Rattlesnake State
         if self.state not in (
             RattlesnakeState.INIT,
@@ -693,18 +1015,66 @@ class RattlesnakeController:
 
     # region Environment
     @property
-    def environment_metadata(self):
+    def environment_metadata(self) -> Dict[str, EnvironmentMetadata]:
+        """
+        Return a dict of environment metadata stored by the environment manager.
+
+        Returns
+        -------
+        dict of str to EnvironmentMetadata
+            Mapping from environment queue names to environment metadata.
+
+        Unit Tests
+        ----------
+        """
         return self.environment_manager.environment_metadata
 
     @environment_metadata.setter
     def environment_metadata(self, value: Dict[str, EnvironmentMetadata]):
+        """
+        Store environment metadata through the environment manager.
+
+        Parameters
+        ----------
+        value : dict of str to EnvironmentMetadata
+            Mapping from environment queue names to environment metadata.
+        """
         self.environment_manager.environment_metadata = value
 
     def initialize_environments(
         self, environment_metadata_list: List[EnvironmentMetadata]
     ):
-        """Validates environment_metadata, starts up environment processes,
-        assigns queues, and sends data to relevant processes"""
+        """
+        Validate and initialize environments.
+
+        Validates the current controller state, validates environment metadata
+        against the stored hardware metadata, starts or updates environment
+        processes through the environment manager, sends initialized environment
+        metadata to acquisition and output, and waits for ready events when
+        blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_metadata_list : list of EnvironmentMetadata
+            Environment metadata objects to initialize.
+
+        Returns
+        -------
+        dict of str to EnvironmentMetadata
+            Mapping from assigned queue names to initialized environment metadata.
+            This is the main way to check which queue names were assigned to each
+            environment.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit environment initialization.
+        RattlesnakeError
+            If environment metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         # Validate Rattlesnake State
         if self.state not in (
             RattlesnakeState.HARDWARE_STORE,
@@ -750,7 +1120,36 @@ class RattlesnakeController:
     # endregion
 
     # region System Id
-    def initialize_system_id(self, sysid_metadata, environment_name):
+    def initialize_system_id(
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Initialize system identification metadata for an environment.
+
+        Validates that system identification metadata can be stored in the current
+        state, validates the metadata against hardware and environment
+        configuration, sends initialization through the environment manager, waits
+        for the environment ready event when blocking mode is enabled, and updates
+        stored environment metadata.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to initialize.
+        environment_name : str
+            User-facing environment name associated with the metadata.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit system identification
+            initialization.
+        RattlesnakeError
+            If system identification metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         if self.state not in (
             RattlesnakeState.ENVIRONMENT_STORE,
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -779,7 +1178,31 @@ class RattlesnakeController:
 
         self.environment_metadata = environment_metadata
 
-    def start_system_id_noise(self, environment_name):
+    def start_system_id_noise(self, environment_name: str) -> None:
+        """
+        Starts the noise phase for a system identification test.
+
+        Validates that hardware is active, resolves the environment queue name,
+        sends a ``START_SYSTEM_ID_NOISE`` command to the controller
+        process, and waits for the environment system identification active event
+        when blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name whose noise measurement should start.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``HARDWARE_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
+
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for starting system identification: {self.state}"
@@ -802,7 +1225,31 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=True
             )
 
-    def start_system_id_transfer_function(self, environment_name):
+    def start_system_id_transfer_function(self, environment_name: str) -> None:
+        """
+        Starts the transfer-function phase of system identification.
+
+        Validates that hardware is active, resolves the environment queue name,
+        sends a ``START_SYSTEM_ID_TRANSFER`` command to the controller
+        process, and waits for the environment system identification active event
+        when blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name whose transfer-function measurement should
+            start.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``HARDWARE_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for starting system identification: {self.state}"
@@ -825,7 +1272,30 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=True
             )
 
-    def stop_system_id(self, environment_name):
+    def stop_system_id(self, environment_name: str) -> None:
+        """
+        Stops active system identification.
+
+        Validates that system identification is active, resolves the environment
+        queue name, sends a ``STOP_SYSTEM_ID`` command to the controller
+        process, and waits for the system identification active event to clear when
+        blocking mode is enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name whose system identification should stop.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``SYS_ID_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.SYS_ID_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for stopping system identification {self.state}"
@@ -848,7 +1318,32 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=False
             )
 
-    def preview_system_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
+    def preview_system_id_noise(
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Performs a preview of the noise for the system identification for the
+        environment.
+
+        This is used in headless mode as the preview button. It starts the
+        acquisition, initializes the system identification metadata, and starts
+        the system identification noise without streaming.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to preview.
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``ENVIRONMENT_STORE`` state.
+
+        Unit Tests
+        ----------
+        """
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
 
@@ -867,8 +1362,31 @@ class RattlesnakeController:
         self.start_system_id_noise(environment_name)
 
     def preview_system_id_transfer(
-        self, sysid_metadata: SysIdMetadata, environment_name
-    ):
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Performs a preview of the transfer function for the system identification
+        for the environment.
+
+        This is used in headless mode as the preview button. It initializes the
+        system identification metadata, starts the acquisition, and starts the
+        system identification transfer function without streaming.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to preview.
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``ENVIRONMENT_STORE`` state.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 "Invalid state for previewing system identification "
@@ -883,7 +1401,34 @@ class RattlesnakeController:
         self.start_acquisition(stream_metadata)
         self.start_system_id_transfer_function(environment_name)
 
-    def run_system_id(self, sysid_metadata: SysIdMetadata, environment_name):
+    def run_system_id(
+        self, sysid_metadata: SysIdMetadata, environment_name: str
+    ) -> None:
+        """
+        Performs a full system identification for the environment.
+
+        This is used in headless mode as the start button. It initializes the
+        system identification metadata, starts the acquisition, and runs the
+        system identification noise followed by the transfer function. Each phase
+        shuts down automatically when complete, after which the acquisition is
+        stopped. If the metadata has a ``stream_file``, each phase is streamed to
+        that file.
+
+        Parameters
+        ----------
+        sysid_metadata : SysIdMetadata
+            System identification metadata to run.
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``ENVIRONMENT_STORE`` state.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
                 f"Invalid state for running system identification: {self.state}"
@@ -937,7 +1482,30 @@ class RattlesnakeController:
             self.stop_streaming()
         self.stop_acquisition()
 
-    def stop_system_id_run(self, environment_name):
+    def stop_system_id_run(self, environment_name: str) -> None:
+        """
+        Stops a system identification preview or run early.
+
+        Used within a headless script or Jupyter notebook to stop the system
+        identification early. If the system identification is active, it is
+        stopped before the acquisition is stopped. If only the hardware is
+        active, the acquisition is stopped.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in the ``HARDWARE_ACTIVE`` or
+            ``SYS_ID_ACTIVE`` state, or if no environment exists with
+            ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
             return
@@ -949,9 +1517,28 @@ class RattlesnakeController:
     # region Acquisition
     def set_stream_metadata(self, stream_metadata: StreamMetadata):
         """
-        This is only used to load a stream_metadata to the controller for
-        UI purposes. Start_acquisition still requirs a stream_metadata
-        object so the metadata stored here will never be used.
+        Store stream metadata for UI use.
+
+        Stores stream metadata on the controller without starting acquisition.
+        This is used to preload UI state; ``start_acquisition`` still requires an
+        explicit ``StreamMetadata`` object.
+
+        Parameters
+        ----------
+        stream_metadata : StreamMetadata
+            Stream metadata to store.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``ENVIRONMENT_STORE`` state.
+        RattlesnakeError
+            If ``stream_metadata`` is not a ``StreamMetadata`` instance.
+        RattlesnakeError
+            If stream metadata validation fails.
+
+        Unit Tests
+        ----------
         """
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
@@ -965,7 +1552,32 @@ class RattlesnakeController:
 
         self.last_stream_metadata = stream_metadata
 
-    def start_acquisition(self, stream_metadata: StreamMetadata):
+    def start_acquisition(self, stream_metadata: StreamMetadata) -> None:
+        """
+        Start acquisition and output hardware.
+
+        Validates controller state and stream metadata, initializes streaming,
+        sends a ``RUN_HARDWARE`` command to the controller process, waits for
+        streaming ready event and acquisition/output active events when blocking
+        mode is enabled, and stores the last stream metadata.
+
+        Parameters
+        ----------
+        stream_metadata : StreamMetadata
+            Streaming configuration to use for the acquisition run.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``ENVIRONMENT_STORE`` state.
+        RattlesnakeError
+            If ``stream_metadata`` is not a ``StreamMetadata`` instance.
+        RattlesnakeError
+            If stream metadata validation fails.
+
+        Unit Tests
+        ----------
+        """
         # Validate Rattlesnake State
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(
@@ -1012,7 +1624,23 @@ class RattlesnakeController:
         # Update stream_metadata
         self.last_stream_metadata = stream_metadata
 
-    def stop_acquisition(self):
+    def stop_acquisition(self) -> None:
+        """
+        Stop acquisition and output hardware.
+
+        Checks if the acquisition is active, stops the profile manager, sends
+        a ``STOP_HARDWARE`` command to the controller process, and waits for the
+        controller ready and acquisition/output active events to clear when
+        blocking mode is enabled.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit stopping acquisition.
+
+        Unit Tests
+        ----------
+        """
         # Validate rattlesnake state (rattlesnake was acquiring data)
         if self.state not in (
             RattlesnakeState.HARDWARE_ACTIVE,
@@ -1049,7 +1677,32 @@ class RattlesnakeController:
     # endregion
 
     # region Environment Active
-    def start_environment(self, instructions):
+    def start_environment(self, instructions: EnvironmentInstructions) -> None:
+        """
+        Start an environment based on the environment name within the instructions.
+
+        Validates the controller state and instruction type, validates environment
+        instructions, sends a ``START_ENVIRONMENT`` command to the controller
+        process, and waits for the environment active event when blocking mode is
+        enabled.
+
+        Parameters
+        ----------
+        instructions : EnvironmentInstructions
+            Instructions used to start the environment.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit starting an environment.
+        RattlesnakeError
+            If ``instructions`` is not an ``EnvironmentInstructions`` instance.
+        RattlesnakeError
+            If instruction validation fails.
+
+        Unit Tests
+        ----------
+        """
         if self.state not in (
             RattlesnakeState.HARDWARE_ACTIVE,
             RattlesnakeState.ENVIRONMENT_ACTIVE,
@@ -1081,7 +1734,30 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=True
             )
 
-    def stop_environment(self, environment_name: str):
+    def stop_environment(self, environment_name: str) -> None:
+        """
+        Stops an active environment.
+
+        Validates that an environment is active, resolves the environment queue
+        name, sends a ``STOP_ENVIRONMENT`` command to the controller process, and
+        waits for the environment active event to clear when blocking mode is
+        enabled.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name to stop.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller is not in ``ENVIRONMENT_ACTIVE`` state.
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         if self.state != RattlesnakeState.ENVIRONMENT_ACTIVE:
             raise RattlesnakeError(
                 f"Invalid state for stopping environment: {self.state}"
@@ -1107,7 +1783,28 @@ class RattlesnakeController:
     # endregion
 
     # region Controller
-    def environment_at_target_level(self, environment_name: str):
+    def environment_at_target_level(self, environment_name: str) -> None:
+        """
+        Starts streaming when stream metadata is set to ``TEST_LEVEL``.
+
+        Sends a ``STREAM_AT_TARGET_LEVEL`` command to the controller process. Used
+        internally by environment user interfaces to inform the controller that
+        the environment has reached target level so streaming at target level can
+        start.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name that reached target level.
+
+        Raises
+        ------
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
+        """
         try:
             self.environment_manager.queue_names_dict[environment_name]
         except KeyError:
@@ -1117,12 +1814,32 @@ class RattlesnakeController:
             TASK_NAME, (GlobalCommands.STREAM_AT_TARGET_LEVEL, environment_name)
         )
 
-    def send_environment_command(self, environment_name, command, data):
+    def send_environment_command(
+        self, environment_name: str, command: any, data: any
+    ) -> None:
         """
-        This is a bypass environment ui's can use to request information
-        from their environments. This should only be used for tasks that
-        are almost certainly not going to throw an error and can be
-        performed at any rattlesnake state.
+        Send an arbitrary command directly to an environment.
+
+        This bypass is intended for UI requests that are safe to execute in any
+        controller state. It resolves the environment name, logs the request, and
+        forwards the command and payload to the environment command queue.
+
+        Parameters
+        ----------
+        environment_name : str
+            User-facing environment name.
+        command : Any
+            Environment command to send.
+        data : Any
+            Payload associated with the command.
+
+        Raises
+        ------
+        RattlesnakeError
+            If no environment exists with ``environment_name``.
+
+        Unit Tests
+        ----------
         """
         self.log(f"Sending {command} to {environment_name}")
         try:
@@ -1138,16 +1855,57 @@ class RattlesnakeController:
 
     # region Streaming
     @property
-    def streaming(self):
+    def streaming(self) -> bool:
+        """
+        Return whether streaming is currently active.
+
+        Returns
+        -------
+        bool
+            ``True`` if the streaming active event is set, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self.event_container.streaming_active_event.is_set()
 
     @property
-    def has_streamed(self):
+    def has_streamed(self) -> bool:
+        """
+        Return whether stream metadata has been stored.
+
+        Returns
+        -------
+        bool
+            ``True`` if ``last_stream_metadata`` is not ``None``, otherwise
+            ``False``.
+
+        Unit Tests
+        ----------
+        """
         if self.last_stream_metadata:
             return True
         return False
 
-    def start_streaming(self):
+    def start_streaming(self) -> None:
+        """
+        Start streaming when stream metadata is set to ``MANUAL``.
+
+        Validates that acquisition, an environment, or system identification is
+        active and that streaming is not already active. Sends a ``STREAM_MANUAL``
+        command to the controller process and waits for the streaming active event
+        when blocking mode is enabled.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit starting streaming.
+        RattlesnakeError
+            If streaming is already active.
+
+        Unit Tests
+        ----------
+        """
         if self.state not in (
             RattlesnakeState.HARDWARE_ACTIVE,
             RattlesnakeState.ENVIRONMENT_ACTIVE,
@@ -1170,7 +1928,22 @@ class RattlesnakeController:
                 ready_event_list, active_event_list, active_event_check=True
             )
 
-    def stop_streaming(self):
+    def stop_streaming(self) -> None:
+        """
+        Stops streaming.
+
+        Validates that streaming is active, sends a ``STOP_STREAMING`` command to
+        the controller process, and waits for the streaming active event to clear
+        when blocking mode is enabled.
+
+        Raises
+        ------
+        RattlesnakeError
+            If streaming is not currently active.
+
+        Unit Tests
+        ----------
+        """
         if not self.streaming:
             raise RattlesnakeError(f"Rattlesnake is not currently streaming")
 
@@ -1189,16 +1962,52 @@ class RattlesnakeController:
 
     # region Profile
     @property
-    def has_profile(self):
+    def has_profile(self) -> bool:
+        """
+        Return whether there is a current profile event list stored to the controller.
+
+        Profile event lists are stored by either initializing them to the controller or
+        by running a profile.
+
+        Returns
+        -------
+        bool
+            ``True`` if ``last_profile_event_list`` is not empty, otherwise
+            ``False``.
+
+        Unit Tests
+        ----------
+        """
         if self.last_profile_event_list:
             return True
         return False
 
-    def initialize_profile_event_list(self, profile_event_list: List[ProfileEvent]):
+    def initialize_profile_event_list(
+        self, profile_event_list: List[ProfileEvent]
+    ) -> None:
         """
-        This is mainly to preload profile event list for UI purposes. You
-        still have to give a profile event list to start_profile so this is
-        not useful for headless opperation
+        Store a profile event list to the controller.
+
+        This is mainly used when launching the user interface from an existing
+        controller as the user interface will mirror this profile event list.
+        Validates that the controller state permits profile storage, validates
+        profile events through the environment manager, and stores the list on the
+        controller.
+
+        Parameters
+        ----------
+        profile_event_list : list of ProfileEvent
+            Profile events to store.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit storing a profile.
+        RattlesnakeError
+            If profile event validation fails.
+
+        Unit Tests
+        ----------
         """
         self.log("Settting Profile Event List")
 
@@ -1211,7 +2020,30 @@ class RattlesnakeController:
         self.environment_manager.validate_profile_events(profile_event_list)
         self.last_profile_event_list = profile_event_list
 
-    def start_profile(self, profile_event_list: List[ProfileEvent]):
+    def start_profile(self, profile_event_list: List[ProfileEvent]) -> None:
+        """
+        Start a profile.
+
+        Validates that hardware is active, validates profile events through the
+        environment manager and profile manager, clears the controller ready event,
+        starts the profile manager, waits for controller ready event when blocking
+        mode is enabled, and stores the profile event list.
+
+        Parameters
+        ----------
+        profile_event_list : list of ProfileEvent
+            Profile events to start.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the controller state does not permit starting a profile.
+        RattlesnakeError
+            If profile event validation fails.
+
+        Unit Tests
+        ----------
+        """
         self.log("Starting Profile")
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(f"Invalid state to start profile: {self.state}")
@@ -1233,7 +2065,13 @@ class RattlesnakeController:
         # Update profile event list
         self.last_profile_event_list = profile_event_list
 
-    def stop_profile(self):
+    def stop_profile(self) -> None:
+        """
+        Stop the active profile.
+
+        Clears the controller ready event, commands the profile manager to stop,
+        and waits for controller ready event when blocking mode is enabled.
+        """
         self.log("Stopping Profile")
         self.event_container.controller_ready_event.clear()
         self.profile_manager.stop_profile()
@@ -1246,13 +2084,31 @@ class RattlesnakeController:
     # endregion
 
     # region Shutdown
-    def shutdown(self):
+    def shutdown(self) -> None:
+        """
+        Shut down the controller and all subprocesses.
+
+        Stops acquisition if hardware, environments, or system identification are
+        active. Then sends ``QUIT`` commands to the controller, acquisition,
+        output, and streaming processes, joins each process, closes environment
+        processes through the environment manager, and shuts down the log file
+        process. Processes that do not shut down within the timeout will be force
+        closed.
+
+        This function is not tied to the user interface shutdown and must be
+        called after the execution loop is finished. It is recommended to use
+        ``with RattlesnakeController() as rattlesnake:`` to automatically shut
+        down the controller within a Python script.
+
+        Unit Tests
+        ----------
+        """
         if self._shutdown_complete:
             return
         if not self._init_complete:
-            # __init__ raised before finishing, so attributes shutdown()
-            # depends on (queue_container, event_container, processes, etc.)
-            # may not exist. There is nothing coherent left to tear down.
+            # Weird edge case with jupyter notebook where sometimes shutdown can happen
+            # before __init__ completes (computer dependent). Needs more investigation
+            # but this patch works for now.
             self._shutdown_complete = True
             return
         print("Rattlesnake Shutting Down")
@@ -1355,14 +2211,17 @@ class RattlesnakeController:
 
         self._shutdown_complete = True
 
-    def log(self, string):
-        """Pass a message to the log_file_queue along with date/time and task name
+    def log(self, string) -> None:
+        """
+        Sends a message to the log file subprocess.
+
+        Formats the supplied message with the current timestamp and controller task
+        name, then places it on the log file queue.
 
         Parameters
         ----------
         string : str
-            Message that will be written to the queue
-
+            Message to write to the log file queue.
         """
         self.queue_container.log_file_queue.put(
             f"{datetime.now()}: {TASK_NAME} -- {string}\n"
