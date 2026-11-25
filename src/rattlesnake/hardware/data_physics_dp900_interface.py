@@ -26,8 +26,10 @@ import ctypes
 import datetime
 from ctypes import c_bool, c_char_p, c_double, c_float, c_int
 from enum import Enum
+from typing import List, NoReturn, Sequence
 
 import numpy as np
+import numpy.typing as npt
 from numpy.ctypeslib import ndpointer
 
 DEBUG = False
@@ -39,13 +41,17 @@ if DEBUG:
     if _WRITE_MESSAGE:
         log_file = open(__log_file__, "w", encoding="utf-8")
 
-    def debug_fn(message):
-        """Reports the message via print or log file
+    def debug_fn(message: str) -> None:
+        """
+        Reports the message via print or log file.
 
         Parameters
         ----------
         message : str
-            The message to be reported
+            The message to be reported.
+
+        Unit Tests
+        ----------
         """
         now = datetime.datetime.now()
         if _PRINT_MESSAGE:
@@ -55,7 +61,12 @@ if DEBUG:
 
 
 class DP900Status(Enum):
-    """Valid DP900 statuses"""
+    """
+    Valid DP900 statuses.
+
+    Unit Tests
+    ----------
+    """
 
     DISCONNECTED = -1
     IDLE = 0
@@ -65,7 +76,12 @@ class DP900Status(Enum):
 
 
 class DP900Coupling(Enum):
-    """Valid DP900 Couplings"""
+    """
+    Valid DP900 couplings.
+
+    Unit Tests
+    ----------
+    """
 
     AC_DIFFERENTIAL = 0
     DC_DIFFERENTIAL = 1
@@ -75,21 +91,31 @@ class DP900Coupling(Enum):
 
 
 class DP900:
-    """An interface to the data physics C API for the DP900 hardware"""
+    """
+    An interface to the Data Physics C API for the DP900 hardware.
 
-    def __init__(self, library_path: str):
+    Methods that call the API raise a ``RuntimeError`` containing the API's error list
+    if the call is not successful. ``status`` tracks the state of the test so that
+    methods are only called in a valid order.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(self, library_path: str) -> None:
         """
-        Connects to the library
+        Connects to the library.
+
+        Loads the library and defines the argument and return types for each API
+        function. The hardware is not connected until ``connect`` is called.
 
         Parameters
         ----------
         library_path : str
-            Path to the Dp900Matlab.dll file that is used to run the DP900 device
+            Path to the Dp900Matlab.dll file that is used to run the DP900 device.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         self._api = ctypes.WinDLL(library_path)
         self._valid_input_ranges = np.array([0.1, 0.3, 1.0, 3.0, 10.0, 30.0])
@@ -243,28 +269,46 @@ class DP900:
         self.status = DP900Status.DISCONNECTED
 
     @property
-    def num_outputs(self):
-        """Gets the number of output channels"""
+    def num_outputs(self) -> int:
+        """
+        Gets the number of output channels.
+
+        Returns
+        -------
+        int
+            Number of output channels set up by ``setup_output_parameters``.
+
+        Unit Tests
+        ----------
+        """
         return self._num_outputs
 
     @property
-    def num_inputs(self):
-        """Gets the number of acquisition channels"""
+    def num_inputs(self) -> int:
+        """
+        Gets the number of acquisition channels.
+
+        Returns
+        -------
+        int
+            Number of input channels set up by ``setup_input_parameters``.
+
+        Unit Tests
+        ----------
+        """
         return self._num_inputs
 
-    def raise_error(self):
+    def raise_error(self) -> NoReturn:
         """
         Collects the data physics error and raises it in Python.
 
         Raises
         ------
         RuntimeError
-            DESCRIPTION.
+            Always raised, with the API's error list as the message.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         error = self.get_error_list()
         if DEBUG:
@@ -286,18 +330,28 @@ class DP900:
     #         debug_fn('Calling IsHwConnected\n')
     #     return bool(self._api.IsHwConnected())
 
-    def connect(self, test_name):
+    def connect(self, test_name: str) -> None:
         """
-        Launches background processes if not running, and connects the 900 API software to them.
+        Launches background processes if not running, and connects the 900 API
+        software to them.
+
+        Sets ``status`` to ``DP900Status.IDLE`` if successful.
 
         Parameters
         ----------
         test_name : str
-            Pointer to a null-terminated (C-style) char array representing the test name.
-            Pass an empty string (pointer to an empty char) to start from a new test.
-            Unless recalling a Saved test setup (with save_test()), pass an empty string.
-            Commas are not allowed in the string.
+            Pointer to a null-terminated (C-style) char array representing the test
+            name. Pass an empty string (pointer to an empty char) to start from a new
+            test. Unless recalling a Saved test setup (with save_test()), pass an empty
+            string. Commas are not allowed in the string.
 
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         # if not self.is_hw_connected():
         if DEBUG:
@@ -310,15 +364,19 @@ class DP900:
         else:
             self.status = DP900Status.IDLE
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
         Disconnects from the API.
 
-        Returns
-        -------
-        int
-            1 if disconnection to the API was successful, 0 if not successful.
+        Sets ``status`` to ``DP900Status.DISCONNECTED`` if successful.
 
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         # if self.is_hw_connected():
         if DEBUG:
@@ -331,18 +389,27 @@ class DP900:
         else:
             self.status = DP900Status.DISCONNECTED
 
-    def set_sample_rate(self, sample_rate):
+    def set_sample_rate(self, sample_rate: float) -> None:
         """
         Sets the sample rate to be used for the next test. The sample rate can
         not be changed while a test is running; it must be set before the
         init() command.
 
-        The sample rate can be arbitrarily set to any value between 256Hz and 216kHz.
+        The sample rate can be arbitrarily set to any value between 256Hz and
+        216kHz.
 
         Parameters
         ----------
         sample_rate : float
             The sample rate for the test.
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn(f"Calling SetSampleRate with\n    sample_rate = {sample_rate}")
@@ -350,15 +417,20 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def init(self):
+    def init(self) -> None:
         """
-        Initializes the test
+        Initializes the test.
 
-        Returns
-        -------
-        int
-            0 if the command was not successful; 1 if the command was
+        Sets ``status`` to ``DP900Status.INIT`` if successful.
+
+        Raises
+        ------
+        RuntimeError
+            If ``status`` is not ``DP900Status.IDLE``, or the API call is not
             successful.
+
+        Unit Tests
+        ----------
         """
         if self.status == DP900Status.IDLE:
             if DEBUG:
@@ -374,7 +446,13 @@ class DP900:
                 f"Current status is {self.status.name}."
             )
 
-    def setup_input_parameters(self, coupling_array, channel_array, sensitivity_array, range_array):
+    def setup_input_parameters(
+        self,
+        coupling_array: Sequence[DP900Coupling] | np.ndarray,
+        channel_array: npt.ArrayLike,
+        sensitivity_array: npt.ArrayLike,
+        range_array: npt.ArrayLike,
+    ) -> None:
         """
         Tells the API how many channels will be used; as well as the hardware
         settings for those parameters.
@@ -398,6 +476,16 @@ class DP900:
             Pointer to a float array, of length numInps where the nth value
             represents the voltage range of the nth input channel.  Can be
             0.1, 0.3, 1.0, 3.0, 10.0, 30.0
+
+        Raises
+        ------
+        ValueError
+            If input arrays are not the same size or if ranges are not valid.
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         # Set up the channel arrays
         if len(coupling_array) != len(sensitivity_array):
@@ -447,7 +535,12 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def setup_output_parameters(self, sensitivity_array, range_array, channel_array):
+    def setup_output_parameters(
+        self,
+        sensitivity_array: npt.ArrayLike,
+        range_array: npt.ArrayLike,
+        channel_array: npt.ArrayLike,
+    ) -> None:
         """
         Configures the settings for the output channels to use during test.
 
@@ -463,7 +556,7 @@ class DP900:
             are voltages)
         range_array : array of float
             A floating point array containing the output range for each output
-            channel.
+            channel.  Can be 2.0 or 10.0
         channel_array : array of integers
             Array of integers of length num_outputs where the nth value represents
             the nth output channel number.  If channels are to be skipped
@@ -474,7 +567,11 @@ class DP900:
         ------
         ValueError
             If input arrays are not the same size or if ranges are not valid.
+        RuntimeError
+            If the API call is not successful.
 
+        Unit Tests
+        ----------
         """
         if len(range_array) != len(sensitivity_array):
             raise ValueError("Range array must have same size as Sensitivity Array")
@@ -516,10 +613,21 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def start(self):
+    def start(self) -> None:
         """
         Starts data acquisition (and output through output channel). The test
         must be initialized (init()) before running start().
+
+        Sets ``status`` to ``DP900Status.RUNNING`` if successful.
+
+        Raises
+        ------
+        RuntimeError
+            If ``status`` is not ``DP900Status.INIT`` or ``DP900Status.STOPPED``, or
+            the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if self.status in [DP900Status.INIT, DP900Status.STOPPED]:
             if DEBUG:
@@ -535,10 +643,21 @@ class DP900:
                 f"stopped prior to starting a measurement"
             )
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stops data acquisition (and output through output channel). The test
         must be started (start()) before running stop().
+
+        Sets ``status`` to ``DP900Status.STOPPED`` if successful.
+
+        Raises
+        ------
+        RuntimeError
+            If ``status`` is not ``DP900Status.RUNNING``, or the API call is not
+            successful.
+
+        Unit Tests
+        ----------
         """
         if self.status == DP900Status.RUNNING:
             if DEBUG:
@@ -554,10 +673,21 @@ class DP900:
                 "running prior to stopping a measurement"
             )
 
-    def end(self):
+    def end(self) -> None:
         """
         Ends the current test. The test must be stopped (stop()) before running
-        Stop().
+        end().
+
+        Does nothing unless ``status`` is ``DP900Status.STOPPED`` or
+        ``DP900Status.INIT``. Sets ``status`` to ``DP900Status.IDLE`` if successful.
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if self.status in [DP900Status.STOPPED, DP900Status.INIT]:
             if DEBUG:
@@ -568,7 +698,7 @@ class DP900:
             else:
                 self.status = DP900Status.IDLE
 
-    def emergency_end(self):
+    def emergency_end(self) -> None:
         """
         If a test is Initialized or Started; but the client (your) code running
         the API crashes or goes into a bad state; the client code can be
@@ -578,6 +708,16 @@ class DP900:
         Stops or Ends a test that is currently running, but the API is not
         connected to. This is intended to be used if your code crashes or goes
         into a bad state while the API is running a test.
+
+        Sets ``status`` to ``DP900Status.IDLE`` if successful.
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling EmergencyEnd")
@@ -587,7 +727,7 @@ class DP900:
         else:
             self.status = DP900Status.IDLE
 
-    def get_system_list(self, online):
+    def get_system_list(self, online: bool) -> List[str]:
         """
         Gets a list of hardware units available for selection
         in the test.
@@ -603,16 +743,18 @@ class DP900:
 
         Returns
         -------
-        list
+        List[str]
             A list of systems that are selectable for use in
             the 900 software
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn(f"Calling GetSystemList with\n    online = {online}")
         return self._api.GetSystemList(online).decode("utf-8").split(",")
 
-    def get_test_list(self):
+    def get_test_list(self) -> str:
         """
         Gets a comma separated list of tests available for opening with the
         connect() command.
@@ -627,20 +769,31 @@ class DP900:
             A comma separated list of tests available for opening with the
             connect() command
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetTestList")
         return self._api.GetTestList().decode("utf-8")
 
-    def set_system_list(self, sys_list):
+    def set_system_list(self, sys_list: str | Sequence[str]) -> None:
         """
         Sets the hardware units available to be used in the test.
 
         Parameters
         ----------
-        sys_list : array of strings
+        sys_list : str or Sequence[str]
             A list of the names of systems to include in the test (eg.
-            ["dp912-98012","dp901-94019"]).
+            ["dp912-98012","dp901-94019"]). A single string is treated as a list
+            with one system.
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if isinstance(sys_list, str):
             sys_list = [sys_list]
@@ -651,7 +804,7 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def save_test(self, test_name):
+    def save_test(self, test_name: str) -> None:
         """
         Saves the test setup for recalling with the connect() command.
 
@@ -663,6 +816,13 @@ class DP900:
         test_name : str
             String to use as the name for the test to be saved as.
 
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn(f"Calling SaveTest with\n    test_name = {test_name}")
@@ -670,7 +830,7 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def delete_test(self, test_name):
+    def delete_test(self, test_name: str) -> None:
         """
         Deletes a test setup from the archived database.
 
@@ -678,6 +838,14 @@ class DP900:
         ----------
         test_name : str
             String containing the name of the test to be deleted
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn(f"Calling DeleteTest with\n    test_name = {test_name}")
@@ -685,7 +853,9 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def read_input_data(self, num_samples, newest_data=False):
+    def read_input_data(
+        self, num_samples: int, newest_data: bool = False
+    ) -> np.ndarray:
         """
         Reads data from the data acquisition software
 
@@ -693,7 +863,7 @@ class DP900:
         ----------
         num_samples : int
             The number of samples to read
-        newest_data : TYPE, optional
+        newest_data : bool, optional
             If True, gets the newest data in the buffer, otherwise gets the
             oldest data in the buffer. The default is False.
 
@@ -702,6 +872,8 @@ class DP900:
         np.ndarray
             An array of data with shape (num_inputs + num_outputs) x num_samples
 
+        Unit Tests
+        ----------
         """
         read_array = np.zeros(
             (self._num_inputs + self._num_outputs) * num_samples, dtype=np.float32
@@ -714,7 +886,7 @@ class DP900:
         #     self.raise_error()
         return read_array.reshape((self._num_inputs + self._num_outputs, num_samples))
 
-    def get_available_input_data_samples(self):
+    def get_available_input_data_samples(self) -> int:
         """
         Gets the number of available samples in the input channel circular
         buffers.
@@ -725,6 +897,8 @@ class DP900:
             The number of samples that are available to be read out of the input
             channel buffer.
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetAvailableDataLength")
@@ -733,7 +907,7 @@ class DP900:
             debug_fn(f"{samples} Samples Available")
         return samples
 
-    def get_space_in_out_buffer(self):
+    def get_space_in_out_buffer(self) -> int:
         """
         Gets the amount of free space in the output buffer (how much data can
         be sent to the output buffer before it is full).
@@ -744,6 +918,8 @@ class DP900:
             The number of samples that can be sent to the output buffer
             before it is full
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetSpaceInOutBuffer")
@@ -752,7 +928,7 @@ class DP900:
             debug_fn(f"    {samples} Samples Available in Buffer")
         return samples
 
-    def get_total_output_samples_on_buffer(self):
+    def get_total_output_samples_on_buffer(self) -> int:
         """
         Gets the number of samples in the output channel circular buffers.
 
@@ -762,6 +938,8 @@ class DP900:
             The number of samples in line to be output through the output
             channels.
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetTotalSamplesInOutputBuffer")
@@ -770,26 +948,25 @@ class DP900:
             debug_fn(f"    {samples} Output Samples Available")
         return samples
 
-    def write_output_data(self, output_data):
+    def write_output_data(self, output_data: np.ndarray) -> None:
         """
         The function will fill the output buffer with data specified, which will
         result in it eventually getting output from the system.
 
         Parameters
         ----------
-        output_data : array of float
+        output_data : np.ndarray
             2D data array with shape num_outputs x num_samples containing the
             data to be output from the signal generator.
 
         Raises
         ------
         ValueError
-            DESCRIPTION.
+            If ``output_data`` does not have 2 dimensions, or its number of rows is
+            not equal to ``num_outputs``.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         if output_data.ndim != 2:
             raise ValueError("`output_data` should have 2 dimensions (num_outputs x num_samples)")
@@ -808,20 +985,40 @@ class DP900:
         # if not success == 1:
         #     self.raise_error()
 
-    def get_raw_error_list(self):
-        """Gets the raw bytes from the error list"""
+    def get_raw_error_list(self) -> bytes:
+        """
+        Gets the raw bytes from the error list.
+
+        Returns
+        -------
+        bytes
+            The error list returned by the API, before decoding.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             debug_fn("Calling GetErrorList")
         return self._api.GetErrorList()
 
-    def get_error_list(self):
-        """Gets the decoded error list"""
+    def get_error_list(self) -> str:
+        """
+        Gets the decoded error list.
+
+        Returns
+        -------
+        str
+            The error list returned by the API.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             debug_fn("Calling GetErrorList")
         data = self._api.GetErrorList()
         return data.decode()
 
-    def set_buffer_size(self, buff_sz):
+    def set_buffer_size(self, buff_sz: int) -> None:
         """
         Sets the number of samples, per channel, in the input and output
         channel circular buffers.
@@ -832,6 +1029,14 @@ class DP900:
             The desired size of the circular buffers, in samples.  Must be greater
             than 4096.  The upper limit of buff_sz is limited by available
             memory in the PC.
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling SetCBufSize")
@@ -839,7 +1044,7 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def set_save_recording(self, enabled):
+    def set_save_recording(self, enabled: bool) -> None:
         """
         Sets the API to archive (or not archive) the complete time history
         being sent through the API. If enabled, this happens in the background
@@ -850,6 +1055,14 @@ class DP900:
         ----------
         enabled : bool
             If True, enables the recording.  If False, disables it.
+
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling SetSaveRecording")
@@ -857,7 +1070,7 @@ class DP900:
         if not success == 1:
             self.raise_error()
 
-    def get_num_inps_available(self):
+    def get_num_inps_available(self) -> int:
         """
         Returns the number of available input channels on the currently
         selected hardware.
@@ -868,6 +1081,8 @@ class DP900:
             The number of input channels available for usage, with the
             currently selected hardware units.
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetNumInpsAvailable")
@@ -876,7 +1091,7 @@ class DP900:
             debug_fn(f"    {inps_available} Inputs Available")
         return inps_available
 
-    def get_num_inps_selected(self):
+    def get_num_inps_selected(self) -> int:
         """
         Returns the number of selected input channels
 
@@ -885,6 +1100,8 @@ class DP900:
         int
             The number of input channels selected in the current setup.
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetNumInpsSelected")
@@ -893,7 +1110,7 @@ class DP900:
             debug_fn(f"    {inps_selected} Inputs Selected")
         return inps_selected
 
-    def get_num_outs_available(self):
+    def get_num_outs_available(self) -> int:
         """
         Returns the number of available output channels on the currently
         selected hardware.
@@ -904,6 +1121,8 @@ class DP900:
             The number of output channels available for use, with the currently
             selected hardware units
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetNumOutsAvailable")
@@ -912,7 +1131,7 @@ class DP900:
             debug_fn(f"    {outs_available} Outputs Available")
         return outs_available
 
-    def get_num_outs_selected(self):
+    def get_num_outs_selected(self) -> int:
         """
         Returns the number of output channels selected in the current test
 
@@ -921,6 +1140,8 @@ class DP900:
         int
             The number of output channels selected in the current setup
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetNumOutsSelected")
@@ -929,7 +1150,7 @@ class DP900:
             debug_fn(f"    {outs_selected} Outputs Selected")
         return outs_selected
 
-    def get_cbuf_size(self):
+    def get_cbuf_size(self) -> int:
         """
         Gets the number of samples, per channel, in the input and output
         channel circular buffers.
@@ -939,6 +1160,8 @@ class DP900:
         int
             The circular buffer size.
 
+        Unit Tests
+        ----------
         """
         if DEBUG:
             debug_fn("Calling GetCBufSize")
@@ -947,15 +1170,23 @@ class DP900:
             debug_fn(f"    CBuf Size {cbuf_size}")
         return cbuf_size
 
-    def get_input_channel_bncs(self):
+    def get_input_channel_bncs(self) -> np.ndarray:
         """
-        Gets the BNC numbers of available input channels on the currently selected hardware.
+        Gets the BNC numbers of available input channels on the currently selected
+        hardware.
 
         Returns
         -------
-        bncs : array of int
+        bncs : np.ndarray
             BNC numbers corresponding to input channels
 
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         num_inputs = self.get_num_inps_available()
         bncs = np.zeros((num_inputs,), dtype=np.int32)
@@ -968,20 +1199,23 @@ class DP900:
             debug_fn(f"    Input BNCs: {bncs.tolist()}")
         return bncs
 
-    def get_output_channel_bncs(self):
+    def get_output_channel_bncs(self) -> np.ndarray:
         """
-
-
-        Parameters
-        ----------
-        bncs : TYPE
-            DESCRIPTION.
+        Gets the BNC numbers of available output channels on the currently selected
+        hardware.
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        bncs : np.ndarray
+            BNC numbers corresponding to output channels
 
+        Raises
+        ------
+        RuntimeError
+            If the API call is not successful.
+
+        Unit Tests
+        ----------
         """
         num_outputs = self.get_num_outs_available()
         bncs = np.zeros((num_outputs,), dtype=np.int32)
@@ -994,7 +1228,13 @@ class DP900:
             debug_fn(f"    Output BNCs: {bncs.tolist()}")
         return bncs
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """
+        Closes the debug log file when the interface is deleted.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             log_file.close()
 
