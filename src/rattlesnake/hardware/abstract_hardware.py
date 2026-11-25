@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Abstract hardware definition that can be used to implement new hardware devices
+Abstract hardware definitions that can be used to implement new hardware devices.
+
+Each hardware device implements three classes: a ``HardwareMetadata`` subclass that
+defines and validates the hardware setup, a ``HardwareAcquisition`` subclass run by
+the acquisition process, and a ``HardwareOutput`` subclass run by the output process.
 
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
@@ -22,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import netCDF4 as nc4
@@ -38,9 +42,18 @@ class HardwareMetadata:
     """
     Abstract class that contains values to fully define how the hardware is setup.
 
-    This class contains attributes required to run acquisition, output, and streaming
-    processes. The class should also contain extra attributes required for the
-    HardwareAcquisition and HardwareOutput class specific to that HardwareType.
+    This class contains attributes required for the environment to interact with the
+    acquisition, output, and streaming processes. The class should be extended with
+    attributes required for the ``HardwareAcquisition`` and ``HardwareOutput`` classes
+    specific to that ``HardwareType``.
+
+    Subclasses must implement validation, the channel table assist methods, and loading
+    and saving of their metadata. The base implementations of those methods handle the
+    attributes shared by all hardware, so subclasses should call them through
+    ``super()`` and extend the result.
+
+    Unit Tests
+    ----------
     """
 
     def __init__(
@@ -52,7 +65,29 @@ class HardwareMetadata:
         time_per_write: float,
         *,
         output_oversample: int = 1,
-    ):
+    ) -> None:
+        """
+        Initializes the metadata shared by all hardware devices.
+
+        Parameters
+        ----------
+        hardware_type : HardwareType
+            Type of hardware device the metadata defines.
+        channel_list : List[Channel]
+            Channels in the channel table.
+        sample_rate : int
+            Sample rate of the data acquisition in samples per second.
+        time_per_read : float
+            Time, in seconds, of data acquired in each read frame.
+        time_per_write : float
+            Time, in seconds, of data output in each write frame.
+        output_oversample : int, optional
+            Factor by which the output sample rate exceeds the acquisition sample rate.
+            Used by virtual hardware for integration oversampling. Defaults to ``1``.
+
+        Unit Tests
+        ----------
+        """
         self.hardware_type = hardware_type
         self._channel_list = channel_list
         self.sample_rate = sample_rate
@@ -62,46 +97,108 @@ class HardwareMetadata:
         self.output_oversample = output_oversample
 
     @property
-    def channel_list(self):
+    def channel_list(self) -> List[Channel]:
+        """
+        Get or set the channels in the channel table.
+
+        Returns
+        -------
+        List[Channel]
+            Channels in the channel table.
+
+        Unit Tests
+        ----------
+        """
         return self._channel_list
 
     @channel_list.setter
-    def channel_list(self, value: List[Channel]):
+    def channel_list(self, value: List[Channel]) -> None:
         self._channel_list = value
 
     @property
-    def samples_per_read(self):
-        """Property returning the number of samples per read frame."""
+    def samples_per_read(self) -> int:
+        """
+        Return the number of samples in each read frame.
+
+        Returns
+        -------
+        int
+            ``sample_rate * time_per_read`` rounded to the nearest integer.
+
+        Unit Tests
+        ----------
+        """
         return round(self.sample_rate * self.time_per_read)
 
     @property
-    def samples_per_write(self):
-        """Property returning the number of samples per write frame."""
+    def samples_per_write(self) -> int:
+        """
+        Return the number of samples in each write frame.
+
+        Returns
+        -------
+        int
+            ``sample_rate * time_per_write * output_oversample`` rounded to the nearest
+            integer.
+
+        Unit Tests
+        ----------
+        """
         return round(self.sample_rate * self.time_per_write * self.output_oversample)
 
     @property
-    def nyquist_frequency(self):
-        """Property returning the Nyquist frequency of the data acquisition."""
+    def nyquist_frequency(self) -> float:
+        """
+        Return the Nyquist frequency of the data acquisition.
+
+        Returns
+        -------
+        float
+            Half of ``sample_rate``, in Hz.
+
+        Unit Tests
+        ----------
+        """
         return self.sample_rate / 2
 
     @property
-    def output_sample_rate(self):
-        """Property returning the output sample rate."""
+    def output_sample_rate(self) -> int:
+        """
+        Return the sample rate of the output.
+
+        Returns
+        -------
+        int
+            ``sample_rate * output_oversample``, in samples per second.
+
+        Unit Tests
+        ----------
+        """
         return self.sample_rate * self.output_oversample
 
     # region Validation
     @abstractmethod
-    def validate(self):
+    def validate(self) -> None:
         """
-        Method to check if the metadata object fully defines the hardware and is valid
-        for that machine.
+        Check that the metadata fully defines the hardware and is valid for that device.
 
-        If possible should check which devices are connected to the machine at a given
-        time and make sure that they are valid inputs to the initialize_hardware function
-        of the HardwareAcquisition and HardwareOutput classes.
+        If possible, subclasses should check which devices are connected to the computer
+        and make sure the metadata is a valid input to the ``initialize_hardware``
+        method of the ``HardwareAcquisition`` and ``HardwareOutput`` classes.
 
-        Throw detailed errors while validating, these errors will show up in log files for
-        debugging and will not stop the main process from running.
+        Raise detailed errors while validating. These errors show up in log files for
+        debugging and do not stop the main process from running.
+
+        The base implementation checks the attributes shared by all hardware.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``channel_list`` contains duplicate channels, or ``output_oversample`` is
+            not a number greater than 0.
+
+        Unit Tests
+        ----------
         """
         if len(self.channel_list) != len(set(self.channel_list)):
             raise RattlesnakeError("Duplicate channels found in channel_list")
@@ -113,7 +210,34 @@ class HardwareMetadata:
             raise RattlesnakeError(f"output_oversample must be a number greater than 0")
 
     @abstractmethod
-    def valid_channel_dict(self, channel: Channel):
+    def valid_channel_dict(self, channel: Channel) -> Dict[str, list]:
+        """
+        Return the valid values of each channel table column for a channel.
+
+        Used to fill the channel table assist widgets. Valid values can depend on the
+        channel's other values, such as the physical channels available on its
+        ``physical_device``. The base implementation returns an empty list for every
+        column, and subclasses fill in the columns they can validate. An example for
+        this is:
+            "node_number": [1, 2, 3, 4],
+            "node_direction": [],
+
+        Parameters
+        ----------
+        channel : Channel
+            Channel to find the valid values for.
+
+        Returns
+        -------
+        Dict[str, list]
+            Mapping from each attribute in ``Channel.channel_attr_list`` to its list of
+            valid values.
+
+        An empty list means the column has no restricted values.
+
+        Unit Tests
+        ----------
+        """
         valid_dict = {}
         for attr in Channel().channel_attr_list:
             valid_dict[attr] = []
@@ -121,7 +245,22 @@ class HardwareMetadata:
 
     @property
     @abstractmethod
-    def assist_mode_modules(self):
+    def assist_mode_modules(self) -> Dict[str, HardwareAssistModules]:
+        """
+        Return the assist widget used for each channel table column.
+
+        The base implementation uses ``HardwareAssistModules.NONE`` for every column,
+        and subclasses change the columns that have a combo box or spin box.
+
+        Returns
+        -------
+        Dict[str, HardwareAssistModules]
+            Mapping from each attribute in ``Channel.channel_attr_list`` to its assist
+            widget type.
+
+        Unit Tests
+        ----------
+        """
         assist_modules = {}
         for attr in Channel().channel_attr_list:
             assist_modules[attr] = HardwareAssistModules.NONE
@@ -134,6 +273,25 @@ class HardwareMetadata:
     def load_channel_table_from_netcdf(
         cls, netcdf_dataset: nc4.Dataset
     ) -> List[Channel]:
+        """
+        Load the channel table from the ``channels`` group of a netCDF4 dataset.
+
+        Blank string values are loaded as ``None``, and empty channels are skipped.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open netCDF4 dataset containing a ``channels`` group and a
+            ``response_channels`` dimension.
+
+        Returns
+        -------
+        List[Channel]
+            Channels loaded from the dataset.
+
+        Unit Tests
+        ----------
+        """
         channel_table = netcdf_dataset["channels"]
 
         channel_list = []
@@ -154,7 +312,24 @@ class HardwareMetadata:
     @classmethod
     def save_channel_table_to_workbook(
         self, channel_list: List[Channel], workbook: openpyxl.workbook.workbook.Workbook
-    ):
+    ) -> None:
+        """
+        Write a channel table to the active sheet of a workbook.
+
+        The active sheet is renamed to "Channel Table". Group headers are written to
+        the first row, column headers to the second row, and one channel per row
+        starting at the third row. ``None`` values are written as empty strings.
+
+        Parameters
+        ----------
+        channel_list : List[Channel]
+            Channels to write to the channel table.
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook to write the channel table to.
+
+        Unit Tests
+        ----------
+        """
         worksheet = workbook.active
         worksheet.title = "Channel Table"
         worksheet.cell(row=1, column=2, value="Test Article Definition")
@@ -210,6 +385,31 @@ class HardwareMetadata:
     def load_channel_table_from_workbook(
         cls, workbook: openpyxl.workbook.workbook.Workbook
     ) -> List[Channel]:
+        """
+        Load the channel table from a workbook.
+
+        If the workbook has more than one sheet, the channel table is the sheet with
+        "channel" in its name. Channels are read starting at the third row until the
+        first empty row.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook containing a channel table sheet.
+
+        Returns
+        -------
+        List[Channel]
+            Channels loaded from the channel table.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the workbook has more than one channel table sheet or none.
+
+        Unit Tests
+        ----------
+        """
         sheets = workbook.sheetnames
 
         if len(sheets) > 1:
@@ -241,7 +441,24 @@ class HardwareMetadata:
     @classmethod
     def save_blank_hardware_to_workbook(
         cls, workbook: openpyxl.workbook.workbook.Workbook
-    ):
+    ) -> None:
+        """
+        Write a blank hardware sheet template to a workbook.
+
+        Writes the "Hardware" sheet labels in the first column and instructions for
+        filling in each value. The sheet is created if it does not exist.
+
+        This currently implements every possible hardware attribute even if it is unused
+        by that specific hardware type.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook to write the hardware sheet to.
+
+        Unit Tests
+        ----------
+        """
         if "Hardware" in workbook.sheetnames:
             hardware_worksheet = workbook["Hardware"]
         else:
@@ -322,7 +539,47 @@ class HardwareMetadata:
 
     @classmethod
     @abstractmethod
-    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+    def load_metadata_from_workbook(
+        cls, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> Tuple[HardwareType, List[Channel], int, float, float, int]:
+        """
+        Load the metadata shared by all hardware from a workbook.
+
+        Reads the channel table and the "Hardware" sheet, where each row has a label
+        in the first column and a value in the second. Values that are missing keep
+        their defaults. Subclasses should call this method, read their own values, and
+        return an instance of the subclass.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook containing a channel table and a "Hardware" sheet.
+
+        Returns
+        -------
+        hardware_type : HardwareType
+            Type of hardware device. Defaults to ``HardwareType.NONE``.
+        channel_list : List[Channel]
+            Channels loaded from the channel table.
+        sample_rate : int
+            Sample rate in samples per second. Defaults to ``1000``.
+        time_per_read : float
+            Time, in seconds, of each read frame. Defaults to ``0.1``.
+        time_per_write : float
+            Time, in seconds, of each write frame. Defaults to ``0.1``.
+        output_oversample : int
+            Integration oversampling factor. Defaults to ``1``.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the workbook has more than one channel table sheet or none.
+        KeyError
+            If the workbook does not have a "Hardware" sheet.
+
+        Unit Tests
+        ----------
+        """
         channel_list = cls.load_channel_table_from_workbook(workbook)
 
         # This is a holdover from previous worksheet logic
@@ -365,7 +622,23 @@ class HardwareMetadata:
         )
 
     @abstractmethod
-    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset) -> None:
+        """
+        Save the metadata attributes shared by all hardware devices to a netCDF4
+        dataset.
+
+        Creates the channel and time sample dimensions, the ``time_data`` streaming
+        variable, the hardware attributes, and a channel table ``channels`` group.
+        Subclasses should call this method and then save their own attributes.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open, writable netCDF4 dataset.
+
+        Unit Tests
+        ----------
+        """
         stream_variable = "time_data"
         stream_dimension = "time_samples"
         # Create dimensions
@@ -432,7 +705,38 @@ class HardwareMetadata:
 
     @classmethod
     @abstractmethod
-    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+    def load_metadata_from_netcdf(
+        cls, netcdf_dataset: nc4.Dataset
+    ) -> Tuple[HardwareType, List[Channel], int, float, float, int]:
+        """
+        Load the metadata shared by all hardware from a netCDF4 dataset.
+
+        Subclasses should call this method, read their own attributes, and return an
+        instance of the subclass.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open netCDF4 dataset saved by ``save_metadata_to_netcdf``.
+
+        Returns
+        -------
+        hardware_type : HardwareType
+            Type of hardware device.
+        channel_list : List[Channel]
+            Channels loaded from the ``channels`` group.
+        sample_rate : int
+            Sample rate in samples per second.
+        time_per_read : float
+            Time, in seconds, of each read frame.
+        time_per_write : float
+            Time, in seconds, of each write frame.
+        output_oversample : int
+            Integration oversampling factor.
+
+        Unit Tests
+        ----------
+        """
         channel_list = cls.load_channel_table_from_netcdf(netcdf_dataset)
 
         # Hardware
@@ -452,7 +756,25 @@ class HardwareMetadata:
         )
 
     @abstractmethod
-    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+    def save_metadata_to_workbook(
+        self, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> None:
+        """
+        Save the metadata shared by all hardware to a workbook.
+
+        Writes the channel table to the active sheet, and the hardware type, sample
+        rate, time per read, and time per write to the second column of the "Hardware"
+        sheet. The hardware sheet is created if it does not exist. Subclasses should
+        call this method and then save their own values.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook to write the metadata to.
+
+        Unit Tests
+        ----------
+        """
         self.save_channel_table_to_workbook(self.channel_list, workbook)
 
         if "Hardware" in workbook.sheetnames:
@@ -479,9 +801,12 @@ class HardwareAcquisition(ABC):
     Abstract class defining the interface between the controller and acquisition.
 
     This class defines the interfaces between the controller and the
-    data acquisition portion of the hardware.  It is run by the Acquisition
+    data acquisition process for the hardware.  It is owned by the Acquisition
     process, and must define how to get data from the test hardware into the
     controller.
+
+    Unit Tests
+    ----------
     """
 
     @abstractmethod
@@ -489,47 +814,97 @@ class HardwareAcquisition(ABC):
         """
         Initialize the hardware and set up channels and sampling properties.
 
-        The function must create channels on the hardware corresponding to
-        the channels in the test.  It must also set the sampling rates.
+        The method must set up channels on the hardware corresponding to the channels in
+        the channel list. It must also set the sampling rates and hardware specific
+        properties.
 
         Parameters
         ----------
         metadata : HardwareMetadata
-            Hardware specific metadata class containing the sampling properties
-            and channel list to store to the HardwareAcquisition.
+            Hardware specific metadata containing the sampling properties and channel
+            list to store to the ``HardwareAcquisition``.
+
+        Unit Tests
+        ----------
         """
 
     @abstractmethod
     def start(self) -> None:
-        """Method to start acquiring data from the hardware."""
+        """
+        Start acquiring data from the hardware.
+
+        Implements any hardware specific startup sequences required by the hardware
+        device.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def read(self) -> np.ndarray:
-        """Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray."""
+        """
+        Read a frame of data from the hardware.
+
+        Returns
+        -------
+        np.ndarray
+            A ``num_channels x samples_per_read`` array of acquired data.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def read_remaining(self) -> np.ndarray:
-        """Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray."""
+        """
+        Read the rest of the data on the hardware after the acquisition stops.
+
+        Returns
+        -------
+        np.ndarray
+            A ``num_channels x num_samples`` array of the remaining acquired data.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def stop(self) -> None:
-        """Method to stop the acquisition."""
+        """
+        Stop the acquisition.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def close(self) -> None:
-        """Method to close down the hardware."""
+        """
+        Close down the hardware.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def get_acquisition_delay(self) -> int:
-        """Get the number of samples between output and acquisition.
+        """
+        Get the number of samples between output and acquisition.
 
-        This function is designed to handle buffering done in the output
-        hardware, ensuring that all data written to the output is read by the
-        acquisition.  If a output hardware has a buffer, there may be a non-
-        negligable delay between when output is written to the device and
-        actually played out from the device."""
+        This method handles buffering done in the output hardware, ensuring that all
+        data written to the output is read by the acquisition. If the output hardware
+        has a buffer, there may be a non-negligible delay between when output is
+        written to the device and when it is played out from the device.
+
+        Returns
+        -------
+        int
+            Number of samples the acquisition must keep reading after the last output
+            is written.
+
+        Unit Tests
+        ----------
+        """
 
 
 # endregion
@@ -537,54 +912,89 @@ class HardwareAcquisition(ABC):
 
 # region Output
 class HardwareOutput(ABC):
-    """Abstract class defining the interface between the controller and output
+    """
+    Abstract class defining the interface between the controller and output.
 
-    This class defines the interfaces between the controller and the
-    output or source portion of the hardware.  It is run by the Output
-    process, and must define how to get write data to the hardware from the
-    control system"""
+    This class defines the interfaces between the controller and the output process or
+    source portion of the hardware. It is owned by the Output process, and must define
+    how to write data from the control system to the hardware.
+
+    Unit Tests
+    ----------
+    """
 
     @abstractmethod
     def initialize_hardware(self, metadata: HardwareMetadata) -> None:
         """
-        Initialize the hardware and set up sources and sampling properties
+        Initialize the hardware and set up sources and sampling properties.
 
-        The function must create channels on the hardware corresponding to
-        the sources in the test.  It must also set the sampling rates.
+        The method must create channels on the hardware corresponding to the sources in
+        the test. It must also set the sampling rates.
 
         Parameters
         ----------
-        metadata : HardwareMetadata :
-            Hardware specific metdata class that defines the sampling properties
-            and channel list for a given hardware.
+        metadata : HardwareMetadata
+            Hardware specific metadata that defines the sampling properties and channel
+            list for a given hardware.
+
+        Unit Tests
+        ----------
         """
 
     @abstractmethod
     def start(self) -> None:
-        """Method to start outputting data to the hardware"""
+        """
+        Start outputting data to the hardware.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
-    def write(self, data) -> None:
+    def write(self, data: np.ndarray) -> None:
         """
-        Method to write a np.ndarray with a frame of data to the hardware
+        Write a frame of data to the hardware.
 
         Parameters
         ----------
-        data : np.ndarray :
-        num_channels x buffer_size array to write to the output hardware
+        data : np.ndarray
+            A ``num_channels x buffer_size`` array to write to the output hardware.
+
+        Unit Tests
+        ----------
         """
 
     @abstractmethod
     def stop(self) -> None:
-        """Method to stop the output"""
+        """
+        Stop the output.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def close(self) -> None:
-        """Method to close down the hardware"""
+        """
+        Close down the hardware.
+
+        Unit Tests
+        ----------
+        """
 
     @abstractmethod
     def ready_for_new_output(self) -> bool:
-        """Method that returns true if the hardware should accept a new signal"""
+        """
+        Return whether the hardware is ready to accept a new frame of output.
+
+        Returns
+        -------
+        bool
+            ``True`` if the hardware should accept a new signal, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
 
 
 # endregion

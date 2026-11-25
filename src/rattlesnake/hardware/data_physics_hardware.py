@@ -3,6 +3,10 @@
 Hardware definition that allows for the Data Physics Quattro Device to be run
 with Rattlesnake.
 
+The Quattro API runs acquisition and output on a single process. The output class
+passes its data to the acquisition class through a multiprocessing queue, and the
+acquisition class writes that data to the device while it waits for acquired data.
+
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
 (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
@@ -24,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import multiprocessing as mp
 import time
-from typing import List
+from typing import List, Self
 
 import numpy as np
 import openpyxl
@@ -42,14 +46,23 @@ from rattlesnake.hardware.data_physics_interface import (
 )
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 
-BUFFER_SIZE_FACTOR = 3
-SLEEP_FACTOR = 10
+BUFFER_SIZE_FACTOR = 3  # Frames of output that may be buffered on the device
+SLEEP_FACTOR = 10  # Fraction of a read frame to sleep while waiting for samples
 
 HARDWARE_TYPE = HardwareType.DP_QUATTRO
 
 
 # region Metadata
 class DataPhysicsMetadata(HardwareMetadata):
+    """
+    Metadata that defines how the Data Physics Quattro hardware is set up.
+
+    Extends ``HardwareMetadata`` with the path to the Quattro library file.
+
+    Unit Tests
+    ----------
+    """
+
     def __init__(
         self,
         channel_list: List[Channel],
@@ -57,7 +70,26 @@ class DataPhysicsMetadata(HardwareMetadata):
         time_per_read: float,
         time_per_write: float,
         hardware_file: str,
-    ):
+    ) -> None:
+        """
+        Initializes the Quattro metadata.
+
+        Parameters
+        ----------
+        channel_list : List[Channel]
+            Channels in the channel table.
+        sample_rate : int
+            Sample rate of the data acquisition in samples per second.
+        time_per_read : float
+            Time, in seconds, of data acquired in each read frame.
+        time_per_write : float
+            Time, in seconds, of data output in each write frame.
+        hardware_file : str
+            Path to the DpQuattro.dll library file used to run the Quattro device.
+
+        Unit Tests
+        ----------
+        """
         super().__init__(
             HARDWARE_TYPE,
             channel_list,
@@ -68,19 +100,62 @@ class DataPhysicsMetadata(HardwareMetadata):
         self.hardware_file = hardware_file
 
     # region Validation
-    def validate(self):
+    def validate(self) -> None:
+        """
+        Check that the metadata fully defines the Quattro hardware.
+
+        Only the checks shared by all hardware are performed.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``channel_list`` contains duplicate channels, or ``output_oversample``
+            is not a number greater than 0.
+
+        Unit Tests
+        ----------
+        """
         return super().validate()
 
     # endregion
 
     # region Loading
-    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset) -> None:
+        """
+        Save the Quattro metadata to a netCDF4 dataset.
+
+        Saves the metadata shared by all hardware and the ``hardware_file`` attribute.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open, writable netCDF4 dataset.
+
+        Unit Tests
+        ----------
+        """
         super().save_metadata_to_netcdf(netcdf_dataset)
 
         netcdf_dataset.hardware_file = self.hardware_file
 
     @classmethod
-    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset) -> Self:
+        """
+        Load Quattro metadata from a netCDF4 dataset.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open netCDF4 dataset saved by ``save_metadata_to_netcdf``.
+
+        Returns
+        -------
+        DataPhysicsMetadata
+            Metadata loaded from the dataset.
+
+        Unit Tests
+        ----------
+        """
         (
             hardware_type,
             channel_list,
@@ -100,14 +175,59 @@ class DataPhysicsMetadata(HardwareMetadata):
             hardware_file,
         )
 
-    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+    def save_metadata_to_workbook(
+        self, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> None:
+        """
+        Save the Quattro metadata to a workbook.
+
+        Saves the metadata shared by all hardware and writes ``hardware_file`` to the
+        "Hardware File" row of the "Hardware" sheet.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook to write the metadata to.
+
+        Unit Tests
+        ----------
+        """
         super().save_metadata_to_workbook(workbook)
 
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(2, 2, self.hardware_file)
 
     @classmethod
-    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+    def load_metadata_from_workbook(
+        cls, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> Self:
+        """
+        Load Quattro metadata from a workbook.
+
+        Reads the metadata shared by all hardware and the "Hardware File" row of the
+        "Hardware" sheet. If the row is missing or blank, ``hardware_file`` is
+        ``None``.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook containing a channel table and a "Hardware" sheet.
+
+        Returns
+        -------
+        DataPhysicsMetadata
+            Metadata loaded from the workbook.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the workbook has more than one channel table sheet or none.
+        KeyError
+            If the workbook does not have a "Hardware" sheet.
+
+        Unit Tests
+        ----------
+        """
         (
             hardware_type,
             channel_list,
@@ -147,30 +267,43 @@ class DataPhysicsMetadata(HardwareMetadata):
 
 # region Acquisition
 class DataPhysicsAcquisition(HardwareAcquisition):
-    """Class defining the interface between the controller and Data Physics
-    hardware
+    """
+    Class defining the interface between the controller and Data Physics Quattro
+    hardware.
 
-    This class defines the interfaces between the controller and the
-    Data Physics hardware that runs their open API.  It is run by the Acquisition
-    process, and must define how to get data from the test hardware into the
-    controller."""
+    This class defines the interfaces between the controller and the Data Physics
+    hardware that runs their open API. It is run by the Acquisition process, and must
+    define how to get data from the test hardware into the controller.
 
-    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
+    Because the Quattro runs acquisition and output on a single process, this class
+    also writes output to the device. ``DataPhysicsOutput`` puts output frames on a
+    queue, and this class writes them to the device while it waits for acquired data.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue
+    ) -> None:
         """
-        Initializes the data physics hardware interface.
+        Initializes the Data Physics Quattro acquisition interface.
+
+        The device is not connected until ``initialize_hardware`` is called. The
+        Quattro has 4 input channels and 2 output channels, and the channel settings
+        default to DC differential coupling, a 10 V range, and a sensitivity of 1.
 
         Parameters
         ----------
-        dll_path : str
-            Path to the DpQuattro.dll file that defines
-        queue : mp.queues.Queue
-            Multiprocessing queue used to pass output data from the output task
-            to the acquisition task because Quattro runs on a single processor
+        ping_alive_event : multiprocessing.synchronize.Event
+            Event used to reset the controller's timeout during long operations. Not
+            used by the Quattro.
+        queue : multiprocessing.queues.Queue
+            Queue used to pass output data from the output process to the acquisition
+            process, because the Quattro runs on a single process.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         self.buffer_size = 2**24
         self.input_channel_order = []
@@ -185,25 +318,29 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         self.read_data = None
         self.time_per_read = None
 
-    def initialize_hardware(self, test_data: DataPhysicsMetadata):
+    def initialize_hardware(self, test_data: DataPhysicsMetadata) -> None:
         """
-        Initialize the hardware and set up channels and sampling properties
+        Initialize the hardware and set up channels and sampling properties.
 
-        The function must create channels on the hardware corresponding to
-        the channels in the test.  It must also set the sampling rates.
+        Loads the Quattro library, resets the device to a disconnected state and
+        reconnects, then sets the sample rate, buffer size, and input and output
+        channel settings.
+
+        Each channel's ``physical_channel`` is its 1-based input channel number. The
+        input coupling is read from each channel's ``coupling`` value, and the
+        sensitivity is converted from mV/EU to V/EU. Channels with a
+        ``feedback_device`` measure a source output, so their input uses a
+        sensitivity of 1 and a 10 V range, and their ``feedback_channel`` is the
+        1-based output channel number.
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
+        test_data : DataPhysicsMetadata
+            Metadata containing the sampling properties, channel list, and library file
+            path for the Quattro.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         # Store data acquisition parameters for later
         self.quattro = DPQuattro(test_data.hardware_file)
@@ -297,15 +434,36 @@ class DataPhysicsAcquisition(HardwareAcquisition):
             self.output_sensitivities, self.output_ranges
         )
 
-    def start(self):
-        """Method to start acquiring data from the hardware"""
+    def start(self) -> None:
+        """
+        Start acquiring data from the hardware.
+
+        Clears any data left over from a previous acquisition.
+
+        Unit Tests
+        ----------
+        """
         self.read_data = []
         self.quattro.initialize()
         self.quattro.start()
 
     def read(self) -> np.ndarray:
-        """Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray"""
+        """
+        Read a frame of data from the hardware.
+
+        Reads every available sample until a full frame has been collected. While
+        waiting, any output on the queue is written to the device. Samples read past
+        the end of the frame are kept as the start of the next frame.
+
+        Returns
+        -------
+        np.ndarray
+            A ``num_channels x samples_per_read`` array of acquired data in channel
+            table order.
+
+        Unit Tests
+        ----------
+        """
         while (
             np.sum([data.shape[-1] for data in self.read_data])
             < self.data_acquisition_parameters.samples_per_read
@@ -336,8 +494,21 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         return read_data[:, : self.data_acquisition_parameters.samples_per_read]
 
     def read_remaining(self) -> np.ndarray:
-        """Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray"""
+        """
+        Read the rest of the data on the hardware after the acquisition stops.
+
+        Writes any output on the queue to the device, then waits until at least one
+        sample is available and reads every available sample.
+
+        Returns
+        -------
+        np.ndarray
+            A ``num_channels x num_samples`` array of the remaining acquired data in
+            channel table order.
+
+        Unit Tests
+        ----------
+        """
         # Check if we need to output anything
         self.get_and_write_output_data()
         # Check how many samples are available
@@ -363,46 +534,66 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         read_data = np.concatenate(self.read_data, axis=-1)
         return read_data
 
-    def stop(self):
-        """Method to stop the acquisition"""
+    def stop(self) -> None:
+        """
+        Stop the acquisition and end the measurement.
+
+        Unit Tests
+        ----------
+        """
         self.quattro.stop()
         self.quattro.end()
 
-    def close(self):
-        """Method to close down the hardware"""
+    def close(self) -> None:
+        """
+        Disconnect from the hardware.
+
+        Unit Tests
+        ----------
+        """
         self.quattro.disconnect()
 
     def get_acquisition_delay(self) -> int:
-        """Get the number of samples between output and acquisition
+        """
+        Get the number of samples between output and acquisition.
 
-        This function is designed to handle buffering done in the output
-        hardware, ensuring that all data written to the output is read by the
-        acquisition.  If a output hardware has a buffer, there may be a non-
-        negligable delay between when output is written to the device and
-        actually played out from the device."""
+        This method handles buffering done in the output hardware, ensuring that all
+        data written to the output is read by the acquisition. If the output hardware
+        has a buffer, there may be a non-negligible delay between when output is
+        written to the device and when it is played out from the device.
+
+        Returns
+        -------
+        int
+            ``BUFFER_SIZE_FACTOR`` times ``samples_per_write``.
+
+        Unit Tests
+        ----------
+        """
         return BUFFER_SIZE_FACTOR * self.data_acquisition_parameters.samples_per_write
 
-    def get_and_write_output_data(self, block: bool = False):
+    def get_and_write_output_data(self, block: bool = False) -> None:
         """
-        Checks to see if there is any data on the output queue that needs to be
-        written to the hardware.
+        Write output data from the queue to the hardware.
+
+        If not blocking and the device already has at least one write frame on its
+        output buffer, no data is taken from the queue. Output data is placed into a
+        two-channel array in the Quattro's output channel order before it is written.
 
         Parameters
         ----------
         block : bool, optional
-            If True, this function will wait until the data appears with a timeout
-            of 10 seconds.  Otherwise it will simply return if there is no
-            data available. The default is False.
+            If ``True``, wait up to 10 seconds for data to appear on the queue.
+            Otherwise return immediately if there is no data available. Defaults to
+            ``False``.
 
         Raises
         ------
         RuntimeError
-            Raised if the timeout occurs while waiting for data while blocking
+            If ``block`` is ``True`` and no data arrives before the timeout.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         samples_on_buffer = self.quattro.get_total_output_samples_on_buffer()
         # print(
@@ -441,67 +632,114 @@ class DataPhysicsAcquisition(HardwareAcquisition):
 
 # region Output
 class DataPhysicsOutput(HardwareOutput):
-    """Abstract class defining the interface between the controller and output
+    """
+    Class defining the interface between the controller and Data Physics Quattro
+    output.
 
-    This class defines the interfaces between the controller and the
-    output or source portion of the hardware.  It is run by the Output
-    process, and must define how to get write data to the hardware from the
-    control system"""
+    This class defines the interfaces between the controller and the output or source
+    portion of the hardware. It is run by the Output process, and must define how to
+    write data from the control system to the hardware.
 
-    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
+    Because the Quattro runs acquisition and output on a single process, this class
+    does not communicate with the device. It puts output frames on a queue that
+    ``DataPhysicsAcquisition`` reads and writes to the device.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue
+    ) -> None:
         """
-        Initializes the hardware by simply storing the data passing queue
+        Initializes the output interface by storing the data passing queue.
 
         Parameters
         ----------
-        queue : mp.queues.Queue
-            Queue used to pass data from output to acquisition
+        ping_alive_event : multiprocessing.synchronize.Event
+            Event used to reset the controller's timeout during long operations. Not
+            used by the Quattro.
+        queue : multiprocessing.queues.Queue
+            Queue used to pass data from the output process to the acquisition process.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         self.queue = queue
 
-    def initialize_hardware(self, test_data: DataPhysicsMetadata):
+    def initialize_hardware(self, test_data: DataPhysicsMetadata) -> None:
         """
-        Initialize the hardware and set up sources and sampling properties
+        Initialize the hardware and set up sources and sampling properties.
 
-        The function must create channels on the hardware corresponding to
-        the sources in the test.  It must also set the sampling rates.
+        Does nothing, because ``DataPhysicsAcquisition`` sets up the output channels.
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
+        test_data : DataPhysicsMetadata
+            Metadata containing the sampling properties and channel list for the
+            Quattro.
+
+        Unit Tests
+        ----------
+        """
+
+    def start(self) -> None:
+        """
+        Start outputting data to the hardware.
+
+        Does nothing, because ``DataPhysicsAcquisition`` starts the device.
+
+        Unit Tests
+        ----------
+        """
+
+    def write(self, data: np.ndarray) -> None:
+        """
+        Put a frame of output data on the queue for the acquisition to write.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            A ``num_output_channels x samples_per_write`` array to write to the output
+            hardware.
+
+        Unit Tests
+        ----------
+        """
+        self.queue.put(data)
+
+    def stop(self) -> None:
+        """
+        Stop the output.
+
+        Does nothing, because ``DataPhysicsAcquisition`` stops the device.
+
+        Unit Tests
+        ----------
+        """
+
+    def close(self) -> None:
+        """
+        Close down the hardware.
+
+        Does nothing, because ``DataPhysicsAcquisition`` disconnects the device.
+
+        Unit Tests
+        ----------
+        """
+
+    def ready_for_new_output(self) -> bool:
+        """
+        Return whether the hardware is ready to accept a new frame of output.
 
         Returns
         -------
-        None.
+        bool
+            ``True`` if the data passing queue is empty, otherwise ``False``.
 
+        Unit Tests
+        ----------
         """
-
-    def start(self):
-        """Method to start outputting data to the hardware"""
-
-    def write(self, data):
-        """Method to write a np.ndarray with a frame of data to the hardware"""
-        self.queue.put(data)
-
-    def stop(self):
-        """Method to stop the output"""
-
-    def close(self):
-        """Method to close down the hardware"""
-
-    def ready_for_new_output(self) -> bool:
-        """Method that returns true if the hardware should accept a new signal
-
-        Returns ``True`` if the data-passing queue is empty."""
         return self.queue.empty()
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Hardware definition that allows for the Data Physics Quattro Device to be run
-with Rattlesnake.
+Interface to the Data Physics C API that allows for the Data Physics Quattro
+Device to be run with Rattlesnake.
 
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
@@ -24,8 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import ctypes
 from enum import Enum
+from typing import Sequence
 
 import numpy as np
+import numpy.typing as npt
 from numpy.ctypeslib import ndpointer
 
 DEBUG = False
@@ -35,7 +37,12 @@ if DEBUG:
 
 
 class QuattroStatus(Enum):
-    """Valid Quattro statuses"""
+    """
+    Valid Quattro statuses.
+
+    Unit Tests
+    ----------
+    """
 
     DISCONNECTED = -1
     IDLE = 0
@@ -45,7 +52,12 @@ class QuattroStatus(Enum):
 
 
 class QuattroCoupling(Enum):
-    """Valid Quattro Couplings"""
+    """
+    Valid Quattro couplings.
+
+    Unit Tests
+    ----------
+    """
 
     AC_DIFFERENTIAL = 0
     DC_DIFFERENTIAL = 1
@@ -55,21 +67,32 @@ class QuattroCoupling(Enum):
 
 
 class DPQuattro:
-    """An interface to the data physics C API for the quattro hardware"""
+    """
+    An interface to the Data Physics C API for the Quattro hardware.
 
-    def __init__(self, library_path: str):
+    ``status`` tracks the state of the test so that methods are only called in a valid
+    order. API errors are passed to ``raise_error``, which currently only writes them
+    to the debug log and does not raise.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(self, library_path: str) -> None:
         """
-        Connects to the library
+        Connects to the library.
+
+        Loads the library and defines the argument and return types for each API
+        function. ``status`` starts as ``QuattroStatus.IDLE`` if the hardware is
+        already connected, otherwise ``QuattroStatus.DISCONNECTED``.
 
         Parameters
         ----------
         library_path : str
-            Path to the DpQuattro.dll file that is used to run the Quattro device
+            Path to the DpQuattro.dll file that is used to run the Quattro device.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         if DEBUG:
             self.log_file = open(__log_file__, "w", encoding="utf-8")
@@ -207,8 +230,22 @@ class DPQuattro:
         else:
             self.status = QuattroStatus.DISCONNECTED
 
-    def connect(self):
-        """Connects to the hardware"""
+    def connect(self) -> None:
+        """
+        Connects to the hardware.
+
+        Sets ``status`` to ``QuattroStatus.IDLE`` if successful.
+        If the API call is not successful, the error is passed to ``raise_error``
+        and ``status`` is not changed.
+
+        Raises
+        ------
+        RuntimeError
+            If the hardware is already connected.
+
+        Unit Tests
+        ----------
+        """
         if not self.is_hardware_connected():
             if DEBUG:
                 self.log_file.write("Calling Connect\n")
@@ -220,8 +257,22 @@ class DPQuattro:
         else:
             self.status = QuattroStatus.IDLE
 
-    def disconnect(self):
-        """Disconnects from the hardware"""
+    def disconnect(self) -> None:
+        """
+        Disconnects from the hardware.
+
+        Sets ``status`` to ``QuattroStatus.DISCONNECTED`` if successful.
+        If the API call is not successful, the error is passed to ``raise_error``
+        and ``status`` is not changed.
+
+        Raises
+        ------
+        RuntimeError
+            If the hardware is not connected.
+
+        Unit Tests
+        ----------
+        """
         if self.is_hardware_connected():
             if DEBUG:
                 self.log_file.write("Calling Disconnect\n")
@@ -233,37 +284,74 @@ class DPQuattro:
         else:
             self.status = QuattroStatus.DISCONNECTED
 
-    def is_hardware_connected(self):
-        """Check if the hardware is connected or not"""
+    def is_hardware_connected(self) -> bool:
+        """
+        Check if the hardware is connected or not.
+
+        Returns
+        -------
+        bool
+            ``True`` if the hardware is connected, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling IsHwConnected\n")
         return bool(self._api.IsHwConnected())
 
-    def get_raw_error_list(self):
-        """Gets the raw bytes of the error list from the hardware"""
+    def get_raw_error_list(self) -> bytes:
+        """
+        Gets the raw bytes of the error list from the hardware.
+
+        Returns
+        -------
+        bytes
+            The error list returned by the API, before decoding.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling GetErrorList\n")
         return self._api.GetErrorList()
 
-    def get_error_list(self):
-        """Gets the decoded error list from the hardware"""
+    def get_error_list(self) -> str:
+        """
+        Gets the decoded error list from the hardware.
+
+        Returns
+        -------
+        str
+            The error list returned by the API.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling GetErrorList\n")
         data = self._api.GetErrorList()
         return data.decode()
 
-    def set_sample_rate(self, sample_rate):
-        """Sets the sample rate of the hardware
+    def set_sample_rate(self, sample_rate: float) -> None:
+        """
+        Sets the sample rate of the hardware.
+
+        The sample rate must be close to one of the sample rates supported by the
+        Quattro, which range from 10.24 Hz to 204.8 kHz.
 
         Parameters
         ----------
         sample_rate : float
-            The desired sample rate of the data acquisiiton system
+            The desired sample rate of the data acquisition system.
 
         Raises
         ------
         ValueError
-            If the sample rate is not valid
+            If the sample rate is not valid.
+
+        Unit Tests
+        ----------
         """
         close_rates = np.isclose(self._valid_sample_rates, sample_rate)
         close_sample_rates = self._valid_sample_rates[close_rates]
@@ -283,25 +371,37 @@ class DPQuattro:
         if not success:
             self.raise_error()
 
-    def is_licensed(self):
-        """Checks the licensing of the hardware
+    def is_licensed(self) -> bool:
+        """
+        Checks the licensing of the hardware.
 
         Returns
         -------
         bool
-            Returns True if the hardware is licensed
+            Returns True if the hardware is licensed.
+
+        Unit Tests
+        ----------
         """
         if DEBUG:
             self.log_file.write("Calling IsLicensed\n")
         return bool(self._api.IsLicensed())
 
-    def initialize(self):
-        """Initializes the data acquisition system
+    def initialize(self) -> None:
+        """
+        Initializes the data acquisition system.
+
+        Sets ``status`` to ``QuattroStatus.INIT`` if successful.
+        If the API call is not successful, the error is passed to ``raise_error``
+        and ``status`` is not changed.
 
         Raises
         ------
         RuntimeError
-            if the hardware is not currently in the idle state
+            If the hardware is not currently in the idle state.
+
+        Unit Tests
+        ----------
         """
         if self.status == QuattroStatus.IDLE:
             if DEBUG:
@@ -317,22 +417,32 @@ class DPQuattro:
                 f"Current status is {self.status.name}."
             )
 
-    def setup_input_parameters(self, coupling_array, sensitivity_array, range_array):
-        """Sets up the acquisition channels for the data acquisition system
+    def setup_input_parameters(
+        self,
+        coupling_array: Sequence[QuattroCoupling] | np.ndarray,
+        sensitivity_array: npt.ArrayLike,
+        range_array: npt.ArrayLike,
+    ) -> None:
+        """
+        Sets up the acquisition channels for the data acquisition system.
 
         Parameters
         ----------
-        coupling_array : np.ndarray
-            An array of coupling values for the data acquisition system
-        sensitivity_array : np.ndarray
-            An array of sensitivity values for the data acquisition system
-        range_array : np.ndarray
-            An array of ranges for the data acquisition system
+        coupling_array : Sequence[QuattroCoupling] or np.ndarray
+            An array of coupling values for the data acquisition system.
+        sensitivity_array : array_like of float
+            An array of sensitivity values for the data acquisition system.
+        range_array : array_like of float
+            An array of ranges for the data acquisition system. Can be 0.1, 1.0, 10.0,
+            or 20.0.
 
         Raises
         ------
         ValueError
-            if any invalid values are passed or the arrays are not the same size
+            If any invalid values are passed or the arrays are not the same size.
+
+        Unit Tests
+        ----------
         """
         # Set up the channel arrays
         if len(coupling_array) != len(sensitivity_array):
@@ -343,10 +453,14 @@ class DPQuattro:
         coupling_array = np.array(
             [int(coupling.value) for coupling in coupling_array], dtype=np.int32
         )
-        sensitivity_array = np.array([float(val) for val in sensitivity_array], dtype=np.float32)
+        sensitivity_array = np.array(
+            [float(val) for val in sensitivity_array], dtype=np.float32
+        )
         validated_range_array = []
         for rng in range_array:
-            close_ranges = self._valid_input_ranges[np.isclose(self._valid_input_ranges, rng)]
+            close_ranges = self._valid_input_ranges[
+                np.isclose(self._valid_input_ranges, rng)
+            ]
             if len(close_ranges) == 0:
                 raise ValueError(
                     f"Range {rng} is not valid.  Valid sample rates are "
@@ -371,28 +485,38 @@ class DPQuattro:
         if not success:
             self.raise_error()
 
-    def setup_output_parameters(self, sensitivity_array, range_array):
-        """Sets up the drive channels on the data acquisition system
+    def setup_output_parameters(
+        self, sensitivity_array: npt.ArrayLike, range_array: npt.ArrayLike
+    ) -> None:
+        """
+        Sets up the drive channels on the data acquisition system.
 
         Parameters
         ----------
-        sensitivity_array : np.ndarray
-            An array of sensitivities to apply to the output channels
-        range_array : np.ndarray
-            An array of ranges to use for the output channels
+        sensitivity_array : array_like of float
+            An array of sensitivities to apply to the output channels.
+        range_array : array_like of float
+            An array of ranges to use for the output channels. Can be 2.0 or 10.0.
 
         Raises
         ------
         ValueError
-            if invalid values are passed or arrays are not the same size
+            If invalid values are passed or arrays are not the same size.
+
+        Unit Tests
+        ----------
         """
         if len(range_array) != len(sensitivity_array):
             raise ValueError("Range array must have same size as Sensitivity Array")
         self._num_outputs = len(sensitivity_array)
-        sensitivity_array = np.array([float(val) for val in sensitivity_array], dtype=np.float32)
+        sensitivity_array = np.array(
+            [float(val) for val in sensitivity_array], dtype=np.float32
+        )
         validated_range_array = []
         for rng in range_array:
-            close_ranges = self._valid_output_ranges[np.isclose(self._valid_output_ranges, rng)]
+            close_ranges = self._valid_output_ranges[
+                np.isclose(self._valid_output_ranges, rng)
+            ]
             if len(close_ranges) == 0:
                 raise ValueError(
                     f"Range {rng} is not valid.  Valid sample rates are "
@@ -414,19 +538,35 @@ class DPQuattro:
         if not success:
             self.raise_error()
 
-    def raise_error(self):
-        """Raises an error any writes the error list to the log file"""
+    def raise_error(self) -> None:
+        """
+        Writes the error list to the log file.
+
+        Raising the error is currently disabled, so API errors are only recorded when
+        ``DEBUG`` is ``True``.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write(f"DP Error: {self.get_error_list()}\n")
         # raise RuntimeError(self.get_error_list())
 
-    def start(self):
-        """Starts the data acquisiiton system
+    def start(self) -> None:
+        """
+        Starts the data acquisition system.
+
+        Sets ``status`` to ``QuattroStatus.RUNNING`` if successful.
+        If the API call is not successful, the error is passed to ``raise_error``
+        and ``status`` is not changed.
 
         Raises
         ------
         RuntimeError
-            if the status is not either initialized or stopped
+            If the status is not either initialized or stopped.
+
+        Unit Tests
+        ----------
         """
         if self.status in [QuattroStatus.INIT, QuattroStatus.STOPPED]:
             if DEBUG:
@@ -442,13 +582,21 @@ class DPQuattro:
                 f"initialized or stopped prior to starting a measurement"
             )
 
-    def stop(self):
-        """Stops the data acquisition system
+    def stop(self) -> None:
+        """
+        Stops the data acquisition system.
+
+        Sets ``status`` to ``QuattroStatus.STOPPED`` if successful.
+        If the API call is not successful, the error is passed to ``raise_error``
+        and ``status`` is not changed.
 
         Raises
         ------
         RuntimeError
-            If the data acquisition system is not currently in the running state
+            If the data acquisition system is not currently in the running state.
+
+        Unit Tests
+        ----------
         """
         if self.status == QuattroStatus.RUNNING:
             if DEBUG:
@@ -464,8 +612,19 @@ class DPQuattro:
                 f"to stopping a measurement"
             )
 
-    def end(self):
-        """Shuts down the data acquisition system"""
+    def end(self) -> None:
+        """
+        Shuts down the data acquisition system.
+
+        Does nothing unless ``status`` is ``QuattroStatus.STOPPED`` or
+        ``QuattroStatus.INIT``. Sets ``status`` to ``QuattroStatus.IDLE`` if
+        successful.
+        If the API call is not successful, the error is passed to ``raise_error``
+        and ``status`` is not changed.
+
+        Unit Tests
+        ----------
+        """
         if self.status in [QuattroStatus.STOPPED, QuattroStatus.INIT]:
             if DEBUG:
                 self.log_file.write("Calling End\n")
@@ -476,30 +635,72 @@ class DPQuattro:
                 self.status = QuattroStatus.IDLE
 
     @property
-    def serial_number(self):
-        """Gets the serial number of the hardware"""
+    def serial_number(self) -> int:
+        """
+        Gets the serial number of the hardware.
+
+        The API is known to return the wrong value.
+
+        Returns
+        -------
+        int
+            The serial number reported by the API.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Warning, this gives out the wrong value!\n")
         if DEBUG:
             self.log_file.write("Calling SerialNumber\n")
         return self._api.SerialNumber()
 
-    def set_buffer_size(self, buffer_size):
-        """Sets the buffer size of the hardware"""
+    def set_buffer_size(self, buffer_size: int) -> None:
+        """
+        Sets the buffer size of the hardware.
+
+        Parameters
+        ----------
+        buffer_size : int
+            Number of samples, per channel, in the input and output circular buffers.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling SetCBufSize\n")
         success = self._api.SetCBufSize(ctypes.c_int(buffer_size))
         if not success:
             self.raise_error()
 
-    def get_buffer_size(self):
-        """Gets the buffer size of the hardware"""
+    def get_buffer_size(self) -> int:
+        """
+        Gets the buffer size of the hardware.
+
+        Returns
+        -------
+        int
+            Number of samples, per channel, in the input and output circular buffers.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling GetCBufSize\n")
         return self._api.GetCBufSize()
 
-    def get_available_input_data_samples(self):
-        """Gets the number of samples available on the data acquisiiton system"""
+    def get_available_input_data_samples(self) -> int:
+        """
+        Gets the number of samples available on the data acquisition system.
+
+        Returns
+        -------
+        int
+            Number of samples available to be read from the input buffer.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling GetAvailableDataLength\n")
         samples = self._api.GetAvailableDataLength()
@@ -513,8 +714,18 @@ class DPQuattro:
     #     self.log_file.write('{:} Output Samples Available\n'.format(samples))
     #     return samples
 
-    def get_total_output_samples_on_buffer(self):
-        """Gets the total number of samples on the output buffer"""
+    def get_total_output_samples_on_buffer(self) -> int:
+        """
+        Gets the total number of samples on the output buffer.
+
+        Returns
+        -------
+        int
+            Number of samples waiting to be output through the output channels.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.write("Calling GetTotalSamplesInOutputBuffer\n")
         samples = self._api.GetTotalSamplesInOutputBuffer()
@@ -522,46 +733,61 @@ class DPQuattro:
             self.log_file.write(f"{samples} Output Samples Available\n")
         return samples
 
-    def read_input_data(self, num_samples, newest_data=False):
-        """Reads data from the acquisition channels
+    def read_input_data(
+        self, num_samples: int, newest_data: bool = False
+    ) -> np.ndarray:
+        """
+        Reads data from the acquisition channels.
 
         Parameters
         ----------
         num_samples : int
-            The number of samples to read
+            The number of samples to read.
         newest_data : bool, optional
-            Determines whether to read the newest acquired data (True) or the oldest (False), by
-            default False
+            Determines whether to read the newest acquired data (True) or the oldest
+            (False), by default False.
 
         Returns
         -------
         np.ndarray
-            The read data in a num_channels x num_samples array
+            The read data in a num_channels x num_samples array.
+
+        Unit Tests
+        ----------
         """
         read_array = np.zeros(self._num_inputs * num_samples, dtype=np.float32)
         read_type = ctypes.c_int(0 if newest_data else 1)
         if DEBUG:
-            self.log_file.write(f"Calling GetData with length {ctypes.c_int(num_samples)}\n")
+            self.log_file.write(
+                f"Calling GetData with length {ctypes.c_int(num_samples)}\n"
+            )
         success = self._api.GetData(read_array, read_type, ctypes.c_int(num_samples))
         if not success:
             self.raise_error()
         return read_array.reshape((self._num_inputs, num_samples))
 
-    def write_output_data(self, output_data):
-        """Puts output data to the hardware output buffer
+    def write_output_data(self, output_data: np.ndarray) -> None:
+        """
+        Puts output data to the hardware output buffer.
 
         Parameters
         ----------
         output_data : np.ndarray
-            The signals to be written to the hardware in a num_outputs x num_samples array
+            The signals to be written to the hardware in a num_outputs x num_samples
+            array.
 
         Raises
         ------
         ValueError
-            If the output data is not shaped correctly
+            If the output data is not shaped correctly.
+
+        Unit Tests
+        ----------
         """
         if output_data.ndim != 2:
-            raise ValueError("`output_data` should have 2 dimensions (num_outputs x num_samples)")
+            raise ValueError(
+                "`output_data` should have 2 dimensions (num_outputs x num_samples)"
+            )
         if output_data.shape[0] != self._num_outputs:
             raise ValueError(
                 f"`output_data` must have number of rows equal to the number of "
@@ -572,12 +798,20 @@ class DPQuattro:
         this_output_data[:] = output_data.flatten().astype(np.float32)
         # self.log_file.write(this_output_data.shape, num_samples, self._num_outputs)
         if DEBUG:
-            self.log_file.write(f"Calling PutOutData with length {ctypes.c_int(num_samples)}\n")
+            self.log_file.write(
+                f"Calling PutOutData with length {ctypes.c_int(num_samples)}\n"
+            )
         _ = self._api.PutOutData(this_output_data, ctypes.c_int(num_samples))
         # if not success:
         #     self.raise_error()
 
-    def __del__(self):
-        """Closes the hardware automatically when the interface is deleted or garbage collected"""
+    def __del__(self) -> None:
+        """
+        Closes the debug log file when the interface is deleted or garbage
+        collected.
+
+        Unit Tests
+        ----------
+        """
         if DEBUG:
             self.log_file.close()

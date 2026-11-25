@@ -3,6 +3,10 @@
 Hardware definition that allows for the Data Physics DP900 Device to be run
 with Rattlesnake.
 
+The DP900 API runs acquisition and output on a single process. The output class
+passes its data to the acquisition class through a multiprocessing queue, and the
+acquisition class writes that data to the device while it waits for acquired data.
+
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
 (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
@@ -22,19 +26,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import multiprocessing as mp
+import multiprocessing.queues  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import time
-from typing import List
+import multiprocessing as mp
+from typing import List, Self
 
 import openpyxl
 import netCDF4 as nc4
 import numpy as np
 
-from rattlesnake.hardware.abstract_hardware import (
-    HardwareMetadata,
-    HardwareAcquisition,
-    HardwareOutput,
-)
 from rattlesnake.utilities import flush_queue
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.hardware.data_physics_dp900_interface import (
@@ -42,15 +43,29 @@ from rattlesnake.hardware.data_physics_dp900_interface import (
     DP900Coupling,
     DP900Status,
 )
+from rattlesnake.hardware.abstract_hardware import (
+    HardwareMetadata,
+    HardwareAcquisition,
+    HardwareOutput,
+)
 
-BUFFER_SIZE_FACTOR = 3
-SLEEP_FACTOR = 10
+BUFFER_SIZE_FACTOR = 3  # Frames of output that may be buffered on the device
+SLEEP_FACTOR = 10  # Fraction of a read frame to sleep while waiting for samples
 
 HARDWARE_TYPE = HardwareType.DP_900
 
 
 # region Metadata
 class DataPhysicsDP900Metadata(HardwareMetadata):
+    """
+    Metadata that defines how the Data Physics DP900 hardware is set up.
+
+    Extends ``HardwareMetadata`` with the path to the DP900 library file.
+
+    Unit Tests
+    ----------
+    """
+
     def __init__(
         self,
         channel_list: List[Channel],
@@ -58,7 +73,26 @@ class DataPhysicsDP900Metadata(HardwareMetadata):
         time_per_read: float,
         time_per_write: float,
         hardware_file: str,
-    ):
+    ) -> None:
+        """
+        Initializes the DP900 metadata.
+
+        Parameters
+        ----------
+        channel_list : List[Channel]
+            Channels in the channel table.
+        sample_rate : int
+            Sample rate of the data acquisition in samples per second.
+        time_per_read : float
+            Time, in seconds, of data acquired in each read frame.
+        time_per_write : float
+            Time, in seconds, of data output in each write frame.
+        hardware_file : str
+            Path to the ``Dp900Matlab.dll`` library file used to run the DP900 device.
+
+        Unit Tests
+        ----------
+        """
         super().__init__(
             HARDWARE_TYPE,
             channel_list,
@@ -69,19 +103,62 @@ class DataPhysicsDP900Metadata(HardwareMetadata):
         self.hardware_file = hardware_file
 
     # region Validation
-    def validate(self):
+    def validate(self) -> None:
+        """
+        Check that the metadata fully defines the DP900 hardware.
+
+        Only the checks shared by all hardware are performed.
+
+        Raises
+        ------
+        RattlesnakeError
+            If ``channel_list`` contains duplicate channels, or ``output_oversample``
+            is not a number greater than 0.
+
+        Unit Tests
+        ----------
+        """
         return super().validate()
 
     # endregion
 
     # region Loading
-    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset):
+    def save_metadata_to_netcdf(self, netcdf_dataset: nc4.Dataset) -> None:
+        """
+        Save the DP900 metadata to a netCDF4 dataset.
+
+        Saves the metadata shared by all hardware and the ``hardware_file`` attribute.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open, writable netCDF4 dataset.
+
+        Unit Tests
+        ----------
+        """
         super().save_metadata_to_netcdf(netcdf_dataset)
 
         netcdf_dataset.hardware_file = self.hardware_file
 
     @classmethod
-    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset):
+    def load_metadata_from_netcdf(cls, netcdf_dataset: nc4.Dataset) -> Self:
+        """
+        Load DP900 metadata from a netCDF4 dataset.
+
+        Parameters
+        ----------
+        netcdf_dataset : netCDF4.Dataset
+            An open netCDF4 dataset saved by ``save_metadata_to_netcdf``.
+
+        Returns
+        -------
+        DataPhysicsDP900Metadata
+            Metadata loaded from the dataset.
+
+        Unit Tests
+        ----------
+        """
         (
             hardware_type,
             channel_list,
@@ -101,14 +178,58 @@ class DataPhysicsDP900Metadata(HardwareMetadata):
             hardware_file,
         )
 
-    def save_metadata_to_workbook(self, workbook: openpyxl.workbook.workbook.Workbook):
+    def save_metadata_to_workbook(
+        self, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> None:
+        """
+        Save the DP900 metadata to a workbook.
+
+        Saves the metadata shared by all hardware and writes ``hardware_file`` to the
+        "Hardware File" row of the "Hardware" sheet.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook to write the metadata to.
+
+        Unit Tests
+        ----------
+        """
         super().save_metadata_to_workbook(workbook)
 
         hardware_worksheet = workbook["Hardware"]
         hardware_worksheet.cell(2, 2, self.hardware_file)
 
     @classmethod
-    def load_metadata_from_workbook(cls, workbook: openpyxl.workbook.workbook.Workbook):
+    def load_metadata_from_workbook(
+        cls, workbook: openpyxl.workbook.workbook.Workbook
+    ) -> Self:
+        """
+        Load DP900 metadata from a workbook.
+
+        Reads the metadata shared by all hardware and the "Hardware File" row of the
+        "Hardware" sheet.
+
+        Parameters
+        ----------
+        workbook : openpyxl.workbook.workbook.Workbook
+            Workbook containing a channel table and a "Hardware" sheet.
+
+        Returns
+        -------
+        DataPhysicsDP900Metadata
+            Metadata loaded from the workbook.
+
+        Raises
+        ------
+        RattlesnakeError
+            If the workbook has more than one channel table sheet or none.
+        KeyError
+            If the workbook does not have a "Hardware" sheet.
+
+        Unit Tests
+        ----------
+        """
         (
             hardware_type,
             channel_list,
@@ -148,30 +269,41 @@ class DataPhysicsDP900Metadata(HardwareMetadata):
 
 # region Acqusition
 class DataPhysicsDP900Acquisition(HardwareAcquisition):
-    """Class defining the interface between the controller and Data Physics
-    DP900 hardware
+    """
+    Class defining the interface between the Acquisition process and Data Physics DP900
+    hardware.
 
-    This class defines the interfaces between the controller and the
-    Data Physics hardware that runs their open API.  It is run by the Acquisition
-    process, and must define how to get data from the test hardware into the
-    controller."""
+    This class defines the interfaces between the controller and the Data Physics
+    hardware that runs their open API. It is run by the Acquisition process, and must
+    define how to get data from the test hardware into the controller.
 
-    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
+    Because the DP900 runs acquisition and output on a single process, this class also
+    writes output to the device. ``DataPhysicsDP900Output`` puts output frames on a
+    queue, and this class writes them to the device while it waits for acquired data.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue
+    ) -> None:
         """
-        Initializes the data physics hardware interface.
+        Initializes the Data Physics DP900 acquisition interface.
+
+        The device is not connected until ``initialize_hardware`` is called.
 
         Parameters
         ----------
-        dll_path : str
-            Path to the Dp900Matlab.dll file that defines
-        queue : mp.queues.Queue
-            Multiprocessing queue used to pass output data from the output task
-            to the acquisition task because DP900 runs on a single processor
+        ping_alive_event : multiprocessing.synchronize.Event
+            Event used to reset the controller's timeout during long operations. Not
+            used by the DP900.
+        queue : multiprocessing.queues.Queue
+            Queue used to pass output data from the output process to the acquisition
+            process, because the DP900 runs on a single process.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
 
         self.DP900Coupling = DP900Coupling
@@ -189,25 +321,34 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         self.time_per_read = None
         self.last_write_time = None
 
-    def initialize_hardware(self, test_data: DataPhysicsDP900Metadata):
+    def initialize_hardware(self, test_data: DataPhysicsDP900Metadata) -> None:
         """
-        Initialize the hardware and set up channels and sampling properties
+        Initialize the hardware and set up channels and sampling properties.
 
-        The function must create channels on the hardware corresponding to
-        the channels in the test.  It must also set the sampling rates.
+        Loads the DP900 library, resets the device to a disconnected state and
+        reconnects, then sets up the input and output channels, sample rate, and
+        buffer size. Channels with a ``feedback_device`` are set up as outputs, and all
+        other channels as inputs. The input coupling is read from each channel's
+        ``coupling`` value.
+
+        The device orders channels by BNC number, so the sorting needed to return data
+        in channel table order is stored for ``read`` and ``read_remaining``.
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
+        test_data : DataPhysicsDP900Metadata
+            Metadata containing the sampling properties, channel list, and library file
+            path for the DP900.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        ValueError
+            If a channel's ``physical_device`` is not an online system, the channels
+            use more than one system, or a channel's ``physical_channel`` does not
+            match exactly one BNC configured in DP900Config.
 
+        Unit Tests
+        ----------
         """
         # Store data acquisition parameters for later
         self.dp900 = DP900(test_data.hardware_file)
@@ -378,14 +519,32 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
 
         self.dp900.set_save_recording(False)
 
-    def start(self):
-        """Method to start acquiring data from the hardware"""
+    def start(self) -> None:
+        """
+        Start acquiring data from the hardware.
+
+        Unit Tests
+        ----------
+        """
         self.dp900.init()
         self.dp900.start()
 
     def read(self) -> np.ndarray:
-        """Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray"""
+        """
+        Read a frame of data from the hardware.
+
+        Waits until a full frame of samples is available. While waiting, any output
+        on the queue is written to the device.
+
+        Returns
+        -------
+        np.ndarray
+            A ``num_channels x samples_per_read`` array of acquired data in channel
+            table order.
+
+        Unit Tests
+        ----------
+        """
         while (
             self.dp900.get_available_input_data_samples()
             < self.data_acquisition_parameters.samples_per_read
@@ -404,8 +563,21 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         return read_data
 
     def read_remaining(self) -> np.ndarray:
-        """Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray"""
+        """
+        Read the rest of the data on the hardware after the acquisition stops.
+
+        Writes any output on the queue to the device, then waits until at least one
+        sample is available and reads every available sample.
+
+        Returns
+        -------
+        np.ndarray
+            A ``num_channels x num_samples`` array of the remaining acquired data in
+            channel table order.
+
+        Unit Tests
+        ----------
+        """
         # Check if we need to output anything
         if self.output_active:
             self.get_and_write_output_data()
@@ -423,48 +595,72 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         read_data[self.channel_sorting] = read_data.copy()
         return read_data
 
-    def stop(self):
-        """Method to stop the acquisition"""
+    def stop(self) -> None:
+        """
+        Stop the acquisition and end the measurement.
+
+        Any output left on the queue is discarded.
+
+        Unit Tests
+        ----------
+        """
         self.dp900.stop()
         self.dp900.end()
         flush_queue(self.output_data_queue)
 
-    def close(self):
-        """Method to close down the hardware"""
+    def close(self) -> None:
+        """
+        Disconnect from the hardware.
+
+        Any output left on the queue is discarded.
+
+        Unit Tests
+        ----------
+        """
         self.dp900.disconnect()
         flush_queue(self.output_data_queue)
 
     def get_acquisition_delay(self) -> int:
-        """Get the number of samples between output and acquisition
+        """
+        Get the number of samples between output and acquisition.
 
-        This function is designed to handle buffering done in the output
-        hardware, ensuring that all data written to the output is read by the
-        acquisition.  If a output hardware has a buffer, there may be a non-
-        negligable delay between when output is written to the device and
-        actually played out from the device."""
+        This method handles buffering done in the output hardware, ensuring that all
+        data written to the output is read by the acquisition. If the output hardware
+        has a buffer, there may be a non-negligible delay between when output is
+        written to the device and when it is played out from the device.
+
+        Returns
+        -------
+        int
+            ``BUFFER_SIZE_FACTOR`` times ``samples_per_write``.
+
+        Unit Tests
+        ----------
+        """
         return BUFFER_SIZE_FACTOR * self.data_acquisition_parameters.samples_per_write
 
-    def get_and_write_output_data(self, block: bool = False):
+    def get_and_write_output_data(self, block: bool = False) -> None:
         """
-        Checks to see if there is any data on the output queue that needs to be
-        written to the hardware.
+        Write output data from the queue to the hardware.
+
+        If not blocking and the device already has at least three write frames on its
+        output buffer, no data is taken from the queue. Output data is sorted into the
+        device's BNC order before it is written.
 
         Parameters
         ----------
         block : bool, optional
-            If True, this function will wait until the data appears with a timeout
-            of 10 seconds.  Otherwise it will simply return if there is no
-            data available. The default is False.
+            If ``True``, wait up to 10 seconds for data to appear on the queue.
+            Otherwise return immediately if there is no data available. Defaults to
+            ``False``.
 
         Raises
         ------
         RuntimeError
-            Raised if the timeout occurs while waiting for data while blocking
+            If ``block`` is ``True`` and no data arrives before the timeout.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         samples_on_buffer = self.dp900.get_total_output_samples_on_buffer()
         write_threshold = 3 * self.data_acquisition_parameters.samples_per_write
@@ -503,71 +699,114 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
 
 # region Output
 class DataPhysicsDP900Output(HardwareOutput):
-    """Abstract class defining the interface between the controller and output
+    """
+    Class defining the interface between the Output process and Data Physics DP900
+    output.
 
-    This class defines the interfaces between the controller and the
-    output or source portion of the hardware.  It is run by the Output
-    process, and must define how to get write data to the hardware from the
-    control system"""
+    This class defines the interfaces between the controller and the output or source
+    portion of the hardware. It is run by the Output process, and must define how to
+    write data from the control system to the hardware.
 
-    def __init__(self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue):
+    Because the DP900 runs acquisition and output on a single process, this class does
+    not communicate with the device. It puts output frames on a queue that
+    ``DataPhysicsDP900Acquisition`` reads and writes to the device.
+
+    Unit Tests
+    ----------
+    """
+
+    def __init__(
+        self, ping_alive_event: mp.synchronize.Event, queue: mp.queues.Queue
+    ) -> None:
         """
-        Initializes the hardware by simply storing the data passing queue
+        Initializes the output interface by storing the data passing queue.
 
         Parameters
         ----------
-        queue : mp.queues.Queue
-            Queue used to pass data from output to acquisition
+        ping_alive_event : multiprocessing.synchronize.Event
+            Event used to reset the controller's timeout during long operations. Not
+            used by the DP900.
+        queue : multiprocessing.queues.Queue
+            Queue used to pass data from the output process to the acquisition process.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
         self.queue = queue
 
-    def initialize_hardware(self, test_data: DataPhysicsDP900Metadata):
+    def initialize_hardware(self, test_data: DataPhysicsDP900Metadata) -> None:
         """
-        Initialize the hardware and set up sources and sampling properties
+        Initialize the hardware and set up sources and sampling properties.
 
-        The function must create channels on the hardware corresponding to
-        the sources in the test.  It must also set the sampling rates.
+        Does nothing, because ``DataPhysicsDP900Acquisition`` sets up the output
+        channels.
 
         Parameters
         ----------
-        test_data : HardwareMetadata :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
+        test_data : DataPhysicsDP900Metadata
+            Metadata containing the sampling properties and channel list for the DP900.
 
-        Returns
-        -------
-        None.
-
+        Unit Tests
+        ----------
         """
 
-    def start(self):
-        """Method to start outputting data to the hardware"""
+    def start(self) -> None:
+        """
+        Start outputting data to the hardware.
+
+        Does nothing, because ``DataPhysicsDP900Acquisition`` starts the device.
+
+        Unit Tests
+        ----------
+        """
         # TODO: Remove this
         # self.last_check_time = time.time()
 
-    def write(self, data):
-        """Method to write a np.ndarray with a frame of data to the hardware"""
+    def write(self, data: np.ndarray) -> None:
+        """
+        Put a frame of output data on the queue for the acquisition to write.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            A ``num_output_channels x samples_per_write`` array to write to the output
+            hardware.
+
+        Unit Tests
+        ----------
+        """
         self.queue.put(data)
 
-    def stop(self):
-        """Method to stop the output"""
+    def stop(self) -> None:
+        """
+        Stop the output by discarding any output left on the queue.
+
+        Unit Tests
+        ----------
+        """
         flush_queue(self.queue)
 
-    def close(self):
-        """Method to close down the hardware"""
+    def close(self) -> None:
+        """
+        Close down the output by discarding any output left on the queue.
+
+        Unit Tests
+        ----------
+        """
         flush_queue(self.queue)
 
     def ready_for_new_output(self) -> bool:
-        """Method that returns true if the hardware should accept a new signal
+        """
+        Return whether the hardware is ready to accept a new frame of output.
 
-        Returns ``True`` if the data-passing queue is empty."""
+        Returns
+        -------
+        bool
+            ``True`` if the data passing queue is empty, otherwise ``False``.
+
+        Unit Tests
+        ----------
+        """
         return self.queue.empty()
 
 
